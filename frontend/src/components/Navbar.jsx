@@ -29,53 +29,41 @@ const Icon = {
   ),
 };
 
-function navItemClass({ isActive }) {
-  const base =
-    'flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors';
+// ---- Sidebar desktop (md+) ----
+
+function sidebarItemClass({ isActive }) {
+  const base = 'flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors';
   return isActive
     ? `${base} bg-neo-accent/15 text-neo-accent`
     : `${base} text-white/80 hover:bg-neo-card hover:text-white`;
 }
 
-export default function Navbar() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
-  function handleLogout() {
-    logout();
-    navigate('/login', { replace: true });
-  }
-
+function Sidebar({ user, onLogout }) {
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-neo-card/40 border-r border-neo-border flex flex-col z-20">
-      {/* Logo */}
+    <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-neo-card/40 border-r border-neo-border flex-col z-20">
       <Link to="/feed" className="block px-6 py-6 border-b border-neo-border">
         <h1 className="text-2xl font-extrabold tracking-tight">
           Neo<span className="text-neo-accent">Social</span>
         </h1>
       </Link>
 
-      {/* Navegación */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        <NavLink to="/feed" className={navItemClass} end>
+        <NavLink to="/feed" className={sidebarItemClass} end>
           <Icon.Home className="w-5 h-5" />
           <span>Feed</span>
         </NavLink>
-
-        <NavLink to="/explore" className={navItemClass}>
+        <NavLink to="/explore" className={sidebarItemClass}>
           <Icon.Compass className="w-5 h-5" />
           <span>Explorar</span>
         </NavLink>
-
         {user?.username && (
-          <NavLink to={`/profile/${user.username}`} className={navItemClass}>
+          <NavLink to={`/profile/${user.username}`} className={sidebarItemClass}>
             <Icon.User className="w-5 h-5" />
             <span>Mi perfil</span>
           </NavLink>
         )}
       </nav>
 
-      {/* Usuario + logout */}
       <div className="border-t border-neo-border p-3 space-y-2">
         {user && (
           <Link
@@ -99,10 +87,9 @@ export default function Navbar() {
             </div>
           </Link>
         )}
-
         <button
           type="button"
-          onClick={handleLogout}
+          onClick={onLogout}
           className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-white/80 hover:bg-neo-accent/10 hover:text-neo-accent transition-colors"
         >
           <Icon.Logout className="w-5 h-5" />
@@ -110,5 +97,87 @@ export default function Navbar() {
         </button>
       </div>
     </aside>
+  );
+}
+
+// ---- Top bar móvil ----
+
+function MobileTopBar({ onLogout }) {
+  return (
+    <header
+      className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-neo-card/95 backdrop-blur border-b border-neo-border"
+    >
+      <div className="h-full px-4 flex items-center justify-between">
+        <Link to="/feed" className="font-extrabold text-xl tracking-tight">
+          Neo<span className="text-neo-accent">Social</span>
+        </Link>
+        <button
+          type="button"
+          onClick={onLogout}
+          aria-label="Cerrar sesión"
+          className="-mr-2 p-2 rounded-full text-white/80 hover:text-neo-accent hover:bg-neo-accent/10 transition-colors"
+        >
+          <Icon.Logout className="w-5 h-5" />
+        </button>
+      </div>
+    </header>
+  );
+}
+
+// ---- Bottom nav móvil ----
+
+function bottomItemClass({ isActive }) {
+  const base =
+    'flex flex-col items-center justify-center gap-0.5 h-full text-xs font-medium transition-colors';
+  return isActive
+    ? `${base} text-neo-accent`
+    : `${base} text-white/70 hover:text-white`;
+}
+
+function MobileBottomNav({ user }) {
+  return (
+    <nav
+      aria-label="Navegación principal"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-16 bg-neo-card/95 backdrop-blur border-t border-neo-border"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
+      <div className="grid grid-cols-3 h-full">
+        <NavLink to="/feed" className={bottomItemClass} end>
+          <Icon.Home className="w-6 h-6" />
+          <span>Feed</span>
+        </NavLink>
+        <NavLink to="/explore" className={bottomItemClass}>
+          <Icon.Compass className="w-6 h-6" />
+          <span>Explorar</span>
+        </NavLink>
+        <NavLink
+          to={user?.username ? `/profile/${user.username}` : '/feed'}
+          className={bottomItemClass}
+        >
+          <Icon.User className="w-6 h-6" />
+          <span>Perfil</span>
+        </NavLink>
+      </div>
+    </nav>
+  );
+}
+
+// ---- Componente principal ----
+
+export default function Navbar() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    logout();
+    navigate('/login', { replace: true });
+  }
+
+  return (
+    <>
+      <Sidebar user={user} onLogout={handleLogout} />
+      <MobileTopBar onLogout={handleLogout} />
+      <MobileBottomNav user={user} />
+    </>
   );
 }

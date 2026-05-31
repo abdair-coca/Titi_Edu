@@ -102,10 +102,10 @@ export default function CreatePost({ onCreated }) {
           <img
             src={user.avatarUrl}
             alt=""
-            className="w-10 h-10 rounded-full bg-neo-bg border border-neo-border shrink-0 mt-1"
+            className="hidden sm:block w-10 h-10 rounded-full bg-neo-bg border border-neo-border shrink-0 mt-1"
           />
         ) : (
-          <div className="w-10 h-10 rounded-full bg-neo-accent/20 text-neo-accent grid place-items-center font-bold shrink-0 mt-1">
+          <div className="hidden sm:grid w-10 h-10 rounded-full bg-neo-accent/20 text-neo-accent place-items-center font-bold shrink-0 mt-1">
             {user?.username?.[0]?.toUpperCase() ?? '?'}
           </div>
         )}

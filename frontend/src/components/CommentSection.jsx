@@ -70,7 +70,7 @@ export default function CommentSection({ postId, initialCount = 0, onCountChange
             <img
               src={user.avatarUrl}
               alt=""
-              className="w-8 h-8 rounded-full bg-neo-bg border border-neo-border shrink-0 mt-1"
+              className="hidden sm:block w-8 h-8 rounded-full bg-neo-bg border border-neo-border shrink-0 mt-1"
             />
           )}
           <input
@@ -78,14 +78,14 @@ export default function CommentSection({ postId, initialCount = 0, onCountChange
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Escribí un comentario…"
-            className="neo-input flex-1"
+            className="neo-input flex-1 min-w-0"
             disabled={submitting}
             maxLength={500}
           />
           <button
             type="submit"
             disabled={submitting || !text.trim()}
-            className="neo-btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            className="neo-btn-primary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? '…' : 'Publicar'}
           </button>

@@ -29,8 +29,10 @@ function ProtectedLayout() {
   return (
     <div className="min-h-screen bg-neo-bg">
       <Navbar />
-      <main className="pl-64 min-h-screen">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
+      {/* En móvil: deja espacio para el top bar (h-14) y el bottom nav (h-16 + safe area iOS). */}
+      {/* En desktop (md+): solo padding-left para el sidebar (w-64). */}
+      <main className="min-h-screen pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-64">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 md:py-8">
           <Outlet />
         </div>
       </main>
@@ -52,7 +54,7 @@ function Home() {
   if (isAuthenticated) return <Navigate to="/feed" replace />;
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
-      <h1 className="text-6xl font-extrabold mb-4">
+      <h1 className="text-5xl sm:text-6xl font-extrabold mb-4">
         Neo<span className="text-neo-accent">Social</span>
       </h1>
       <p className="text-neo-muted mb-8 max-w-md">
