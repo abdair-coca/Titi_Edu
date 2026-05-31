@@ -37,37 +37,54 @@ function extractHashtags(content) {
 
 function serializePost(record) {
   const p = record.get('p').properties;
+  const hasNullable = (key) => record.has?.(key);
+  const soundNode = hasNullable('sound') ? record.get('sound') : null;
+  const locNode = hasNullable('location') ? record.get('location') : null;
   return {
     id: p.id,
     content: p.content,
     imageUrl: p.imageUrl,
     createdAt: p.createdAt?.toString?.() ?? p.createdAt,
     author: record.get('author'),
-    authorAvatar: record.has?.('authorAvatar') ? record.get('authorAvatar') : null,
-    hashtags: record.has?.('hashtags') ? record.get('hashtags') : [],
+    authorAvatar: hasNullable('authorAvatar') ? record.get('authorAvatar') : null,
+    hashtags: hasNullable('hashtags') ? record.get('hashtags') : [],
     likes: toNumber(record.get('likes')),
-    comments: record.has?.('comments') ? toNumber(record.get('comments')) : 0,
-    likedByMe: record.has?.('likedByMe') ? Boolean(record.get('likedByMe')) : false,
+    comments: hasNullable('comments') ? toNumber(record.get('comments')) : 0,
+    likedByMe: hasNullable('likedByMe') ? Boolean(record.get('likedByMe')) : false,
+    sound: soundNode
+      ? { id: soundNode.properties.id, name: soundNode.properties.name, artist: soundNode.properties.artist }
+      : null,
+    location: locNode
+      ? { id: locNode.properties.id, city: locNode.properties.city, country: locNode.properties.country }
+      : null,
   };
 }
 
+const POST_QUERY_TAIL = `
+  OPTIONAL MATCH (p)<-[:LE_GUSTO]-(liker:Usuario)
+  OPTIONAL MATCH (c:Comentario)-[:EN]->(p)
+  OPTIONAL MATCH (p)-[:TIENE_HASHTAG]->(h:Hashtag)
+  OPTIONAL MATCH (p)-[:USA_SONIDO]->(sound:Sonido)
+  OPTIONAL MATCH (p)-[:ETIQUETADO_EN]->(location:Ubicacion)
+  WITH p, u, sound, location,
+       collect(DISTINCT h.name) as hashtags,
+       count(DISTINCT liker) as likes,
+       count(DISTINCT c) as comments
+  OPTIONAL MATCH (p)<-[myLike:LE_GUSTO]-(me:Usuario {id: $userId})
+  RETURN p,
+         u.username as author,
+         u.avatarUrl as authorAvatar,
+         hashtags, likes, comments,
+         myLike IS NOT NULL as likedByMe,
+         sound, location
+`;
+
+// ---- Feed ----
 router.get('/feed', requireAuth, async (req, res) => {
   try {
     const records = await runQuery(
-      `MATCH (me:User {id: $userId})-[:FOLLOWS]->(followed:User)-[:PUBLISHED]->(p:Post)
-       OPTIONAL MATCH (p)<-[:LIKED]-(liker:User)
-       OPTIONAL MATCH (p)<-[:COMMENTED]-(commenter:User)
-       OPTIONAL MATCH (p)-[:HAS_HASHTAG]->(h:Hashtag)
-       WITH p, followed, me,
-            collect(DISTINCT h.name) as hashtags,
-            count(DISTINCT liker) as likes,
-            count(DISTINCT commenter) as comments
-       OPTIONAL MATCH (p)<-[myLike:LIKED]-(me)
-       RETURN p,
-              followed.username as author,
-              followed.avatarUrl as authorAvatar,
-              hashtags, likes, comments,
-              myLike IS NOT NULL as likedByMe
+      `MATCH (me:Usuario {id: $userId})-[:SIGUIO]->(u:Usuario)-[:PUBLICO]->(p:Post)
+       ${POST_QUERY_TAIL}
        ORDER BY p.createdAt DESC
        LIMIT 50`,
       { userId: req.user.id }
@@ -79,24 +96,13 @@ router.get('/feed', requireAuth, async (req, res) => {
   }
 });
 
+// ---- Explore ----
 router.get('/explore', optionalAuth, async (req, res) => {
   try {
     const userId = req.user?.id ?? null;
     const records = await runQuery(
-      `MATCH (u:User)-[:PUBLISHED]->(p:Post)
-       OPTIONAL MATCH (p)<-[:LIKED]-(liker:User)
-       OPTIONAL MATCH (p)<-[:COMMENTED]-(commenter:User)
-       OPTIONAL MATCH (p)-[:HAS_HASHTAG]->(h:Hashtag)
-       WITH p, u,
-            collect(DISTINCT h.name) as hashtags,
-            count(DISTINCT liker) as likes,
-            count(DISTINCT commenter) as comments
-       OPTIONAL MATCH (p)<-[myLike:LIKED]-(me:User {id: $userId})
-       RETURN p,
-              u.username as author,
-              u.avatarUrl as authorAvatar,
-              hashtags, likes, comments,
-              myLike IS NOT NULL as likedByMe
+      `MATCH (u:Usuario)-[:PUBLICO]->(p:Post)
+       ${POST_QUERY_TAIL}
        ORDER BY p.createdAt DESC
        LIMIT 50`,
       { userId }
@@ -108,9 +114,13 @@ router.get('/explore', optionalAuth, async (req, res) => {
   }
 });
 
+// ---- Crear post ----
 router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   try {
     const content = (req.body?.content ?? '').toString().trim();
+    const soundId = (req.body?.soundId ?? '').toString().trim() || null;
+    const locationId = (req.body?.locationId ?? '').toString().trim() || null;
+
     if (!content && !req.file) {
       return res.status(400).json({ success: false, message: 'El post debe tener contenido o imagen' });
     }
@@ -119,20 +129,39 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
     const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
 
     await runQuery(
-      `MATCH (u:User {id: $userId})
-       CREATE (u)-[:PUBLISHED]->(p:Post {
+      `MATCH (u:Usuario {id: $userId})
+       CREATE (u)-[:PUBLICO]->(p:Post {
          id: $id, content: $content, imageUrl: $imageUrl, createdAt: datetime()
        })`,
       { userId: req.user.id, id, content, imageUrl }
     );
 
+    // Hashtags
     const hashtags = extractHashtags(content);
     for (const tag of hashtags) {
       await runQuery(
         `MATCH (p:Post {id: $postId})
          MERGE (h:Hashtag {name: $tag})
-         MERGE (p)-[:HAS_HASHTAG]->(h)`,
+         MERGE (p)-[:TIENE_HASHTAG]->(h)`,
         { postId: id, tag }
+      );
+    }
+
+    // Sonido
+    if (soundId) {
+      await runQuery(
+        `MATCH (p:Post {id: $postId}), (s:Sonido {id: $soundId})
+         MERGE (p)-[:USA_SONIDO]->(s)`,
+        { postId: id, soundId }
+      );
+    }
+
+    // Ubicación
+    if (locationId) {
+      await runQuery(
+        `MATCH (p:Post {id: $postId}), (loc:Ubicacion {id: $locationId})
+         MERGE (p)-[:ETIQUETADO_EN]->(loc)`,
+        { postId: id, locationId }
       );
     }
 
@@ -143,88 +172,77 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
   }
 });
 
+// ---- Post individual ----
 router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id ?? null;
     const records = await runQuery(
-      `MATCH (u:User)-[:PUBLISHED]->(p:Post {id: $id})
-       OPTIONAL MATCH (p)<-[:LIKED]-(liker:User)
-       OPTIONAL MATCH (p)-[:HAS_HASHTAG]->(h:Hashtag)
-       WITH p, u,
-            collect(DISTINCT h.name) as hashtags,
-            count(DISTINCT liker) as likes
-       OPTIONAL MATCH (p)<-[myLike:LIKED]-(me:User {id: $userId})
-       RETURN p,
-              u.username as author,
-              u.avatarUrl as authorAvatar,
-              hashtags, likes,
-              myLike IS NOT NULL as likedByMe`,
+      `MATCH (u:Usuario)-[:PUBLICO]->(p:Post {id: $id})
+       ${POST_QUERY_TAIL}`,
       { id, userId }
     );
     if (records.length === 0) {
       return res.status(404).json({ success: false, message: 'Post no encontrado' });
     }
-
-    const commentRecords = await runQuery(
-      `MATCH (u:User)-[c:COMMENTED]->(p:Post {id: $id})
-       RETURN c.id as id, c.text as text, c.createdAt as createdAt,
-              u.username as author, u.avatarUrl as authorAvatar
-       ORDER BY c.createdAt ASC`,
-      { id }
-    );
-
-    const comments = commentRecords.map(r => ({
-      id: r.get('id'),
-      text: r.get('text'),
-      createdAt: r.get('createdAt')?.toString?.() ?? r.get('createdAt'),
-      author: r.get('author'),
-      authorAvatar: r.get('authorAvatar'),
-    }));
-
-    const post = serializePost(records[0]);
-    post.comments = comments.length;
-    res.json({ success: true, data: { post, comments } });
+    res.json({ success: true, data: { post: serializePost(records[0]) } });
   } catch (err) {
     console.error('GET /:id error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo post' });
   }
 });
 
+// ---- Like toggle ----
 router.post('/:id/like', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const exists = await runQuery(
-      'MATCH (p:Post {id: $id}) RETURN p LIMIT 1',
+      'MATCH (u:Usuario)-[:PUBLICO]->(p:Post {id: $id}) RETURN u.id as ownerId LIMIT 1',
       { id }
     );
     if (exists.length === 0) {
       return res.status(404).json({ success: false, message: 'Post no encontrado' });
     }
+    const ownerId = exists[0].get('ownerId');
 
     const existing = await runQuery(
-      'MATCH (u:User {id: $userId})-[r:LIKED]->(p:Post {id: $id}) RETURN r LIMIT 1',
+      'MATCH (u:Usuario {id: $userId})-[r:LE_GUSTO]->(p:Post {id: $id}) RETURN r LIMIT 1',
       { userId: req.user.id, id }
     );
 
     let liked;
     if (existing.length > 0) {
       await runQuery(
-        'MATCH (u:User {id: $userId})-[r:LIKED]->(p:Post {id: $id}) DELETE r',
+        'MATCH (u:Usuario {id: $userId})-[r:LE_GUSTO]->(p:Post {id: $id}) DELETE r',
         { userId: req.user.id, id }
       );
       liked = false;
     } else {
       await runQuery(
-        `MATCH (u:User {id: $userId}), (p:Post {id: $id})
-         MERGE (u)-[:LIKED]->(p)`,
+        `MATCH (u:Usuario {id: $userId}), (p:Post {id: $id})
+         MERGE (u)-[:LE_GUSTO]->(p)`,
         { userId: req.user.id, id }
       );
       liked = true;
+
+      // Notificación al owner (excepto si es self-like)
+      if (ownerId && ownerId !== req.user.id) {
+        const notifId = randomUUID();
+        await runQuery(
+          `MATCH (owner:Usuario {id: $ownerId}), (actor:Usuario {id: $actorId}), (p:Post {id: $postId})
+           MERGE (owner)<-[:RECIBIO]-(n:Notificacion {
+             type: 'like', actorId: $actorId, postId: $postId
+           })
+           ON CREATE SET n.id = $notifId, n.read = false, n.createdAt = datetime()
+           ON MATCH SET n.read = false, n.createdAt = datetime()
+           MERGE (n)-[:SOBRE]->(p)`,
+          { ownerId, actorId: req.user.id, postId: id, notifId }
+        );
+      }
     }
 
     const countRecords = await runQuery(
-      'MATCH (p:Post {id: $id})<-[r:LIKED]-(:User) RETURN count(r) as likes',
+      'MATCH (p:Post {id: $id})<-[r:LE_GUSTO]-(:Usuario) RETURN count(r) as likes',
       { id }
     );
     const likes = toNumber(countRecords[0].get('likes'));
@@ -236,49 +254,7 @@ router.post('/:id/like', requireAuth, async (req, res) => {
   }
 });
 
-router.post('/:id/comment', requireAuth, async (req, res) => {
-  try {
-    const { id } = req.params;
-    const text = (req.body?.text ?? '').toString().trim();
-    if (!text) {
-      return res.status(400).json({ success: false, message: 'El comentario no puede estar vacío' });
-    }
-
-    const exists = await runQuery(
-      'MATCH (p:Post {id: $id}) RETURN p LIMIT 1',
-      { id }
-    );
-    if (exists.length === 0) {
-      return res.status(404).json({ success: false, message: 'Post no encontrado' });
-    }
-
-    const commentId = randomUUID();
-    const records = await runQuery(
-      `MATCH (u:User {id: $userId}), (p:Post {id: $id})
-       CREATE (u)-[c:COMMENTED {id: $commentId, text: $text, createdAt: datetime()}]->(p)
-       RETURN c.id as id, c.text as text, c.createdAt as createdAt,
-              u.username as author, u.avatarUrl as authorAvatar`,
-      { userId: req.user.id, id, commentId, text }
-    );
-    const r = records[0];
-    res.status(201).json({
-      success: true,
-      data: {
-        comment: {
-          id: r.get('id'),
-          text: r.get('text'),
-          createdAt: r.get('createdAt')?.toString?.() ?? r.get('createdAt'),
-          author: r.get('author'),
-          authorAvatar: r.get('authorAvatar'),
-        },
-      },
-    });
-  } catch (err) {
-    console.error('POST /comment error', err);
-    res.status(500).json({ success: false, message: 'Error creando comentario' });
-  }
-});
-
+// ---- Editar post ----
 router.put('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
@@ -288,7 +264,7 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
 
     const owner = await runQuery(
-      'MATCH (u:User)-[:PUBLISHED]->(p:Post {id: $id}) RETURN u.id as ownerId',
+      'MATCH (u:Usuario)-[:PUBLICO]->(p:Post {id: $id}) RETURN u.id as ownerId',
       { id }
     );
     if (owner.length === 0) {
@@ -298,43 +274,28 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ success: false, message: 'No puedes editar posts ajenos' });
     }
 
-    // Actualiza el content y elimina los HAS_HASHTAG previos en una sola sesión
     await runQuery(
       `MATCH (p:Post {id: $id})
        SET p.content = $content
        WITH p
-       OPTIONAL MATCH (p)-[r:HAS_HASHTAG]->()
+       OPTIONAL MATCH (p)-[r:TIENE_HASHTAG]->()
        DELETE r`,
       { id, content }
     );
 
-    // Re-extrae hashtags del nuevo contenido y crea las relaciones
     const hashtags = extractHashtags(content);
     for (const tag of hashtags) {
       await runQuery(
         `MATCH (p:Post {id: $postId})
          MERGE (h:Hashtag {name: $tag})
-         MERGE (p)-[:HAS_HASHTAG]->(h)`,
+         MERGE (p)-[:TIENE_HASHTAG]->(h)`,
         { postId: id, tag }
       );
     }
 
-    // Devuelve el post en el mismo shape que /feed para que el frontend lo reemplace en su estado
     const records = await runQuery(
-      `MATCH (u:User)-[:PUBLISHED]->(p:Post {id: $id})
-       OPTIONAL MATCH (p)<-[:LIKED]-(liker:User)
-       OPTIONAL MATCH (p)<-[:COMMENTED]-(commenter:User)
-       OPTIONAL MATCH (p)-[:HAS_HASHTAG]->(h:Hashtag)
-       WITH p, u,
-            collect(DISTINCT h.name) as hashtags,
-            count(DISTINCT liker) as likes,
-            count(DISTINCT commenter) as comments
-       OPTIONAL MATCH (p)<-[myLike:LIKED]-(me:User {id: $userId})
-       RETURN p,
-              u.username as author,
-              u.avatarUrl as authorAvatar,
-              hashtags, likes, comments,
-              myLike IS NOT NULL as likedByMe`,
+      `MATCH (u:Usuario)-[:PUBLICO]->(p:Post {id: $id})
+       ${POST_QUERY_TAIL}`,
       { id, userId: req.user.id }
     );
 
@@ -345,11 +306,12 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 });
 
+// ---- Eliminar post ----
 router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const records = await runQuery(
-      'MATCH (u:User)-[:PUBLISHED]->(p:Post {id: $id}) RETURN u.id as ownerId, p.imageUrl as imageUrl',
+      'MATCH (u:Usuario)-[:PUBLICO]->(p:Post {id: $id}) RETURN u.id as ownerId, p.imageUrl as imageUrl',
       { id }
     );
     if (records.length === 0) {
@@ -359,8 +321,12 @@ router.delete('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({ success: false, message: 'No puedes eliminar posts ajenos' });
     }
 
+    // Borra el post + sus Comentario nodes asociados + notificaciones SOBRE este post
     await runQuery(
-      'MATCH (p:Post {id: $id}) DETACH DELETE p',
+      `MATCH (p:Post {id: $id})
+       OPTIONAL MATCH (c:Comentario)-[:EN]->(p)
+       OPTIONAL MATCH (n:Notificacion)-[:SOBRE]->(p)
+       DETACH DELETE c, n, p`,
       { id }
     );
 

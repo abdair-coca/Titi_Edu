@@ -13,6 +13,7 @@ import Feed from './pages/Feed.jsx';
 import Explore from './pages/Explore.jsx';
 import Profile from './pages/Profile.jsx';
 import HashtagFeed from './pages/HashtagFeed.jsx';
+import Notifications from './pages/Notifications.jsx';
 import Navbar from './components/Navbar.jsx';
 
 // ---- Layouts ----
@@ -100,6 +101,7 @@ export default function App() {
         <Route path="/search" element={<Navigate to="/explore" replace />} />
         <Route path="/profile/:username" element={<Profile />} />
         <Route path="/hashtag/:tag" element={<HashtagFeed />} />
+        <Route path="/notifications" element={<Notifications />} />
       </Route>
 
       {/* 404 */}

@@ -1,5 +1,7 @@
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import client from '../api/client.js';
 
 // Iconos inline para no agregar dependencias
 const Icon = {
@@ -27,7 +29,51 @@ const Icon = {
       <line x1="21" y1="12" x2="9" y2="12" />
     </svg>
   ),
+  Bell: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+    </svg>
+  ),
 };
+
+// Hook que mantiene contador de no-leídas. Refresca al montar y cuando cambia la ruta.
+function useUnreadNotifications() {
+  const { isAuthenticated } = useAuth();
+  const [count, setCount] = useState(0);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setCount(0);
+      return;
+    }
+    let cancelled = false;
+    client
+      .get('/api/notifications/unread/count')
+      .then(({ data }) => {
+        if (!cancelled && data?.success) setCount(data.data.unreadCount ?? 0);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, location.pathname]);
+
+  return count;
+}
+
+function NotifBadge({ count }) {
+  if (!count) return null;
+  return (
+    <span
+      aria-label={`${count} notificaciones no leídas`}
+      className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-neo-accent text-white text-[10px] font-bold leading-none tabular-nums"
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  );
+}
 
 // ---- Sidebar desktop (md+) ----
 
@@ -38,7 +84,7 @@ function sidebarItemClass({ isActive }) {
     : `${base} text-white/80 hover:bg-neo-card hover:text-white`;
 }
 
-function Sidebar({ user, onLogout }) {
+function Sidebar({ user, onLogout, unread }) {
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-screen w-64 bg-neo-card/40 border-r border-neo-border flex-col z-20">
       <Link to="/feed" className="block px-6 py-6 border-b border-neo-border">
@@ -55,6 +101,13 @@ function Sidebar({ user, onLogout }) {
         <NavLink to="/explore" className={sidebarItemClass}>
           <Icon.Compass className="w-5 h-5" />
           <span>Explorar</span>
+        </NavLink>
+        <NavLink to="/notifications" className={sidebarItemClass}>
+          <span className="relative inline-flex">
+            <Icon.Bell className="w-5 h-5" />
+            <NotifBadge count={unread} />
+          </span>
+          <span>Notificaciones</span>
         </NavLink>
         {user?.username && (
           <NavLink to={`/profile/${user.username}`} className={sidebarItemClass}>
@@ -102,23 +155,33 @@ function Sidebar({ user, onLogout }) {
 
 // ---- Top bar móvil ----
 
-function MobileTopBar({ onLogout }) {
+function MobileTopBar({ onLogout, unread }) {
   return (
     <header
       className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-neo-card/95 backdrop-blur border-b border-neo-border"
     >
-      <div className="h-full px-4 flex items-center justify-between">
+      <div className="h-full px-4 flex items-center justify-between gap-2">
         <Link to="/feed" className="font-extrabold text-xl tracking-tight">
           Neo<span className="text-neo-accent">Social</span>
         </Link>
-        <button
-          type="button"
-          onClick={onLogout}
-          aria-label="Cerrar sesión"
-          className="-mr-2 p-2 rounded-full text-white/80 hover:text-neo-accent hover:bg-neo-accent/10 transition-colors"
-        >
-          <Icon.Logout className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-1">
+          <Link
+            to="/notifications"
+            aria-label="Notificaciones"
+            className="relative p-2 rounded-full text-white/80 hover:text-neo-accent hover:bg-neo-accent/10 transition-colors"
+          >
+            <Icon.Bell className="w-5 h-5" />
+            <NotifBadge count={unread} />
+          </Link>
+          <button
+            type="button"
+            onClick={onLogout}
+            aria-label="Cerrar sesión"
+            className="-mr-2 p-2 rounded-full text-white/80 hover:text-neo-accent hover:bg-neo-accent/10 transition-colors"
+          >
+            <Icon.Logout className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </header>
   );
@@ -134,14 +197,14 @@ function bottomItemClass({ isActive }) {
     : `${base} text-white/70 hover:text-white`;
 }
 
-function MobileBottomNav({ user }) {
+function MobileBottomNav({ user, unread }) {
   return (
     <nav
       aria-label="Navegación principal"
       className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-16 bg-neo-card/95 backdrop-blur border-t border-neo-border"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="grid grid-cols-3 h-full">
+      <div className="grid grid-cols-4 h-full">
         <NavLink to="/feed" className={bottomItemClass} end>
           <Icon.Home className="w-6 h-6" />
           <span>Feed</span>
@@ -149,6 +212,13 @@ function MobileBottomNav({ user }) {
         <NavLink to="/explore" className={bottomItemClass}>
           <Icon.Compass className="w-6 h-6" />
           <span>Explorar</span>
+        </NavLink>
+        <NavLink to="/notifications" className={bottomItemClass}>
+          <span className="relative inline-flex">
+            <Icon.Bell className="w-6 h-6" />
+            <NotifBadge count={unread} />
+          </span>
+          <span>Alertas</span>
         </NavLink>
         <NavLink
           to={user?.username ? `/profile/${user.username}` : '/feed'}
@@ -167,6 +237,7 @@ function MobileBottomNav({ user }) {
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const unread = useUnreadNotifications();
 
   function handleLogout() {
     logout();
@@ -175,9 +246,9 @@ export default function Navbar() {
 
   return (
     <>
-      <Sidebar user={user} onLogout={handleLogout} />
-      <MobileTopBar onLogout={handleLogout} />
-      <MobileBottomNav user={user} />
+      <Sidebar user={user} onLogout={handleLogout} unread={unread} />
+      <MobileTopBar onLogout={handleLogout} unread={unread} />
+      <MobileBottomNav user={user} unread={unread} />
     </>
   );
 }

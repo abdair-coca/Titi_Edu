@@ -23,13 +23,23 @@ export function toNumber(val) {
   return Number(val);
 }
 
+/**
+ * Modelo de datos NeoSocial — todos los nombres en español.
+ * Nodos: Usuario, Post, Hashtag, Comentario, Notificacion, Sonido, Ubicacion
+ * Relaciones: SIGUIO, PUBLICO, LE_GUSTO, ESCRIBIO, EN, RESPONDE_A,
+ *             RECIBIO, SOBRE, USA_SONIDO, TIENE_HASHTAG, VIVE_EN, ETIQUETADO_EN
+ */
 export async function initConstraints() {
   const constraints = [
-    'CREATE CONSTRAINT user_id IF NOT EXISTS FOR (u:User) REQUIRE u.id IS UNIQUE',
-    'CREATE CONSTRAINT user_username IF NOT EXISTS FOR (u:User) REQUIRE u.username IS UNIQUE',
-    'CREATE CONSTRAINT user_email IF NOT EXISTS FOR (u:User) REQUIRE u.email IS UNIQUE',
+    'CREATE CONSTRAINT usuario_id IF NOT EXISTS FOR (u:Usuario) REQUIRE u.id IS UNIQUE',
+    'CREATE CONSTRAINT usuario_username IF NOT EXISTS FOR (u:Usuario) REQUIRE u.username IS UNIQUE',
+    'CREATE CONSTRAINT usuario_email IF NOT EXISTS FOR (u:Usuario) REQUIRE u.email IS UNIQUE',
     'CREATE CONSTRAINT post_id IF NOT EXISTS FOR (p:Post) REQUIRE p.id IS UNIQUE',
     'CREATE CONSTRAINT hashtag_name IF NOT EXISTS FOR (h:Hashtag) REQUIRE h.name IS UNIQUE',
+    'CREATE CONSTRAINT comentario_id IF NOT EXISTS FOR (c:Comentario) REQUIRE c.id IS UNIQUE',
+    'CREATE CONSTRAINT notificacion_id IF NOT EXISTS FOR (n:Notificacion) REQUIRE n.id IS UNIQUE',
+    'CREATE CONSTRAINT sonido_id IF NOT EXISTS FOR (s:Sonido) REQUIRE s.id IS UNIQUE',
+    'CREATE CONSTRAINT ubicacion_id IF NOT EXISTS FOR (u:Ubicacion) REQUIRE u.id IS UNIQUE',
   ];
   for (const c of constraints) await runQuery(c);
 }

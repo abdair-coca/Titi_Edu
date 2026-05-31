@@ -10,6 +10,7 @@ export default function Profile() {
   const { isAuthenticated } = useAuth();
 
   const [profile, setProfile] = useState(null);
+  const [location, setLocation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [following, setFollowing] = useState(false);
@@ -53,8 +54,9 @@ export default function Profile() {
     try {
       const { data } = await client.get(`/api/users/${username}`);
       if (data?.success) {
-        const { user, stats, isFollowing, isSelf } = data.data;
+        const { user, stats, isFollowing, isSelf, location } = data.data;
         setProfile({ user, stats });
+        setLocation(location || null);
         setFollowing(Boolean(isFollowing));
         setFollowerCount(stats?.followerCount ?? 0);
         setIsSelf(Boolean(isSelf));
@@ -180,6 +182,16 @@ export default function Profile() {
               <p className="text-white/90 whitespace-pre-wrap mb-2">{user.bio}</p>
             ) : (
               <p className="text-neo-muted italic mb-2">Sin biografía.</p>
+            )}
+
+            {location && (
+              <p className="text-sm text-neo-muted flex items-center gap-1.5 justify-center sm:justify-start mb-1">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-neo-accent" aria-hidden="true">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span>{location.city}, {location.country}</span>
+              </p>
             )}
 
             {user.createdAt && (

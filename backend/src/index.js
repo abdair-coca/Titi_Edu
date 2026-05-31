@@ -10,6 +10,10 @@ import authRoutes from './routes/auth.js';
 import usersRoutes from './routes/users.js';
 import postsRoutes from './routes/posts.js';
 import searchRoutes from './routes/search.js';
+import commentsRoutes from './routes/comments.js';
+import notificationsRoutes from './routes/notifications.js';
+import soundsRoutes from './routes/sounds.js';
+import locationsRoutes from './routes/locations.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -54,6 +58,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/posts', postsRoutes);
 app.use('/api/search', searchRoutes);
+app.use('/api/comments', commentsRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/sounds', soundsRoutes);
+app.use('/api/locations', locationsRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Ruta no encontrada' });

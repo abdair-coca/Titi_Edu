@@ -14,20 +14,20 @@ router.get('/', async (req, res) => {
 
     const [userRecords, postRecords, hashtagRecords] = await Promise.all([
       runQuery(
-        `MATCH (u:User)
+        `MATCH (u:Usuario)
          WHERE toLower(u.username) CONTAINS toLower($q) OR toLower(u.bio) CONTAINS toLower($q)
          RETURN u LIMIT 10`,
         { q: cleanQ }
       ),
       runQuery(
-        `MATCH (u:User)-[:PUBLISHED]->(p:Post)
+        `MATCH (u:Usuario)-[:PUBLICO]->(p:Post)
          WHERE toLower(p.content) CONTAINS toLower($q)
          RETURN p, u.username as author, u.avatarUrl as authorAvatar
          ORDER BY p.createdAt DESC LIMIT 10`,
         { q: cleanQ }
       ),
       runQuery(
-        `MATCH (h:Hashtag)<-[:HAS_HASHTAG]-(p:Post)
+        `MATCH (h:Hashtag)<-[:TIENE_HASHTAG]-(p:Post)
          WHERE toLower(h.name) CONTAINS toLower($q)
          RETURN h.name as name, count(p) as postCount
          ORDER BY postCount DESC LIMIT 10`,
@@ -37,12 +37,7 @@ router.get('/', async (req, res) => {
 
     const users = userRecords.map(r => {
       const p = r.get('u').properties;
-      return {
-        id: p.id,
-        username: p.username,
-        bio: p.bio,
-        avatarUrl: p.avatarUrl,
-      };
+      return { id: p.id, username: p.username, bio: p.bio, avatarUrl: p.avatarUrl };
     });
 
     const posts = postRecords.map(r => {

@@ -21,6 +21,39 @@ const HeartIcon = ({ filled, className }) => (
   </svg>
 );
 
+const MusicIcon = ({ className }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M9 18V5l12-2v13" />
+    <circle cx="6" cy="18" r="3" />
+    <circle cx="18" cy="16" r="3" />
+  </svg>
+);
+
+const PinIcon = ({ className }) => (
+  <svg
+    className={className}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
 const CommentIcon = ({ className }) => (
   <svg
     className={className}
@@ -148,6 +181,27 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
       {post.content && (
         <div className="px-5 pt-4 text-white/95">
           <ContentWithHashtags text={post.content} />
+        </div>
+      )}
+
+      {/* Sonido + Ubicación */}
+      {(post.sound || post.location) && (
+        <div className="px-5 pt-3 flex flex-wrap gap-3 text-xs text-neo-muted">
+          {post.sound && (
+            <span className="inline-flex items-center gap-1.5 max-w-full">
+              <MusicIcon className="w-3.5 h-3.5 text-neo-accent shrink-0" />
+              <span className="truncate">
+                <span className="text-white/90 font-medium">{post.sound.name}</span>
+                {post.sound.artist && <span> — {post.sound.artist}</span>}
+              </span>
+            </span>
+          )}
+          {post.location && (
+            <span className="inline-flex items-center gap-1.5">
+              <PinIcon className="w-3.5 h-3.5 text-neo-accent shrink-0" />
+              <span>{post.location.city}, {post.location.country}</span>
+            </span>
+          )}
         </div>
       )}
 

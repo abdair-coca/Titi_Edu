@@ -37,7 +37,7 @@ router.post('/register', async (req, res) => {
     }
 
     const existing = await runQuery(
-      'MATCH (u:User) WHERE u.username = $username OR u.email = $email RETURN u LIMIT 1',
+      'MATCH (u:Usuario) WHERE u.username = $username OR u.email = $email RETURN u LIMIT 1',
       { username, email }
     );
     if (existing.length > 0) {
@@ -49,7 +49,7 @@ router.post('/register', async (req, res) => {
     const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(username)}`;
 
     const records = await runQuery(
-      `CREATE (u:User {
+      `CREATE (u:Usuario {
          id: $id, username: $username, email: $email, password: $password,
          bio: '', avatarUrl: $avatarUrl, createdAt: datetime()
        }) RETURN u`,
@@ -73,7 +73,7 @@ router.post('/login', async (req, res) => {
     }
 
     const records = await runQuery(
-      'MATCH (u:User {email: $email}) RETURN u LIMIT 1',
+      'MATCH (u:Usuario {email: $email}) RETURN u LIMIT 1',
       { email }
     );
     if (records.length === 0) {

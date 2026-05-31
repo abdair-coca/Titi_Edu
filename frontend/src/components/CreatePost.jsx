@@ -29,6 +29,27 @@ export default function CreatePost({ onCreated }) {
   const [error, setError] = useState(null);
   const fileInputRef = useRef(null);
 
+  // Catálogos del backend para sonido y ubicación
+  const [sounds, setSounds] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [soundId, setSoundId] = useState('');
+  const [locationId, setLocationId] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      client.get('/api/sounds').catch(() => ({ data: null })),
+      client.get('/api/locations').catch(() => ({ data: null })),
+    ]).then(([s, l]) => {
+      if (cancelled) return;
+      if (s?.data?.success) setSounds(s.data.data.sounds || []);
+      if (l?.data?.success) setLocations(l.data.data.locations || []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Limpia el object URL del preview cuando cambia o al desmontar
   useEffect(() => {
     return () => {
@@ -77,11 +98,15 @@ export default function CreatePost({ onCreated }) {
       const fd = new FormData();
       fd.append('content', value);
       if (file) fd.append('image', file);
+      if (soundId) fd.append('soundId', soundId);
+      if (locationId) fd.append('locationId', locationId);
       // axios pone automáticamente Content-Type: multipart/form-data con el boundary
       const { data } = await client.post('/api/posts', fd);
       if (data?.success) {
         setContent('');
         clearFile();
+        setSoundId('');
+        setLocationId('');
         onCreated?.(data.data);
       } else {
         setError(data?.message || 'Error al publicar');
@@ -140,6 +165,44 @@ export default function CreatePost({ onCreated }) {
               >
                 ×
               </button>
+            </div>
+          )}
+
+          {/* Sonido + Ubicación (opcionales) */}
+          {(sounds.length > 0 || locations.length > 0) && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3">
+              {sounds.length > 0 && (
+                <select
+                  value={soundId}
+                  onChange={(e) => setSoundId(e.target.value)}
+                  disabled={submitting}
+                  aria-label="Elegir sonido"
+                  className="neo-input text-sm"
+                >
+                  <option value="">🎵 Sin sonido</option>
+                  {sounds.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      🎵 {s.name} — {s.artist}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {locations.length > 0 && (
+                <select
+                  value={locationId}
+                  onChange={(e) => setLocationId(e.target.value)}
+                  disabled={submitting}
+                  aria-label="Elegir ubicación"
+                  className="neo-input text-sm"
+                >
+                  <option value="">📍 Sin ubicación</option>
+                  {locations.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      📍 {l.city}, {l.country}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
 
