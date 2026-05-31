@@ -17,8 +17,29 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const app = express();
 
+// ---- CORS ----
+// Orígenes permitidos: localhost (dev) + lo que venga en FRONTEND_URL.
+// FRONTEND_URL admite múltiples URLs separadas por coma — útil para
+// combinar el dominio de producción con previews de Vercel.
+//   FRONTEND_URL=https://neosocial.vercel.app
+//   FRONTEND_URL=https://neosocial.vercel.app,https://neosocial-git-dev.vercel.app
+const LOCAL_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+const extraOrigins = (process.env.FRONTEND_URL || '')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean);
+const allowedOrigins = [...new Set([...LOCAL_ORIGINS, ...extraOrigins])];
+
+console.log('CORS allowed origins:', allowedOrigins);
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'],
+  origin(origin, cb) {
+    // Permite herramientas sin Origin header (curl, Thunder Client, health checks)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.includes(origin)) return cb(null, true);
+    console.warn(`CORS rechazado para origin: ${origin}`);
+    return cb(new Error(`Origin ${origin} no permitido por CORS`));
+  },
   credentials: true,
 }));
 app.use(express.json({ limit: '2mb' }));
