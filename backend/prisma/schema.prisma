@@ -1,0 +1,224 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ESTUDIANTE
+  PROFESOR
+  ADMIN
+}
+
+enum TipoPregunta {
+  OPCION_MULTIPLE
+  VERDADERO_FALSO
+  RESPUESTA_CORTA
+}
+
+model Usuario {
+  id       String @id @default(uuid())
+  neoId    String @unique
+  username String @unique
+  email    String @unique
+
+  rol             Rol       @default(ESTUDIANTE)
+  verificado      Boolean   @default(false)
+  racha           Int       @default(0)
+  ultimaActividad DateTime?
+  createdAt       DateTime  @default(now())
+
+  cursosCreados      Curso[]         @relation("CursosCreados")
+  cursosComoProfesor CursoProfesor[]
+
+  inscripciones Inscripcion[]
+  progresos     Progreso[]
+  intentos      Intento[]
+  logros        LogroUsuario[]
+  certificados  Certificado[]
+}
+
+model Categoria {
+  id     String  @id @default(uuid())
+  nombre String  @unique
+  icono  String
+  cursos Curso[]
+}
+
+model Curso {
+  id          String   @id @default(uuid())
+  titulo      String
+  descripcion String
+  portadaUrl  String?
+  nivel       String
+  publicado   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  categoriaId String
+  categoria   Categoria @relation(fields: [categoriaId], references: [id])
+
+  creadorId String
+  creador   Usuario @relation("CursosCreados", fields: [creadorId], references: [id])
+
+  profesores    CursoProfesor[]
+  modulos       Modulo[]
+  inscripciones Inscripcion[]
+  certificados  Certificado[]
+}
+
+model CursoProfesor {
+  cursoId    String
+  profesorId String
+  curso      Curso   @relation(fields: [cursoId], references: [id])
+  profesor   Usuario @relation(fields: [profesorId], references: [id])
+
+  @@id([cursoId, profesorId])
+}
+
+model Modulo {
+  id          String      @id @default(uuid())
+  titulo      String
+  descripcion String?
+  orden       Int
+  cursoId     String
+  curso       Curso       @relation(fields: [cursoId], references: [id])
+  lecciones   Leccion[]
+  evaluacion  Evaluacion?
+}
+
+model Leccion {
+  id          String              @id @default(uuid())
+  titulo      String
+  contenido   String // texto/descripción
+  videoUrl    String? // YouTube embed URL
+  orden       Int
+  moduloId    String
+  modulo      Modulo              @relation(fields: [moduloId], references: [id])
+  materiales  Material[]
+  progresos   Progreso[]
+  comentarios ComentarioLeccion[]
+}
+
+model Material {
+  id        String  @id @default(uuid())
+  nombre    String
+  url       String
+  tipo      String // 'pdf' | 'word' | 'imagen' | 'codigo' | 'otro'
+  leccionId String
+  leccion   Leccion @relation(fields: [leccionId], references: [id])
+}
+
+model Evaluacion {
+  id          String     @id @default(uuid())
+  titulo      String
+  moduloId    String?    @unique
+  modulo      Modulo?    @relation(fields: [moduloId], references: [id])
+  cursoId     String? // null si es de módulo, presente si es final
+  esFinal     Boolean    @default(false)
+  intentosMax Int        @default(3)
+  notaMinima  Float      @default(70)
+  preguntas   Pregunta[]
+  intentos    Intento[]
+}
+
+model Pregunta {
+  id           String       @id @default(uuid())
+  texto        String
+  tipo         TipoPregunta
+  orden        Int
+  evaluacionId String
+  evaluacion   Evaluacion   @relation(fields: [evaluacionId], references: [id])
+  opciones     Opcion[]
+}
+
+model Opcion {
+  id         String   @id @default(uuid())
+  texto      String
+  esCorrecta Boolean  @default(false)
+  preguntaId String
+  pregunta   Pregunta @relation(fields: [preguntaId], references: [id])
+}
+
+model Inscripcion {
+  id               String    @id @default(uuid())
+  usuarioId        String
+  cursoId          String
+  fechaInscripcion DateTime  @default(now())
+  completado       Boolean   @default(false)
+  fechaCompletado  DateTime?
+  usuario          Usuario   @relation(fields: [usuarioId], references: [id])
+  curso            Curso     @relation(fields: [cursoId], references: [id])
+
+  @@unique([usuarioId, cursoId])
+}
+
+model Progreso {
+  id              String    @id @default(uuid())
+  usuarioId       String
+  leccionId       String
+  completada      Boolean   @default(false)
+  fechaCompletado DateTime?
+  usuario         Usuario   @relation(fields: [usuarioId], references: [id])
+  leccion         Leccion   @relation(fields: [leccionId], references: [id])
+
+  @@unique([usuarioId, leccionId])
+}
+
+model Intento {
+  id           String     @id @default(uuid())
+  usuarioId    String
+  evaluacionId String
+  numero       Int // 1, 2 o 3
+  nota         Float
+  aprobado     Boolean
+  fechaIntento DateTime   @default(now())
+  usuario      Usuario    @relation(fields: [usuarioId], references: [id])
+  evaluacion   Evaluacion @relation(fields: [evaluacionId], references: [id])
+}
+
+model ComentarioLeccion {
+  id        String   @id @default(uuid())
+  texto     String
+  usuarioId String
+  leccionId String
+  createdAt DateTime @default(now())
+  leccion   Leccion  @relation(fields: [leccionId], references: [id])
+}
+
+model Logro {
+  id          String         @id @default(uuid())
+  nombre      String         @unique
+  descripcion String
+  icono       String // emoji o URL
+  tipo        String // 'curso' | 'racha' | 'social' | 'evaluacion'
+  condicion   String // descripción de cómo se desbloquea
+  usuarios    LogroUsuario[]
+}
+
+model LogroUsuario {
+  usuarioId     String
+  logroId       String
+  fechaObtenido DateTime @default(now())
+  usuario       Usuario  @relation(fields: [usuarioId], references: [id])
+  logro         Logro    @relation(fields: [logroId], references: [id])
+
+  @@id([usuarioId, logroId])
+}
+
+model Certificado {
+  id           String   @id @default(uuid())
+  usuarioId    String
+  cursoId      String
+  codigoVerif  String   @unique @default(uuid())
+  fechaEmision DateTime @default(now())
+  usuario      Usuario  @relation(fields: [usuarioId], references: [id])
+  curso        Curso    @relation(fields: [cursoId], references: [id])
+}

@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { randomUUID } from 'crypto';
 import { runQuery } from '../db.js';
+import prisma from '../prisma.js';
 
 const router = Router();
 
@@ -55,6 +56,19 @@ router.post('/register', async (req, res) => {
        }) RETURN u`,
       { id, username, email, password: hash, avatarUrl }
     );
+
+    // Espejo en PostgreSQL — no debe romper el registro si falla.
+    try {
+      await prisma.usuario.create({
+        data: {
+          neoId: id,
+          username,
+          email,
+        },
+      });
+    } catch (pgErr) {
+      console.error('register: error replicando usuario en PostgreSQL', pgErr);
+    }
 
     const user = publicUser(records[0].get('u'));
     const token = signToken(user);

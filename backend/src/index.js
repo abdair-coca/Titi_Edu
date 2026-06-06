@@ -14,6 +14,7 @@ import commentsRoutes from './routes/comments.js';
 import notificationsRoutes from './routes/notifications.js';
 import soundsRoutes from './routes/sounds.js';
 import locationsRoutes from './routes/locations.js';
+import courseRoutes from './routes/courses.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -62,6 +63,7 @@ app.use('/api/comments', commentsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/sounds', soundsRoutes);
 app.use('/api/locations', locationsRoutes);
+app.use('/api/courses', courseRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Ruta no encontrada' });
