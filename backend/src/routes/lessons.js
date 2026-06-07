@@ -1,0 +1,258 @@
+import { Router } from 'express';
+import prisma from '../prisma.js';
+import { requireAuth } from '../middleware/auth.js';
+
+const router = Router();
+
+// --- Helpers (mismo patrón que routes/courses.js y routes/modules.js) ---
+
+// El JWT actual lleva el id de Neo4j. En Postgres ese id vive en `Usuario.neoId`.
+async function loadCurrentUser(req, res) {
+  if (req.dbUser) return req.dbUser;
+  const usuario = await prisma.usuario.findUnique({
+    where: { neoId: req.user.id },
+  });
+  if (!usuario) {
+    res.status(401).json({ success: false, message: 'Usuario no encontrado' });
+    return null;
+  }
+  req.dbUser = usuario;
+  return usuario;
+}
+
+function requireRole(...roles) {
+  return async (req, res, next) => {
+    try {
+      const usuario = await loadCurrentUser(req, res);
+      if (!usuario) return;
+      if (!roles.includes(usuario.rol)) {
+        return res.status(403).json({
+          success: false,
+          message: 'No tienes permiso para esta acción',
+        });
+      }
+      next();
+    } catch (err) {
+      console.error('requireRole error', err);
+      res.status(500).json({ success: false, message: 'Error verificando permisos' });
+    }
+  };
+}
+
+// ---- POST /api/modules/:moduleId/lessons  — crear lección (PROFESOR) ----
+router.post(
+  '/modules/:moduleId/lessons',
+  requireAuth,
+  requireRole('PROFESOR'),
+  async (req, res) => {
+    try {
+      const { moduleId } = req.params;
+      const { titulo, contenido, videoUrl, orden } = req.body || {};
+
+      if (!titulo || !contenido || orden === undefined || orden === null) {
+        return res.status(400).json({
+          success: false,
+          message: 'titulo, contenido y orden son requeridos',
+        });
+      }
+
+      const ordenNum = Number(orden);
+      if (!Number.isInteger(ordenNum)) {
+        return res.status(400).json({
+          success: false,
+          message: 'orden debe ser un número entero',
+        });
+      }
+
+      const modulo = await prisma.modulo.findUnique({
+        where: { id: moduleId },
+        select: { id: true },
+      });
+      if (!modulo) {
+        return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+      }
+
+      const leccion = await prisma.leccion.create({
+        data: {
+          titulo: String(titulo).trim(),
+          contenido: String(contenido),
+          videoUrl:
+            videoUrl !== undefined && videoUrl !== null && videoUrl !== ''
+              ? String(videoUrl).trim()
+              : null,
+          orden: ordenNum,
+          moduloId: modulo.id,
+        },
+      });
+
+      res.status(201).json({ success: true, data: { leccion } });
+    } catch (err) {
+      console.error('POST /api/modules/:moduleId/lessons error', err);
+      res.status(500).json({ success: false, message: 'Error creando lección' });
+    }
+  },
+);
+
+// ---- PUT /api/lessons/:id  — editar lección (PROFESOR) ----
+router.put('/lessons/:id', requireAuth, requireRole('PROFESOR'), async (req, res) => {
+  try {
+    const { titulo, contenido, videoUrl, orden } = req.body || {};
+
+    const data = {};
+    if (titulo !== undefined) data.titulo = String(titulo).trim();
+    if (contenido !== undefined) data.contenido = String(contenido);
+    if (videoUrl !== undefined) {
+      data.videoUrl =
+        videoUrl === null || videoUrl === '' ? null : String(videoUrl).trim();
+    }
+    if (orden !== undefined) {
+      const ordenNum = Number(orden);
+      if (!Number.isInteger(ordenNum)) {
+        return res.status(400).json({
+          success: false,
+          message: 'orden debe ser un número entero',
+        });
+      }
+      data.orden = ordenNum;
+    }
+
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No hay campos para actualizar',
+      });
+    }
+
+    try {
+      const leccion = await prisma.leccion.update({
+        where: { id: req.params.id },
+        data,
+      });
+      res.json({ success: true, data: { leccion } });
+    } catch (err) {
+      if (err.code === 'P2025') {
+        return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+      }
+      throw err;
+    }
+  } catch (err) {
+    console.error('PUT /api/lessons/:id error', err);
+    res.status(500).json({ success: false, message: 'Error editando lección' });
+  }
+});
+
+// ---- POST /api/lessons/:id/complete  — marcar lección como completada ----
+router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
+  try {
+    const usuario = await loadCurrentUser(req, res);
+    if (!usuario) return;
+
+    // Verifica que la lección exista para evitar progresos huérfanos
+    const leccion = await prisma.leccion.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+    if (!leccion) {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+
+    const progreso = await prisma.progreso.upsert({
+      where: {
+        usuarioId_leccionId: {
+          usuarioId: usuario.id,
+          leccionId: leccion.id,
+        },
+      },
+      update: {
+        completada: true,
+        fechaCompletado: new Date(),
+      },
+      create: {
+        usuarioId: usuario.id,
+        leccionId: leccion.id,
+        completada: true,
+        fechaCompletado: new Date(),
+      },
+    });
+
+    res.json({ success: true, data: { progreso } });
+  } catch (err) {
+    console.error('POST /api/lessons/:id/complete error', err);
+    res.status(500).json({ success: false, message: 'Error marcando lección como completada' });
+  }
+});
+
+// ---- GET /api/lessons/:id/comments  — público ----
+router.get('/lessons/:id/comments', async (req, res) => {
+  try {
+    const comentarios = await prisma.comentarioLeccion.findMany({
+      where: { leccionId: req.params.id },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    // ComentarioLeccion no tiene relación `usuario` definida en el schema,
+    // así que resolvemos los usernames en una segunda query.
+    const usuarioIds = [...new Set(comentarios.map((c) => c.usuarioId))];
+    const usuarios = usuarioIds.length
+      ? await prisma.usuario.findMany({
+          where: { id: { in: usuarioIds } },
+          select: { id: true, username: true },
+        })
+      : [];
+    const usernameById = new Map(usuarios.map((u) => [u.id, u.username]));
+
+    const enriched = comentarios.map((c) => ({
+      ...c,
+      username: usernameById.get(c.usuarioId) || null,
+    }));
+
+    res.json({ success: true, data: { comentarios: enriched } });
+  } catch (err) {
+    console.error('GET /api/lessons/:id/comments error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo comentarios' });
+  }
+});
+
+// ---- POST /api/lessons/:id/comments  — crear comentario ----
+router.post('/lessons/:id/comments', requireAuth, async (req, res) => {
+  try {
+    const usuario = await loadCurrentUser(req, res);
+    if (!usuario) return;
+
+    const texto = (req.body?.texto ?? '').toString().trim();
+    if (!texto) {
+      return res.status(400).json({
+        success: false,
+        message: 'El texto del comentario no puede estar vacío',
+      });
+    }
+
+    const leccion = await prisma.leccion.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+    if (!leccion) {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+
+    const comentario = await prisma.comentarioLeccion.create({
+      data: {
+        texto,
+        usuarioId: usuario.id,
+        leccionId: leccion.id,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      data: {
+        comentario: { ...comentario, username: usuario.username },
+      },
+    });
+  } catch (err) {
+    console.error('POST /api/lessons/:id/comments error', err);
+    res.status(500).json({ success: false, message: 'Error creando comentario' });
+  }
+});
+
+export default router;
