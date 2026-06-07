@@ -15,6 +15,9 @@ import Profile from './pages/Profile.jsx';
 import HashtagFeed from './pages/HashtagFeed.jsx';
 import Notifications from './pages/Notifications.jsx';
 import Navbar from './components/Navbar.jsx';
+import Courses from './pages/Courses.jsx'
+import CourseDetail from './pages/CourseDetail.jsx'
+import MyCourses from './pages/MyCourses.jsx'
 
 // ---- Layouts ----
 
@@ -102,7 +105,12 @@ export default function App() {
         <Route path="/profile/:username" element={<Profile />} />
         <Route path="/hashtag/:tag" element={<HashtagFeed />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/courses/:id" element={<CourseDetail />} />
+        <Route path="/my-courses" element={<MyCourses />} />
       </Route>
+
+      
+      <Route path="/courses" element={<Courses />} />
 
       {/* 404 */}
       <Route path="*" element={<Placeholder title="404 — Ruta no encontrada" />} />
