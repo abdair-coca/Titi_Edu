@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client.js';
-import TitiMascot from '../components/TitiMascot.jsx';
 
 const NIVELES = [
   { value: 'all', label: 'Todos los niveles' },
@@ -10,30 +9,25 @@ const NIVELES = [
   { value: 'avanzado', label: 'Avanzado' },
 ];
 
-// Estilos del badge de nivel — clave en minúsculas
-const NIVEL_BADGE = {
-  principiante: 'bg-titi-green/20 text-titi-green',
-  intermedio: 'bg-titi-blue/20 text-titi-blue',
-  avanzado: 'bg-titi-red/20 text-titi-red',
-};
-
 export default function Courses() {
   const navigate = useNavigate();
+
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [nivel, setNivel] = useState('all');
+
   const [cursos, setCursos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
 
-  // Debounce del search → evita un fetch por tecla
+  // Debounce del search input
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
     return () => clearTimeout(id);
   }, [query]);
 
-  // Fetch del catálogo cuando cambian los filtros
+  // Fetch del catálogo
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -47,17 +41,12 @@ export default function Courses() {
       .get('/api/courses', { params })
       .then(({ data }) => {
         if (cancelled) return;
-        if (data?.success) {
-          setCursos(data.data?.cursos || []);
-        } else {
-          setError(data?.message || 'No se pudo cargar el catálogo');
-        }
+        if (data?.success) setCursos(data.data?.cursos || []);
+        else setError(data?.message || 'No se pudo cargar el catálogo');
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(
-          err.response?.data?.message || err.message || 'Error de red',
-        );
+        setError(err.response?.data?.message || err.message || 'Error de red');
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -68,27 +57,31 @@ export default function Courses() {
     };
   }, [debouncedQuery, nivel, refreshTick]);
 
+  const hasFilters = debouncedQuery || nivel !== 'all';
+
   return (
-    <div>
-      <header className="mb-6">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-titi-text mb-1">
-          Cursos
+    <div className="bg-titi-cream min-h-full">
+      {/* Header */}
+      <header className="mb-8">
+        <h1 className="text-3xl font-extrabold text-titi-dark mb-1">
+          Catálogo de Cursos
         </h1>
-        <p className="text-sm text-titi-muted font-semibold">
+        <p className="text-sm font-medium text-gray-500">
           Aprendé algo nuevo con la comunidad Titi
         </p>
       </header>
 
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6">
+      <div className="flex flex-col sm:flex-row gap-3 mb-8">
+        {/* Search */}
         <div className="relative flex-1">
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscá un curso por título…"
-            className="titi-input pl-12"
             aria-label="Buscar cursos"
+            className="w-full bg-titi-cream border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-titi-dark placeholder:text-gray-300 focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
           />
           <svg
             viewBox="0 0 24 24"
@@ -97,18 +90,20 @@ export default function Courses() {
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-titi-muted pointer-events-none"
+            className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            aria-hidden="true"
           >
             <circle cx="11" cy="11" r="7" />
             <line x1="21" y1="21" x2="16.5" y2="16.5" />
           </svg>
         </div>
 
+        {/* Nivel select */}
         <select
           value={nivel}
           onChange={(e) => setNivel(e.target.value)}
           aria-label="Filtrar por nivel"
-          className="titi-input sm:w-56 cursor-pointer"
+          className="sm:w-56 bg-titi-cream border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-titi-dark cursor-pointer focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
         >
           {NIVELES.map((n) => (
             <option key={n.value} value={n.value}>
@@ -118,69 +113,90 @@ export default function Courses() {
         </select>
       </div>
 
-      {/* Contenido */}
+      {/* Contenido principal */}
       {loading ? (
-        <CardsSkeleton />
+        <SkeletonGrid />
       ) : error ? (
-        <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
-          <p className="text-titi-red font-bold mb-2">Error</p>
-          <p className="text-sm text-titi-muted mb-4">{error}</p>
-          <button
-            type="button"
-            onClick={() => setRefreshTick((t) => t + 1)}
-            className="titi-btn-primary"
-          >
-            Reintentar
-          </button>
-        </div>
+        <ErrorState
+          message={error}
+          onRetry={() => setRefreshTick((t) => t + 1)}
+        />
       ) : cursos.length === 0 ? (
-        <div className="titi-card p-10 text-center">
-          <TitiMascot
-            mood="sad"
-            message="¡Aún no hay cursos disponibles! 🐒"
-            size="lg"
-          />
-          {(debouncedQuery || nivel !== 'all') && (
-            <p className="text-titi-muted text-sm mt-4">
-              Probá quitando los filtros para ver el catálogo completo.
-            </p>
-          )}
-        </div>
+        <EmptyState
+          hasFilters={hasFilters}
+          onClear={() => {
+            setQuery('');
+            setDebouncedQuery('');
+            setNivel('all');
+          }}
+        />
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-          {cursos.map((curso) => (
-            <CourseCard
-              key={curso.id}
-              curso={curso}
-              onOpen={() => navigate(`/courses/${curso.id}`)}
-            />
-          ))}
-        </div>
+        <>
+          {/* Contador de resultados */}
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm font-semibold text-gray-500">
+              {cursos.length === 1
+                ? '1 curso encontrado'
+                : `${cursos.length} cursos encontrados`}
+              {hasFilters && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setDebouncedQuery('');
+                    setNivel('all');
+                  }}
+                  className="ml-2 text-titi-dark font-bold hover:text-titi-yellow-dark transition-colors"
+                >
+                  · Limpiar filtros
+                </button>
+              )}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {cursos.map((curso) => (
+              <CourseCard
+                key={curso.id}
+                curso={curso}
+                onOpen={() => navigate(`/courses/${curso.id}`)}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
 }
 
-// ---- Sub-componentes (mismo archivo, según pedido) ----
-
+// ---- CourseCard (sección 5.2 del DESIGN.md) ----
 function CourseCard({ curso, onOpen }) {
-  const nivelKey = (curso.nivel || '').toLowerCase();
-  const badgeClass =
-    NIVEL_BADGE[nivelKey] || 'bg-titi-yellow/30 text-titi-dark';
-  const inscritos = curso._count?.inscripciones ?? 0;
+  const cantidadLecciones =
+    curso._count?.lecciones ??
+    curso._count?.modulos ??
+    0;
+  const lessonsLabel =
+    cantidadLecciones === 1 ? '1 lección' : `${cantidadLecciones} lecciones`;
 
   return (
-    <button
-      type="button"
+    <div
       onClick={onOpen}
-      className="titi-card text-left p-0 overflow-hidden flex flex-col hover:-translate-y-0.5 hover:shadow-titi-lg transition-all focus:outline-none focus:ring-2 focus:ring-titi-yellow"
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-1 transition-all duration-200 overflow-hidden cursor-pointer flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
     >
-      {/* Portada */}
-      <div className="aspect-[16/9] w-full bg-titi-yellow/20 border-b border-titi-border overflow-hidden">
+      {/* Imagen de portada */}
+      <div className="relative h-44 bg-gradient-to-br from-titi-yellow-light via-titi-yellow-light to-titi-yellow/40 overflow-hidden">
         {curso.portadaUrl ? (
           <img
             src={curso.portadaUrl}
-            alt=""
+            alt={curso.titulo}
             className="w-full h-full object-cover"
             loading="lazy"
             onError={(e) => {
@@ -188,68 +204,155 @@ function CourseCard({ curso, onOpen }) {
             }}
           />
         ) : (
-          <div className="w-full h-full grid place-items-center text-3xl">
-            {curso.categoria?.icono || '📚'}
-          </div>
+          <>
+            {/* Decoraciones de fondo — círculos suaves */}
+            <span
+              aria-hidden="true"
+              className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/40 blur-xl"
+            />
+            <span
+              aria-hidden="true"
+              className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-titi-yellow/30 blur-xl"
+            />
+            <div className="relative w-full h-full grid place-items-center text-6xl select-none drop-shadow-sm">
+              {curso.categoria?.icono || '📚'}
+            </div>
+          </>
         )}
+
+        {/* Badge de nivel */}
+        <span className="absolute top-3 left-3 bg-white text-titi-dark text-xs font-semibold capitalize px-2.5 py-1 rounded-full shadow-sm">
+          {curso.nivel || 'sin nivel'}
+        </span>
       </div>
 
       {/* Contenido */}
       <div className="p-4 flex flex-col gap-2 flex-1">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span
-            className={`text-[10px] sm:text-xs font-extrabold uppercase tracking-wide px-2.5 py-0.5 rounded-full ${badgeClass}`}
-          >
-            {curso.nivel || 'sin nivel'}
+        {/* Categoría */}
+        {curso.categoria?.nombre && (
+          <span className="text-xs font-semibold text-titi-streak uppercase tracking-wide">
+            {curso.categoria.nombre}
           </span>
-          {curso.categoria?.nombre && (
-            <span className="text-[10px] sm:text-xs font-bold text-titi-muted">
-              · {curso.categoria.nombre}
-            </span>
-          )}
-        </div>
+        )}
 
-        <h3 className="text-base sm:text-lg font-extrabold text-titi-text leading-snug line-clamp-2">
+        {/* Título */}
+        <h3 className="text-base font-bold text-titi-dark leading-snug line-clamp-2">
           {curso.titulo}
         </h3>
 
-        <p className="text-xs sm:text-sm text-titi-muted line-clamp-3 leading-relaxed">
-          {curso.descripcion}
-        </p>
-
-        <div className="mt-auto pt-2 flex items-center justify-between text-xs font-bold text-titi-muted">
-          {curso.creador?.username ? (
-            <span className="truncate">@{curso.creador.username}</span>
-          ) : (
-            <span />
+        {/* Meta info */}
+        <p className="text-sm text-gray-500 font-medium">
+          {lessonsLabel}
+          {curso.creador?.username && (
+            <> · Por {curso.creador.username}</>
           )}
-          <span className="shrink-0">
-            {inscritos} {inscritos === 1 ? 'inscrito' : 'inscritos'}
-          </span>
-        </div>
+        </p>
       </div>
-    </button>
+    </div>
   );
 }
 
-function CardsSkeleton() {
+// ---- Skeleton (sección 8 del DESIGN.md) ----
+function SkeletonGrid() {
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-      {Array.from({ length: 6 }).map((_, i) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {Array.from({ length: 8 }).map((_, i) => (
         <div
           key={i}
-          className="titi-card overflow-hidden flex flex-col animate-pulse"
+          className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
         >
-          <div className="aspect-[16/9] w-full bg-titi-border/60" />
+          <div className="h-44 bg-gray-100" />
           <div className="p-4 flex flex-col gap-3">
-            <div className="h-3 w-20 rounded-full bg-titi-border/80" />
-            <div className="h-4 w-3/4 rounded bg-titi-border/80" />
-            <div className="h-3 w-full rounded bg-titi-border/60" />
-            <div className="h-3 w-5/6 rounded bg-titi-border/60" />
-            <div className="h-3 w-1/3 rounded bg-titi-border/60 mt-2" />
+            <div className="h-3 bg-gray-100 rounded w-1/3" />
+            <div className="h-4 bg-gray-100 rounded w-3/4" />
+            <div className="h-3 bg-gray-100 rounded w-1/2" />
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ---- Empty state (sección 8 del DESIGN.md) ----
+function EmptyState({ hasFilters, onClear }) {
+  const navigate = useNavigate();
+
+  if (hasFilters) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+        <img
+          src="/Titi.png"
+          alt="Titi"
+          className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
+          draggable={false}
+        />
+        <h3 className="text-xl font-bold text-titi-dark mb-2">
+          No encontré cursos con esos filtros
+        </h3>
+        <p className="text-sm text-gray-400 mb-6 max-w-xs">
+          Probá ajustar la búsqueda o quitá los filtros para ver el catálogo
+          completo.
+        </p>
+        <button
+          type="button"
+          onClick={onClear}
+          className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Limpiar filtros
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+      <img
+        src="/Titi.png"
+        alt="Titi"
+        className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
+        draggable={false}
+      />
+      <h3 className="text-xl font-bold text-titi-dark mb-2">
+        ¡Aún no hay cursos disponibles!
+      </h3>
+      <p className="text-sm text-gray-400 mb-6 max-w-xs">
+        Pronto vas a poder explorar contenido creado por la comunidad Titi.
+      </p>
+      <button
+        type="button"
+        onClick={() => navigate('/feed')}
+        className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        Volver al feed
+      </button>
+    </div>
+  );
+}
+
+// ---- Error state (sección 8 del DESIGN.md) ----
+function ErrorState({ message, onRetry }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+        <span className="text-red-500 text-lg" aria-hidden="true">
+          ⚠️
+        </span>
+        <div className="flex-1">
+          <p className="text-sm font-semibold text-red-700">
+            No pudimos cargar el catálogo
+          </p>
+          <p className="text-xs text-red-500 mt-0.5">{message}</p>
+        </div>
+      </div>
+      <div>
+        <button
+          type="button"
+          onClick={onRetry}
+          className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          Reintentar
+        </button>
+      </div>
     </div>
   );
 }

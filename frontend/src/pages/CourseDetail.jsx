@@ -3,13 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 
-const NIVEL_BADGE = {
-  principiante: 'bg-titi-green/20 text-titi-green',
-  intermedio: 'bg-titi-blue/20 text-titi-blue',
-  avanzado: 'bg-titi-red/20 text-titi-red',
-};
-
-function formatDate(value) {
+function formatDateEs(value) {
   if (!value) return '';
   try {
     return new Date(value).toLocaleDateString('es-ES', {
@@ -22,7 +16,7 @@ function formatDate(value) {
   }
 }
 
-export default function   CourseDetail() {
+export default function CourseDetail() {
   const { id: courseId } = useParams();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuth();
@@ -40,7 +34,7 @@ export default function   CourseDetail() {
 
   const isStudent = isAuthenticated && user?.rol === 'ESTUDIANTE';
 
-  // --- Fetch del detalle del curso ---
+  // --- Fetch detalle del curso ---
   useEffect(() => {
     if (!courseId) return;
     let cancelled = false;
@@ -73,7 +67,7 @@ export default function   CourseDetail() {
     };
   }, [courseId]);
 
-  // --- Check si ya está inscrito (solo estudiantes autenticados) ---
+  // --- Check enrollment ---
   useEffect(() => {
     if (!courseId || !isStudent) {
       setEnrollChecked(true);
@@ -92,8 +86,7 @@ export default function   CourseDetail() {
         }
       })
       .catch(() => {
-        // Silencioso: si falla, asumimos no inscrito y dejamos que el
-        // backend devuelva 409 al inscribirse de nuevo.
+        // Silencioso: si falla, asumimos no inscrito.
       })
       .finally(() => {
         if (!cancelled) setEnrollChecked(true);
@@ -104,7 +97,6 @@ export default function   CourseDetail() {
     };
   }, [courseId, isStudent]);
 
-  // --- Acciones ---
   const handleEnroll = async () => {
     setEnrolling(true);
     setEnrollError(null);
@@ -112,16 +104,15 @@ export default function   CourseDetail() {
       const { data } = await client.post(`/api/courses/${courseId}/enroll`);
       if (data?.success) {
         setEnrolled(true);
-        setSuccessMsg('¡Te inscribiste con éxito! Redirigiendo al curso…');
-        setTimeout(() => navigate(`/courses/${courseId}/learn`), 900);
+        setSuccessMsg('¡Te inscribiste con éxito! Redirigiendo a Mis cursos…');
+        setTimeout(() => navigate('/my-courses'), 1100);
       } else {
         setEnrollError(data?.message || 'No se pudo completar la inscripción');
       }
     } catch (err) {
-      // 409 = ya inscrito → tratarlo como éxito y redirigir
       if (err.response?.status === 409) {
         setEnrolled(true);
-        navigate(`/courses/${courseId}/learn`);
+        navigate('/my-courses');
         return;
       }
       setEnrollError(
@@ -132,125 +123,252 @@ export default function   CourseDetail() {
     }
   };
 
-  // --- Render ---
+  // --- Render: loading ---
   if (loading) {
     return (
-      <div className="space-y-4">
-        <div className="h-8 w-2/3 bg-titi-border/70 rounded animate-pulse" />
-        <div className="h-4 w-1/3 bg-titi-border/60 rounded animate-pulse" />
-        <div className="titi-card p-6 animate-pulse space-y-3">
-          <div className="h-4 w-full bg-titi-border/60 rounded" />
-          <div className="h-4 w-5/6 bg-titi-border/60 rounded" />
-          <div className="h-4 w-2/3 bg-titi-border/60 rounded" />
+      <div className="bg-titi-cream min-h-screen p-8">
+        <LoadingSkeleton />
+      </div>
+    );
+  }
+
+  // --- Render: error ---
+  if (error) {
+    return (
+      <div className="bg-titi-cream min-h-screen p-8">
+        <div className="max-w-2xl">
+          <button
+            type="button"
+            onClick={() => navigate('/courses')}
+            className="text-sm font-semibold text-gray-500 hover:text-titi-dark transition-colors mb-4 inline-flex items-center gap-1"
+          >
+            ← Volver al catálogo
+          </button>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-700">
+                No pudimos cargar el curso
+              </p>
+              <p className="text-xs text-red-500 mt-0.5">{error}</p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
-        <p className="text-titi-red font-bold mb-2">No se pudo cargar el curso</p>
-        <p className="text-sm text-titi-muted mb-4">{error}</p>
-        <button
-          type="button"
-          onClick={() => navigate('/courses')}
-          className="titi-btn-ghost"
-        >
-          ← Volver al catálogo
-        </button>
-      </div>
-    );
-  }
-
   if (!curso) return null;
-
-  const nivelKey = (curso.nivel || '').toLowerCase();
-  const badgeClass =
-    NIVEL_BADGE[nivelKey] || 'bg-titi-yellow/30 text-titi-dark';
-
   return (
-    <div className="space-y-6">
+    <div className="bg-titi-cream min-h-screen p-8">
       {/* Volver */}
       <button
         type="button"
         onClick={() => navigate('/courses')}
-        className="text-sm font-bold text-titi-muted hover:text-titi-text transition-colors inline-flex items-center gap-1"
+        className="text-sm font-semibold text-gray-500 hover:text-titi-dark transition-colors mb-6 inline-flex items-center gap-1"
       >
         ← Volver al catálogo
       </button>
 
-      {/* Hero */}
-      <header className="titi-card p-0 overflow-hidden">
-        {curso.portadaUrl ? (
-          <div className="aspect-[21/9] w-full bg-titi-yellow/20 border-b border-titi-border overflow-hidden">
-            <img
-              src={curso.portadaUrl}
-              alt=""
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-          </div>
-        ) : null}
+      <div className="lg:grid lg:grid-cols-3 gap-8">
+        {/* --- Columna izquierda: contenido --- */}
+        <div className="lg:col-span-2 flex flex-col gap-6">
+          {/* Hero del curso */}
+          <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
+            {/* Portada */}
+            <div className="relative h-56 bg-gradient-to-br from-titi-yellow-light via-titi-yellow-light to-titi-yellow/40 overflow-hidden">
+              {curso.portadaUrl ? (
+                <img
+                  src={curso.portadaUrl}
+                  alt={curso.titulo}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-8 -right-8 w-40 h-40 rounded-full bg-white/40 blur-2xl"
+                  />
+                  <span
+                    aria-hidden="true"
+                    className="absolute -bottom-10 -left-10 w-44 h-44 rounded-full bg-titi-yellow/30 blur-2xl"
+                  />
+                  <div className="relative w-full h-full grid place-items-center text-7xl select-none drop-shadow-sm">
+                    {curso.categoria?.icono || '📚'}
+                  </div>
+                </>
+              )}
+            </div>
 
-        <div className="p-6 sm:p-8 space-y-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span
-              className={`text-xs font-extrabold uppercase tracking-wide px-3 py-1 rounded-full ${badgeClass}`}
-            >
-              {curso.nivel || 'sin nivel'}
-            </span>
-            {curso.categoria?.nombre && (
-              <span className="titi-chip">
-                {curso.categoria.icono ? `${curso.categoria.icono} ` : ''}
-                {curso.categoria.nombre}
-              </span>
-            )}
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-titi-text leading-tight">
-            {curso.titulo}
-          </h1>
-
-          <div className="flex items-center gap-4 flex-wrap text-sm text-titi-muted font-semibold">
-            {curso.creador?.username && (
-              <span>
-                Por{' '}
-                <span className="text-titi-text font-extrabold">
-                  @{curso.creador.username}
+            {/* Encabezado */}
+            <div className="p-6 sm:p-8 flex flex-col gap-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="inline-block bg-titi-yellow-light text-titi-dark text-xs font-semibold capitalize px-3 py-1 rounded-full">
+                  {curso.nivel || 'sin nivel'}
                 </span>
-              </span>
-            )}
-            {curso.createdAt && (
-              <span>Creado el {formatDate(curso.createdAt)}</span>
-            )}
-            {typeof curso._count?.inscripciones === 'number' && (
-              <span>
-                {curso._count.inscripciones}{' '}
-                {curso._count.inscripciones === 1 ? 'inscrito' : 'inscritos'}
-              </span>
-            )}
-          </div>
+                {curso.categoria?.nombre && (
+                  <span className="text-xs font-semibold text-titi-streak uppercase tracking-wide">
+                    {curso.categoria.nombre}
+                  </span>
+                )}
+              </div>
 
-          <p className="text-titi-text text-base leading-relaxed whitespace-pre-line">
-            {curso.descripcion}
-          </p>
+              <h1 className="text-3xl font-extrabold text-titi-dark leading-tight">
+                {curso.titulo}
+              </h1>
 
-          {/* CTA — inscripción / login */}
-          <div className="pt-2">
+              <div className="flex items-center gap-4 flex-wrap text-sm font-medium text-gray-500">
+                {curso.creador?.username && (
+                  <span>
+                    Por{' '}
+                    <span className="text-titi-dark font-bold">
+                      @{curso.creador.username}
+                    </span>
+                  </span>
+                )}
+                {curso.createdAt && (
+                  <span>Creado el {formatDateEs(curso.createdAt)}</span>
+                )}
+                {typeof curso._count?.inscripciones === 'number' && (
+                  <span>
+                    {curso._count.inscripciones}{' '}
+                    {curso._count.inscripciones === 1
+                      ? 'estudiante inscrito'
+                      : 'estudiantes inscritos'}
+                  </span>
+                )}
+              </div>
+
+              <p className="text-base text-titi-dark leading-relaxed whitespace-pre-line">
+                {curso.descripcion}
+              </p>
+            </div>
+          </section>
+
+          {/* Lista de módulos */}
+          <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-6 sm:p-8">
+            <h2 className="text-2xl font-bold text-titi-dark mb-1">
+              Contenido del curso
+            </h2>
+            <p className="text-sm font-medium text-gray-500 mb-5">
+              {curso.modulos?.length
+                ? `${curso.modulos.length} ${curso.modulos.length === 1 ? 'módulo' : 'módulos'}`
+                : 'Aún sin módulos publicados'}
+            </p>
+
+            {!curso.modulos || curso.modulos.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
+                <img
+                  src="/Titi.png"
+                  alt="Titi"
+                  className="w-20 h-20 mb-3 object-contain drop-shadow-sm select-none"
+                  draggable={false}
+                />
+                <h3 className="text-base font-bold text-titi-dark mb-1">
+                  Aún no hay módulos
+                </h3>
+                <p className="text-sm text-gray-400 max-w-xs">
+                  Vuelve pronto, el profe está preparando el contenido.
+                </p>
+              </div>
+            ) : (
+              <ol className="flex flex-col gap-3">
+                {curso.modulos.map((modulo, idx) => {
+                  const numLecciones = modulo.lecciones?.length ?? 0;
+                  return (
+                    <li
+                      key={modulo.id}
+                      className="bg-white rounded-xl border border-gray-100 p-4 flex items-center gap-3 hover:border-titi-yellow-light hover:bg-titi-cream/50 transition-colors"
+                    >
+                      <span className="shrink-0 w-9 h-9 rounded-full bg-titi-yellow-light text-titi-dark grid place-items-center font-extrabold text-sm">
+                        {idx + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-base font-bold text-titi-dark leading-snug">
+                          {modulo.titulo}
+                        </h3>
+                        <p className="text-xs font-medium text-gray-500 mt-0.5">
+                          {numLecciones}{' '}
+                          {numLecciones === 1 ? 'lección' : 'lecciones'}
+                          {modulo.evaluacion ? ' · incluye evaluación' : ''}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </section>
+        </div>
+
+        {/* --- Columna derecha: enrollment card sticky --- */}
+        <aside className="mt-6 lg:mt-0">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-6 sticky top-8 flex flex-col gap-4">
+            <h2 className="text-xl font-bold text-titi-dark">
+              {enrolled ? 'Ya estás inscrito 🎉' : 'Comenzá a aprender'}
+            </h2>
+
+            <p className="text-sm font-medium text-gray-500">
+              {enrolled
+                ? 'Continuá tu progreso desde Mis cursos.'
+                : 'Inscribite gratis y avanzá a tu ritmo con la comunidad Titi.'}
+            </p>
+
+            {/* Stats rápidos */}
+            <div className="flex flex-col gap-2 py-2 border-y border-gray-100">
+              <Stat
+                icon="📚"
+                label={
+                  curso.modulos?.length
+                    ? `${curso.modulos.length} ${curso.modulos.length === 1 ? 'módulo' : 'módulos'}`
+                    : 'Módulos por agregar'
+                }
+              />
+              <Stat
+                icon="🎓"
+                label={
+                  curso.nivel
+                    ? `Nivel ${curso.nivel}`
+                    : 'Nivel sin definir'
+                }
+              />
+              {typeof curso._count?.inscripciones === 'number' && (
+                <Stat
+                  icon="👥"
+                  label={`${curso._count.inscripciones} ${
+                    curso._count.inscripciones === 1
+                      ? 'estudiante'
+                      : 'estudiantes'
+                  }`}
+                />
+              )}
+            </div>
+
+            {/* Mensajes de estado */}
             {successMsg && (
-              <div className="mb-3 px-4 py-2 rounded-xl bg-titi-green/20 text-titi-green font-bold text-sm">
-                {successMsg}
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
+                <span className="text-green-500 text-lg" aria-hidden="true">✅</span>
+                <p className="text-sm font-semibold text-green-700">
+                  {successMsg}
+                </p>
               </div>
             )}
             {enrollError && (
-              <div className="mb-3 px-4 py-2 rounded-xl bg-titi-red/20 text-titi-red font-bold text-sm">
-                {enrollError}
+              <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+                <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-red-700">
+                    No pudimos inscribirte
+                  </p>
+                  <p className="text-xs text-red-500 mt-0.5">{enrollError}</p>
+                </div>
               </div>
             )}
 
+            {/* CTA */}
             {!isAuthenticated ? (
               <button
                 type="button"
@@ -259,7 +377,7 @@ export default function   CourseDetail() {
                     state: { from: `/courses/${courseId}` },
                   })
                 }
-                className="titi-btn-primary"
+                className="bg-white text-titi-dark font-semibold text-sm w-full px-5 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-150"
               >
                 Inicia sesión para inscribirte
               </button>
@@ -268,75 +386,94 @@ export default function   CourseDetail() {
                 <button
                   type="button"
                   disabled
-                  className="titi-btn-ghost opacity-60 cursor-wait"
+                  className="bg-titi-yellow text-titi-dark font-bold text-base w-full px-6 py-3 rounded-xl opacity-50 cursor-not-allowed"
                 >
                   Verificando inscripción…
                 </button>
               ) : enrolled ? (
                 <button
                   type="button"
-                  onClick={() => navigate(`/courses/${courseId}/learn`)}
-                  className="titi-btn-primary"
+                  onClick={() => navigate('/my-courses')}
+                  className="bg-titi-yellow text-titi-dark font-bold text-base w-full px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
                 >
-                  Continuar curso →
+                  Ir a mis cursos →
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={handleEnroll}
                   disabled={enrolling}
-                  className="titi-btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="bg-titi-yellow text-titi-dark font-bold text-base w-full px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {enrolling ? 'Inscribiendo…' : 'Inscribirme al curso'}
                 </button>
               )
             ) : (
-              <p className="text-sm text-titi-muted font-semibold">
-                Solo los estudiantes pueden inscribirse en este curso.
-              </p>
+              <div className="bg-titi-cream border border-gray-200 rounded-xl p-4">
+                <p className="text-sm font-semibold text-titi-dark">
+                  Solo los estudiantes pueden inscribirse.
+                </p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Iniciá sesión con una cuenta de estudiante para participar.
+                </p>
+              </div>
             )}
           </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+// ---- Sub-componentes ----
+
+function Stat({ icon, label }) {
+  return (
+    <div className="flex items-center gap-2.5 text-sm font-medium text-titi-dark">
+      <span className="text-base" aria-hidden="true">
+        {icon}
+      </span>
+      <span>{label}</span>
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="lg:grid lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-2 flex flex-col gap-6">
+        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse">
+          <div className="h-56 bg-gray-100" />
+          <div className="p-8 flex flex-col gap-4">
+            <div className="h-3 w-24 bg-gray-100 rounded-full" />
+            <div className="h-7 w-3/4 bg-gray-100 rounded" />
+            <div className="h-3 w-1/2 bg-gray-100 rounded" />
+            <div className="h-4 w-full bg-gray-100 rounded mt-2" />
+            <div className="h-4 w-5/6 bg-gray-100 rounded" />
+            <div className="h-4 w-2/3 bg-gray-100 rounded" />
+          </div>
         </div>
-      </header>
-
-      {/* Módulos */}
-      <section className="titi-card p-6 sm:p-8">
-        <h2 className="text-xl sm:text-2xl font-extrabold text-titi-text mb-4">
-          Contenido del curso
-        </h2>
-
-        {!curso.modulos || curso.modulos.length === 0 ? (
-          <p className="text-sm text-titi-muted font-semibold">
-            Este curso aún no tiene módulos publicados.
-          </p>
-        ) : (
-          <ol className="space-y-3">
-            {curso.modulos.map((modulo, idx) => {
-              const numLecciones = modulo.lecciones?.length ?? 0;
-              return (
-                <li
-                  key={modulo.id}
-                  className="flex items-start gap-4 p-4 rounded-xl border border-titi-border hover:border-titi-yellow/70 transition-colors"
-                >
-                  <span className="shrink-0 w-9 h-9 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold">
-                    {idx + 1}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-extrabold text-titi-text leading-snug">
-                      {modulo.titulo}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-titi-muted font-semibold mt-1">
-                      {numLecciones}{' '}
-                      {numLecciones === 1 ? 'lección' : 'lecciones'}
-                      {modulo.evaluacion ? ' · incluye evaluación' : ''}
-                    </p>
-                  </div>
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </section>
+        <div className="bg-white rounded-2xl border border-gray-100 p-8 animate-pulse flex flex-col gap-3">
+          <div className="h-5 w-1/3 bg-gray-100 rounded mb-3" />
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-16 bg-gray-100 rounded-xl"
+            />
+          ))}
+        </div>
+      </div>
+      <div className="mt-6 lg:mt-0">
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 animate-pulse flex flex-col gap-4">
+          <div className="h-5 w-2/3 bg-gray-100 rounded" />
+          <div className="h-3 w-full bg-gray-100 rounded" />
+          <div className="h-3 w-5/6 bg-gray-100 rounded" />
+          <div className="h-px bg-gray-100 my-2" />
+          <div className="h-3 w-1/2 bg-gray-100 rounded" />
+          <div className="h-3 w-1/2 bg-gray-100 rounded" />
+          <div className="h-12 w-full bg-gray-100 rounded-xl mt-3" />
+        </div>
+      </div>
     </div>
   );
 }

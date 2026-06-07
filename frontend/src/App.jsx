@@ -36,7 +36,7 @@ function ProtectedLayout() {
       {/* En móvil: deja espacio para el top bar (h-14) y el bottom nav (h-16 + safe area iOS). */}
       {/* En desktop (md+): solo padding-left para el sidebar (w-64). */}
       <main className="min-h-screen pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-64">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8">
           <Outlet />
         </div>
       </main>
@@ -105,12 +105,10 @@ export default function App() {
         <Route path="/profile/:username" element={<Profile />} />
         <Route path="/hashtag/:tag" element={<HashtagFeed />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/courses" element={<Courses />} />
         <Route path="/courses/:id" element={<CourseDetail />} />
         <Route path="/my-courses" element={<MyCourses />} />
       </Route>
-
-      
-      <Route path="/courses" element={<Courses />} />
 
       {/* 404 */}
       <Route path="*" element={<Placeholder title="404 — Ruta no encontrada" />} />

@@ -35,6 +35,19 @@ const Icon = {
       <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
     </svg>
   ),
+  Books: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    </svg>
+  ),
+  Target: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1.5" />
+    </svg>
+  ),
 };
 
 function useUnreadNotifications() {
@@ -105,6 +118,14 @@ function Sidebar({ user, onLogout, unread }) {
         <NavLink to="/explore" className={sidebarItemClass}>
           <Icon.Compass className="w-5 h-5" />
           <span>Explorar</span>
+        </NavLink>
+        <NavLink to="/courses" className={sidebarItemClass}>
+          <Icon.Books className="w-5 h-5" />
+          <span>Cursos</span>
+        </NavLink>
+        <NavLink to="/my-courses" className={sidebarItemClass}>
+          <Icon.Target className="w-5 h-5" />
+          <span>Mis cursos</span>
         </NavLink>
         <NavLink to="/notifications" className={sidebarItemClass}>
           <span className="relative inline-flex">
@@ -203,7 +224,7 @@ function MobileBottomNav({ user, unread }) {
       className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-16 bg-titi-dark text-white border-t border-titi-dark shadow-titi-lg"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      <div className="grid grid-cols-4 h-full">
+      <div className="grid grid-cols-5 h-full">
         <NavLink to="/feed" className={bottomItemClass} end>
           <Icon.Home className="w-6 h-6" />
           <span>Inicio</span>
@@ -211,6 +232,10 @@ function MobileBottomNav({ user, unread }) {
         <NavLink to="/explore" className={bottomItemClass}>
           <Icon.Compass className="w-6 h-6" />
           <span>Explorar</span>
+        </NavLink>
+        <NavLink to="/courses" className={bottomItemClass}>
+          <Icon.Books className="w-6 h-6" />
+          <span>Cursos</span>
         </NavLink>
         <NavLink to="/notifications" className={bottomItemClass}>
           <span className="relative inline-flex">

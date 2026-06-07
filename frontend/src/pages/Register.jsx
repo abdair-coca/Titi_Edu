@@ -46,8 +46,16 @@ export default function Register() {
               <img src="/Titi.png" alt="" className="w-10 h-10 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
               <span className="text-2xl font-extrabold lowercase tracking-tight">titi</span>
             </Link>
-            <h1 className="text-3xl sm:text-4xl font-extrabold mb-2">
-              ¡Únete a Titi! <span aria-hidden="true">🐒</span>
+            <h1 className="text-3xl sm:text-4xl font-extrabold mb-2 inline-flex items-center gap-2 flex-wrap">
+              <span>¡Únete a Titi!</span>
+              <img
+                src="/Titi.png"
+                alt=""
+                aria-hidden="true"
+                className="w-9 h-9 sm:w-10 sm:h-10 object-contain inline-block align-middle select-none"
+                draggable={false}
+                onError={(e) => (e.currentTarget.style.display = 'none')}
+              />
             </h1>
             <p className="text-titi-muted">Empezá a compartir lo que te apasiona.</p>
           </div>

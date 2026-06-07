@@ -402,7 +402,7 @@ module.exports = {
 <aside className="w-60 bg-titi-dark fixed h-full flex flex-col py-6 z-40">
   {/* Logo */}
   <div className="px-6 mb-8 flex items-center gap-2">
-    <span className="text-2xl">🐒</span>
+    <img src="/Titi.png" alt="Titi" className="w-8 h-8 object-contain select-none" draggable={false} />
     <span className="text-white font-extrabold text-xl tracking-tight">titi</span>
   </div>
 
@@ -548,7 +548,7 @@ const navItems = [
     <p className="text-sm font-bold text-purple-900">{logro.nombre}</p>
     <p className="text-xs text-purple-500">{logro.descripcion}</p>
   </div>
-  <span className="text-xl ml-auto">🐒</span>
+  <img src="/Titi.png" alt="Titi" className="w-7 h-7 ml-auto object-contain select-none" draggable={false} />
 </div>
 ```
 
@@ -572,6 +572,18 @@ const navItems = [
 
 ## 7. Titi la mascota — reglas de uso
 
+### Activo visual de Titi
+
+**Regla absoluta:** la mascota Titi siempre se representa con la imagen `/Titi.png` (servida desde `frontend/public/Titi.png`). **Nunca** uses el emoji 🐒 — ni como placeholder, ni en logos, ni en estados vacíos, ni en toasts, ni dentro de mensajes. Si necesitás mostrar a Titi en una UI, usá un `<img src="/Titi.png" alt="Titi" />` con el tamaño apropiado (`w-8 h-8` para logos, `w-24 h-24` para empty states, `w-7 h-7` para toasts) o el componente `<TitiMascot />` cuando se requiera variantes de mood y mensaje.
+
+```jsx
+// ✅ Correcto
+<img src="/Titi.png" alt="Titi" className="w-24 h-24 object-contain drop-shadow-sm select-none" draggable={false} />
+
+// ❌ Incorrecto — nunca usar el emoji para representar a Titi
+<span className="text-6xl">🐒</span>
+```
+
 ### Cuándo aparece Titi
 
 | Momento | Mood de Titi | Mensaje de referencia |
@@ -583,7 +595,7 @@ const navItems = [
 | Racha rota | 😔 consolador | "Tu racha se rompió... ¡Pero hoy es un nuevo comienzo!" |
 | Logro desbloqueado | 🏅 orgulloso | "¡Nuevo logro: {nombre}! 🏅" |
 | Feed vacío | 🤷 curioso | "¡Sigue a alguien para ver su actividad! 👀" |
-| Sin notificaciones | 😌 tranquilo | "Todo tranquilo por aquí 🐒" |
+| Sin notificaciones | 😌 tranquilo | "Todo tranquilo por aquí" (la imagen de Titi aparece como mascota, sin emoji adicional) |
 | Curso completado | 🎓 ceremonioso | "¡Curso completado! Tu certificado está listo 🎓" |
 
 ### Cuándo NO aparece Titi
@@ -612,9 +624,9 @@ const navItems = [
 ### Estado vacío (empty state)
 
 ```jsx
-// Siempre incluir: ilustración/emoji, título, descripción, CTA
+// Siempre incluir: ilustración Titi, título, descripción, CTA
 <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
-  <span className="text-6xl mb-4">🐒</span>
+  <img src="/Titi.png" alt="Titi" className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none" draggable={false} />
   <h3 className="text-xl font-bold text-titi-dark mb-2">{titulo}</h3>
   <p className="text-sm text-gray-400 mb-6 max-w-xs">{descripcion}</p>
   <button className="bg-titi-yellow ...">
@@ -740,6 +752,7 @@ const navItems = [
 - **Nunca** usar colores hardcodeados como `#FFD93D` en JSX. Siempre `bg-titi-yellow`.
 - **Nunca** inventar variantes de botón que no estén en este documento.
 - **Nunca** usar `font-family` inline. Solo `font-sans` (que ya es Nunito).
+- **Nunca** representar a la mascota Titi con el emoji 🐒 — siempre usar `<img src="/Titi.png" alt="Titi" />` o el componente `<TitiMascot />` (ver sección 7).
 - **Siempre** usar `rounded-xl` o `rounded-2xl` para cards — nunca `rounded` o `rounded-md` en contenedores grandes.
 - **Siempre** incluir estado de `disabled` en botones.
 - **Siempre** incluir estado vacío en listas.
@@ -755,6 +768,7 @@ Claude Code debe verificar esto antes de dar un componente por terminado:
 - [ ] ¿Tiene estado hover con la sombra amarilla correspondiente?
 - [ ] ¿Tiene estado de carga (skeleton o spinner)?
 - [ ] ¿Tiene estado vacío con mensaje de Titi si aplica?
+- [ ] ¿La mascota Titi se representa siempre con `/Titi.png` y nunca con el emoji 🐒?
 - [ ] ¿El botón principal tiene la sombra inferior estilo Duolingo?
 - [ ] ¿Los bordes usan `rounded-xl` o `rounded-2xl`?
 - [ ] ¿Las transiciones son ≤ 300ms?

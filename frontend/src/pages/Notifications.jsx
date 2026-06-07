@@ -66,7 +66,7 @@ export default function Notifications() {
 
       {!loading && !error && items.length === 0 && (
         <div className="titi-card p-10 text-center">
-          <TitiMascot mood="idle" message="Todo tranquilo por aquí 🐒" size="lg" />
+          <TitiMascot mood="idle" message="Todo tranquilo por aquí" size="lg" />
           <p className="text-titi-muted mt-4 max-w-md mx-auto">
             Cuando alguien te dé like, te siga o comente tus posts, lo vas a ver acá.
           </p>
