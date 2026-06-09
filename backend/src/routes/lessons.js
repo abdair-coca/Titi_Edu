@@ -93,6 +93,57 @@ router.post(
   },
 );
 
+// ---- GET /api/lessons/:id  — lección con materiales (público) ----
+router.get('/lessons/:id', async (req, res) => {
+  try {
+    const leccion = await prisma.leccion.findUnique({
+      where: { id: req.params.id },
+      include: {
+        materiales: { orderBy: { nombre: 'asc' } },
+        modulo: { select: { id: true, titulo: true, cursoId: true } },
+      },
+    });
+    if (!leccion) {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+    res.json({ success: true, data: { leccion } });
+  } catch (err) {
+    console.error('GET /api/lessons/:id error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo lección' });
+  }
+});
+
+// ---- DELETE /api/lessons/:id  — borrar lección + cascada (autor del curso) ----
+router.delete('/lessons/:id', requireAuth, requireRole('PROFESOR'), async (req, res) => {
+  try {
+    const leccion = await prisma.leccion.findUnique({
+      where: { id: req.params.id },
+      include: { modulo: { include: { curso: { select: { creadorId: true } } } } },
+    });
+    if (!leccion) {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+    if (leccion.modulo.curso.creadorId !== req.dbUser.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo el autor del curso puede borrar la lección',
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.material.deleteMany({ where: { leccionId: leccion.id } });
+      await tx.progreso.deleteMany({ where: { leccionId: leccion.id } });
+      await tx.comentarioLeccion.deleteMany({ where: { leccionId: leccion.id } });
+      await tx.leccion.delete({ where: { id: leccion.id } });
+    });
+
+    res.json({ success: true, data: { deleted: leccion.id } });
+  } catch (err) {
+    console.error('DELETE /api/lessons/:id error', err);
+    res.status(500).json({ success: false, message: 'Error borrando lección' });
+  }
+});
+
 // ---- PUT /api/lessons/:id  — editar lección (PROFESOR) ----
 router.put('/lessons/:id', requireAuth, requireRole('PROFESOR'), async (req, res) => {
   try {

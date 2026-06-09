@@ -15,11 +15,30 @@ export default function Courses() {
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [nivel, setNivel] = useState('all');
+  const [categoria, setCategoria] = useState('all');
 
+  const [categorias, setCategorias] = useState([]);
   const [cursos, setCursos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
+
+  // Cargar categorías una sola vez
+  useEffect(() => {
+    let cancelled = false;
+    client
+      .get('/api/categories')
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.success) setCategorias(data.data?.categorias || []);
+      })
+      .catch(() => {
+        // Silencioso: si falla, el filtro de categoría queda vacío.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Debounce del search input
   useEffect(() => {
@@ -36,6 +55,7 @@ export default function Courses() {
     const params = {};
     if (debouncedQuery) params.search = debouncedQuery;
     if (nivel !== 'all') params.nivel = nivel;
+    if (categoria !== 'all') params.categoria = categoria;
 
     client
       .get('/api/courses', { params })
@@ -55,9 +75,16 @@ export default function Courses() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedQuery, nivel, refreshTick]);
+  }, [debouncedQuery, nivel, categoria, refreshTick]);
 
-  const hasFilters = debouncedQuery || nivel !== 'all';
+  const hasFilters = debouncedQuery || nivel !== 'all' || categoria !== 'all';
+
+  function clearFilters() {
+    setQuery('');
+    setDebouncedQuery('');
+    setNivel('all');
+    setCategoria('all');
+  }
 
   return (
     <div>
@@ -98,6 +125,21 @@ export default function Courses() {
           </svg>
         </div>
 
+        {/* Categoría select */}
+        <select
+          value={categoria}
+          onChange={(e) => setCategoria(e.target.value)}
+          aria-label="Filtrar por categoría"
+          className="sm:w-56 bg-titi-cream border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-titi-dark cursor-pointer focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
+        >
+          <option value="all">Todas las categorías</option>
+          {categorias.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.icono} {c.nombre}
+            </option>
+          ))}
+        </select>
+
         {/* Nivel select */}
         <select
           value={nivel}
@@ -122,14 +164,7 @@ export default function Courses() {
           onRetry={() => setRefreshTick((t) => t + 1)}
         />
       ) : cursos.length === 0 ? (
-        <EmptyState
-          hasFilters={hasFilters}
-          onClear={() => {
-            setQuery('');
-            setDebouncedQuery('');
-            setNivel('all');
-          }}
-        />
+        <EmptyState hasFilters={hasFilters} onClear={clearFilters} />
       ) : (
         <>
           {/* Contador de resultados */}
@@ -141,11 +176,7 @@ export default function Courses() {
               {hasFilters && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setQuery('');
-                    setDebouncedQuery('');
-                    setNivel('all');
-                  }}
+                  onClick={clearFilters}
                   className="ml-2 text-titi-dark font-bold hover:text-titi-yellow-dark transition-colors"
                 >
                   · Limpiar filtros

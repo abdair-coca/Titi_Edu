@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import LessonComments from '../components/LessonComments.jsx';
+import { resolveMediaUrl } from '../lib/format.js';
 
 export default function LearnCourse() {
   const { id: courseId } = useParams();
@@ -19,6 +21,9 @@ export default function LearnCourse() {
   // El endpoint GET /api/courses/:id no devuelve `contenido`, así que
   // lazy-cargamos GET /api/modules/:moduloId/lessons cuando se necesita.
   const [lessonsByModulo, setLessonsByModulo] = useState({});
+
+  // Cache de materiales por leccionId (GET /api/lessons/:id)
+  const [materialsByLesson, setMaterialsByLesson] = useState({});
 
   // Lección activa
   const [activeId, setActiveId] = useState(null);
@@ -133,6 +138,32 @@ export default function LearnCourse() {
     if (cached) return cached;
     return activeModulo.lecciones?.find((l) => l.id === activeId) || null;
   }, [activeModulo, activeId, lessonsByModulo]);
+
+  // --- Lazy-cargar materiales de la lección activa ---
+  useEffect(() => {
+    if (!activeId) return;
+    if (materialsByLesson[activeId] !== undefined) return;
+    let cancelled = false;
+    client
+      .get(`/api/lessons/${activeId}`)
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.success) {
+          setMaterialsByLesson((prev) => ({
+            ...prev,
+            [activeId]: data.data?.leccion?.materiales || [],
+          }));
+        } else {
+          setMaterialsByLesson((prev) => ({ ...prev, [activeId]: [] }));
+        }
+      })
+      .catch(() => {
+        setMaterialsByLesson((prev) => ({ ...prev, [activeId]: [] }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId, materialsByLesson]);
 
   // --- Totales para barra de progreso ---
   const totalLessons = useMemo(() => {
@@ -351,6 +382,7 @@ export default function LearnCourse() {
           {activeLesson ? (
             <LessonView
               leccion={activeLesson}
+              materiales={materialsByLesson[activeLesson.id]}
               completed={completed.has(activeLesson.id)}
               completing={completing}
               completeError={completeError}
@@ -368,7 +400,39 @@ export default function LearnCourse() {
 }
 
 // ---- Vista de lección activa ----
-function LessonView({ leccion, completed, completing, completeError, onComplete }) {
+const TIPO_ICON = {
+  pdf: '📄',
+  word: '📝',
+  imagen: '🖼️',
+  codigo: '💻',
+  otro: '📎',
+};
+
+function MaterialChip({ material }) {
+  const icon = TIPO_ICON[material.tipo] || '📎';
+  const href = material.url?.startsWith('/uploads/')
+    ? resolveMediaUrl(material.url)
+    : material.url;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      download
+      className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold text-titi-dark hover:border-titi-yellow hover:bg-titi-cream transition-all duration-150 max-w-full"
+    >
+      <span className="text-base" aria-hidden="true">
+        {icon}
+      </span>
+      <span className="truncate">{material.nombre}</span>
+      <span className="text-xs text-gray-400 uppercase tracking-wide shrink-0">
+        {material.tipo}
+      </span>
+    </a>
+  );
+}
+
+function LessonView({ leccion, materiales, completed, completing, completeError, onComplete }) {
   const videoEmbed = useMemo(
     () => normalizeVideoUrl(leccion.videoUrl),
     [leccion.videoUrl],
@@ -403,6 +467,25 @@ function LessonView({ leccion, completed, completing, completeError, onComplete 
         </p>
       )}
 
+      {/* Materiales */}
+      {materiales === undefined ? (
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-sm font-bold text-titi-dark uppercase tracking-wide mb-2">Materiales</h2>
+          <p className="text-xs text-gray-400 font-medium">Cargando…</p>
+        </div>
+      ) : materiales.length > 0 ? (
+        <div className="mb-6 sm:mb-8">
+          <h2 className="text-sm font-bold text-titi-dark uppercase tracking-wide mb-3">
+            Materiales
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {materiales.map((m) => (
+              <MaterialChip key={m.id} material={m} />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {completeError && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-4">
           <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
@@ -436,6 +519,10 @@ function LessonView({ leccion, completed, completing, completeError, onComplete 
           </button>
         )}
       </div>
+
+      {/* Comentarios */}
+      <hr className="border-titi-border my-8" />
+      <LessonComments lessonId={leccion.id} />
     </article>
   );
 }

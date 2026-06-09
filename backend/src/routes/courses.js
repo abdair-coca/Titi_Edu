@@ -171,9 +171,16 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ---- POST /  — crear curso (PROFESOR) ----
+// ---- POST /  — crear curso (PROFESOR verificado) ----
 router.post('/', requireAuth, requireRole('PROFESOR'), async (req, res) => {
   try {
+    if (!req.dbUser.verificado) {
+      return res.status(403).json({
+        success: false,
+        message: 'Tu cuenta de profesor aún no está verificada',
+      });
+    }
+
     const { titulo, descripcion, nivel, categoriaId, portadaUrl } = req.body || {};
     if (!titulo || !descripcion || !nivel || !categoriaId) {
       return res.status(400).json({
@@ -207,7 +214,7 @@ router.post('/', requireAuth, requireRole('PROFESOR'), async (req, res) => {
   }
 });
 
-// ---- PUT /:id  — editar curso (solo autor) ----
+// ---- PUT /:id  — editar curso (solo autor verificado) ----
 router.put('/:id', requireAuth, async (req, res) => {
   try {
     const usuario = await loadCurrentUser(req, res);
@@ -224,6 +231,12 @@ router.put('/:id', requireAuth, async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'Solo el autor puede editar el curso',
+      });
+    }
+    if (usuario.rol === 'PROFESOR' && !usuario.verificado) {
+      return res.status(403).json({
+        success: false,
+        message: 'Tu cuenta de profesor aún no está verificada',
       });
     }
 
@@ -292,6 +305,104 @@ router.post('/:id/publish', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('POST /courses/:id/publish error', err);
     res.status(500).json({ success: false, message: 'Error publicando curso' });
+  }
+});
+
+// ---- POST /:id/unpublish  — despublicar curso (solo autor) ----
+router.post('/:id/unpublish', requireAuth, async (req, res) => {
+  try {
+    const usuario = await loadCurrentUser(req, res);
+    if (!usuario) return;
+
+    const existente = await prisma.curso.findUnique({
+      where: { id: req.params.id },
+      select: { creadorId: true, publicado: true },
+    });
+    if (!existente) {
+      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+    }
+    if (existente.creadorId !== usuario.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo el autor puede despublicar el curso',
+      });
+    }
+
+    if (!existente.publicado) {
+      return res.json({
+        success: true,
+        data: { curso: { id: req.params.id, publicado: false } },
+      });
+    }
+
+    const curso = await prisma.curso.update({
+      where: { id: req.params.id },
+      data: { publicado: false },
+    });
+    res.json({ success: true, data: { curso } });
+  } catch (err) {
+    console.error('POST /courses/:id/unpublish error', err);
+    res.status(500).json({ success: false, message: 'Error despublicando curso' });
+  }
+});
+
+// ---- DELETE /:id  — borrar curso (autor o ADMIN) ----
+// Rechaza con 409 si tiene inscripciones. Cascada manual a módulos/lecciones/materiales/comentarios.
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const usuario = await loadCurrentUser(req, res);
+    if (!usuario) return;
+
+    const curso = await prisma.curso.findUnique({
+      where: { id: req.params.id },
+      include: {
+        _count: { select: { inscripciones: true } },
+        modulos: {
+          select: {
+            id: true,
+            lecciones: { select: { id: true } },
+          },
+        },
+      },
+    });
+    if (!curso) {
+      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+    }
+    if (curso.creadorId !== usuario.id && usuario.rol !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo el autor o un admin puede borrar el curso',
+      });
+    }
+    if (curso._count.inscripciones > 0) {
+      return res.status(409).json({
+        success: false,
+        message: 'No puedes borrar un curso con estudiantes inscritos. Despublícalo primero.',
+      });
+    }
+
+    const moduloIds = curso.modulos.map((m) => m.id);
+    const leccionIds = curso.modulos.flatMap((m) => m.lecciones.map((l) => l.id));
+
+    await prisma.$transaction(async (tx) => {
+      if (leccionIds.length) {
+        await tx.material.deleteMany({ where: { leccionId: { in: leccionIds } } });
+        await tx.progreso.deleteMany({ where: { leccionId: { in: leccionIds } } });
+        await tx.comentarioLeccion.deleteMany({ where: { leccionId: { in: leccionIds } } });
+        await tx.leccion.deleteMany({ where: { id: { in: leccionIds } } });
+      }
+      if (moduloIds.length) {
+        await tx.evaluacion.deleteMany({ where: { moduloId: { in: moduloIds } } });
+        await tx.modulo.deleteMany({ where: { id: { in: moduloIds } } });
+      }
+      await tx.cursoProfesor.deleteMany({ where: { cursoId: curso.id } });
+      await tx.curso.delete({ where: { id: curso.id } });
+    });
+
+    res.json({ success: true, data: { deleted: curso.id } });
+  } catch (err) {
+    console.error('DELETE /courses/:id error', err);
+    res.status(500).json({ success: false, message: 'Error borrando curso' });
   }
 });
 

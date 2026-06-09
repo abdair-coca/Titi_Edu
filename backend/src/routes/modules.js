@@ -98,6 +98,105 @@ router.post(
   },
 );
 
+// ---- GET /api/courses/:courseId/modules — público, módulos del curso ordenados ----
+router.get('/courses/:courseId/modules', async (req, res) => {
+  try {
+    const modulos = await prisma.modulo.findMany({
+      where: { cursoId: req.params.courseId },
+      orderBy: { orden: 'asc' },
+      include: {
+        _count: { select: { lecciones: true } },
+        evaluacion: { select: { id: true, titulo: true } },
+      },
+    });
+    res.json({ success: true, data: { modulos } });
+  } catch (err) {
+    console.error('GET /api/courses/:courseId/modules error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo módulos' });
+  }
+});
+
+// ---- PUT /api/modules/:id — editar módulo (autor del curso) ----
+router.put('/modules/:id', requireAuth, requireRole('PROFESOR'), async (req, res) => {
+  try {
+    const modulo = await prisma.modulo.findUnique({
+      where: { id: req.params.id },
+      include: { curso: { select: { creadorId: true } } },
+    });
+    if (!modulo) {
+      return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+    }
+    if (modulo.curso.creadorId !== req.dbUser.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo el autor del curso puede editar el módulo',
+      });
+    }
+
+    const { titulo, descripcion, orden } = req.body || {};
+    const data = {};
+    if (titulo !== undefined) data.titulo = String(titulo).trim();
+    if (descripcion !== undefined) {
+      data.descripcion = descripcion === null || descripcion === '' ? null : String(descripcion).trim();
+    }
+    if (orden !== undefined) {
+      const ordenNum = Number(orden);
+      if (!Number.isInteger(ordenNum)) {
+        return res.status(400).json({ success: false, message: 'orden debe ser un número entero' });
+      }
+      data.orden = ordenNum;
+    }
+    if (Object.keys(data).length === 0) {
+      return res.status(400).json({ success: false, message: 'No hay campos para actualizar' });
+    }
+
+    const updated = await prisma.modulo.update({ where: { id: req.params.id }, data });
+    res.json({ success: true, data: { modulo: updated } });
+  } catch (err) {
+    console.error('PUT /api/modules/:id error', err);
+    res.status(500).json({ success: false, message: 'Error editando módulo' });
+  }
+});
+
+// ---- DELETE /api/modules/:id — borrar módulo + cascada (autor del curso) ----
+router.delete('/modules/:id', requireAuth, requireRole('PROFESOR'), async (req, res) => {
+  try {
+    const modulo = await prisma.modulo.findUnique({
+      where: { id: req.params.id },
+      include: {
+        curso: { select: { creadorId: true } },
+        lecciones: { select: { id: true } },
+      },
+    });
+    if (!modulo) {
+      return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+    }
+    if (modulo.curso.creadorId !== req.dbUser.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo el autor del curso puede borrar el módulo',
+      });
+    }
+
+    const leccionIds = modulo.lecciones.map((l) => l.id);
+    await prisma.$transaction(async (tx) => {
+      if (leccionIds.length) {
+        await tx.material.deleteMany({ where: { leccionId: { in: leccionIds } } });
+        await tx.progreso.deleteMany({ where: { leccionId: { in: leccionIds } } });
+        await tx.comentarioLeccion.deleteMany({ where: { leccionId: { in: leccionIds } } });
+        await tx.leccion.deleteMany({ where: { id: { in: leccionIds } } });
+      }
+      await tx.evaluacion.deleteMany({ where: { moduloId: modulo.id } });
+      await tx.modulo.delete({ where: { id: modulo.id } });
+    });
+
+    res.json({ success: true, data: { deleted: modulo.id } });
+  } catch (err) {
+    console.error('DELETE /api/modules/:id error', err);
+    res.status(500).json({ success: false, message: 'Error borrando módulo' });
+  }
+});
+
 // ---- GET /api/modules/:id/lessons  — público, módulo con lecciones ordenadas ----
 router.get('/modules/:id/lessons', async (req, res) => {
   try {
