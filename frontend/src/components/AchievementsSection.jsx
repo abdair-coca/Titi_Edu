@@ -33,9 +33,9 @@ export default function AchievementsSection({ username, isSelf = false }) {
   const desbloqueados = logros.filter((l) => l.desbloqueado).length;
 
   return (
-    <section aria-label="Logros" className="titi-card p-6 mb-6">
+    <section aria-label="Logros" className="titi-card p-4 sm:p-6 mb-6">
       <div className="flex items-center justify-between gap-2 mb-4">
-        <h2 className="text-lg font-bold text-titi-dark flex items-center gap-2">
+        <h2 className="text-base sm:text-lg font-bold text-titi-dark flex items-center gap-2">
           <span aria-hidden="true">🏅</span> Logros
         </h2>
         {!loading && !error && (
@@ -46,7 +46,7 @@ export default function AchievementsSection({ username, isSelf = false }) {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3" aria-busy="true">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3" aria-busy="true">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />
           ))}
@@ -67,7 +67,7 @@ export default function AchievementsSection({ username, isSelf = false }) {
           Todavía no hay logros disponibles.
         </p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
           {logros.map((l) => (
             <div
               key={l.id}
@@ -76,16 +76,16 @@ export default function AchievementsSection({ username, isSelf = false }) {
                   ? `${l.descripcion}${l.fechaObtenido ? ` · ${formatDate(l.fechaObtenido)}` : ''}`
                   : l.condicion
               }
-              className={`rounded-xl border p-3 text-center transition-all duration-150 ${
+              className={`rounded-xl border p-2 sm:p-3 text-center transition-all duration-150 ${
                 l.desbloqueado
                   ? 'bg-purple-50 border-purple-200 shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
                   : 'bg-gray-50 border-gray-200 opacity-60 grayscale'
               }`}
             >
-              <span className="text-3xl block select-none" aria-hidden="true">
+              <span className="text-2xl sm:text-3xl block select-none" aria-hidden="true">
                 {l.icono}
               </span>
-              <p className="text-xs font-bold text-titi-dark mt-1.5 leading-tight">
+              <p className="text-[11px] sm:text-xs font-bold text-titi-dark mt-1 sm:mt-1.5 leading-tight">
                 {l.nombre}
               </p>
               {l.desbloqueado ? (

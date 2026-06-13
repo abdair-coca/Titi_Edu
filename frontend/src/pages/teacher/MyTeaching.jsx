@@ -99,7 +99,7 @@ export default function MyTeaching() {
         <button
           type="button"
           onClick={() => navigate('/teacher/courses/new')}
-          className="bg-titi-yellow text-titi-dark font-bold text-base px-5 py-2.5 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 whitespace-nowrap"
+          className="bg-titi-yellow text-titi-dark font-bold text-base px-5 py-2.5 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 whitespace-nowrap w-full sm:w-auto"
         >
           + Crear curso
         </button>

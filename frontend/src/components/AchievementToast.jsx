@@ -52,11 +52,11 @@ export default function AchievementToast({ logros = [], onDone, durationMs = 320
     <div
       role="status"
       aria-live="polite"
-      className={`fixed top-4 right-4 z-50 ${
+      className={`fixed top-4 right-4 left-4 sm:left-auto z-50 sm:max-w-xs ${
         phase === 'in' ? 'titi-achievement-toast-in' : 'titi-achievement-toast-out'
       }`}
     >
-      <div className="flex items-center gap-3 max-w-xs p-4 bg-purple-50 border border-purple-200 rounded-2xl shadow-lg">
+      <div className="flex items-center gap-3 p-3 sm:p-4 bg-purple-50 border border-purple-200 rounded-2xl shadow-lg">
         <span className="text-3xl shrink-0 select-none" aria-hidden="true">
           {logro.icono}
         </span>

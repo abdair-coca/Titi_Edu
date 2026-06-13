@@ -621,15 +621,15 @@ function LessonView({ leccion, materiales, completed, completing, completeError,
 // ---- Banner de curso completado con certificado ----
 function CertificateBanner({ onClose }) {
   return (
-    <div className="relative flex items-center gap-4 p-5 mb-6 bg-titi-yellow-light border-2 border-titi-yellow rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+    <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 sm:p-5 pr-10 mb-6 bg-titi-yellow-light border-2 border-titi-yellow rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
       <img
         src="/Titi.png"
         alt="Titi"
-        className="w-16 h-16 object-contain drop-shadow-sm select-none shrink-0"
+        className="w-14 h-14 sm:w-16 sm:h-16 object-contain select-none shrink-0"
         draggable={false}
       />
-      <div className="min-w-0 flex-1">
-        <p className="text-lg font-extrabold text-titi-dark leading-tight">
+      <div className="min-w-0 flex-1 w-full">
+        <p className="text-base sm:text-lg font-extrabold text-titi-dark leading-tight">
           ¡Curso completado! 🎓
         </p>
         <p className="text-sm font-semibold text-gray-600 mt-0.5">
@@ -646,7 +646,7 @@ function CertificateBanner({ onClose }) {
         type="button"
         onClick={onClose}
         aria-label="Cerrar"
-        className="absolute top-2 right-3 text-gray-400 hover:text-gray-600 text-lg font-bold"
+        className="absolute top-2 right-2 w-8 h-8 grid place-items-center rounded-full text-gray-500 hover:text-gray-700 hover:bg-titi-yellow/30 text-lg font-bold transition-colors"
       >
         ✕
       </button>

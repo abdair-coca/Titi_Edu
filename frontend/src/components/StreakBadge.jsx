@@ -213,11 +213,11 @@ function HeroVariant({ racha, estado, isSelf, className }) {
   if (rota) {
     return (
       <div
-        className={`flex items-center gap-4 p-5 bg-gray-50 border-2 border-gray-200 rounded-2xl ${className}`}
+        className={`flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-gray-50 border-2 border-gray-200 rounded-2xl ${className}`}
       >
-        <FlameIcon size={56} dim animated={false} />
+        <FlameIcon size={48} dim animated={false} />
         <div className="min-w-0 flex-1">
-          <p className="text-4xl font-black leading-none tabular-nums text-gray-400">0</p>
+          <p className="text-3xl sm:text-4xl font-black leading-none tabular-nums text-gray-400">0</p>
           <p className="text-sm font-bold text-gray-500 mt-1.5">
             {isSelf ? 'Tu racha está apagada' : 'Sin racha activa'}
           </p>
@@ -233,15 +233,15 @@ function HeroVariant({ racha, estado, isSelf, className }) {
 
   return (
     <div
-      className={`p-5 sm:p-6 bg-orange-50 border-2 border-orange-200 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] ${className}`}
+      className={`p-4 sm:p-6 bg-orange-50 border-2 border-orange-200 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] ${className}`}
       aria-label={`Racha de ${racha} ${racha === 1 ? 'día' : 'días'}`}
     >
-      <div className="flex items-center gap-4 sm:gap-5">
-        <FlameIcon size={64} animated={encendida} dim={estado === 'apagada'} />
+      <div className="flex items-center gap-3 sm:gap-5">
+        <FlameIcon size={56} animated={encendida} dim={estado === 'apagada'} />
 
         <div className="min-w-0 flex-1">
           <div className="flex items-end gap-2 flex-wrap">
-            <span className="text-4xl font-black text-titi-streak tabular-nums leading-none">
+            <span className="text-3xl sm:text-4xl font-black text-titi-streak tabular-nums leading-none">
               {display}
             </span>
             <span className="text-sm font-bold text-titi-dark pb-0.5">
@@ -257,7 +257,7 @@ function HeroVariant({ racha, estado, isSelf, className }) {
       {/* Progreso hacia la próxima meta */}
       {next && (
         <div className="mt-4">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 mb-1.5">
             <span className="text-xs font-bold text-titi-dark">
               Próxima meta: {next.icono} {next.dias} días
             </span>

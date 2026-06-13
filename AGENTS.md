@@ -1,320 +1,308 @@
-# AGENTS.md — Titi | Etapa 2: Módulo Educativo Base
+# AGENTS.md — Titi | Etapa 4: Integración Social + Admin
 
 Lee este archivo completo antes de tocar cualquier código.
-Este documento describe **qué falta para cerrar la Etapa 2** del proyecto.
+Este documento describe **qué falta para cerrar la Etapa 4** del proyecto.
 La fuente de verdad del producto sigue siendo `AGENTSGoal.md`.
 
-> **Nota:** Etapa 1 (rediseño visual a Titi) ya está completada y su documento original quedó archivado. El estado actual del frontend ya usa la paleta Titi, Nunito y la mascota `/Titi.png` según `frontend/design.md`.
+> **Etapas 1, 2 y 3 ya están cerradas.** Ver `AGENTSGoal.md` §9 para el resumen de lo entregado.
 
 ---
 
 ## 1. Objetivo de la etapa
 
-Cerrar el módulo educativo base de forma que:
+> **Convertir a Titi en una red social donde el aprendizaje es visible y descubrible.**
+> Los amigos ven qué cursos toman otros, las recomendaciones salen de la red, y un admin puede gobernar el catálogo sin tocar la base de datos.
 
-> **Un profesor pueda crear un curso completo (módulos + lecciones + materiales + publicación) desde la UI, y un estudiante pueda navegar el catálogo, inscribirse, consumir las lecciones, descargar materiales y dejar comentarios — todo sin tocar la API a mano.**
-
-Esa frase es el Definition of Done. Si una parte de ese flujo todavía requiere llamar a la API directamente o editar la base de datos, la Etapa 2 **no** está terminada.
+Definition of Done en una línea: si para verificar a un profesor, cambiar un rol, recomendar un curso o ver qué hicieron mis amigos esta semana todavía tengo que abrir Prisma Studio o `curl`, la Etapa 4 **no** está cerrada.
 
 ---
 
 ## 2. Estado actual (auditoría)
 
-### Backend
+### Backend — lo que ya hay
 
 | Área | Estado | Detalle |
 |---|---|---|
-| PostgreSQL + Prisma | ✅ | `prisma/schema.prisma` + migración `20260606200208_init` aplicada |
-| Schema completo | ✅ | Modelos coinciden con AGENTSGoal §"Modelo de datos PostgreSQL" (incluye `Curso.creadorId`) |
-| Sincronización Usuario Neo4j ↔ Postgres | ✅ | `routes/auth.js` crea espejo en `Usuario` (Postgres) con `neoId` |
-| `routes/courses.js` | 🟡 | Hay `GET /`, `GET /:id`, `POST /`, `PUT /:id`, `POST /:id/publish`, `POST /:id/enroll`, `GET /my/enrolled`, `GET /my/teaching`, `GET /:id/progress`. Faltan DELETE, despublicar, validación de profesor verificado |
-| `routes/modules.js` | 🟡 | Solo `POST /api/courses/:courseId/modules` y `GET /api/modules/:id/lessons`. Faltan PUT, DELETE, GET por curso |
-| `routes/lessons.js` | 🟡 | Hay POST, PUT, `POST /:id/complete`, `GET /:id/comments`, `POST /:id/comments`. Faltan DELETE y `GET /:id` individual con materiales |
-| `routes/materials.js` | 🔴 | No existe. Modelo `Material` en Prisma sin endpoints |
-| `routes/categories.js` | 🔴 | No existe. Modelo `Categoria` en Prisma sin endpoints **ni seed** → `categoriaId` es FK requerida en `Curso`, por lo que sin datos sembrados no se puede crear ningún curso |
-| Seed | 🔴 | No hay `prisma/seed.js`. Hay que crear categorías y datos demo a mano |
+| Auth + espejo Neo4j↔Postgres | ✅ | `auth.js`, helper `loadCurrentUser` en cada ruta Postgres |
+| Cursos / Módulos / Lecciones / Materiales | ✅ | CRUDs completos con guard de autor y rol |
+| Evaluaciones + Intentos | ✅ | `routes/evaluations.js` con grading server-side |
+| Servicios | ✅ | `progress.service.js` (racha + completion), `achievement.service.js` (catálogo + checkers) |
+| `POST /api/auth/become-teacher` | 🟡 | Autoascenso de dev — **a eliminar en esta etapa** |
+| `routes/admin.js` | 🔴 | No existe |
+| Propagación de eventos sociales a Neo4j | 🔴 | `INSCRITO_EN` y `COMPLETO_CURSO` no se crean al inscribirse / completar |
+| Feed académico | 🔴 | `posts.js` solo devuelve posts, no actividad de cursos / logros |
+| Recomendaciones por amigos | 🔴 | Sin endpoint |
 
-### Frontend
+### Frontend — lo que ya hay
 
 | Área | Estado | Detalle |
 |---|---|---|
-| `pages/Courses.jsx` (catálogo) | 🟡 | Lista, búsqueda y filtro por nivel funcionan. Falta filtro por **categoría** |
-| `pages/CourseDetail.jsx` | ✅ | Hero, módulos, sidebar de inscripción, manejo de roles |
-| `pages/LearnCourse.jsx` | 🟡 | Player, sidebar de lecciones, progreso, marcar completada. Faltan **comentarios** y **materiales** |
-| `pages/MyCourses.jsx` | ✅ | Lista de inscripciones con barras de progreso por curso |
-| Panel del profesor | 🔴 | No existe ninguna pantalla para crear/editar curso, módulos o lecciones |
-| Navbar | 🟡 | No tiene entrada condicional por rol (PROFESOR debería ver "Enseñar") |
-
-### Conclusión
-
-Para terminar Etapa 2 hay que cubrir tres frentes:
-1. **Cerrar el backend** (categorías, materiales, deletes que faltan, seed).
-2. **Completar la experiencia del estudiante** (comentarios y materiales en la lección, filtro de categoría en el catálogo).
-3. **Construir el panel del profesor** (todo nuevo).
+| Navbar con guard `PROFESOR/ADMIN` | ✅ | Entrada "Enseñar" condicional en sidebar desktop |
+| Bottom nav contextual por rol en mobile | ✅ | Slot "Mis cursos" → "Enseñar" cuando es PROFESOR/ADMIN |
+| Pantallas `pages/admin/*` | 🔴 | No existen |
+| Tarjeta de "Actividad académica" en Feed | 🔴 | No existe |
+| Sección "Recomendados por tus amigos" en Cursos | 🔴 | No existe |
+| Acceso a /teacher en mobile | ✅ | El bottom nav muestra "Enseñar" en lugar de "Mis cursos" para profes |
 
 ---
 
 ## 3. Plan — Backend
 
-### 3.1 Categorías (bloqueante — hacer primero)
+### 3.1 Propagación a Neo4j (hacer primero — alimenta todo lo demás)
 
-Crear `backend/src/routes/categories.js`:
+Cuando una operación Postgres deba aparecer en queries sociales, replicar a Neo4j en un `try/catch` que **nunca rompa la respuesta principal** (patrón documentado en `titi-backend-patterns.md` §9).
 
-| Método | Ruta | Auth | Descripción |
-|---|---|---|---|
-| `GET` | `/api/categories` | público | Lista ordenada por nombre |
-| `POST` | `/api/categories` | ADMIN | Reservado para Etapa 4 (panel admin) — implementar ya con `requireRole('ADMIN')` |
+**En `POST /api/courses/:id/enroll`** (`routes/courses.js`) — después de crear la `Inscripcion`:
 
-Registrar en `src/index.js` con `app.use('/api/categories', categoriesRoutes)`.
-
-### 3.2 Seed (bloqueante — hacer junto con categorías)
-
-Crear `backend/prisma/seed.js` y agregar al `package.json` del backend:
-
-```json
-"prisma": { "seed": "node prisma/seed.js" }
+```cypher
+MATCH (u:Usuario {id: $neoId})
+MERGE (ref:CursoRef {cursoId: $cursoId})
+MERGE (u)-[r:INSCRITO_EN]->(ref)
+ON CREATE SET r.fechaInscripcion = datetime()
 ```
 
-Contenido mínimo del seed:
+**En `checkCursoCompletado`** (`services/progress.service.js`) — cuando `nuevo === true`, además de emitir el certificado:
 
-- **Categorías** (6 mínimo, con `icono` emoji):
-  - Programación 💻 · Matemáticas 🧮 · Idiomas 🌍 · Ciencias 🔬 · Diseño 🎨 · Negocios 📈 · Humanidades 📖 · Música 🎵
-- **Usuario `profesor_demo`** con `rol: PROFESOR`, `verificado: true`, espejo en Neo4j (`(:Usuario {id, username, email, password: hashed})`) y en Postgres con el mismo `neoId`. Password sembrada bajo `process.env.SEED_PASSWORD || 'titi1234'`.
-- **Un curso demo publicado** ("Introducción a Python") con 2 módulos, 3 lecciones cada uno, `videoUrl` de YouTube de ejemplo y al menos 1 material por lección.
+```cypher
+MATCH (u:Usuario {id: $neoId})
+MERGE (ref:CursoRef {cursoId: $cursoId})
+MERGE (u)-[r:COMPLETO_CURSO]->(ref)
+ON CREATE SET r.fechaCompletado = datetime()
+```
 
-Idempotente: usar `upsert` por slug/email para que correrlo dos veces no rompa.
+Para llegar al `neoId` desde `usuarioId` de Postgres, leer `Usuario.neoId` con un `findUnique`.
 
-### 3.3 Cursos — endpoints faltantes (`routes/courses.js`)
+**En logros** (`services/achievement.service.js` `otorgarLogro`) — al desbloquear, crear notificación en Neo4j para los seguidores:
 
-| Método | Ruta | Auth | Reglas |
-|---|---|---|---|
-| `DELETE` | `/api/courses/:id` | autor o ADMIN | **Rechazar con 409 si tiene inscripciones**. Exige despublicar primero |
-| `POST` | `/api/courses/:id/unpublish` | autor | Marca `publicado = false`. No toca inscripciones ya existentes |
+```cypher
+MATCH (autor:Usuario {id: $neoId})<-[:SIGUIO]-(follower:Usuario)
+WITH autor, follower
+MERGE (follower)<-[:RECIBIO]-(n:Notificacion {
+  type: 'logro', actorId: $neoId, logroNombre: $nombre
+})
+ON CREATE SET n.id = randomUUID(), n.read = false, n.createdAt = datetime()
+MERGE (n)-[:SOBRE]->(autor)
+```
 
-Adicionalmente, en los handlers existentes de `POST /` y `PUT /:id`:
-- Cuando `req.dbUser.rol === 'PROFESOR'`, exigir `req.dbUser.verificado === true`. Si no, responder `403 "Tu cuenta de profesor aún no está verificada"`.
-- El seed deja `profesor_demo` con `verificado: true` para desbloquear el flujo en dev.
+Tipo de notificación nuevo: `'logro'`. Manejarlo en el render del frontend.
 
-### 3.4 Módulos — endpoints faltantes (`routes/modules.js`)
+### 3.2 Feed académico — `routes/posts.js`
 
-| Método | Ruta | Auth | Notas |
-|---|---|---|---|
-| `GET` | `/api/courses/:courseId/modules` | público | Devuelve módulos ordenados, sin lecciones (para el editor) |
-| `PUT` | `/api/modules/:id` | autor del curso | Permite editar `titulo`, `descripcion`, `orden` |
-| `DELETE` | `/api/modules/:id` | autor del curso | Cascada: borrar lecciones, materiales, progresos y evaluación asociadas |
+Nuevo endpoint **`GET /api/posts/feed/academic`** (autenticado): actividad reciente de gente que sigo.
 
-### 3.5 Lecciones — endpoints faltantes (`routes/lessons.js`)
+Mezcla en una sola lista, ordenada por timestamp DESC:
+- `(yo)-[:SIGUIO]->(amigo)-[r:INSCRITO_EN]->(:CursoRef)` → tipo `inscripcion`
+- `(yo)-[:SIGUIO]->(amigo)-[r:COMPLETO_CURSO]->(:CursoRef)` → tipo `curso_completado`
+- `(yo)-[:SIGUIO]->(amigo)<-[:SOBRE]-(:Notificacion {type:'logro'})` → tipo `logro`
 
-| Método | Ruta | Auth | Notas |
-|---|---|---|---|
-| `GET` | `/api/lessons/:id` | público | Devuelve la lección con `materiales` incluidos |
-| `DELETE` | `/api/lessons/:id` | autor del curso | Cascada: progresos, materiales y comentarios de la lección |
+Devolver `{ actorUsername, actorAvatarUrl, type, cursoId?, logroNombre?, createdAt }`. Resolver `cursoId` → `{ titulo, categoria }` con un `prisma.curso.findMany({ where: { id: { in: cursoIds } } })` y mergear.
 
-### 3.6 Materiales (nuevo: `routes/materials.js`)
+**Privacidad:** solo gente que sigo. Nunca actividad pública.
 
-| Método | Ruta | Auth | Notas |
-|---|---|---|---|
-| `POST` | `/api/lessons/:lessonId/materials` | autor del curso | `multipart/form-data` con `file` + `nombre` + `tipo`. Reusar patrón multer de `posts.js`, guardar bajo `src/uploads/materials/` |
-| `DELETE` | `/api/materials/:id` | autor del curso | Borrar archivo del disco con `fs.promises.unlink` antes de borrar el row |
+### 3.3 Recomendaciones — `routes/courses.js`
 
-Tipos aceptados: `pdf | word | imagen | codigo | otro`. Límite 10 MB. Validar mimetype contra el `tipo` declarado.
+Nuevo endpoint **`GET /api/courses/recommended`** (autenticado): cursos publicados que **mis amigos ya tomaron**, en los que yo aún no estoy inscrito.
 
-### 3.7 Lo que **no** entra en Etapa 2 (dejar como TODO)
+```cypher
+MATCH (yo:Usuario {id: $neoId})-[:SIGUIO]->(amigo:Usuario)-[:INSCRITO_EN]->(ref:CursoRef)
+WHERE NOT EXISTS { (yo)-[:INSCRITO_EN]->(ref) }
+RETURN ref.cursoId as cursoId, count(DISTINCT amigo) as friendCount,
+       collect(DISTINCT amigo.username)[0..3] as sampleFriends
+ORDER BY friendCount DESC
+LIMIT 12
+```
 
-- Sincronización `(:Usuario)-[:INSCRITO_EN]->(cursoId)` en Neo4j al inscribirse — corresponde a Etapa 4 (recomendaciones). Dejar comentario `// TODO Etapa 4` en `POST /:id/enroll`.
-- Cloudinary para materiales — Etapa 5. Disco local es suficiente ahora.
-- Evaluaciones, racha, logros, certificados — Etapa 3.
+Hidratar contra Postgres (solo `publicado: true`) y devolver `{ curso, friendCount, sampleFriends }`.
+
+### 3.4 Admin — `routes/admin.js` (todo nuevo)
+
+Middleware: `requireAuth + requireRole('ADMIN')`.
+
+| Método | Ruta | Notas |
+|---|---|---|
+| `GET` | `/api/admin/users` | Lista paginada con `rol`, `verificado`, `racha`, conteo de cursos |
+| `PUT` | `/api/admin/users/:id/verify` | `verificado=true`, solo si `rol=PROFESOR` |
+| `PUT` | `/api/admin/users/:id/role` | Body: `{ rol: 'ESTUDIANTE'\|'PROFESOR'\|'ADMIN' }`. Validar enum |
+| `GET` | `/api/admin/courses` | Incluye borradores. Filtros `?publicado=` |
+| `PUT` | `/api/admin/courses/:id/approve` | Marca como `publicado` (acción de admin, opcional) |
+| `DELETE` | `/api/admin/courses/:id` | Override del 409 — borra incluso con inscripciones. Cascada completa |
+| `GET` | `/api/admin/stats` | Totales: usuarios, profesores verificados, cursos publicados, inscripciones, certificados |
+| `POST` | `/api/admin/categories` | CRUD movido aquí desde `categories.js` (donde ya estaba con `requireRole('ADMIN')`) |
+| `PUT` | `/api/admin/categories/:id` | Editar nombre / icono |
+| `DELETE` | `/api/admin/categories/:id` | 409 si tiene cursos asociados |
+
+Registrar en `src/index.js`. Sembrar **al menos un ADMIN demo** en `prisma/seed.js` (`admin_demo@titi.local`) con el mismo password del seed.
+
+### 3.5 Eliminar el endpoint temporal
+
+Borrar `POST /api/auth/become-teacher` de `routes/auth.js`. En el frontend de `MyTeaching.jsx` ya no debe aparecer el botón "Convertirme en profesor (dev)" — reemplazarlo por una nota "Pedile a un admin que te active el rol".
 
 ---
 
 ## 4. Plan — Frontend (estudiante)
 
-### 4.1 Comentarios en lecciones (bloqueante)
+### 4.1 Feed académico mezclado
 
-Crear `frontend/src/components/LessonComments.jsx`:
+En `pages/Feed.jsx`, al montar fetchear en paralelo `/api/posts/feed` y `/api/posts/feed/academic`, mezclarlos por `createdAt` DESC.
 
-- Espejo visual de `components/CommentSection.jsx` (avatar + bubble blanco con sombra suave Titi).
-- `GET /api/lessons/:id/comments` al montar.
-- `POST` con textarea + botón amarillo Titi.
-- Estado vacío con `<img src="/Titi.png" />` (no usar 🐒 según design.md §7).
-- Optimistic update al publicar.
+Componente nuevo `components/AcademicActivityCard.jsx` (basado en design.md §5.4):
 
-Integración en `pages/LearnCourse.jsx` → `LessonView`, debajo del botón "Marcar como completada", separado por un `<hr className="border-titi-border my-8" />`.
+- Header: avatar + nombre + verbo según tipo
+  - `inscripcion` → "{user} se inscribió en" + 📚
+  - `curso_completado` → "{user} completó" + 🎓
+  - `logro` → "{user} desbloqueó el logro" + 🏅
+- Para tipos de curso: tarjeta compacta del curso con CTA "Ver este curso →"
+- Para `logro`: chip del logro (icono + nombre)
 
-### 4.2 Materiales en la lección
+Respetar la regla de UI plana (sin gradientes / blur) — ya cumplida en Etapa 3.
 
-En `LessonView` (`pages/LearnCourse.jsx`), debajo de `leccion.contenido`:
+### 4.2 Recomendaciones por amigos en Cursos
 
-- Sección titulada "Materiales" solo si `leccion.materiales?.length > 0`.
-- Lista de chips con ícono por tipo (`📄 pdf`, `📝 word`, `🖼️ imagen`, `💻 codigo`, `📎 otro`) y link de descarga (`<a download>`).
-- Como hoy se lazy-fetchea por módulo, agregar fetch a `GET /api/lessons/:id` cuando cambia `activeId` y cachear en `lessonsByModulo` o en un nuevo `materialsByLesson`.
+En `pages/Courses.jsx`, debajo del header y antes del catálogo:
 
-### 4.3 Filtro por categoría en `pages/Courses.jsx`
+```jsx
+{recommended.length > 0 && (
+  <section aria-label="Recomendados por tus amigos">
+    <h2 className="text-lg font-bold text-titi-dark mb-3">
+      Tus amigos están aprendiendo
+    </h2>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {recommended.map(({ curso, friendCount, sampleFriends }) => (
+        <RecommendedCourseCard ... />
+      ))}
+    </div>
+  </section>
+)}
+```
 
-- Al montar: `GET /api/categories` → `setCategorias(...)`.
-- Segundo `<select>` a la derecha del de nivel con la misma clase visual.
-- Estado `categoria` (string id o `'all'`), incluido en el `useEffect` que fetchea el catálogo.
-- Si `categoria !== 'all'`, enviar `params.categoria = categoria` al backend (ya soportado en `GET /api/courses`).
-- "Limpiar filtros" debe resetear los tres: `query`, `nivel`, `categoria`.
+`RecommendedCourseCard` reusa el `CourseCard` actual pero agrega un chip "🤝 N amigos" con tooltip mostrando los `sampleFriends`.
+
+Solo se muestra para `isAuthenticated`. No bloquea el catálogo si está vacío.
+
+### 4.3 Notificación de logros de amigos
+
+En `pages/Notifications.jsx`, manejar `type: 'logro'`. Render: "@{user} desbloqueó el logro {nombre} 🏅".
 
 ---
 
-## 5. Plan — Frontend (profesor)
+## 5. Plan — Frontend (admin)
 
 ### 5.1 Estructura
 
-Crear carpeta `frontend/src/pages/teacher/` con:
+Crear `frontend/src/pages/admin/` con:
 
 ```
-pages/teacher/
-├── MyTeaching.jsx       ← lista de mis cursos como profesor + CTA "Crear curso"
-├── CourseEditor.jsx     ← formulario crear/editar curso
-└── ModulesEditor.jsx    ← edición inline de módulos + lecciones + materiales
+pages/admin/
+├── AdminDashboard.jsx   ← stats + entradas a sub-paneles
+├── AdminUsers.jsx       ← tabla de usuarios, verificar profesor, cambiar rol
+├── AdminCourses.jsx     ← todos los cursos (incl. borradores) + delete forzado
+└── AdminCategories.jsx  ← CRUD categorías
 ```
 
-Rutas (en `App.jsx`):
+Rutas en `App.jsx`:
 
 ```
-/teacher                          → MyTeaching
-/teacher/courses/new              → CourseEditor (modo crear)
-/teacher/courses/:id/edit         → CourseEditor (modo editar)
-/teacher/courses/:id/modules      → ModulesEditor
+/admin                → AdminDashboard
+/admin/users          → AdminUsers
+/admin/courses        → AdminCourses
+/admin/categories     → AdminCategories
 ```
 
-Guard: todas requieren `isAuthenticated && user.rol === 'PROFESOR'`. Si no, redirect a `/courses`.
+Guard nuevo `AdminOnly` (paralelo al `TeacherOnly` existente): si `user.rol !== 'ADMIN'`, redirect a `/feed`.
 
-### 5.2 `MyTeaching.jsx`
+### 5.2 Entrada en Navbar
 
-- `GET /api/courses/my/teaching` al montar.
-- Grid de tarjetas reutilizando el estilo de `CourseCard` pero con:
-  - Badge "Borrador" / "Publicado" en esquina.
-  - Acciones: "Editar curso" → `/teacher/courses/:id/edit`, "Editar contenido" → `/teacher/courses/:id/modules`, "Publicar"/"Despublicar", "Eliminar" (con `ConfirmModal`).
-- CTA principal "Crear nuevo curso" → `/teacher/courses/new`.
-- Estado vacío con Titi.
+Agregar `NavLink to="/admin"` al sidebar desktop **solo si `user.rol === 'ADMIN'`** (mismo patrón que la entrada "Enseñar" — ver [Navbar.jsx:138-143](frontend/src/components/Navbar.jsx:138)).
 
-### 5.3 `CourseEditor.jsx`
+### 5.3 Acceso a /admin desde mobile
 
-Formulario con campos del modelo `Curso`:
+El acceso a `/teacher` en mobile ya está resuelto: el slot "Mis cursos" del bottom nav se transforma en "Enseñar" para `rol ∈ {PROFESOR, ADMIN}` (ver [Navbar.jsx](frontend/src/components/Navbar.jsx) `MobileBottomNav`).
 
-- `titulo` (input)
-- `descripcion` (textarea)
-- `nivel` (select: principiante / intermedio / avanzado)
-- `categoriaId` (select desde `GET /api/categories`)
-- `portadaUrl` (input URL — Cloudinary va en Etapa 5)
+Para `/admin` aplicar el mismo patrón: si `rol === 'ADMIN'`, el slot "Cursos" puede transformarse en "Admin", o reusar el mismo slot que ya muestra "Enseñar" pero apuntando a `/admin`. **Decisión recomendada:** mantener "Enseñar" y agregar acceso a `/admin` desde el menú del avatar en `MobileTopBar` (admin es un rol mucho menos frecuente que profesor).
 
-Botones:
-- "Guardar borrador" → `POST /api/courses` o `PUT /api/courses/:id`
-- "Continuar al contenido →" navega a `/teacher/courses/:id/modules`
-
-Estilo: respetar design.md §5.1 (botón primario amarillo con sombra inferior `#E6B800`, inputs `bg-titi-cream`, focus ring amarillo).
-
-### 5.4 `ModulesEditor.jsx`
-
-Vista de dos columnas:
-- **Izquierda**: árbol de módulos con sus lecciones, drag-handle visual para el orden (sin DnD real — flechas ↑↓ que llaman a `PUT /api/modules/:id` o `PUT /api/lessons/:id` con `orden` ajustado). Botón "Agregar módulo" arriba.
-- **Derecha**: editor de la lección seleccionada con `titulo`, `contenido` (textarea), `videoUrl` (input URL), y zona de **materiales** con drag&drop básico (`<input type="file">` clásico está OK para Etapa 2).
-
-Acciones:
-- Crear módulo: `POST /api/courses/:courseId/modules`
-- Editar módulo: `PUT /api/modules/:id`
-- Borrar módulo: `DELETE /api/modules/:id` con `ConfirmModal`
-- Crear lección: `POST /api/modules/:moduleId/lessons`
-- Editar lección: `PUT /api/lessons/:id`
-- Borrar lección: `DELETE /api/lessons/:id`
-- Subir material: `POST /api/lessons/:lessonId/materials`
-- Borrar material: `DELETE /api/materials/:id`
-
-Botón "Publicar curso" en el header, deshabilitado si el curso tiene 0 módulos o 0 lecciones.
-
-### 5.5 Navbar — entrada condicional
-
-En `components/Navbar.jsx`:
-
-- Si `user?.rol === 'PROFESOR'`, agregar `NavLink to="/teacher"` con un nuevo `Icon.GraduationCap` (svg inline) y label "Enseñar".
-- Posición: entre "Mis cursos" y "Notificaciones" en el sidebar desktop. En el bottom nav móvil, **no** se agrega para no romper el grid de 5 columnas — el profesor accede desde el sidebar o desde el avatar.
+Mantener el bottom nav en 5 columnas como manda design.md.
 
 ---
 
-## 6. Riesgos y decisiones tomadas
+## 6. Decisiones tomadas
 
 | Decisión | Razón |
 |---|---|
-| Borrado de curso bloqueado si tiene inscripciones | Evitar perder progreso de estudiantes. Despublicar es el camino correcto |
-| `verificado` requerido para crear cursos | Coherente con `Usuario.verificado` del schema. En dev el seed marca `profesor_demo` como verificado |
-| Materiales a disco local (`src/uploads/materials/`) | Mismo patrón que `posts.js`. Cloudinary se mueve a Etapa 5 |
-| `INSCRITO_EN` en Neo4j queda como TODO | No es necesario para la funcionalidad de Etapa 2; sí lo es para recomendaciones (Etapa 4) |
-| Sin DnD real para orden de módulos/lecciones | Botones ↑↓ son suficientes y no agregan dependencia |
-| Profesor no entra al bottom nav móvil | El grid de 5 columnas ya está apretado. El profesor accede desde sidebar/perfil |
+| Propagación a Neo4j **no bloquea** la operación Postgres | Postgres es fuente de verdad para datos educativos. Si Neo4j falla, queremos loguear pero responder OK |
+| Nodos `:CursoRef` con `cursoId` en Neo4j | Evita duplicar `Curso` en ambas DBs. `cursoId` referencia Postgres |
+| Notificaciones de logros via Neo4j | Mismo grafo que likes/follows. El `:RECIBIO`/`:SOBRE` ya existe |
+| Admin override del 409 de borrar curso | Es la única forma de limpiar cursos abusivos sin tocar SQL |
+| Eliminar `become-teacher` en esta etapa | Tener admin lo hace innecesario y peligroso (cualquier usuario podía autoascenderse) |
+| Sin paginación pesada en feed académico | Limit 50 alcanza. La paginación real llega en Etapa 5 |
 
 ### Pendiente de confirmar antes de codear
 
-1. **Auto-verificación de profesores en dev** — ¿Agregamos un endpoint temporal `POST /api/auth/become-teacher` que cambie el rol del usuario logueado a PROFESOR y `verificado=true`? Útil mientras no exista el panel admin (Etapa 4). Si sí, marcarlo con `// TODO eliminar en Etapa 4`.
-2. **Comportamiento al despublicar** — ¿Las inscripciones existentes siguen viendo el curso o se ocultan? Recomendación: lo siguen viendo en "Mis cursos" pero no aparece en el catálogo.
+1. **Aprobación de cursos** — ¿el admin debe aprobar antes de que aparezca en el catálogo, o el `publicado` que pone el profesor es suficiente? Default: el `publicado` del profesor alcanza, el endpoint `/approve` queda como fallback opcional.
+2. **Override de inscripciones al borrar curso** — al borrar un curso con admin override, ¿qué pasa con las inscripciones / progreso / certificados? Propuesta: borrar inscripciones + progresos, **preservar certificados** (el estudiante ya se ganó esa credencial).
 
 ---
 
 ## 7. Orden de ejecución sugerido
 
-Ejecutar de arriba hacia abajo. Cada bloque desbloquea al siguiente.
+**Bloque A — Backend foundation**
+1. Helper `replicateToNeo4j` en `services/` para concentrar el patrón.
+2. Propagación en `POST /enroll` y en `checkCursoCompletado`.
+3. Notificación social al otorgar logros.
+4. Seed del usuario `admin_demo`.
 
-**Bloque A — Datos base (sin esto nada se puede probar)**
-1. `routes/categories.js` con `GET` y `POST`
-2. `prisma/seed.js` con categorías + `profesor_demo` + curso demo
-3. Correr `npx prisma db seed`
+**Bloque B — Endpoints sociales**
+5. `GET /api/posts/feed/academic`
+6. `GET /api/courses/recommended`
 
-**Bloque B — Backend completo**
-4. Endpoints faltantes de `courses.js` (DELETE, unpublish, validación `verificado`)
-5. Endpoints faltantes de `modules.js` (GET por curso, PUT, DELETE)
-6. Endpoints faltantes de `lessons.js` (GET con materiales, DELETE)
-7. `routes/materials.js` con upload multer + DELETE
-8. Registrar todas las rutas nuevas en `src/index.js`
+**Bloque C — Admin**
+7. `routes/admin.js` completo
+8. Eliminar `POST /api/auth/become-teacher` y la UI relacionada
+9. Mover endpoints de categorías a admin
 
-**Bloque C — Frontend del estudiante**
-9. `components/LessonComments.jsx` + integración en `LearnCourse`
-10. Sección "Materiales" en `LessonView`
-11. Filtro de categoría en `Courses.jsx`
+**Bloque D — Frontend estudiante**
+10. `AcademicActivityCard` + integración en `Feed`
+11. Sección "Recomendados" en `Courses`
+12. Manejo de `type: 'logro'` en `Notifications`
 
-**Bloque D — Frontend del profesor**
-12. `pages/teacher/MyTeaching.jsx` + ruta en `App.jsx` + guard por rol
-13. `pages/teacher/CourseEditor.jsx`
-14. `pages/teacher/ModulesEditor.jsx` (módulos + lecciones + materiales)
-15. Entrada "Enseñar" en `Navbar.jsx` (sidebar desktop)
+**Bloque E — Frontend admin**
+13. `pages/admin/*` (4 páginas) + guard `AdminOnly`
+14. Entrada "Admin" en sidebar
+15. Menú-avatar en `MobileTopBar` para acceso a /teacher y /admin
 
-**Bloque E — Cierre**
-16. Smoke test end-to-end manual:
-    - Registrar `estudiante_test`
-    - Login como `profesor_demo`
-    - Crear curso → módulo → lección con video → subir material PDF → publicar
-    - Logout → login como `estudiante_test`
-    - Filtrar catálogo por categoría → abrir curso → inscribirse
-    - Reproducir lección → descargar material → marcar completada → comentar
-    - Verificar progreso en "Mis cursos"
-17. Tachar todos los checkboxes de §8
+**Bloque F — Cierre**
+16. Smoke test E2E:
+    - Login admin_demo → verificar a un nuevo profesor → ese profesor crea curso → publica
+    - Estudiante se inscribe → ver el evento en el feed de un amigo
+    - Estudiante completa curso → certificado + evento en feed
+    - Admin borra curso con inscripciones → confirma cascada
+17. Tachar checkboxes de §8
 
 ---
 
-## 8. Definition of Done — Etapa 2
+## 8. Definition of Done — Etapa 4
 
-- [ ] `GET /api/categories` devuelve al menos 6 categorías sembradas
-- [ ] `npx prisma db seed` deja un curso publicado navegable y un profesor demo verificado
-- [ ] Un PROFESOR verificado crea curso → módulo → lección → material → publica, todo desde la UI
-- [ ] Un PROFESOR no verificado recibe 403 al intentar crear curso
-- [ ] Eliminar un curso sin inscritos funciona; con inscritos responde 409 con mensaje claro
-- [ ] El catálogo filtra por nivel **y** categoría
-- [ ] Un ESTUDIANTE puede inscribirse, marcar lecciones completas, descargar materiales y comentar
-- [ ] Los comentarios persisten y se muestran ordenados por fecha desc
-- [ ] La barra de progreso del curso refleja los `Progreso.completada` reales
-- [ ] El navbar muestra "Enseñar" solo a PROFESOR
-- [ ] No queda ningún endpoint listado en AGENTSGoal §"Cursos/Módulos/Lecciones/Evaluaciones" (las primeras tres secciones) sin implementar
-- [ ] No quedan flujos que requieran tocar la API a mano
+- [ ] Al inscribirme en un curso, mis seguidores ven la actividad en su feed
+- [ ] Al completar un curso, mis seguidores ven "X completó el curso Y"
+- [ ] Al desbloquear un logro, mis seguidores reciben notificación
+- [ ] Sección "Tus amigos están aprendiendo" aparece en `/courses` para usuarios autenticados con amigos inscritos
+- [ ] El admin verifica un profesor desde la UI y ese profesor ya puede crear cursos
+- [ ] El admin cambia el rol de cualquier usuario desde la UI
+- [ ] El admin borra un curso con inscritos (cascada confirmada)
+- [ ] `GET /api/admin/stats` devuelve totales consistentes
+- [ ] Categorías se crean/editan/borran desde la UI del admin
+- [ ] `POST /api/auth/become-teacher` ya no existe ni en backend ni en frontend
+- [ ] La propagación Neo4j↔Postgres falla con log pero **no bloquea** ningún flujo del usuario
+- [ ] El profesor en mobile puede llegar a `/teacher` sin tipear la URL
 
 ---
 
 ## 9. Convenciones a respetar
 
 - **Diseño**: todo componente nuevo debe pasar la checklist de `frontend/design.md` §12.
-- **Mascota**: Titi se representa con `<img src="/Titi.png" />`, nunca con el emoji 🐒.
-- **Respuesta API**: `{ success, data }` en éxito, `{ success: false, message }` en error (AGENTSGoal §"Patrones obligatorios").
-- **Nombres**: nodos Neo4j, relaciones, modelos Prisma y campos visibles en UI en **español**. Variables, funciones, archivos y rutas técnicas en **inglés**.
-- **Commits**: prefijos en español — `feat: agregar editor de módulos`, `fix: validar verificado al crear curso`.
-- **CodeGraph**: usar `codegraph_*` antes de grep/read para preguntas estructurales (ver `~/.claude/CLAUDE.md`).
+- **UI plana**: sin `bg-gradient-*` ni `blur-*` decorativos en componentes nuevos (regla aprendida en Etapa 3).
+- **Mascota Titi**: siempre `<img src="/Titi.png" />`, nunca emoji 🐒.
+- **Respuesta API**: `{ success, data }` éxito, `{ success: false, message }` error.
+- **Nombres**: modelos Prisma, nodos/relaciones Neo4j y campos visibles en **español**. Código (variables, funciones, archivos) en **inglés**.
+- **Commits**: prefijos en español (`feat:`, `fix:`, `refactor:`, `docs:`, `chore:`).
+- **CodeGraph**: usar `codegraph_*` antes de grep para preguntas estructurales.
+- **Propagación a Neo4j**: siempre dentro de `try/catch` que loguea pero no rompe la respuesta principal.

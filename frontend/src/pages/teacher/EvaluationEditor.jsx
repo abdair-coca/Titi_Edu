@@ -218,16 +218,16 @@ export default function EvaluationEditor({ mode = 'module' }) {
         ← Volver al contenido
       </button>
 
-      <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark mb-1">
+      <h1 className="text-xl sm:text-3xl font-extrabold text-titi-dark mb-1 leading-tight">
         {isFinal ? 'Evaluación final del curso' : 'Evaluación del módulo'}
       </h1>
-      <p className="text-sm font-medium text-gray-500 mb-6">
+      <p className="text-sm font-medium text-gray-500 mb-5 sm:mb-6">
         {evalId
           ? 'Editá las preguntas. Al guardar se reemplazan por esta versión.'
           : 'Creá las preguntas. Podés combinar los 3 tipos.'}
       </p>
 
-      <div className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col gap-5">
+      <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col gap-5">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold text-titi-dark">
             Título <span className="text-titi-red">*</span>
@@ -316,7 +316,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50"
+            className="w-full sm:w-auto bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50"
           >
             {saving ? 'Guardando…' : evalId ? 'Guardar cambios' : 'Crear evaluación'}
           </button>
@@ -324,7 +324,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="text-titi-red font-semibold text-sm px-4 py-2 rounded-xl hover:bg-red-50 transition-all"
+              className="w-full sm:w-auto text-titi-red font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-red-50 transition-all"
             >
               Eliminar evaluación
             </button>
@@ -371,13 +371,13 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
   }
 
   return (
-    <div className="bg-titi-cream/50 border border-titi-border rounded-2xl p-4">
+    <div className="bg-titi-cream/50 border border-titi-border rounded-2xl p-3 sm:p-4">
       <div className="flex items-start gap-2 mb-3">
         <span className="shrink-0 w-7 h-7 rounded-full bg-titi-yellow-light text-titi-dark grid place-items-center text-xs font-extrabold mt-1">
           {index + 1}
         </span>
         <div className="flex-1 min-w-0">
-          <span className="text-xs font-bold text-titi-achievement uppercase tracking-wide">
+          <span className="text-[10px] sm:text-xs font-bold text-titi-achievement uppercase tracking-wide block">
             {tipo?.icon} {tipo?.label}
           </span>
           <textarea
@@ -393,7 +393,7 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
           type="button"
           onClick={onRemove}
           aria-label="Eliminar pregunta"
-          className="shrink-0 w-7 h-7 grid place-items-center rounded text-titi-red hover:bg-red-50 mt-1"
+          className="shrink-0 w-8 h-8 grid place-items-center rounded-lg text-titi-red hover:bg-red-50 mt-1"
         >
           ✕
         </button>
@@ -401,7 +401,7 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
 
       {/* Opciones según tipo */}
       {pregunta.tipo === 'RESPUESTA_CORTA' ? (
-        <div className="pl-9 flex flex-col gap-2">
+        <div className="pl-2 sm:pl-9 flex flex-col gap-2">
           <p className="text-xs font-semibold text-gray-500">
             Respuestas aceptadas (no distingue mayúsculas ni tildes):
           </p>
@@ -435,7 +435,7 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
           </button>
         </div>
       ) : (
-        <div className="pl-9 flex flex-col gap-2">
+        <div className="pl-2 sm:pl-9 flex flex-col gap-2">
           <p className="text-xs font-semibold text-gray-500">
             Marcá la opción correcta:
           </p>

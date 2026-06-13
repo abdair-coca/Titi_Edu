@@ -271,6 +271,9 @@ function bottomItemClass({ isActive }) {
 }
 
 function MobileBottomNav({ user }) {
+  // Un PROFESOR/ADMIN no se inscribe en cursos — ve directo su panel docente.
+  const isTeacher = user?.rol === 'PROFESOR' || user?.rol === 'ADMIN';
+
   return (
     <nav
       aria-label="Navegación principal"
@@ -290,10 +293,17 @@ function MobileBottomNav({ user }) {
           <Icon.Books className="w-6 h-6" />
           <span>Cursos</span>
         </NavLink>
-        <NavLink to="/my-courses" className={bottomItemClass}>
-          <Icon.Target className="w-6 h-6" />
-          <span>Mis cursos</span>
-        </NavLink>
+        {isTeacher ? (
+          <NavLink to="/teacher" className={bottomItemClass}>
+            <Icon.Cap className="w-6 h-6" />
+            <span>Enseñar</span>
+          </NavLink>
+        ) : (
+          <NavLink to="/my-courses" className={bottomItemClass}>
+            <Icon.Target className="w-6 h-6" />
+            <span>Mis cursos</span>
+          </NavLink>
+        )}
         <NavLink
           to={user?.username ? `/profile/${user.username}` : '/feed'}
           className={bottomItemClass}

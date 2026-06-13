@@ -198,7 +198,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
       <QuizShell evaluacion={evaluacion}>
         <div className="flex flex-col items-center text-center py-6">
           <TitiMascot mood="motivating" message="¡Vos podés! Leé con calma cada pregunta." size="md" />
-          <dl className="grid grid-cols-3 gap-4 mt-6 w-full max-w-md">
+          <dl className="grid grid-cols-3 gap-2 sm:gap-4 mt-6 w-full max-w-md">
             <InfoStat label="Preguntas" value={totalPreguntas} />
             <InfoStat label="Nota mínima" value={`${evaluacion.notaMinima}%`} />
             <InfoStat
@@ -270,17 +270,17 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
               return (
                 <li
                   key={p.id}
-                  className={`flex items-start gap-3 rounded-xl border px-3 py-2 ${
+                  className={`flex items-start gap-2 sm:gap-3 rounded-xl border px-3 py-2 ${
                     ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
                   }`}
                 >
                   <span
-                    className={`text-sm font-black shrink-0 ${ok ? 'text-green-600' : 'text-titi-red'}`}
+                    className={`text-sm font-black shrink-0 leading-relaxed ${ok ? 'text-green-600' : 'text-titi-red'}`}
                     aria-label={ok ? 'Correcta' : 'Incorrecta'}
                   >
                     {ok ? '✓' : '✗'}
                   </span>
-                  <span className="text-sm font-medium text-titi-dark min-w-0">
+                  <span className="text-sm font-medium text-titi-dark min-w-0 break-words">
                     <span className="text-gray-400 tabular-nums mr-1">{i + 1}.</span>
                     {p.texto}
                   </span>
@@ -323,15 +323,15 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-3 pt-2">
-          <span className="text-sm font-semibold text-gray-400 tabular-nums">
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+          <span className="text-sm font-semibold text-gray-400 tabular-nums text-center sm:text-left">
             {answeredCount} / {totalPreguntas} respondidas
           </span>
           <button
             type="button"
             onClick={handleSubmit}
             disabled={!allAnswered || submitting}
-            className="bg-titi-yellow text-titi-dark font-bold text-base px-8 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto bg-titi-yellow text-titi-dark font-bold text-base px-6 sm:px-8 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? 'Enviando…' : 'Enviar respuestas'}
           </button>
@@ -344,12 +344,12 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
 // ---- Carcasa con título ----
 function QuizShell({ evaluacion, children }) {
   return (
-    <section className="bg-white border border-gray-100 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-5 sm:p-6">
-      <header className="mb-5">
+    <section className="bg-white border border-gray-100 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-6">
+      <header className="mb-4 sm:mb-5">
         <p className="text-xs font-extrabold uppercase tracking-wide text-titi-achievement">
           {evaluacion.esFinal ? 'Evaluación final' : 'Evaluación de módulo'}
         </p>
-        <h2 className="text-xl sm:text-2xl font-bold text-titi-dark mt-0.5">
+        <h2 className="text-lg sm:text-2xl font-bold text-titi-dark mt-0.5 leading-snug">
           {evaluacion.titulo}
         </h2>
       </header>
@@ -360,9 +360,13 @@ function QuizShell({ evaluacion, children }) {
 
 function InfoStat({ label, value }) {
   return (
-    <div className="bg-titi-cream rounded-xl px-3 py-2.5">
-      <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400">{label}</dt>
-      <dd className="text-lg font-extrabold text-titi-dark tabular-nums">{value}</dd>
+    <div className="bg-titi-cream rounded-xl px-2 py-2 sm:px-3 sm:py-2.5">
+      <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400 leading-tight">
+        {label}
+      </dt>
+      <dd className="text-base sm:text-lg font-extrabold text-titi-dark tabular-nums mt-0.5">
+        {value}
+      </dd>
     </div>
   );
 }
@@ -370,9 +374,9 @@ function InfoStat({ label, value }) {
 // ---- Una pregunta del formulario ----
 function QuestionCard({ pregunta, index, answer, onAnswer }) {
   return (
-    <fieldset className="bg-titi-cream/60 border border-titi-border rounded-2xl p-4">
+    <fieldset className="bg-titi-cream/60 border border-titi-border rounded-2xl p-3 sm:p-4">
       <legend className="sr-only">Pregunta {index + 1}</legend>
-      <p className="text-sm sm:text-base font-bold text-titi-dark mb-3">
+      <p className="text-sm sm:text-base font-bold text-titi-dark mb-3 break-words">
         <span className="text-gray-400 tabular-nums mr-1.5">{index + 1}.</span>
         {pregunta.texto}
       </p>

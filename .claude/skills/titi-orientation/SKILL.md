@@ -23,25 +23,42 @@ backend/src/
   prisma.js             ← singleton PrismaClient
   middleware/auth.js    ← requireAuth, optionalAuth (parsea JWT a req.user)
   routes/
-    auth.js             ← /api/auth (register, login) — crea Neo4j + espejo Postgres
+    auth.js             ← /api/auth (register, login, become-teacher* — *eliminar en Etapa 4)
     posts.js            ← /api/posts (feed, explore, like, save, comentarios via /comments.js)
     users.js            ← /api/users (perfil, follow, ubicación)
-    courses.js          ← /api/courses (catálogo, detalle, inscribir, mi-progreso, mis-cursos)
-    modules.js          ← /api/courses/:id/modules + /api/modules/:id/lessons
-    lessons.js          ← /api/lessons (POST/PUT/complete/comments)
+    courses.js          ← /api/courses (catálogo, detalle, inscribir, publish/unpublish/delete, mis-cursos)
+    modules.js          ← /api/courses/:id/modules + /api/modules/:id/lessons + CRUD módulos
+    lessons.js          ← /api/lessons (CRUD, complete con racha+logros, comments)
+    materials.js        ← /api/lessons/:id/materials + /api/materials/:id (multer)
+    categories.js       ← /api/categories (GET público, POST admin)
+    evaluations.js      ← /api/evaluations (CRUD + attempt con grading server-side)
+    progress.js         ← /api/progress (streak, achievements, certificates + verify público)
     notifications.js, search.js, comments.js, sounds.js, locations.js
+  services/
+    progress.service.js     ← actualizarRacha + checkCursoCompletado + rachaEstaActiva
+    achievement.service.js  ← LOGROS_CATALOGO + ensureLogrosCatalog + checkers
 
 frontend/src/
   api/client.js         ← axios + interceptor JWT desde localStorage
   context/AuthContext   ← { user, isAuthenticated, login, logout }
+  hooks/useStreak.js    ← racha actual del usuario logueado
   components/
     Navbar.jsx          ← sidebar desktop + bottom nav móvil + badge notif
     PostCard.jsx        ← post completo con like/save/comentarios
     CreatePost.jsx, EditPostModal.jsx, CommentSection.jsx, OptionsPosts.jsx
     ConfirmModal.jsx, TitiMascot.jsx
+    LessonComments.jsx
+    StreakBadge.jsx (3 variantes), StreakToast.jsx
+    AchievementToast.jsx, AchievementsSection.jsx
+    EvaluationQuiz.jsx
   pages/
     Feed, Explore, Profile, Notifications, HashtagFeed, Login, Register
     Courses, CourseDetail, LearnCourse, MyCourses
+    Certificates.jsx (+ export VerifyCertificate para /verify/:codigo)
+    teacher/MyTeaching.jsx (con FAB móvil "+ Crear curso")
+    teacher/CourseEditor.jsx
+    teacher/ModulesEditor.jsx
+    teacher/EvaluationEditor.jsx (mode="module"|"final")
 ```
 
 ## El puente Neo4j ↔ Postgres (CRÍTICO)
@@ -79,10 +96,10 @@ async function loadCurrentUser(req, res) {
 
 ## Etapas del proyecto
 
-- ✅ **Etapa 1** — Red social Titi (completa).
-- 🔄 **Etapa 2** — Módulo educativo base (en curso). Ver `AGENTS.md` para checklist.
-- 📋 **Etapa 3** — Evaluaciones, racha, logros, certificados.
-- 📋 **Etapa 4** — Integración social + admin.
+- ✅ **Etapa 1** — Red social Titi.
+- ✅ **Etapa 2** — Módulo educativo base (cursos / módulos / lecciones / materiales / inscripciones).
+- ✅ **Etapa 3** — Evaluaciones, racha, logros, certificados.
+- 🔄 **Etapa 4** — Integración social + admin. **Ver `AGENTS.md` para checklist.**
 - 📋 **Etapa 5** — Cloudinary, tests, deploy.
 
 ## Lecturas obligatorias antes de tocar código

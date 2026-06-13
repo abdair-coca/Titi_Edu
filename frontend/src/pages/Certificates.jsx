@@ -44,8 +44,8 @@ export default function Certificates() {
 
   return (
     <div>
-      <header className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark mb-1">
+      <header className="mb-5 sm:mb-8">
+        <h1 className="text-xl sm:text-3xl font-extrabold text-titi-dark mb-1 leading-tight">
           Mis certificados
         </h1>
         <p className="text-sm font-medium text-gray-500">
@@ -106,20 +106,20 @@ export default function Certificates() {
               key={cert.id}
               className="bg-white rounded-2xl border-2 border-titi-yellow shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden"
             >
-              <div className="flex items-center gap-3 px-5 py-4 bg-titi-yellow-light">
-                <span className="text-3xl select-none" aria-hidden="true">
+              <div className="flex items-center gap-3 px-4 sm:px-5 py-4 bg-titi-yellow-light">
+                <span className="text-2xl sm:text-3xl select-none shrink-0" aria-hidden="true">
                   {cert.curso?.categoria?.icono || '🎓'}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-xs font-extrabold uppercase tracking-wide text-titi-yellow-dark">
+                  <p className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wide text-titi-yellow-dark">
                     Certificado Titi
                   </p>
-                  <h3 className="text-base font-bold text-titi-dark leading-snug line-clamp-2">
+                  <h3 className="text-sm sm:text-base font-bold text-titi-dark leading-snug line-clamp-2">
                     {cert.curso?.titulo || 'Curso'}
                   </h3>
                 </div>
               </div>
-              <div className="p-5 flex flex-col gap-3">
+              <div className="p-4 sm:p-5 flex flex-col gap-3">
                 <p className="text-sm font-medium text-gray-500">
                   Emitido el {formatDate(cert.fechaEmision)}
                 </p>
@@ -131,17 +131,17 @@ export default function Certificates() {
                     {cert.codigoVerif}
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => copyCode(cert)}
-                    className="bg-white text-titi-dark font-semibold text-sm px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all"
+                    className="bg-white text-titi-dark font-semibold text-sm px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all text-center"
                   >
                     {copiedId === cert.id ? '✓ Copiado' : 'Copiar código'}
                   </button>
                   <Link
                     to={`/verify/${cert.codigoVerif}`}
-                    className="bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
+                    className="bg-titi-yellow text-titi-dark font-bold text-sm px-3 py-2 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 text-center"
                   >
                     Ver verificación
                   </Link>

@@ -582,74 +582,46 @@ const MENSAJES_TITI = {
 
 ---
 
-### 🔄 Etapa 2 — Módulo Educativo Base (EN CURSO)
+### ✅ Etapa 2 — Módulo Educativo Base (COMPLETADA)
 
-> **Definition of Done detallado en `AGENTS.md`** — este archivo solo describe el alcance.
+**Alcance entregado:**
+- PostgreSQL + Prisma conectados, schema completo migrado.
+- CRUD de cursos / módulos / lecciones / materiales (multer, tope 10 MB, tipos `pdf|word|imagen|codigo|otro`).
+- Inscripciones con `@@unique([usuarioId, cursoId])` para dedup.
+- Categorías sembradas (`💻 Programación`, `🧮 Matemáticas`, `🌍 Idiomas`, `🔬 Ciencias`, `🎨 Diseño`, `📈 Negocios`, `📖 Humanidades`, `🎵 Música`).
+- UI estudiante: catálogo con filtros (categoría + nivel + búsqueda), detalle, `LearnCourse` con video YouTube, materiales descargables, comentarios.
+- UI profesor: `MyTeaching`, `CourseEditor`, `ModulesEditor` (módulos + lecciones + materiales con drag-handle por flechas ↑↓).
+- Guard de rol PROFESOR en `App.jsx` para sub-rutas `/teacher/courses/*`.
+- Seed idempotente con `profesor_demo` verificado y curso "Introducción a Python".
 
-**Dependencias:** Etapa 1 cerrada, PostgreSQL provisionado, Prisma migrado.
-
-**Alcance:**
-- PostgreSQL + Prisma instalado y conectado.
-- Modelo completo en `schema.prisma` (cursos, módulos, lecciones, materiales, categorías, inscripciones, progreso).
-- CRUD completo de cursos, módulos, lecciones y materiales.
-- Sistema de inscripciones con dedup vía constraint.
-- Categorías con seed inicial.
-- UI del estudiante: catálogo con filtros (categoría + nivel + búsqueda), detalle de curso, reproductor de lección con video YouTube, descarga de materiales, comentarios.
-- UI del profesor: panel de mis cursos como profesor, editor de curso, editor de módulos/lecciones, subida de materiales.
-- Seed con un profesor demo y un curso demo navegable.
-
-**Deliverables:**
-- 6+ endpoints REST nuevos (deletes, materiales, categorías).
-- 3+ páginas nuevas en `pages/teacher/`.
-- 2+ componentes nuevos (`LessonComments`, sección de materiales en `LessonView`).
-- `prisma/seed.js` idempotente.
-
-**Criterios de aceptación:** ver `AGENTS.md` §8.
-
-**Riesgos:**
-- Subida de archivos con multer es nueva para materiales pero ya existe en `posts.js`. Reusar patrón.
-- Validación de profesor verificado puede romper flujos demo si el seed no marca `verificado: true`.
+**Decisiones tomadas:**
+- Cascada manual en deletes con transacción Prisma (en vez de `onDelete: Cascade` en el schema).
+- Borrar curso con inscripciones responde **409** — hay que despublicar primero.
+- Endpoint temporal `POST /api/auth/become-teacher` (autoascenso a profesor en dev) — se elimina en Etapa 4 cuando exista panel admin.
 
 ---
 
-### 📋 Etapa 3 — Evaluaciones y Progreso
+### ✅ Etapa 3 — Evaluaciones y Progreso (COMPLETADA)
 
-**Dependencias:** Etapa 2 cerrada (curso debe poder crearse con módulos antes de poder evaluar).
+**Alcance entregado:**
+- `routes/evaluations.js` con CRUD completo: crear evaluación de módulo y final (autor verificado), `GET` filtrado por rol (los estudiantes no ven `esCorrecta` ni las opciones de respuesta corta), `PUT` reemplaza preguntas en transacción, `DELETE` con cascada de intentos.
+- `POST /api/evaluations/:id/attempt` con **calificación server-side**: opción múltiple y V/F por id de opción correcta, respuesta corta normaliza tildes/mayúsculas. Bloqueo tras `intentosMax` fallidos. Devuelve detalle por pregunta, racha, logros y certificado si el curso quedó completo.
+- `services/progress.service.js`: `actualizarRacha` (TZ del servidor, `startOfDay`) + `checkCursoCompletado` (regla: **todas las lecciones + todas las evaluaciones aprobadas** → emite Certificado y otorga logro "Primer curso").
+- `services/achievement.service.js`: catálogo de 7 logros con `ensureLogrosCatalog()` idempotente + checkers (`checkLogrosLeccion`, `checkLogrosEvaluacion`, `checkLogroSocial`). El `@@id([usuarioId, logroId])` previene duplicados.
+- `routes/progress.js`: `/streak`, `/achievements` (propio), `/:username/achievements` (público), `/:username/streak` (público), `/certificates`, `/certificate/:courseId`, `/certificates/verify/:codigo` (público sin auth).
+- Componentes: `EvaluationQuiz` (3 fases intro→quiz→result con TitiMascot por estado), `AchievementToast` (cola, entra desde la derecha, no bloquea UI), `StreakBadge` rediseñado en 3 variantes con metas e hitos (7 🔥 / 30 ⚡ / 100 💯 / 365 👑), `AchievementsSection` (grid en perfil con desbloqueados/bloqueados).
+- Páginas: `Certificates.jsx` (mis certificados + ruta pública `/verify/:codigo`), `EvaluationEditor.jsx` (editor del profesor para módulo y final con guard `TeacherOnly`).
+- Integración en `LearnCourse`: entradas de evaluación en el sidebar (📝 por módulo, 🏁 final), banner de "¡Curso completado!" con CTA al certificado, toasts de racha y logros.
 
-**Alcance:**
-- Evaluaciones por módulo y evaluación final por curso.
-- Tipos de pregunta: opción múltiple, verdadero/falso, respuesta corta.
-- Sistema de intentos (máx configurable por evaluación, default 3) con nota mínima (default 70%).
-- Servicio de racha activa al completar lecciones y al aprobar evaluaciones.
-- Servicio de logros con desbloqueo automático.
-- Emisión de certificado al completar un curso (con código de verificación único).
-- UI de Titi con mensajes motivadores: `<TitiMascot mood="celebrating|sad|fire|proud" />`.
-- `AchievementToast` que aparece desde la derecha al desbloquear logros.
-- `StreakBadge` siempre visible en el sidebar.
-
-**Deliverables:**
-- `routes/evaluations.js`, `routes/progress.js` completos.
-- `services/progress.service.js` con `actualizarRacha`.
-- `services/achievement.service.js` con el catálogo de logros y el checker.
-- Componentes: `EvaluationQuiz`, `ProgressBar`, `StreakBadge`, `AchievementToast`, `TitiMascot` con variantes de mood.
-- Página `Certificates.jsx` con verificación pública.
-
-**Criterios de aceptación:**
-- [ ] Profesor crea evaluación de módulo y final, con preguntas de los 3 tipos.
-- [ ] Estudiante hace intento, recibe nota y feedback.
-- [ ] Después de 3 intentos fallidos queda bloqueado hasta intervención manual.
-- [ ] Racha aumenta correctamente día a día y se rompe si se salta uno.
-- [ ] Al completar curso se emite certificado con código verificable.
-- [ ] Logros se desbloquean automáticamente al cumplir condiciones.
-- [ ] Toasts de logro nunca bloquean la UI y se cierran solos.
-
-**Riesgos:**
-- Lógica de racha sensible a husos horarios — usar siempre `startOfDay` en TZ local del servidor (`America/La_Paz`).
-- Logros pueden duplicarse si el checker corre múltiples veces — el `@@id([usuarioId, logroId])` lo previene a nivel DB.
+**Decisiones tomadas:**
+- Para el certificado se exige **lecciones + todas las evaluaciones** (no solo la final).
+- Logros se muestran **en el perfil de cualquier usuario** (no en una página dedicada).
+- UI plana sin gradientes ni `blur-*` decorativos en lo nuevo de la Etapa 3 (`design.md` §1: "Cálido antes que agresivo").
+- **Bottom nav contextual al rol** en mobile: el slot "Mis cursos" se reemplaza por "Enseñar" cuando `rol ∈ {PROFESOR, ADMIN}`. Razón: un docente conceptualmente no se inscribe en cursos, y este slot le da acceso de un toque al panel `/teacher`. El sidebar desktop mantiene ambas entradas.
 
 ---
 
-### 📋 Etapa 4 — Integración Social + Admin
+### 🔄 Etapa 4 — Integración Social + Admin (EN CURSO)
 
 **Dependencias:** Etapa 3 cerrada.
 
