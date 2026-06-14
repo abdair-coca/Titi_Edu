@@ -97,9 +97,9 @@ export default function Profile() {
 
   useEffect(() => {
     if (!isSelf) return;
-    if (tab === 'saved' && !savedLoaded && !savedLoading) fetchSaved();
-    if (tab === 'liked' && !likedLoaded && !likedLoading) fetchLiked();
-  }, [tab, isSelf, savedLoaded, savedLoading, likedLoaded, likedLoading, fetchSaved, fetchLiked]);
+    if (!savedLoaded && !savedLoading) fetchSaved();
+    if (!likedLoaded && !likedLoading) fetchLiked();
+  }, [isSelf, savedLoaded, savedLoading, likedLoaded, likedLoading, fetchSaved, fetchLiked]);
 
   // Reset tabs cache cuando cambia de perfil
   useEffect(() => {
