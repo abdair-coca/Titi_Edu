@@ -178,33 +178,45 @@ function Sidebar({ user, onLogout, unread, streak }) {
       </nav>
 
       {user && (
-        <div className={`px-3 pb-3 ${sidebarLabel}`}>
-          <StreakBadge
-            variant="sidebar"
-            racha={streak.racha}
-            estaActiva={streak.estaActiva}
-            ultimaActividad={streak.ultimaActividad}
-          />
+        <div className="px-3 pb-3 shrink-0">
+          {/* Colapsado: mini racha (llama + número) */}
+          <div className="group-hover:hidden flex justify-center">
+            <span className="inline-flex items-center gap-1 bg-titi-dark-mid border border-titi-streak/30 px-2 py-1 rounded-full">
+              <MiniFlame active={streak.estaActiva && streak.racha > 0} />
+              <span className="text-sm font-black text-titi-streak tabular-nums leading-none">
+                {streak.racha}
+              </span>
+            </span>
+          </div>
+          {/* Expandido: badge completo */}
+          <div className="hidden group-hover:block">
+            <StreakBadge
+              variant="sidebar"
+              racha={streak.racha}
+              estaActiva={streak.estaActiva}
+              ultimaActividad={streak.ultimaActividad}
+            />
+          </div>
         </div>
       )}
       <div className="border-t border-white/10 p-3 space-y-2 shrink-0">
         {user && (
           <Link
             to={`/profile/${user.username}`}
-            className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors"
+            className="flex items-center justify-center group-hover:justify-start gap-3 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors"
           >
             {user.avatarUrl ? (
               <img
                 src={user.avatarUrl}
                 alt={user.username}
-                className="w-9 h-9 rounded-full bg-titi-dark border-2 border-titi-yellow shrink-0"
+                className="w-9 h-9 rounded-full object-cover bg-titi-dark border-2 border-titi-yellow shrink-0"
               />
             ) : (
               <div className="w-9 h-9 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold shrink-0">
                 {user.username?.[0]?.toUpperCase() ?? '?'}
               </div>
             )}
-            <div className={`min-w-0 ${sidebarLabel}`}>
+            <div className="min-w-0 hidden group-hover:block">
               <p className="text-sm font-bold truncate">@{user.username}</p>
               <p className="text-xs text-white/60 truncate">Ver perfil</p>
             </div>
