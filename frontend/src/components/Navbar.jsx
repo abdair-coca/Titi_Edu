@@ -330,35 +330,30 @@ function MobileBottomNav({ user }) {
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="grid grid-cols-5 h-full">
-        <NavLink to="/feed" className={bottomItemClass} end>
-          <Icon.Home className="w-6 h-6" />
-          <span>Inicio</span>
+        <NavLink to="/feed" className={bottomItemClass} aria-label="Inicio" end>
+          <Icon.Home className="w-7 h-7" />
         </NavLink>
-        <NavLink to="/explore" className={bottomItemClass}>
-          <Icon.Compass className="w-6 h-6" />
-          <span>Explorar</span>
+        <NavLink to="/explore" className={bottomItemClass} aria-label="Explorar">
+          <Icon.Compass className="w-7 h-7" />
         </NavLink>
-        <NavLink to="/courses" className={bottomItemClass}>
-          <Icon.Books className="w-6 h-6" />
-          <span>Cursos</span>
+        <NavLink to="/courses" className={bottomItemClass} aria-label="Cursos">
+          <Icon.Books className="w-7 h-7" />
         </NavLink>
         {isTeacher ? (
-          <NavLink to="/teacher" className={bottomItemClass}>
-            <Icon.Cap className="w-6 h-6" />
-            <span>Enseñar</span>
+          <NavLink to="/teacher" className={bottomItemClass} aria-label="Enseñar">
+            <Icon.Cap className="w-7 h-7" />
           </NavLink>
         ) : (
-          <NavLink to="/my-courses" className={bottomItemClass}>
-            <Icon.Target className="w-6 h-6" />
-            <span>Mis cursos</span>
+          <NavLink to="/my-courses" className={bottomItemClass} aria-label="Mis cursos">
+            <Icon.Target className="w-7 h-7" />
           </NavLink>
         )}
         <NavLink
           to={user?.username ? `/profile/${user.username}` : '/feed'}
           className={bottomItemClass}
+          aria-label="Perfil"
         >
-          <Icon.User className="w-6 h-6" />
-          <span>Perfil</span>
+          <Icon.User className="w-7 h-7" />
         </NavLink>
       </div>
     </nav>
