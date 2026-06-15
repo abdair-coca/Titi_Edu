@@ -7,6 +7,7 @@ import { randomUUID } from 'crypto';
 import { runQuery, toNumber } from '../db.js';
 import prisma from '../prisma.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
+import { cloudinaryEnabled, uploadBuffer, destroyAsset } from '../services/upload.service.js';
 
 const router = Router();
 
@@ -14,16 +15,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${randomUUID()}${ext}`);
-  },
-});
-
+// memoryStorage: el buffer va a Cloudinary; si no hay credenciales cae a disco.
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const ok = /image\/(jpeg|jpg|png|gif|webp)/.test(file.mimetype);
@@ -31,6 +25,19 @@ const upload = multer({
     cb(null, true);
   },
 });
+
+// Sube la imagen del post: Cloudinary si hay credenciales, disco si no.
+// Devuelve { imageUrl, imagePublicId } (publicId null en modo disco).
+async function storePostImage(file) {
+  if (cloudinaryEnabled) {
+    const { url, publicId } = await uploadBuffer(file.buffer, 'titi/posts', 'image');
+    return { imageUrl: url, imagePublicId: publicId };
+  }
+  const ext = path.extname(file.originalname).toLowerCase();
+  const filename = `${randomUUID()}${ext}`;
+  await fs.promises.writeFile(path.join(uploadsDir, filename), file.buffer);
+  return { imageUrl: `/uploads/${filename}`, imagePublicId: null };
+}
 
 function extractHashtags(content) {
   return [...(content || '').matchAll(/#(\w+)/g)].map(m => m[1].toLowerCase());
@@ -258,14 +265,18 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
     }
 
     const id = randomUUID();
-    const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    let imageUrl = null;
+    let imagePublicId = null;
+    if (req.file) {
+      ({ imageUrl, imagePublicId } = await storePostImage(req.file));
+    }
 
     await runQuery(
       `MATCH (u:Usuario {id: $userId})
        CREATE (u)-[:PUBLICO]->(p:Post {
-         id: $id, content: $content, imageUrl: $imageUrl, createdAt: datetime()
+         id: $id, content: $content, imageUrl: $imageUrl, imagePublicId: $imagePublicId, createdAt: datetime()
        })`,
-      { userId: req.user.id, id, content, imageUrl }
+      { userId: req.user.id, id, content, imageUrl, imagePublicId }
     );
 
     // Hashtags
@@ -487,7 +498,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const records = await runQuery(
-      'MATCH (u:Usuario)-[:PUBLICO]->(p:Post {id: $id}) RETURN u.id as ownerId, p.imageUrl as imageUrl',
+      'MATCH (u:Usuario)-[:PUBLICO]->(p:Post {id: $id}) RETURN u.id as ownerId, p.imageUrl as imageUrl, p.imagePublicId as imagePublicId',
       { id }
     );
     if (records.length === 0) {
@@ -506,8 +517,12 @@ router.delete('/:id', requireAuth, async (req, res) => {
       { id }
     );
 
+    // Borra el asset: Cloudinary si hay publicId, disco si es legacy /uploads/
+    const imagePublicId = records[0].get('imagePublicId');
     const imageUrl = records[0].get('imageUrl');
-    if (imageUrl && imageUrl.startsWith('/uploads/')) {
+    if (imagePublicId) {
+      await destroyAsset(imagePublicId, 'image');
+    } else if (imageUrl && imageUrl.startsWith('/uploads/')) {
       const filePath = path.join(uploadsDir, path.basename(imageUrl));
       fs.promises.unlink(filePath).catch(() => { });
     }

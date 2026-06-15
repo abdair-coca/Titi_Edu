@@ -6,12 +6,28 @@ import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
+import { cloudinaryEnabled, uploadBuffer, destroyAsset } from '../services/upload.service.js';
 
 const router = Router();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const materialsDir = path.join(__dirname, '..', 'uploads', 'materials');
 if (!fs.existsSync(materialsDir)) fs.mkdirSync(materialsDir, { recursive: true });
+
+// Cloudinary trata pdf/word/codigo como 'raw' y las imágenes como 'image'.
+const resourceTypeFor = (tipo) => (tipo === 'imagen' ? 'image' : 'raw');
+
+// Sube el material: Cloudinary si hay credenciales, disco si no.
+// Devuelve { url, publicId } (publicId null en modo disco).
+async function storeMaterial(file, tipo) {
+  if (cloudinaryEnabled) {
+    return uploadBuffer(file.buffer, 'titi/materials', resourceTypeFor(tipo));
+  }
+  const ext = path.extname(file.originalname).toLowerCase();
+  const filename = `${randomUUID()}${ext}`;
+  await fs.promises.writeFile(path.join(materialsDir, filename), file.buffer);
+  return { url: `/uploads/materials/${filename}`, publicId: null };
+}
 
 async function loadCurrentUser(req, res) {
   if (req.dbUser) return req.dbUser;
@@ -34,16 +50,8 @@ const TIPO_MIMETYPES = {
   otro: /.*/,
 };
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, materialsDir),
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, `${randomUUID()}${ext}`);
-  },
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
 });
 
@@ -51,10 +59,7 @@ const upload = multer({
 router.post('/lessons/:lessonId/materials', requireAuth, upload.single('file'), async (req, res) => {
   try {
     const usuario = await loadCurrentUser(req, res);
-    if (!usuario) {
-      if (req.file) fs.promises.unlink(req.file.path).catch(() => {});
-      return;
-    }
+    if (!usuario) return;
 
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'Archivo requerido (campo "file")' });
@@ -64,7 +69,6 @@ router.post('/lessons/:lessonId/materials', requireAuth, upload.single('file'), 
     const tipo = (req.body?.tipo ?? 'otro').toString().trim();
 
     if (!TIPOS_VALIDOS.includes(tipo)) {
-      fs.promises.unlink(req.file.path).catch(() => {});
       return res.status(400).json({
         success: false,
         message: `tipo debe ser uno de: ${TIPOS_VALIDOS.join(', ')}`,
@@ -73,7 +77,6 @@ router.post('/lessons/:lessonId/materials', requireAuth, upload.single('file'), 
 
     const mimeRegex = TIPO_MIMETYPES[tipo];
     if (!mimeRegex.test(req.file.mimetype)) {
-      fs.promises.unlink(req.file.path).catch(() => {});
       return res.status(400).json({
         success: false,
         message: `El archivo no parece ser de tipo "${tipo}" (mimetype: ${req.file.mimetype})`,
@@ -85,22 +88,24 @@ router.post('/lessons/:lessonId/materials', requireAuth, upload.single('file'), 
       include: { modulo: { include: { curso: { select: { creadorId: true } } } } },
     });
     if (!leccion) {
-      fs.promises.unlink(req.file.path).catch(() => {});
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
     if (leccion.modulo.curso.creadorId !== usuario.id) {
-      fs.promises.unlink(req.file.path).catch(() => {});
       return res.status(403).json({
         success: false,
         message: 'Solo el autor del curso puede subir materiales',
       });
     }
 
+    // Validación pasada → recién ahora subimos el archivo
+    const { url, publicId } = await storeMaterial(req.file, tipo);
+
     const material = await prisma.material.create({
       data: {
         nombre,
         tipo,
-        url: `/uploads/materials/${req.file.filename}`,
+        url,
+        publicId,
         leccionId: leccion.id,
       },
     });
@@ -108,7 +113,6 @@ router.post('/lessons/:lessonId/materials', requireAuth, upload.single('file'), 
     res.status(201).json({ success: true, data: { material } });
   } catch (err) {
     console.error('POST /lessons/:lessonId/materials error', err);
-    if (req.file) fs.promises.unlink(req.file.path).catch(() => {});
     res.status(500).json({ success: false, message: 'Error subiendo material' });
   }
 });
@@ -135,8 +139,10 @@ router.delete('/materials/:id', requireAuth, async (req, res) => {
       });
     }
 
-    // Borrar archivo del disco si está en uploads/materials/
-    if (material.url?.startsWith('/uploads/materials/')) {
+    // Borra el asset: Cloudinary si hay publicId, disco si es legacy
+    if (material.publicId) {
+      await destroyAsset(material.publicId, resourceTypeFor(material.tipo));
+    } else if (material.url?.startsWith('/uploads/materials/')) {
       const filePath = path.join(materialsDir, path.basename(material.url));
       fs.promises.unlink(filePath).catch(() => {});
     }

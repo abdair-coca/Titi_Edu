@@ -111,6 +111,7 @@ model Material {
   id        String  @id @default(uuid())
   nombre    String
   url       String
+  publicId  String? // public_id de Cloudinary (null para archivos legacy en disco)
   tipo      String // 'pdf' | 'word' | 'imagen' | 'codigo' | 'otro'
   leccionId String
   leccion   Leccion @relation(fields: [leccionId], references: [id])
