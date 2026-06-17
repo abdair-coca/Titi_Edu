@@ -121,7 +121,7 @@ const sidebarLabel = 'whitespace-nowrap opacity-0 group-hover:opacity-100 transi
 
 function Sidebar({ user, onLogout, unread, streak }) {
   return (
-    <aside className="hidden md:flex group fixed left-0 top-0 h-screen w-20 hover:w-64 bg-titi-dark border-r border-white/10 flex-col z-20 text-white overflow-hidden transition-[width] duration-200 ease-out">
+    <aside className="hidden md:flex group fixed left-0 top-0 h-screen w-20 hover:w-64 bg-titi-dark border-r border-white/10 flex-col z-40 text-white overflow-hidden transition-[width] duration-200 ease-out">
       <Link to="/feed" className="flex items-center gap-2 h-16 px-5 border-b border-white/10 shrink-0">
         <img
           src="/favicon.png"

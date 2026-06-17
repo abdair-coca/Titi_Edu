@@ -372,7 +372,7 @@ export default function LearnCourse() {
       <aside
         className={`
           w-72 bg-white border-r border-gray-100 flex flex-col
-          fixed inset-y-0 left-0 z-40 overflow-y-auto
+          fixed inset-y-0 left-0 z-40 overflow-y-auto scrollbar-none
           transition-transform duration-200
           ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
           md:static md:h-full md:translate-x-0
@@ -831,7 +831,7 @@ function LessonSidePanels({
     <div className="flex flex-col-reverse lg:flex-row shrink-0 lg:h-full bg-white border border-gray-100 rounded-2xl overflow-hidden">
       {/* Panel de contenido (solo si hay uno abierto) */}
       {active && (
-        <div ref={panelRef} className="w-full lg:w-80 bg-white p-4 sm:p-5 lg:h-full lg:overflow-y-auto">
+        <div ref={panelRef} className="w-full lg:w-80 bg-white p-4 sm:p-5 lg:h-full lg:overflow-y-auto scrollbar-none">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
               <active.Icon className="w-4 h-4 text-titi-dark" />
