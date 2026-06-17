@@ -516,7 +516,7 @@ export default function LearnCourse() {
 
       {/* === Centro + columna derecha === */}
       <div className="flex-1 flex flex-col lg:flex-row min-w-0 min-h-0 md:h-full lg:gap-3">
-        <main className="flex-1 p-3 sm:p-4 md:p-5 overflow-y-auto min-w-0 min-h-0">
+        <main className="flex-1 p-3 sm:p-4 md:p-5 overflow-y-auto scrollbar-none min-w-0 min-h-0">
           <div className="max-w-5xl mx-auto">
             {/* Toggle del drawer en móvil */}
             <button
