@@ -8,10 +8,12 @@ ver el `AGENTS.md` de la raíz.
 
 ## Rediseño — Sección Learn (`pages/LearnCourse.jsx`)
 
-> **Estado:** propuesta a implementar. Objetivo: que la pantalla de aprendizaje de
-> un curso quede igual a la imagen de referencia (layout 3 columnas estilo
-> "classroom"). Hoy `LearnCourse.jsx` es de 2 columnas (sidebar de lecciones +
-> contenido); falta toda la columna derecha y varias features.
+> **Estado:** IMPLEMENTADO (pasos 1–5). `LearnCourse.jsx` ya es de 3 columnas:
+> sidebar con progreso, centro (video + descripción + Profundiza + acción), y
+> columna derecha como riel de íconos (Notas/Archivos/Comentarios) con panel
+> desplegable. Notas persisten en Postgres (`NotaLeccion`). "Profundiza" es STUB
+> (sin IA real todavía). like/dislike/flag: omitido. Pendiente futuro: enchufar
+> Claude API a "Profundiza" (ver §Features #2).
 
 ### Objetivo visual (imagen de referencia)
 

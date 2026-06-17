@@ -4,13 +4,18 @@ import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { relativeTime } from '../lib/format.js';
 
-export default function LessonComments({ lessonId }) {
+export default function LessonComments({ lessonId, hideHeader = false, onCount }) {
   const { isAuthenticated, user } = useAuth();
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // Reporta la cantidad de comentarios al padre (para el título "Comentarios (N)").
+  useEffect(() => {
+    onCount?.(comments.length);
+  }, [comments.length, onCount]);
 
   const fetchComments = useCallback(async () => {
     if (!lessonId) return;
@@ -70,13 +75,15 @@ export default function LessonComments({ lessonId }) {
   }
 
   return (
-    <section aria-label="Comentarios de la lección" className="mt-8">
-      <h2 className="text-xl font-bold text-titi-dark mb-4">
-        Comentarios{' '}
-        <span className="text-sm font-semibold text-gray-400 tabular-nums">
-          ({comments.length})
-        </span>
-      </h2>
+    <section aria-label="Comentarios de la lección" className={hideHeader ? '' : 'mt-8'}>
+      {!hideHeader && (
+        <h2 className="text-xl font-bold text-titi-dark mb-4">
+          Comentarios{' '}
+          <span className="text-sm font-semibold text-gray-400 tabular-nums">
+            ({comments.length})
+          </span>
+        </h2>
+      )}
 
       {/* Form */}
       {isAuthenticated ? (

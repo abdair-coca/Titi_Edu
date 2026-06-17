@@ -7,6 +7,7 @@ import StreakToast from '../components/StreakToast.jsx';
 import AchievementToast from '../components/AchievementToast.jsx';
 import EvaluationQuiz from '../components/EvaluationQuiz.jsx';
 import { resolveMediaUrl } from '../lib/format.js';
+import { usePopIn } from '../lib/motion.js';
 
 export default function LearnCourse() {
   const { id: courseId } = useParams();
@@ -55,6 +56,9 @@ export default function LearnCourse() {
   const [noteText, setNoteText] = useState('');
   const [noteSaving, setNoteSaving] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
+
+  // Conteo de comentarios de la lección activa (para "Comentarios (N)")
+  const [commentCount, setCommentCount] = useState(0);
 
   // --- Fetch del curso + progreso en paralelo ---
   useEffect(() => {
@@ -563,6 +567,8 @@ export default function LearnCourse() {
             onNoteSave={handleSaveNote}
             noteSaving={noteSaving}
             noteSaved={noteSaved}
+            commentCount={commentCount}
+            onCommentCount={setCommentCount}
           />
         )}
       </div>
@@ -709,6 +715,7 @@ const DEEPEN_PROMPTS = [
 
 function DeepenCard() {
   const [selected, setSelected] = useState(null);
+  const respRef = usePopIn([selected]);
 
   return (
     <section className="bg-titi-yellow-light/60 border border-titi-yellow/40 rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8">
@@ -734,7 +741,7 @@ function DeepenCard() {
       </div>
 
       {selected && (
-        <div className="mt-4 bg-white border border-titi-border rounded-xl p-4 flex items-start gap-3">
+        <div ref={respRef} className="mt-4 bg-white border border-titi-border rounded-xl p-4 flex items-start gap-3">
           <img
             src="/Titi.png"
             alt="Titi"
@@ -770,19 +777,26 @@ function LessonSidePanels({
   onNoteSave,
   noteSaving,
   noteSaved,
+  commentCount,
+  onCommentCount,
 }) {
   const toggle = (key) => onChange(open === key ? null : key);
   const active = PANELS.find((p) => p.key === open);
+  const panelRef = usePopIn([open]);
+  const title =
+    active?.key === 'comentarios'
+      ? `Comentarios (${commentCount})`
+      : active?.title;
 
   return (
     <div className="flex flex-col-reverse lg:flex-row shrink-0 border-t lg:border-t-0 lg:border-l border-gray-100">
       {/* Panel de contenido (solo si hay uno abierto) */}
       {active && (
-        <div className="w-full lg:w-80 bg-white p-4 sm:p-5 lg:max-h-screen lg:overflow-y-auto">
+        <div ref={panelRef} className="w-full lg:w-80 bg-white p-4 sm:p-5 lg:max-h-screen lg:overflow-y-auto">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
               <active.Icon className="w-4 h-4 text-titi-dark" />
-              {active.title}
+              {title}
             </h2>
             <button
               type="button"
@@ -804,7 +818,9 @@ function LessonSidePanels({
             />
           )}
           {open === 'materiales' && <MaterialsPanel materiales={materiales} />}
-          {open === 'comentarios' && <LessonComments lessonId={lessonId} />}
+          {open === 'comentarios' && (
+            <LessonComments lessonId={lessonId} hideHeader onCount={onCommentCount} />
+          )}
         </div>
       )}
 
