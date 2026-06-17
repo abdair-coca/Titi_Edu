@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../api/client.js';
+import { useStaggerReveal } from '../lib/motion.js';
 import PostCard from '../components/PostCard.jsx';
 import CreatePost from '../components/CreatePost.jsx';
 import AcademicActivityCard from '../components/AcademicActivityCard.jsx';
@@ -57,6 +58,9 @@ export default function Feed() {
 
   const isEmpty = timeline.length === 0;
 
+  // Entrada escalonada de las tarjetas del feed (GSAP, respeta reduced-motion).
+  const timelineRef = useStaggerReveal([timeline.length]);
+
   return (
     <div className="max-w-xl mx-auto">
       <header className="flex items-center justify-between mb-6">
@@ -89,7 +93,7 @@ export default function Feed() {
       {!loading && !error && isEmpty && <EmptyFeed />}
 
       {timeline.length > 0 && (
-        <div>
+        <div ref={timelineRef}>
           {timeline.map((entry) =>
             entry.kind === 'post' ? (
               <PostCard

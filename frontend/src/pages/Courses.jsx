@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useStaggerReveal } from '../lib/motion.js';
 import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
 
 const NIVELES = [
@@ -102,6 +103,9 @@ export default function Courses() {
       cancelled = true;
     };
   }, [debouncedQuery, nivel, categoria, refreshTick]);
+
+  // Entrada escalonada de las cards del catálogo (GSAP, respeta reduced-motion).
+  const gridRef = useStaggerReveal([cursos]);
 
   const hasFilters = debouncedQuery || nivel !== 'all' || categoria !== 'all';
 
@@ -231,7 +235,10 @@ export default function Courses() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+          <div
+            ref={gridRef}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
+          >
             {cursos.map((curso) => (
               <CourseCard
                 key={curso.id}

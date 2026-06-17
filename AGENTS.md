@@ -299,6 +299,7 @@ Seis subfases en orden de dependencia. Cada una es una **unidad commitable**: ci
 ## 10. Convenciones
 
 - **Diseño**: todo componente nuevo pasa checklist de `frontend/design.md` §12.
+- **Motion**: animación = GSAP vía `useStaggerReveal`/`useGSAP` (`src/lib/motion.js`); reglas y checklist en `frontend/motion.md`. Respetar `prefers-reduced-motion`.
 - **UI plana**: sin `bg-gradient-*` ni `blur-*` en componentes nuevos.
 - **Mascota Titi**: `<img src="/Titi.png" />`, nunca emoji 🐒.
 - **Respuesta API**: `{ success, data }` éxito; `{ success: false, message }` error.

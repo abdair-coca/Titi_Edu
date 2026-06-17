@@ -727,6 +727,11 @@ const navItems = [
 - Solo `fade-up` para cards al cargar la página
 - Duración máxima: 500ms. Si tarda más, el usuario pierde la sensación de respuesta
 - Nunca animar simultáneamente más de 3 elementos
+- Siempre respetar `prefers-reduced-motion`
+
+> **Sistema completo de motion (tokens, GSAP, patrón `useGSAP`, checklist) → ver
+> [`motion.md`](./motion.md).** Estas keyframes CSS se quedan como están; GSAP
+> solo se usa para coreografías que CSS hace mal (stagger de listas, timelines).
 
 ---
 

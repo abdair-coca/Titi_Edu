@@ -162,6 +162,7 @@ SocialNeo/
     ├── vite.config.js
     ├── tailwind.config.js       ← paleta Titi
     ├── design.md                ← sistema de diseño visual
+    ├── motion.md                ← sistema de motion (GSAP) — ver design.md §10
     ├── public/
     │   └── Titi.png             ← imagen oficial de la mascota
     └── src/
@@ -174,7 +175,8 @@ SocialNeo/
         │   ├── AuthContext.jsx  ← user, isAuthenticated, login, logout
         │   └── ProgressContext.jsx  ← (Etapa 3) racha, logros, notif Titi
         ├── lib/
-        │   └── format.js        ← resolveMediaUrl, relativeTime, formatDate
+        │   ├── format.js        ← resolveMediaUrl, relativeTime, formatDate
+        │   └── motion.js        ← MOTION tokens + useStaggerReveal (GSAP)
         ├── components/
         │   ├── Navbar.jsx       ← sidebar desktop + bottom nav móvil
         │   ├── PostCard.jsx     ← post con like, save, comentarios
@@ -805,6 +807,7 @@ if (data?.success) { /* ... */ }
 ```
 
 **Componentes deben pasar la checklist de `frontend/design.md` §12** antes de marcarse como terminados.
+Si el componente lleva animación GSAP, además pasa la checklist de motion de `frontend/motion.md` §6.
 
 **Mascota Titi:** siempre `<img src="/Titi.png" alt="Titi" />`. Nunca emoji 🐒.
 
