@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { formatDate, relativeTime, resolveMediaUrl } from '../lib/format.js';
-import { useStaggerReveal } from '../lib/motion.js';
+import { useStaggerReveal, usePopIn } from '../lib/motion.js';
 import OptionsPosts from '../components/OptionsPosts.jsx';
 import PostCard from '../components/PostCard.jsx';
 import StreakBadge from '../components/StreakBadge.jsx';
@@ -26,6 +26,10 @@ export default function Profile() {
   const [isSelf, setIsSelf] = useState(false);
 
   const [tab, setTab] = useState('posts'); // 'posts' | 'saved' | 'liked'
+
+  // El header entra con pop cuando llegan los datos (la página ya hizo su
+  // PageTransition mientras cargaba, así que el contenido async necesita el suyo).
+  const headerRef = usePopIn([profile, username]);
 
   const [posts, setPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(true);
@@ -231,7 +235,7 @@ export default function Profile() {
   return (
     <div>
       {/* Header del perfil */}
-      <div className="titi-card p-6 mb-6 border-t-4 border-t-titi-yellow">
+      <div ref={headerRef} className="titi-card p-6 mb-6 border-t-4 border-t-titi-yellow">
         <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left">
           {user.avatarUrl ? (
             <img

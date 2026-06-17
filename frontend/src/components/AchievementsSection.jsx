@@ -79,7 +79,7 @@ export default function AchievementsSection({ username, isSelf = false }) {
                   ? `${l.descripcion}${l.fechaObtenido ? ` · ${formatDate(l.fechaObtenido)}` : ''}`
                   : l.condicion
               }
-              className={`rounded-xl border p-2 sm:p-3 text-center transition-all duration-150 ${
+              className={`rounded-xl border p-2 sm:p-3 text-center transition-colors duration-150 ${
                 l.desbloqueado
                   ? 'bg-purple-50 border-purple-200 shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
                   : 'bg-gray-50 border-gray-200 opacity-60 grayscale'
