@@ -20,6 +20,8 @@ hacer esperar. Coherente con `design.md` §1 (UI plana, cálida).
 ### Reglas duras
 
 - Duración máxima **400ms** (`MOTION.dur.slow`). Default de entradas: 300ms.
+  Excepción: el "llenado" de la barra de progreso (`MyCourses`) usa ~700ms — no
+  es una entrada sino una visualización de dato; un llenado más lento se lee mejor.
 - Nunca animar simultáneamente más de **3 elementos** (el stagger es secuencia, no
   simultáneo).
 - **Siempre** respetar `prefers-reduced-motion` → **desactivar todo** (entradas,
@@ -82,6 +84,7 @@ el cierre tenga qué animar.
 | Modal | panel con pop + backdrop con fade | `usePopIn` + `.titi-backdrop-in` |
 | Cambio de lección (Learn) | pop del contenido al cambiar de lección + pop de la respuesta de "Profundiza" | `usePopIn` en `LearnCourse` (`LessonView`, `DeepenCard`) |
 | Colapsable (ver/ocultar) | acordeón: grid `0fr→1fr` + fade, ease neutro (no pop), abre **y** cierra. Eje según layout: alto (vertical) o ancho (`grid-cols`, panel lateral en desktop) | CSS Tailwind en `LearnCourse` ("Ver descripción", `DeepenCard`, `LessonSidePanels`) |
+| Barra de progreso | "llenado": monta en 0 y anima el `width` hasta el % real, ease neutro | CSS `transition-[width]` + estado en `rAF` (`EnrolledCard` de `MyCourses`) |
 | Mascota Titi | pop al montar | `usePopIn` en `TitiMascot` |
 | Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
 

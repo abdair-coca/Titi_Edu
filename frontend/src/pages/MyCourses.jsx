@@ -142,6 +142,26 @@ function EnrolledCard({ inscripcion, progress, onContinue, onOpenDetail }) {
   const porcentaje = progress?.porcentaje ?? 0;
   const hasProgressData = Boolean(progress && progress.total > 0);
 
+  // Relleno animado: monta en 0 y sube al % real en el siguiente frame, así la
+  // transición CSS hace el llenado "cargando". Reduced-motion salta al final.
+  const [fill, setFill] = useState(0);
+  useEffect(() => {
+    if (!hasProgressData) return undefined;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setFill(porcentaje);
+      return undefined;
+    }
+    setFill(0);
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setFill(porcentaje));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [hasProgressData, porcentaje]);
+
   return (
     <article className="titi-card-pop bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] overflow-hidden flex flex-col">
       {/* Portada con badges */}
@@ -229,10 +249,10 @@ function EnrolledCard({ inscripcion, progress, onContinue, onOpenDetail }) {
             </div>
             <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all duration-500 ${
+                className={`h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${
                   completado ? 'bg-green-500' : 'bg-titi-yellow'
                 }`}
-                style={{ width: `${porcentaje}%` }}
+                style={{ width: `${fill}%` }}
               />
             </div>
           </div>
