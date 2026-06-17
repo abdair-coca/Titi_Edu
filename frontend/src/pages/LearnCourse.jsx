@@ -372,10 +372,10 @@ export default function LearnCourse() {
       <aside
         className={`
           w-72 bg-white border-r border-gray-100 flex flex-col
-          fixed inset-y-0 left-0 z-40 overflow-y-auto scrollbar-none
+          fixed top-14 bottom-16 left-0 z-40 overflow-y-auto scrollbar-none
           transition-transform duration-200
           ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:static md:h-full md:transform-none
+          md:static md:inset-auto md:h-full md:transform-none
           md:border-r-0 md:border md:border-gray-100 md:rounded-2xl
         `}
       >

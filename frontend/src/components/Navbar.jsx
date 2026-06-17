@@ -121,7 +121,7 @@ const sidebarLabel = 'whitespace-nowrap opacity-0 group-hover:opacity-100 transi
 
 function Sidebar({ user, onLogout, unread, streak }) {
   return (
-    <aside className="hidden md:flex group fixed left-0 top-0 h-screen w-20 hover:w-64 bg-titi-dark border-r border-white/10 flex-col z-40 text-white overflow-hidden transition-[width] duration-200 ease-out">
+    <aside className="hidden md:flex group fixed left-0 top-0 h-screen w-20 hover:w-64 bg-titi-dark border-r border-white/10 flex-col z-50 text-white overflow-hidden transition-[width] duration-200 ease-out">
       <Link to="/feed" className="flex items-center gap-2 h-16 px-5 border-b border-white/10 shrink-0">
         <img
           src="/favicon.png"
@@ -245,7 +245,7 @@ function Sidebar({ user, onLogout, unread, streak }) {
 // ---- Top bar móvil ----
 function MobileTopBar({ user, onLogout, unread, streak, showStreak }) {
   return (
-    <header className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-titi-dark text-white border-b border-titi-dark shadow-titi">
+    <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-titi-dark text-white border-b border-titi-dark shadow-titi">
       <div className="h-full px-4 flex items-center justify-between gap-2">
         <Link to="/feed">
           <TitiLogo size="md" />
@@ -326,7 +326,7 @@ function MobileBottomNav({ user }) {
   return (
     <nav
       aria-label="Navegación principal"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-30 h-16 bg-titi-dark text-white border-t border-titi-dark shadow-titi-lg"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-titi-dark text-white border-t border-titi-dark shadow-titi-lg"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="grid grid-cols-5 h-full">
