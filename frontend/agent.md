@@ -26,13 +26,13 @@ Layout de **3 columnas** dentro del shell de la app:
 │ Título curso │  │      Video (16:9)       │  │ ▸ Materiales [^] │
 │ 2 de 2 lecc. │  └─────────────────────────┘  │ ▸ Comentarios[^] │
 │              │  Título lección  [Guardar nota]│                  │
-│ PROGRESO DEL │                                │                  │
+│ PROGRESO DEL │  Descripción de la lección…    │                  │
 │ CURSO ▓▓▓100%│  ┌── Profundiza en este tema ─┐│                  │
 │              │  │ [chip][chip][chip][chip]   ││                  │
 │ BEGINNING    │  └────────────────────────────┘│                  │
-│ ✓ Lección 1  │  👍  👎  🚩                     │                  │
-│ ✓ Lección 2  │                                │                  │
-│ ✦ Eval Final │  [Siguiente lección →] [✓ Lec.]│                  │
+│ ✓ Lección 1  │                                │                  │
+│ ✓ Lección 2  │  [Siguiente lección →] [✓ Lec.]│                  │
+│ ✦ Eval Final │                                │                  │
 └──────────────┴───────────────────────────────┴──────────────────┘
 ```
 
@@ -59,23 +59,26 @@ Hoy ya existe (el `<aside>` de lecciones). Cambios:
 - **Video** arriba (iframe 16:9) — ya existe (`LessonView`, `:534`). Sin cambios.
 - **Fila de título**: título de la lección a la izquierda + botón **"Guardar nota"**
   (ícono bookmark) a la derecha. → feature NUEVA (ver §Notas).
-- **Card "Profundiza en este tema"** (NUEVA): fondo destacado
+- **Descripción debajo del título** (pedido explícito): justo abajo del título,
+  mostrar la descripción/contenido de la lección (`leccion.contenido`) como texto
+  de apoyo (`text-gray-600`, leading relajado). Mantener el render que ya existe
+  en `LessonView` (`:551-559`), reposicionado debajo del título.
+- **Card "Profundiza en este tema"** (NUEVA — **STUB por ahora**): fondo destacado
   (`bg-titi-yellow-light` o `bg-titi-cream`), título con ✨, y 4 chips de prompt:
   - "Quiero preguntas de práctica"
   - "Explica este tema de forma sencilla"
   - "Hazme un resumen"
   - "Dame ejemplos de la vida real"
-  → feature NUEVA de IA (ver §Profundiza/IA).
-- **Fila like / dislike / flag** (NUEVA): tres íconos (`👍 👎 🚩`) para reacción y
-  reporte de la lección. (Definir si persiste en backend o es local — ver decisiones.)
+  La UI va completa; al tocar un chip muestra una respuesta **placeholder/mock**
+  (sin IA real todavía). Dejar el punto de conexión listo para enchufar Claude API
+  después (ver §Features #2).
 - **Fila de acción al pie** (cambia): dos botones lado a lado:
   - **"Siguiente lección →"** (NUEVO, estilo secundario/outline): navega a la
     siguiente lección del curso (siguiente en el módulo o primera del módulo
     siguiente; si es la última, ir a la evaluación final).
   - **"✓ Lección completada"** (verde) — reutiliza el botón actual de completar
     (`LessonView`, `:592-612`), movido a esta fila.
-- El texto de `contenido` de la lección sigue renderizándose (entre video y la
-  card de Profundiza, o debajo del título). Mantener.
+- **like / dislike / flag**: **OMITIDO en esta iteración** (no se incluye por ahora).
 - **Mover Materiales y Comentarios fuera del centro** → van a la columna derecha.
 
 #### 3. Columna derecha (paneles colapsables) — NUEVA
@@ -94,20 +97,18 @@ Tres tarjetas tipo acordeón (chevron que colapsa/expande), estilo `titi-card`:
 
 ### Features nuevas que tocan backend / requieren decisión
 
-1. **Notas por lección** (`Nota` / apuntes): persistir el texto por
-   `(usuarioId, leccionId)`. Decisión: ¿modelo Prisma nuevo `NotaLeccion` con
-   endpoints `GET/PUT /api/lessons/:id/note`, o `localStorage` por ahora?
-   Recomendación: backend (Postgres) por ser dato del alumno; sigue patrón de
-   `titi-backend-patterns` y `titi-dual-db` (vive en Postgres, no en Neo4j).
-2. **"Profundiza en este tema" (IA)**: cada chip manda el contenido/título de la
-   lección a un endpoint que responde con texto generado. Integrar vía **Claude
-   API (Anthropic)** desde el backend — la API key **nunca** en el frontend.
-   Endpoint nuevo `POST /api/lessons/:id/ai` con `{ prompt }` → `{ respuesta }`.
-   Mostrar la respuesta en un panel/modal. **Decisión pendiente:** confirmar que
-   se quiere IA real (costo por request) y dónde se muestra la respuesta.
-3. **like / dislike / flag de lección**: ¿persistir (modelo + endpoints) o es
-   feedback efímero? Si persiste: Postgres `(usuarioId, leccionId, tipo)`.
-   `flag` = reporte → cola de moderación admin. **Decisión pendiente.**
+1. **Notas por lección** (`NotaLeccion`) — **DECIDIDO: Postgres**. Modelo Prisma
+   nuevo con `(usuarioId, leccionId)` único + endpoints `GET/PUT
+   /api/lessons/:id/note`. Sigue `titi-backend-patterns` y `titi-dual-db` (vive en
+   Postgres, no en Neo4j). El botón "Guardar nota" del centro y el panel "Notas" de
+   la derecha comparten el mismo estado/endpoint.
+2. **"Profundiza en este tema" (IA)** — **DECIDIDO: STUB por ahora**. La UI y los 4
+   chips van completos; la respuesta es placeholder/mock en el frontend (o un
+   endpoint que devuelve texto fijo). Dejar el contrato listo para enchufar luego
+   **Claude API (Anthropic)** desde el backend (`POST /api/lessons/:id/ai` con
+   `{ prompt }` → `{ respuesta }`, key **nunca** en el frontend). No hay costo de IA
+   mientras sea stub.
+3. **like / dislike / flag de lección** — **DECIDIDO: OMITIR** en esta iteración.
 4. **"Siguiente lección"**: solo frontend (navegación entre `activeId`); no toca
    backend. Calcular la siguiente lección a partir de `curso.modulos`.
 
@@ -115,7 +116,8 @@ Tres tarjetas tipo acordeón (chevron que colapsa/expande), estilo `titi-card`:
 
 - `pages/LearnCourse.jsx` — reestructurar a grid de 3 columnas; mover progreso al
   sidebar; mover Materiales/Comentarios a la derecha; agregar fila de acción.
-- `components/learn/DeepenCard.jsx` (NUEVO) — card "Profundiza" + chips de IA.
+- `components/learn/DeepenCard.jsx` (NUEVO) — card "Profundiza" + chips. Respuesta
+  STUB (mock) por ahora; contrato listo para Claude API después.
 - `components/learn/LessonNotes.jsx` (NUEVO) — panel de notas (textarea + guardar).
 - `components/learn/Accordion.jsx` (NUEVO, opcional) — tarjeta colapsable
   reutilizable para los 3 paneles de la derecha.
@@ -144,10 +146,17 @@ Tres tarjetas tipo acordeón (chevron que colapsa/expande), estilo `titi-card`:
 - **API**: `{ success, data }` / `{ success:false, message }`. Servicios externos
   (Claude API) en `try/catch` que loguea y no rompe la respuesta.
 
-### Decisiones pendientes (confirmar con el usuario antes de implementar)
+### Decisiones tomadas
 
-1. Notas: ¿Postgres (recomendado) o `localStorage`?
-2. "Profundiza": ¿IA real con Claude API (tiene costo) o stub/placeholder por ahora?
-3. like/dislike/flag: ¿se persiste? ¿el flag entra a moderación admin?
-4. ¿Esto entra en la Etapa 5 (que está enfocada en deploy) o es una etapa propia?
-   La raíz `AGENTS.md` no lo contempla; conviene definir su lugar en el roadmap.
+1. **Notas** → Postgres (modelo `NotaLeccion` + endpoints).
+2. **"Profundiza" (IA)** → STUB por ahora (UI completa, respuesta mock; Claude API
+   queda para después).
+3. **like / dislike / flag** → OMITIR en esta iteración.
+4. **Descripción de la lección** → mostrarla debajo del título (centro).
+5. **Estado** → por ahora solo este spec; **no implementar** hasta que el usuario lo pida.
+
+### Pendiente de confirmar
+
+- Lugar en el roadmap: la raíz `AGENTS.md` está enfocada en deploy (Etapa 5) y no
+  contempla este rediseño. Definir si es una subfase aparte o una etapa propia
+  antes de arrancar la implementación.
