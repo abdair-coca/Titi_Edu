@@ -43,23 +43,29 @@ export function useStaggerReveal(dependencies = [], options = {}) {
   useGSAP(
     () => {
       const el = scope.current;
-      if (!el) return undefined;
+      if (!el) return;
       const items = gsap.utils.toArray(el.children);
-      if (items.length === 0) return undefined;
+      if (items.length === 0) return;
 
-      const mm = gsap.matchMedia();
-      mm.add('(prefers-reduced-motion: no-preference)', () => {
-        gsap.from(items, {
-          y,
-          opacity: 0,
+      // Reduced-motion: no animar, dejar los elementos en su estado final.
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      // fromTo (no from) para que el estado final sea explícito y robusto frente
+      // a re-render / StrictMode. autoAlpha = opacity + visibility. clearProps al
+      // terminar deja los estilos inline limpios (no estorba al hover de la card).
+      gsap.fromTo(
+        items,
+        { y, autoAlpha: 0 },
+        {
+          y: 0,
+          autoAlpha: 1,
           duration,
           ease: MOTION.ease.out,
           // amount = tiempo total repartido entre todos; acotado por maxStagger.
           stagger: { amount: Math.min(items.length * stagger, maxStagger) },
-        });
-      });
-
-      return () => mm.revert();
+          clearProps: 'transform,opacity,visibility',
+        },
+      );
     },
     { scope, dependencies },
   );

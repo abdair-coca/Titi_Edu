@@ -78,9 +78,15 @@ Librerías: `gsap` + `@gsap/react`.
 **Siempre** `useGSAP()` de `@gsap/react` con un `scope` ref. Nunca `gsap.to`
 suelto en un `useEffect` sin cleanup — rompe en StrictMode (doble montaje).
 
-**Siempre** envolver la animación en `gsap.matchMedia()` con
-`(prefers-reduced-motion: no-preference)`. Si el usuario pide menos movimiento,
-no se anima nada: el elemento queda en su estado final.
+**Siempre** chequear `prefers-reduced-motion` y, si el usuario pide menos
+movimiento, no animar: el elemento queda en su estado final.
+
+Preferí `gsap.fromTo` (estado inicial **y** final explícitos) sobre `gsap.from`.
+`from` infiere el estado final del DOM y es frágil con re-render / StrictMode
+(deja cards congeladas a media opacidad). Usá `autoAlpha` (opacity + visibility)
+y `clearProps` al terminar para no dejar estilos inline que estorben al hover.
+No mezcles `gsap.matchMedia().add(...)` con un `mm.revert()` manual dentro de
+`useGSAP`: useGSAP ya revierte, el doble cleanup mata el tween antes de tiempo.
 
 El hook reutilizable `useStaggerReveal` (`src/lib/motion.js`) ya encapsula ambas
 reglas. Úsalo en vez de reescribir GSAP a mano:
@@ -110,11 +116,12 @@ import { MOTION } from '../lib/motion.js';
 function Componente() {
   const scope = useRef(null);
   useGSAP(() => {
-    const mm = gsap.matchMedia();
-    mm.add('(prefers-reduced-motion: no-preference)', () => {
-      gsap.from('.target', { y: 12, opacity: 0, duration: MOTION.dur.slow, ease: MOTION.ease.out });
-    });
-    return () => mm.revert();
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    gsap.fromTo(
+      '.target',
+      { y: 12, autoAlpha: 0 },
+      { y: 0, autoAlpha: 1, duration: MOTION.dur.slow, ease: MOTION.ease.out, clearProps: 'transform,opacity,visibility' },
+    );
   }, { scope });
   return <div ref={scope}>…</div>;
 }
@@ -126,7 +133,7 @@ function Componente() {
 
 Antes de dar por terminada una animación:
 
-- [ ] ¿Respeta `prefers-reduced-motion` (vía `gsap.matchMedia` o `@media` CSS)?
+- [ ] ¿Respeta `prefers-reduced-motion` (vía `window.matchMedia` o `@media` CSS)?
 - [ ] ¿Duración ≤ 500ms?
 - [ ] ¿≤ 3 elementos simultáneos (stagger acotado)?
 - [ ] ¿Usa `useGSAP` con `scope` (cleanup automático, seguro en StrictMode)?
