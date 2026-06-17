@@ -7,7 +7,7 @@ import StreakToast from '../components/StreakToast.jsx';
 import AchievementToast from '../components/AchievementToast.jsx';
 import EvaluationQuiz from '../components/EvaluationQuiz.jsx';
 import { resolveMediaUrl } from '../lib/format.js';
-import { usePopIn } from '../lib/motion.js';
+import { usePopIn, useStaggerReveal } from '../lib/motion.js';
 
 export default function LearnCourse() {
   const { id: courseId } = useParams();
@@ -238,6 +238,10 @@ export default function LearnCourse() {
     currentIndex >= 0 ? orderedLessons[currentIndex + 1] : null;
   const hasNext = Boolean(nextLesson || curso?.evaluacionFinal);
 
+  // Entrada escalonada de los módulos del índice lateral al cargar el curso.
+  // Dep = nº de módulos (primitivo, estable). Ver motion.md §5.
+  const lessonNavRef = useStaggerReveal([curso?.modulos?.length]);
+
   // --- Handlers ---
   const handleSelectLesson = (lessonId) => {
     setActiveId(lessonId);
@@ -416,7 +420,7 @@ export default function LearnCourse() {
         </div>
 
         {/* Lista de módulos + lecciones */}
-        <nav className="flex-1 py-2">
+        <nav ref={lessonNavRef} className="flex-1 py-2">
           {curso.modulos?.length === 0 ? (
             <p className="px-4 py-3 text-xs text-gray-400 font-medium">
               Este curso aún no tiene módulos publicados.
@@ -618,9 +622,11 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
   );
   // Descripción colapsada por defecto (se despliega a pedido).
   const [showDesc, setShowDesc] = useState(false);
+  // Pop al cambiar de lección (también remonta por key en el padre). Ver motion.md §5.
+  const articleRef = usePopIn([leccion.id]);
 
   return (
-    <article>
+    <article ref={articleRef}>
       {videoEmbed && (
         <div className="w-full aspect-video rounded-2xl overflow-hidden bg-titi-dark mb-6">
           <iframe

@@ -68,6 +68,7 @@ Regla: si CSS lo resuelve con una transición o keyframe simple, **es CSS**.
 | Hover de card | lift (-4px) + escala (1.03) + sombra amarilla, con rebote | clase CSS `.titi-card-pop` |
 | Press de botón | se hunde (`active:scale-0.96`) | clase `.titi-btn` |
 | Modal | panel con pop + backdrop con fade | `usePopIn` + `.titi-backdrop-in` |
+| Cambio de lección (Learn) | pop del contenido al cambiar de lección + pop del panel lateral y de la respuesta de "Profundiza" | `usePopIn` en `LearnCourse` (`LessonView`, `LessonSidePanels`, `DeepenCard`) |
 | Mascota Titi | pop al montar | `usePopIn` en `TitiMascot` |
 | Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
 
@@ -77,7 +78,8 @@ Toda lista o grid que se llena desde la API entra escalonada. Aplicado en:
 `Feed`, `Courses` (catálogo + recomendados), `MyCourses`, `MyTeaching`,
 `Explore`, `Notifications`, `HashtagFeed`, `Certificates`, `Profile` (posts),
 `CourseDetail` (las dos columnas al entrar — contenido + inscripción — y los
-módulos), `AchievementsSection`, `AdminDashboard` (stats + paneles),
+módulos), `LearnCourse` (módulos del índice lateral; ver además el pop de
+contenido abajo), `AchievementsSection`, `AdminDashboard` (stats + paneles),
 `AdminCourses`, `AdminCategories`.
 
 **Regla**: cuando agregues una página/sección con una lista, ponele
