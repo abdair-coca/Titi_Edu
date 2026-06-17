@@ -111,15 +111,15 @@ export default function CourseDetail() {
       const { data } = await client.post(`/api/courses/${courseId}/enroll`);
       if (data?.success) {
         setEnrolled(true);
-        setSuccessMsg('¡Te inscribiste con éxito! Redirigiendo a Mis cursos…');
-        setTimeout(() => navigate('/my-courses'), 1100);
+        setSuccessMsg('¡Te inscribiste con éxito! Llevándote al curso…');
+        setTimeout(() => navigate(`/courses/${courseId}/learn`), 1100);
       } else {
         setEnrollError(data?.message || 'No se pudo completar la inscripción');
       }
     } catch (err) {
       if (err.response?.status === 409) {
         setEnrolled(true);
-        navigate('/my-courses');
+        navigate(`/courses/${courseId}/learn`);
         return;
       }
       setEnrollError(
