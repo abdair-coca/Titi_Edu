@@ -358,7 +358,7 @@ export default function LearnCourse() {
   if (!curso) return null;
 
   return (
-    <div className="flex min-h-screen md:min-h-0 md:h-[calc(100vh-4rem)] md:overflow-hidden bg-titi-cream">
+    <div className="flex min-h-screen md:min-h-0 md:h-[calc(100vh-1.5rem)] md:overflow-hidden bg-titi-cream md:gap-3">
       <StreakToast
         shown={streakToast.shown}
         racha={streakToast.racha}
@@ -376,6 +376,7 @@ export default function LearnCourse() {
           transition-transform duration-200
           ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
           md:static md:h-full md:translate-x-0
+          md:border-r-0 md:border md:border-gray-100 md:rounded-2xl
         `}
       >
         {/* Header del sidebar */}
@@ -514,8 +515,8 @@ export default function LearnCourse() {
       )}
 
       {/* === Centro + columna derecha === */}
-      <div className="flex-1 flex flex-col lg:flex-row min-w-0 min-h-0 md:h-full">
-        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto min-w-0 min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row min-w-0 min-h-0 md:h-full lg:gap-3">
+        <main className="flex-1 p-3 sm:p-4 md:p-5 overflow-y-auto min-w-0 min-h-0">
           <div className="max-w-5xl mx-auto">
             {/* Toggle del drawer en móvil */}
             <button
@@ -827,7 +828,7 @@ function LessonSidePanels({
       : active?.title;
 
   return (
-    <div className="flex flex-col-reverse lg:flex-row shrink-0 lg:h-full border-t lg:border-t-0 lg:border-l border-gray-100">
+    <div className="flex flex-col-reverse lg:flex-row shrink-0 lg:h-full bg-white border border-gray-100 rounded-2xl overflow-hidden">
       {/* Panel de contenido (solo si hay uno abierto) */}
       {active && (
         <div ref={panelRef} className="w-full lg:w-80 bg-white p-4 sm:p-5 lg:h-full lg:overflow-y-auto">
@@ -863,7 +864,7 @@ function LessonSidePanels({
       )}
 
       {/* Riel de íconos */}
-      <nav className="flex lg:flex-col gap-1 p-2 bg-white lg:w-24 lg:h-full shrink-0 justify-center lg:justify-start">
+      <nav className={`flex lg:flex-col gap-1 p-2 bg-white lg:w-24 lg:h-full shrink-0 justify-center lg:justify-start ${active ? 'lg:border-l border-gray-100' : ''}`}>
         {PANELS.map(({ key, label, Icon }) => {
           const isOpen = open === key;
           return (

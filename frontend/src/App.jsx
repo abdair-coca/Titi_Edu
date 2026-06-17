@@ -41,13 +41,24 @@ function ProtectedLayout() {
     return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
+  // La pantalla de aprendizaje es un "player" full-bleed: sin el max-w-7xl
+  // centrado ni el padding grande del resto de páginas, para pegar las
+  // columnas a los bordes.
+  const isLearn = /\/courses\/[^/]+\/learn$/.test(location.pathname);
+
   return (
     <div className="min-h-screen bg-neo-bg">
       <Navbar />
       {/* En móvil: deja espacio para el top bar (h-14) y el bottom nav (h-16 + safe area iOS). */}
       {/* En desktop (md+): solo padding-left para el sidebar (w-64). */}
       <main className="min-h-screen pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+        <div
+          className={
+            isLearn
+              ? 'p-2 sm:p-3'
+              : 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8'
+          }
+        >
           <PageTransition key={location.pathname}>
             <Outlet />
           </PageTransition>
