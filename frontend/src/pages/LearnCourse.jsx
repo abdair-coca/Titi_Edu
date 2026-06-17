@@ -48,6 +48,9 @@ export default function LearnCourse() {
   // Mobile: drawer de lecciones abierto
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  // Panel lateral derecho abierto: null | 'notas' | 'materiales' | 'comentarios'
+  const [sidePanel, setSidePanel] = useState(null);
+
   // --- Fetch del curso + progreso en paralelo ---
   useEffect(() => {
     if (!courseId) return;
@@ -489,6 +492,7 @@ export default function LearnCourse() {
                 onComplete={handleComplete}
                 hasNext={hasNext}
                 onNext={handleNext}
+                onSaveNote={() => setSidePanel('notas')}
               />
             ) : (
               <EmptyLessonState
@@ -498,13 +502,14 @@ export default function LearnCourse() {
           </div>
         </main>
 
-        {/* Columna derecha — solo en vista de lección */}
+        {/* Columna derecha — riel de íconos + panel (solo en vista de lección) */}
         {activeLesson && !activeEvalId && (
-          <aside className="w-full lg:w-80 shrink-0 p-4 sm:p-6 lg:pl-0 lg:py-8 lg:pr-8 space-y-4">
-            <LessonNotesCard />
-            <LessonMaterialsCard materiales={materialsByLesson[activeLesson.id]} />
-            <LessonCommentsCard lessonId={activeLesson.id} />
-          </aside>
+          <LessonSidePanels
+            open={sidePanel}
+            onChange={setSidePanel}
+            lessonId={activeLesson.id}
+            materiales={materialsByLesson[activeLesson.id]}
+          />
         )}
       </div>
     </div>
@@ -544,7 +549,7 @@ function MaterialChip({ material }) {
   );
 }
 
-function LessonView({ leccion, completed, completing, completeError, onComplete, hasNext, onNext }) {
+function LessonView({ leccion, completed, completing, completeError, onComplete, hasNext, onNext, onSaveNote }) {
   const videoEmbed = useMemo(
     () => normalizeVideoUrl(leccion.videoUrl),
     [leccion.videoUrl],
@@ -565,9 +570,19 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
         </div>
       )}
 
-      <h1 className="text-xl sm:text-2xl font-bold text-titi-dark mb-3">
-        {leccion.titulo}
-      </h1>
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <h1 className="text-xl sm:text-2xl font-bold text-titi-dark">
+          {leccion.titulo}
+        </h1>
+        <button
+          type="button"
+          onClick={onSaveNote}
+          className="shrink-0 inline-flex items-center gap-1.5 text-sm font-semibold text-titi-dark hover:text-titi-yellow-dark transition-colors"
+        >
+          <BookmarkIcon className="w-4 h-4" />
+          Guardar nota
+        </button>
+      </div>
 
       {/* Descripción de la lección, debajo del título */}
       {leccion.contenido ? (
@@ -627,21 +642,79 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
   );
 }
 
-// ---- Paneles de la columna derecha ----
-function LessonNotesCard() {
-  // Placeholder de layout — la persistencia (Postgres) llega en el paso de Notas.
+// ---- Columna derecha: riel de íconos + panel desplegable ----
+const PANELS = [
+  { key: 'notas', label: 'Notas', Icon: NoteIcon, title: 'Notas' },
+  { key: 'materiales', label: 'Archivos', Icon: FilesIcon, title: 'Materiales' },
+  { key: 'comentarios', label: 'Comentarios', Icon: CommentIcon, title: 'Comentarios' },
+];
+
+function LessonSidePanels({ open, onChange, lessonId, materiales }) {
+  const toggle = (key) => onChange(open === key ? null : key);
+  const active = PANELS.find((p) => p.key === open);
+
   return (
-    <section className="titi-card p-4">
-      <div className="mb-2">
-        <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
-          <span aria-hidden="true">📝</span> Notas
-        </h2>
-        <p className="text-xs text-gray-400 font-medium">
-          Tus apuntes personales de esta lección.
-        </p>
-      </div>
+    <div className="flex flex-col-reverse lg:flex-row shrink-0 border-t lg:border-t-0 lg:border-l border-gray-100">
+      {/* Panel de contenido (solo si hay uno abierto) */}
+      {active && (
+        <div className="w-full lg:w-80 bg-white p-4 sm:p-5 lg:max-h-screen lg:overflow-y-auto">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
+              <active.Icon className="w-4 h-4 text-titi-dark" />
+              {active.title}
+            </h2>
+            <button
+              type="button"
+              onClick={() => onChange(null)}
+              className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              aria-label="Cerrar panel"
+            >
+              ✕
+            </button>
+          </div>
+
+          {open === 'notas' && <NotesPanel />}
+          {open === 'materiales' && <MaterialsPanel materiales={materiales} />}
+          {open === 'comentarios' && <LessonComments lessonId={lessonId} />}
+        </div>
+      )}
+
+      {/* Riel de íconos */}
+      <nav className="flex lg:flex-col gap-1 p-2 bg-white lg:w-24 shrink-0 justify-center lg:justify-start">
+        {PANELS.map(({ key, label, Icon }) => {
+          const isOpen = open === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => toggle(key)}
+              aria-pressed={isOpen}
+              className={[
+                'flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl transition-colors w-full',
+                isOpen
+                  ? 'bg-titi-yellow-light text-titi-dark'
+                  : 'text-gray-500 hover:bg-titi-cream hover:text-titi-dark',
+              ].join(' ')}
+            >
+              <Icon className="w-5 h-5" />
+              <span className="text-[11px] font-semibold leading-none">{label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    </div>
+  );
+}
+
+function NotesPanel() {
+  // Placeholder — la persistencia (Postgres) llega en el paso de Notas.
+  return (
+    <div>
+      <p className="text-xs text-gray-400 font-medium mb-2">
+        Tus apuntes personales de esta lección.
+      </p>
       <textarea
-        rows={4}
+        rows={6}
         placeholder="Escribí tus apuntes…"
         className="titi-input resize-none text-sm"
         disabled
@@ -649,21 +722,16 @@ function LessonNotesCard() {
       <p className="text-[10px] text-gray-300 mt-1">
         Guardado de notas: próximo paso.
       </p>
-    </section>
+    </div>
   );
 }
 
-function LessonMaterialsCard({ materiales }) {
+function MaterialsPanel({ materiales }) {
   return (
-    <section className="titi-card p-4">
-      <div className="mb-3">
-        <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
-          <span aria-hidden="true">📑</span> Materiales
-        </h2>
-        <p className="text-xs text-gray-400 font-medium">
-          Recursos descargables de la lección.
-        </p>
-      </div>
+    <div>
+      <p className="text-xs text-gray-400 font-medium mb-3">
+        Recursos descargables de la lección.
+      </p>
       {materiales === undefined ? (
         <p className="text-xs text-gray-400 font-medium">Cargando…</p>
       ) : materiales.length > 0 ? (
@@ -677,18 +745,42 @@ function LessonMaterialsCard({ materiales }) {
           No hay materiales disponibles por el momento.
         </p>
       )}
-    </section>
+    </div>
   );
 }
 
-function LessonCommentsCard({ lessonId }) {
+// ---- Íconos de línea (riel + guardar nota) ----
+function NoteIcon({ className }) {
   return (
-    <section className="titi-card p-4">
-      <h2 className="text-base font-bold text-titi-dark flex items-center gap-2 mb-3">
-        <span aria-hidden="true">💬</span> Comentarios
-      </h2>
-      <LessonComments lessonId={lessonId} />
-    </section>
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+    </svg>
+  );
+}
+
+function FilesIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+      <path d="M14 2v6h6" />
+    </svg>
+  );
+}
+
+function CommentIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
+    </svg>
+  );
+}
+
+function BookmarkIcon({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z" />
+    </svg>
   );
 }
 

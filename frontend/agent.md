@@ -81,9 +81,13 @@ Hoy ya existe (el `<aside>` de lecciones). Cambios:
 - **like / dislike / flag**: **OMITIDO en esta iteración** (no se incluye por ahora).
 - **Mover Materiales y Comentarios fuera del centro** → van a la columna derecha.
 
-#### 3. Columna derecha (paneles colapsables) — NUEVA
+#### 3. Columna derecha (riel de íconos + panel desplegable) — NUEVA
 
-Tres tarjetas tipo acordeón (chevron que colapsa/expande), estilo `titi-card`:
+Para no sobrecargar la vista: un **riel vertical de íconos** a la derecha (Notas /
+Archivos / Comentarios). Por defecto **todo colapsado** (solo íconos). Al tocar un
+ícono se abre, a su izquierda, un panel con el contenido de esa sección; tocar de
+nuevo (o la ✕) lo cierra. Solo uno abierto a la vez. El link "Guardar nota" del
+centro abre el panel de Notas. Las tres secciones son:
 
 - **Notas** — "Tus apuntes personales de esta lección". Textarea + autosave o
   botón guardar. Sincroniza con el botón "Guardar nota" del centro. (Ver §Notas.)
