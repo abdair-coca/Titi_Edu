@@ -358,7 +358,7 @@ export default function LearnCourse() {
   if (!curso) return null;
 
   return (
-    <div className="flex min-h-screen bg-titi-cream">
+    <div className="flex min-h-screen md:min-h-0 md:h-[calc(100vh-4rem)] md:overflow-hidden bg-titi-cream">
       <StreakToast
         shown={streakToast.shown}
         racha={streakToast.racha}
@@ -375,7 +375,7 @@ export default function LearnCourse() {
           fixed inset-y-0 left-0 z-40 overflow-y-auto
           transition-transform duration-200
           ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:sticky md:top-0 md:h-screen md:translate-x-0
+          md:static md:h-full md:translate-x-0
         `}
       >
         {/* Header del sidebar */}
@@ -514,9 +514,9 @@ export default function LearnCourse() {
       )}
 
       {/* === Centro + columna derecha === */}
-      <div className="flex-1 flex flex-col lg:flex-row min-w-0">
-        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto min-w-0">
-          <div className="max-w-3xl mx-auto">
+      <div className="flex-1 flex flex-col lg:flex-row min-w-0 min-h-0 md:h-full">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto min-w-0 min-h-0">
+          <div className="max-w-5xl mx-auto">
             {/* Toggle del drawer en móvil */}
             <button
               type="button"
@@ -733,46 +733,65 @@ const DEEPEN_PROMPTS = [
 ];
 
 function DeepenCard() {
+  const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState(null);
   const respRef = usePopIn([selected]);
 
   return (
-    <section className="bg-titi-yellow-light/60 border border-titi-yellow/40 rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8">
-      <h2 className="text-base font-bold text-titi-dark flex items-center gap-2 mb-3">
-        <span aria-hidden="true">✨</span> Profundiza en este tema
-      </h2>
-      <div className="flex flex-wrap gap-2">
-        {DEEPEN_PROMPTS.map((prompt) => (
-          <button
-            key={prompt}
-            type="button"
-            onClick={() => setSelected(prompt)}
-            className={[
-              'text-sm font-semibold px-4 py-2.5 rounded-xl border transition-all duration-150',
-              selected === prompt
-                ? 'bg-titi-yellow text-titi-dark border-titi-yellow'
-                : 'bg-white text-titi-dark border-gray-200 hover:border-titi-yellow hover:bg-titi-cream',
-            ].join(' ')}
-          >
-            {prompt}
-          </button>
-        ))}
-      </div>
+    <section className="bg-titi-yellow-light/60 border border-titi-yellow/40 rounded-2xl mb-6">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-2 p-4 sm:p-5 text-left"
+      >
+        <span className="text-base font-bold text-titi-dark flex items-center gap-2">
+          <span aria-hidden="true">✨</span> Profundiza en este tema
+        </span>
+        <span
+          className={`text-sm text-titi-dark transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+          aria-hidden="true"
+        >
+          ▾
+        </span>
+      </button>
 
-      {selected && (
-        <div ref={respRef} className="mt-4 bg-white border border-titi-border rounded-xl p-4 flex items-start gap-3">
-          <img
-            src="/Titi.png"
-            alt="Titi"
-            className="w-10 h-10 object-contain select-none shrink-0"
-            draggable={false}
-          />
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-titi-dark">{selected}</p>
-            <p className="text-sm text-gray-500 mt-1">
-              Titi va a responder esto con IA muy pronto. Función en construcción 🛠️
-            </p>
+      {open && (
+        <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+          <div className="flex flex-wrap gap-2">
+            {DEEPEN_PROMPTS.map((prompt) => (
+              <button
+                key={prompt}
+                type="button"
+                onClick={() => setSelected(prompt)}
+                className={[
+                  'text-sm font-semibold px-4 py-2.5 rounded-xl border transition-all duration-150',
+                  selected === prompt
+                    ? 'bg-titi-yellow text-titi-dark border-titi-yellow'
+                    : 'bg-white text-titi-dark border-gray-200 hover:border-titi-yellow hover:bg-titi-cream',
+                ].join(' ')}
+              >
+                {prompt}
+              </button>
+            ))}
           </div>
+
+          {selected && (
+            <div ref={respRef} className="mt-4 bg-white border border-titi-border rounded-xl p-4 flex items-start gap-3">
+              <img
+                src="/Titi.png"
+                alt="Titi"
+                className="w-10 h-10 object-contain select-none shrink-0"
+                draggable={false}
+              />
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-titi-dark">{selected}</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Titi va a responder esto con IA muy pronto. Función en construcción 🛠️
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </section>
@@ -808,10 +827,10 @@ function LessonSidePanels({
       : active?.title;
 
   return (
-    <div className="flex flex-col-reverse lg:flex-row shrink-0 border-t lg:border-t-0 lg:border-l border-gray-100">
+    <div className="flex flex-col-reverse lg:flex-row shrink-0 lg:h-full border-t lg:border-t-0 lg:border-l border-gray-100">
       {/* Panel de contenido (solo si hay uno abierto) */}
       {active && (
-        <div ref={panelRef} className="w-full lg:w-80 bg-white p-4 sm:p-5 lg:max-h-screen lg:overflow-y-auto">
+        <div ref={panelRef} className="w-full lg:w-80 bg-white p-4 sm:p-5 lg:h-full lg:overflow-y-auto">
           <div className="flex items-center justify-between gap-2 mb-3">
             <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
               <active.Icon className="w-4 h-4 text-titi-dark" />
@@ -844,7 +863,7 @@ function LessonSidePanels({
       )}
 
       {/* Riel de íconos */}
-      <nav className="flex lg:flex-col gap-1 p-2 bg-white lg:w-24 shrink-0 justify-center lg:justify-start">
+      <nav className="flex lg:flex-col gap-1 p-2 bg-white lg:w-24 lg:h-full shrink-0 justify-center lg:justify-start">
         {PANELS.map(({ key, label, Icon }) => {
           const isOpen = open === key;
           return (
