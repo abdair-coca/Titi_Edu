@@ -29,7 +29,9 @@ export default function Profile() {
 
   // El header entra con pop cuando llegan los datos (la página ya hizo su
   // PageTransition mientras cargaba, así que el contenido async necesita el suyo).
-  const headerRef = usePopIn([profile, username]);
+  // Dep por valor estable (username del perfil), no por referencia de `profile`:
+  // así no re-anima cuando cambian stats/followers y el objeto se reemplaza.
+  const headerRef = usePopIn([profile?.user?.username]);
 
   const [posts, setPosts] = useState([]);
   const [postsLoading, setPostsLoading] = useState(true);

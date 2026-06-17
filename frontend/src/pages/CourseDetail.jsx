@@ -26,7 +26,7 @@ export default function CourseDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const modulesRef = useStaggerReveal([curso?.modulos]);
+  const modulesRef = useStaggerReveal([curso?.modulos?.length]);
 
   // Enrollment state
   const [enrolled, setEnrolled] = useState(false);

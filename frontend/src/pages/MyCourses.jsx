@@ -29,7 +29,7 @@ export default function MyCourses() {
   // cursos 100% completados aunque la Inscripcion no esté marcada como tal.
   const [progressByCurso, setProgressByCurso] = useState({});
 
-  const gridRef = useStaggerReveal([inscripciones]);
+  const gridRef = useStaggerReveal([inscripciones.length]);
 
   useEffect(() => {
     let cancelled = false;

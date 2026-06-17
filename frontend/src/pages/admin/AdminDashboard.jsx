@@ -30,7 +30,7 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
-  const statsRef = useStaggerReveal([stats]);
+  const statsRef = useStaggerReveal([Boolean(stats)]);
   const panelsRef = useStaggerReveal([]);
 
   const cards = stats

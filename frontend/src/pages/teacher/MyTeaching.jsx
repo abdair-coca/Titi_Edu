@@ -15,7 +15,7 @@ export default function MyTeaching() {
   const [busy, setBusy] = useState(null); // id del curso ocupado
   const [confirm, setConfirm] = useState(null); // { type: 'delete', curso }
 
-  const gridRef = useStaggerReveal([cursos]);
+  const gridRef = useStaggerReveal([cursos.length]);
 
   const isProfesor = user?.rol === 'PROFESOR' || user?.rol === 'ADMIN';
 

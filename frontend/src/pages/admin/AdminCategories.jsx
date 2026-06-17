@@ -18,7 +18,7 @@ export default function AdminCategories() {
   const [confirm, setConfirm] = useState(null); // categoría a borrar
   const [busy, setBusy] = useState(null);
 
-  const listRef = useStaggerReveal([categorias]);
+  const listRef = useStaggerReveal([categorias.length]);
 
   const fetchCategorias = useCallback(async () => {
     setLoading(true);

@@ -110,14 +110,22 @@ que infiere el final del DOM y es frágil con re-render / StrictMode (deja cards
 congeladas a media opacidad). Usá `autoAlpha` (opacity + visibility) y `clearProps`
 al terminar para no dejar estilos inline que estorben al hover.
 
+**Dependencias por valor, no por referencia.** Pasale a los hooks una señal
+**primitiva y estable** (`items.length`, un id, un booleano), nunca el array/objeto
+crudo. Si pasás la referencia, cualquier `setState` que la reemplace (churn de
+stats, doble fetch de StrictMode en dev) cuenta como cambio de dep y **re-dispara
+la animación** → la entrada se ve dos veces. Ej: `useStaggerReveal([items.length])`,
+`usePopIn([perfil?.user?.username])`. (Excepción: modales → `usePopIn([open])`,
+querés que re-anime en cada apertura.)
+
 Los hooks de `src/lib/motion.js` ya encapsulan todo esto — usalos:
 
 ```jsx
 import { useStaggerReveal, usePopIn } from '../lib/motion.js';
 
-// Lista: entrada escalonada de los hijos directos.
+// Lista: entrada escalonada de los hijos directos. Dep = length (primitivo).
 function Grid({ items }) {
-  const ref = useStaggerReveal([items]);
+  const ref = useStaggerReveal([items.length]);
   return <div ref={ref} className="grid ...">{items.map(...)}</div>;
 }
 

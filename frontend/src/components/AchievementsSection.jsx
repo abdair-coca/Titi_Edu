@@ -33,7 +33,7 @@ export default function AchievementsSection({ username, isSelf = false }) {
 
   const desbloqueados = logros.filter((l) => l.desbloqueado).length;
 
-  const gridRef = useStaggerReveal([logros]);
+  const gridRef = useStaggerReveal([logros.length]);
 
   return (
     <section aria-label="Logros" className="titi-card p-4 sm:p-6 mb-6">

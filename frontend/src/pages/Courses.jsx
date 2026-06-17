@@ -105,8 +105,8 @@ export default function Courses() {
   }, [debouncedQuery, nivel, categoria, refreshTick]);
 
   // Entrada escalonada de las cards del catálogo (GSAP, respeta reduced-motion).
-  const gridRef = useStaggerReveal([cursos]);
-  const recommendedRef = useStaggerReveal([recommended]);
+  const gridRef = useStaggerReveal([cursos.length]);
+  const recommendedRef = useStaggerReveal([recommended.length]);
 
   const hasFilters = debouncedQuery || nivel !== 'all' || categoria !== 'all';
 

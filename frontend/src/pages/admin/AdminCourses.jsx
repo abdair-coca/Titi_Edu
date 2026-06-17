@@ -17,7 +17,7 @@ export default function AdminCourses() {
   const [busy, setBusy] = useState(null);
   const [confirm, setConfirm] = useState(null); // curso a borrar
 
-  const listRef = useStaggerReveal([cursos]);
+  const listRef = useStaggerReveal([cursos.length]);
 
   const fetchCourses = useCallback(async () => {
     setLoading(true);

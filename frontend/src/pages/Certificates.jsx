@@ -15,7 +15,7 @@ export default function Certificates() {
   const [error, setError] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
-  const gridRef = useStaggerReveal([certificados]);
+  const gridRef = useStaggerReveal([certificados.length]);
 
   const fetch = useCallback(async () => {
     setLoading(true);
