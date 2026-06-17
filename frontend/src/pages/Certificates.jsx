@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { formatDate } from '../lib/format.js';
+import { useStaggerReveal } from '../lib/motion.js';
 
 /**
  * Certificates — lista de mis certificados (ruta protegida /certificates).
@@ -13,6 +14,8 @@ export default function Certificates() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
+
+  const gridRef = useStaggerReveal([certificados]);
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -100,7 +103,7 @@ export default function Certificates() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+        <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
           {certificados.map((cert) => (
             <article
               key={cert.id}

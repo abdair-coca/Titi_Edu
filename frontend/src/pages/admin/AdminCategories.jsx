@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import client from '../../api/client.js';
 import ConfirmModal from '../../components/ConfirmModal.jsx';
+import { useStaggerReveal } from '../../lib/motion.js';
 
 const FORM_VACIO = { nombre: '', icono: '' };
 
@@ -16,6 +17,8 @@ export default function AdminCategories() {
 
   const [confirm, setConfirm] = useState(null); // categoría a borrar
   const [busy, setBusy] = useState(null);
+
+  const listRef = useStaggerReveal([categorias]);
 
   const fetchCategorias = useCallback(async () => {
     setLoading(true);
@@ -148,7 +151,7 @@ export default function AdminCategories() {
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] divide-y divide-gray-100">
+        <div ref={listRef} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] divide-y divide-gray-100">
           {categorias.map((cat) => (
             <div key={cat.id} className="p-4 flex items-center gap-4">
               <span className="text-2xl select-none shrink-0" aria-hidden="true">{cat.icono}</span>

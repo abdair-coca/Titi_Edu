@@ -106,6 +106,7 @@ export default function Courses() {
 
   // Entrada escalonada de las cards del catálogo (GSAP, respeta reduced-motion).
   const gridRef = useStaggerReveal([cursos]);
+  const recommendedRef = useStaggerReveal([recommended]);
 
   const hasFilters = debouncedQuery || nivel !== 'all' || categoria !== 'all';
 
@@ -134,7 +135,7 @@ export default function Courses() {
           <h2 className="text-lg font-bold text-titi-dark mb-3">
             Tus amigos están aprendiendo
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div ref={recommendedRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recommended.map(({ curso, friendCount, sampleFriends }) => (
               <RecommendedCourseCard
                 key={curso.id}

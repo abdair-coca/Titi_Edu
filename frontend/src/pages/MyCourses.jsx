@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client.js';
+import { useStaggerReveal } from '../lib/motion.js';
 
 function formatDateEs(value) {
   if (!value) return '';
@@ -27,6 +28,8 @@ export default function MyCourses() {
   // Se llena en paralelo después de cargar las inscripciones para detectar
   // cursos 100% completados aunque la Inscripcion no esté marcada como tal.
   const [progressByCurso, setProgressByCurso] = useState({});
+
+  const gridRef = useStaggerReveal([inscripciones]);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,7 +113,7 @@ export default function MyCourses() {
       ) : inscripciones.length === 0 ? (
         <EmptyState onExplore={() => navigate('/courses')} />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {inscripciones.map((insc) => (
             <EnrolledCard
               key={insc.id}

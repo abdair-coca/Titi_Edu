@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import client from '../../api/client.js';
 import ConfirmModal from '../../components/ConfirmModal.jsx';
+import { useStaggerReveal } from '../../lib/motion.js';
 
 const FILTROS = [
   { value: 'all', label: 'Todos' },
@@ -15,6 +16,8 @@ export default function AdminCourses() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null);
   const [confirm, setConfirm] = useState(null); // curso a borrar
+
+  const listRef = useStaggerReveal([cursos]);
 
   const fetchCourses = useCallback(async () => {
     setLoading(true);
@@ -103,7 +106,7 @@ export default function AdminCourses() {
           No hay cursos con este filtro.
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] divide-y divide-gray-100">
+        <div ref={listRef} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] divide-y divide-gray-100">
           {cursos.map((curso) => (
             <div key={curso.id} className="p-4 flex items-center gap-4">
               <span className="text-2xl select-none shrink-0" aria-hidden="true">{curso.categoria?.icono || '📚'}</span>

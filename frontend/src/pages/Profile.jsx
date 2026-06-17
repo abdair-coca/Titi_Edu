@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { formatDate, relativeTime, resolveMediaUrl } from '../lib/format.js';
+import { useStaggerReveal } from '../lib/motion.js';
 import OptionsPosts from '../components/OptionsPosts.jsx';
 import PostCard from '../components/PostCard.jsx';
 import StreakBadge from '../components/StreakBadge.jsx';
@@ -424,6 +425,7 @@ function TabButton({ active, onClick, icon, label, count }) {
 }
 
 function PostsList({ loading, error, posts, onRetry, emptyTitle, emptyDescription, handleDelete, handleEdit, onChange }) {
+  const listRef = useStaggerReveal([posts.length]);
   if (loading) {
     return (
       <div className="titi-card p-6 text-center text-titi-muted font-semibold">Cargando…</div>
@@ -452,7 +454,7 @@ function PostsList({ loading, error, posts, onRetry, emptyTitle, emptyDescriptio
     );
   }
   return (
-    <div className="space-y-4">
+    <div ref={listRef} className="space-y-4">
       {posts.map((p) => (
         <PostCard
           key={p.id}

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import { relativeTime } from '../lib/format.js';
 import TitiMascot from '../components/TitiMascot.jsx';
+import { useStaggerReveal } from '../lib/motion.js';
 
 export default function Notifications() {
   const [items, setItems] = useState([]);
@@ -39,6 +40,8 @@ export default function Notifications() {
 
   const hasUnread = items.some((n) => !n.read);
 
+  const listRef = useStaggerReveal([items.length]);
+
   return (
     <div>
       <header className="flex items-center justify-between mb-6">
@@ -74,7 +77,7 @@ export default function Notifications() {
       )}
 
       {items.length > 0 && (
-        <ul className="space-y-2">
+        <ul ref={listRef} className="space-y-2">
           {items.map((n) => (
             <NotificationItem key={n.id} notif={n} onClick={() => markOneRead(n.id)} />
           ))}

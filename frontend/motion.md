@@ -71,12 +71,29 @@ Regla: si CSS lo resuelve con una transición o keyframe simple, **es CSS**.
 | Mascota Titi | pop al montar | `usePopIn` en `TitiMascot` |
 | Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
 
-**Hover pop solo en tiles clickeables de navegación**: `CourseCard`,
-`RecommendedCourseCard`, mini-card de curso dentro de `AcademicActivityCard`.
-**`PostCard` NO escala**: hovering para dar like/comentar no debe mover el post.
+### Cobertura — `useStaggerReveal` en toda lista/grid
 
-**Límite conocido**: los modales usan `if(!open) return null`, así que la **salida**
-es instantánea (sin animar). Aceptable; animar la salida requiere mantener montado.
+Toda lista o grid que se llena desde la API entra escalonada. Aplicado en:
+`Feed`, `Courses` (catálogo + recomendados), `MyCourses`, `MyTeaching`,
+`Explore`, `Notifications`, `HashtagFeed`, `Certificates`, `Profile` (posts),
+`CourseDetail` (módulos), `AchievementsSection`, `AdminDashboard` (stats + paneles),
+`AdminCourses`, `AdminCategories`.
+
+**Regla**: cuando agregues una página/sección con una lista, ponele
+`useStaggerReveal([data])` al contenedor. **Nada suelto** — sin entrada = inconsistente.
+
+### Excepciones (decisiones, no olvidos)
+
+- **Hover pop (lift+escala) solo en tiles de navegación puros**: `CourseCard`,
+  `RecommendedCourseCard`, mini-card de `AcademicActivityCard`, paneles de
+  `AdminDashboard`. Cards con controles internos (PostCard, EnrolledCard,
+  TeachingCard) **no escalan**: el hover no debe estorbar los botones de adentro.
+- **Tabla de `AdminUsers` (`<tbody><tr>`)**: sin stagger. `transform/scale` sobre
+  `table-row` renderiza inconsistente entre navegadores.
+- **Landing (`Home`) y `VerifyCertificate`**: fuera del shell de la app (no hay
+  navegación in-app hacia ellas) → sin `PageTransition`.
+- **Salida de modales**: `if(!open) return null` desmonta al instante, así que la
+  salida no anima. Aceptable; animarla requiere mantener montado.
 
 ---
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import PostCard from '../components/PostCard.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
+import { useStaggerReveal } from '../lib/motion.js';
 import { relativeTime, resolveMediaUrl } from '../lib/format.js';
 
 export default function Explore() {
@@ -80,6 +81,8 @@ function ExploreFeed() {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
   }, []);
 
+  const listRef = useStaggerReveal([posts.length]);
+
   if (loading) {
     return <div className="titi-card p-8 text-center text-titi-muted font-semibold">Cargando…</div>;
   }
@@ -100,7 +103,7 @@ function ExploreFeed() {
     );
   }
   return (
-    <div>
+    <div ref={listRef}>
       {posts.map((p) => (
         <PostCard
           key={p.id}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useStaggerReveal } from '../lib/motion.js';
 
 function formatDateEs(value) {
   if (!value) return '';
@@ -24,6 +25,8 @@ export default function CourseDetail() {
   const [curso, setCurso] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const modulesRef = useStaggerReveal([curso?.modulos]);
 
   // Enrollment state
   const [enrolled, setEnrolled] = useState(false);
@@ -272,7 +275,7 @@ export default function CourseDetail() {
                 </p>
               </div>
             ) : (
-              <ol className="flex flex-col gap-3">
+              <ol ref={modulesRef} className="flex flex-col gap-3">
                 {curso.modulos.map((modulo, idx) => {
                   const numLecciones = modulo.lecciones?.length ?? 0;
                   return (

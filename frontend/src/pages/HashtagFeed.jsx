@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import PostCard from '../components/PostCard.jsx';
+import { useStaggerReveal } from '../lib/motion.js';
 
 export default function HashtagFeed() {
   const { tag } = useParams();
@@ -48,6 +49,8 @@ export default function HashtagFeed() {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
   }, []);
 
+  const listRef = useStaggerReveal([posts.length]);
+
   return (
     <div>
       <header className="mb-6">
@@ -87,7 +90,7 @@ export default function HashtagFeed() {
       )}
 
       {posts.length > 0 && (
-        <div>
+        <div ref={listRef}>
           {posts.map((p) => (
             <PostCard
               key={p.id}

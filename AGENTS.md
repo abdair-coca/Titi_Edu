@@ -28,6 +28,7 @@ Done en una línea: si para que un extraño use Titi hay que correr el backend l
 | Sin tests automatizados (testing manual hasta Etapa 4) | `AGENTSGoal.md` §11 | Suite Vitest + supertest (5.3) |
 | Feed/Explore sin paginación (limit fijo) | Etapa 4 §6 | Paginación real (5.2) |
 | TODOs marcados "Etapa 5" en el código | varias | Limpieza (5.6) — 12 archivos los referencian |
+| **Lentitud percibida al consultar la DB (sobre todo Postgres)** | Etapa 5 (motion) | Optimizar latencia de queries (índices §4.2, paginación §4.1) y/o suavizar la espera con skeletons consistentes. No es problema de animación — el motion ya es snappy. |
 
 ### Lo que ya está listo y no se toca
 

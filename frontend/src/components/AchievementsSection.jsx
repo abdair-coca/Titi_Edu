@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import client from '../api/client.js';
 import { formatDate } from '../lib/format.js';
+import { useStaggerReveal } from '../lib/motion.js';
 
 /**
  * AchievementsSection — grid de logros de un usuario para la página de perfil.
@@ -31,6 +32,8 @@ export default function AchievementsSection({ username, isSelf = false }) {
   }, [fetch]);
 
   const desbloqueados = logros.filter((l) => l.desbloqueado).length;
+
+  const gridRef = useStaggerReveal([logros]);
 
   return (
     <section aria-label="Logros" className="titi-card p-4 sm:p-6 mb-6">
@@ -67,7 +70,7 @@ export default function AchievementsSection({ username, isSelf = false }) {
           Todavía no hay logros disponibles.
         </p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
+        <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
           {logros.map((l) => (
             <div
               key={l.id}

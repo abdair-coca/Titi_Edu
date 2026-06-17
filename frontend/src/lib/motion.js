@@ -5,7 +5,7 @@ import { useRef } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
-// Tokens de motion.
+// Tokens de motion. Snappy: rápido al entrar, rebote leve.
 export const MOTION = {
   // Duraciones en segundos (GSAP usa segundos, no ms). Tope 0.4s = 400ms.
   dur: { fast: 0.15, base: 0.3, slow: 0.4 },

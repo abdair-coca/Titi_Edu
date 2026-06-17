@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../../api/client.js';
+import { useStaggerReveal } from '../../lib/motion.js';
 
 const PANELS = [
   { to: '/admin/users', titulo: 'Usuarios', desc: 'Verificar profesores y cambiar roles', icon: '👥' },
@@ -28,6 +29,9 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => { fetchStats(); }, [fetchStats]);
+
+  const statsRef = useStaggerReveal([stats]);
+  const panelsRef = useStaggerReveal([]);
 
   const cards = stats
     ? [
@@ -63,7 +67,7 @@ export default function AdminDashboard() {
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <div ref={statsRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
           {cards.map((c) => (
             <div key={c.label} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4">
               <p className={`text-3xl font-black tabular-nums ${c.color}`}>{c.value}</p>
@@ -73,12 +77,12 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div ref={panelsRef} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {PANELS.map((p) => (
           <Link
             key={p.to}
             to={p.to}
-            className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-1 transition-all duration-200 p-5 flex items-center gap-4"
+            className="titi-card-pop bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] p-5 flex items-center gap-4"
           >
             <span className="text-3xl select-none" aria-hidden="true">{p.icon}</span>
             <div>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../../api/client.js';
 import { useAuth } from '../../context/AuthContext.jsx';
+import { useStaggerReveal } from '../../lib/motion.js';
 import ConfirmModal from '../../components/ConfirmModal.jsx';
 
 export default function MyTeaching() {
@@ -13,6 +14,8 @@ export default function MyTeaching() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null); // id del curso ocupado
   const [confirm, setConfirm] = useState(null); // { type: 'delete', curso }
+
+  const gridRef = useStaggerReveal([cursos]);
 
   const isProfesor = user?.rol === 'PROFESOR' || user?.rol === 'ADMIN';
 
@@ -111,7 +114,7 @@ export default function MyTeaching() {
       ) : cursos.length === 0 ? (
         <EmptyState onCreate={() => navigate('/teacher/courses/new')} />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {cursos.map((curso) => (
             <TeachingCard
               key={curso.id}
