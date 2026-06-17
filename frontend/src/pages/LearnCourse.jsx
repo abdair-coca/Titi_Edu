@@ -51,6 +51,11 @@ export default function LearnCourse() {
   // Panel lateral derecho abierto: null | 'notas' | 'materiales' | 'comentarios'
   const [sidePanel, setSidePanel] = useState(null);
 
+  // Nota personal de la lección activa
+  const [noteText, setNoteText] = useState('');
+  const [noteSaving, setNoteSaving] = useState(false);
+  const [noteSaved, setNoteSaved] = useState(false);
+
   // --- Fetch del curso + progreso en paralelo ---
   useEffect(() => {
     if (!courseId) return;
@@ -181,6 +186,29 @@ export default function LearnCourse() {
     };
   }, [activeId, materialsByLesson]);
 
+  // --- Cargar la nota personal de la lección activa ---
+  useEffect(() => {
+    if (!activeId || !isAuthenticated) {
+      setNoteText('');
+      setNoteSaved(false);
+      return;
+    }
+    let cancelled = false;
+    setNoteSaved(false);
+    client
+      .get(`/api/lessons/${activeId}/note`)
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.success) setNoteText(data.data?.nota?.texto || '');
+      })
+      .catch(() => {
+        // Silencioso — si falla, el textarea queda vacío.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeId, isAuthenticated]);
+
   // --- Totales para barra de progreso ---
   const totalLessons = useMemo(() => {
     if (!curso) return 0;
@@ -223,6 +251,27 @@ export default function LearnCourse() {
   const handleNext = () => {
     if (nextLesson) handleSelectLesson(nextLesson.id);
     else if (curso?.evaluacionFinal) handleSelectEval(curso.evaluacionFinal.id);
+  };
+
+  const handleNoteChange = (v) => {
+    setNoteText(v);
+    setNoteSaved(false);
+  };
+
+  const handleSaveNote = async () => {
+    if (!activeId) return;
+    setNoteSaving(true);
+    setNoteSaved(false);
+    try {
+      const { data } = await client.put(`/api/lessons/${activeId}/note`, {
+        texto: noteText,
+      });
+      if (data?.success) setNoteSaved(true);
+    } catch {
+      // Silencioso — el textarea conserva el texto para reintentar.
+    } finally {
+      setNoteSaving(false);
+    }
   };
 
   // Procesa racha / logros / curso completado que devuelven complete y attempt
@@ -509,6 +558,11 @@ export default function LearnCourse() {
             onChange={setSidePanel}
             lessonId={activeLesson.id}
             materiales={materialsByLesson[activeLesson.id]}
+            noteText={noteText}
+            onNoteChange={handleNoteChange}
+            onNoteSave={handleSaveNote}
+            noteSaving={noteSaving}
+            noteSaved={noteSaved}
           />
         )}
       </div>
@@ -649,7 +703,17 @@ const PANELS = [
   { key: 'comentarios', label: 'Comentarios', Icon: CommentIcon, title: 'Comentarios' },
 ];
 
-function LessonSidePanels({ open, onChange, lessonId, materiales }) {
+function LessonSidePanels({
+  open,
+  onChange,
+  lessonId,
+  materiales,
+  noteText,
+  onNoteChange,
+  onNoteSave,
+  noteSaving,
+  noteSaved,
+}) {
   const toggle = (key) => onChange(open === key ? null : key);
   const active = PANELS.find((p) => p.key === open);
 
@@ -673,7 +737,15 @@ function LessonSidePanels({ open, onChange, lessonId, materiales }) {
             </button>
           </div>
 
-          {open === 'notas' && <NotesPanel />}
+          {open === 'notas' && (
+            <NotesPanel
+              value={noteText}
+              onChange={onNoteChange}
+              onSave={onNoteSave}
+              saving={noteSaving}
+              saved={noteSaved}
+            />
+          )}
           {open === 'materiales' && <MaterialsPanel materiales={materiales} />}
           {open === 'comentarios' && <LessonComments lessonId={lessonId} />}
         </div>
@@ -706,8 +778,7 @@ function LessonSidePanels({ open, onChange, lessonId, materiales }) {
   );
 }
 
-function NotesPanel() {
-  // Placeholder — la persistencia (Postgres) llega en el paso de Notas.
+function NotesPanel({ value, onChange, onSave, saving, saved }) {
   return (
     <div>
       <p className="text-xs text-gray-400 font-medium mb-2">
@@ -715,13 +786,25 @@ function NotesPanel() {
       </p>
       <textarea
         rows={6}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        maxLength={5000}
         placeholder="Escribí tus apuntes…"
         className="titi-input resize-none text-sm"
-        disabled
       />
-      <p className="text-[10px] text-gray-300 mt-1">
-        Guardado de notas: próximo paso.
-      </p>
+      <div className="flex items-center justify-between mt-2">
+        <span className="text-[11px] font-semibold text-green-500">
+          {saved ? 'Guardado ✓' : ''}
+        </span>
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={saving}
+          className="bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {saving ? 'Guardando…' : 'Guardar'}
+        </button>
+      </div>
     </div>
   );
 }

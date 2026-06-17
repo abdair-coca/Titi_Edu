@@ -271,6 +271,62 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
   }
 });
 
+// ---- GET /api/lessons/:id/note  — nota personal del usuario (privada) ----
+router.get('/lessons/:id/note', requireAuth, async (req, res) => {
+  try {
+    const usuario = await loadCurrentUser(req, res);
+    if (!usuario) return;
+
+    const nota = await prisma.notaLeccion.findUnique({
+      where: {
+        usuarioId_leccionId: { usuarioId: usuario.id, leccionId: req.params.id },
+      },
+    });
+
+    res.json({ success: true, data: { nota: nota || null } });
+  } catch (err) {
+    console.error('GET /api/lessons/:id/note error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo la nota' });
+  }
+});
+
+// ---- PUT /api/lessons/:id/note  — guardar/actualizar la nota personal ----
+router.put('/lessons/:id/note', requireAuth, async (req, res) => {
+  try {
+    const usuario = await loadCurrentUser(req, res);
+    if (!usuario) return;
+
+    const texto = (req.body?.texto ?? '').toString();
+    if (texto.length > 5000) {
+      return res.status(400).json({
+        success: false,
+        message: 'La nota no puede superar los 5000 caracteres',
+      });
+    }
+
+    const leccion = await prisma.leccion.findUnique({
+      where: { id: req.params.id },
+      select: { id: true },
+    });
+    if (!leccion) {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+
+    const nota = await prisma.notaLeccion.upsert({
+      where: {
+        usuarioId_leccionId: { usuarioId: usuario.id, leccionId: leccion.id },
+      },
+      update: { texto },
+      create: { usuarioId: usuario.id, leccionId: leccion.id, texto },
+    });
+
+    res.json({ success: true, data: { nota } });
+  } catch (err) {
+    console.error('PUT /api/lessons/:id/note error', err);
+    res.status(500).json({ success: false, message: 'Error guardando la nota' });
+  }
+});
+
 // ---- GET /api/lessons/:id/comments  — público ----
 router.get('/lessons/:id/comments', async (req, res) => {
   try {
