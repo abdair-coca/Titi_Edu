@@ -62,6 +62,12 @@ ease neutro (`ease-out`, **no** pop), 300ms. El contenido queda montado, así
 que anima al abrir **y** al cerrar. Reduced-motion con el variant
 `motion-reduce:transition-none` de Tailwind.
 
+Para colapso **horizontal** (panel que aparece de costado, ej. el panel lateral
+de Learn en desktop) usar `grid-template-columns: 0fr→1fr` con `min-w-0` en los
+contenedores. Si el contenido se desmonta al cerrar (no es un simple `&&`),
+retener la última clave en un estado y limpiarla en `onTransitionEnd` para que
+el cierre tenga qué animar.
+
 ---
 
 ## 4. Catálogo de interacciones (estado actual)
@@ -74,8 +80,8 @@ que anima al abrir **y** al cerrar. Reduced-motion con el variant
 | Hover de card | lift (-4px) + escala (1.03) + sombra amarilla, con rebote | clase CSS `.titi-card-pop` |
 | Press de botón | se hunde (`active:scale-0.96`) | clase `.titi-btn` |
 | Modal | panel con pop + backdrop con fade | `usePopIn` + `.titi-backdrop-in` |
-| Cambio de lección (Learn) | pop del contenido al cambiar de lección + pop del panel lateral y de la respuesta de "Profundiza" | `usePopIn` en `LearnCourse` (`LessonView`, `LessonSidePanels`, `DeepenCard`) |
-| Colapsable (ver/ocultar) | acordeón: `grid-rows` 0fr→1fr + fade, ease neutro (no pop), abre **y** cierra | CSS Tailwind en `LearnCourse` ("Ver descripción", `DeepenCard`) |
+| Cambio de lección (Learn) | pop del contenido al cambiar de lección + pop de la respuesta de "Profundiza" | `usePopIn` en `LearnCourse` (`LessonView`, `DeepenCard`) |
+| Colapsable (ver/ocultar) | acordeón: grid `0fr→1fr` + fade, ease neutro (no pop), abre **y** cierra. Eje según layout: alto (vertical) o ancho (`grid-cols`, panel lateral en desktop) | CSS Tailwind en `LearnCourse` ("Ver descripción", `DeepenCard`, `LessonSidePanels`) |
 | Mascota Titi | pop al montar | `usePopIn` en `TitiMascot` |
 | Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
 

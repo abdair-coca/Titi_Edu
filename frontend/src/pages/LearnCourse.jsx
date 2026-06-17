@@ -848,8 +848,15 @@ function LessonSidePanels({
   onCommentCount,
 }) {
   const toggle = (key) => onChange(open === key ? null : key);
-  const active = PANELS.find((p) => p.key === open);
-  const panelRef = usePopIn([open]);
+  const expanded = Boolean(open);
+  // Mantener el panel montado durante el cierre para que el colapso anime
+  // (si desmontáramos al instante no habría qué animar). displayKey va detrás
+  // de `open` al cerrar y se limpia cuando termina la transición.
+  const [displayKey, setDisplayKey] = useState(open);
+  useEffect(() => {
+    if (open) setDisplayKey(open);
+  }, [open]);
+  const active = PANELS.find((p) => p.key === displayKey);
   const title =
     active?.key === 'comentarios'
       ? `Comentarios (${commentCount})`
@@ -857,42 +864,60 @@ function LessonSidePanels({
 
   return (
     <div className="flex flex-col-reverse lg:flex-row shrink-0 lg:h-full bg-white border border-gray-100 rounded-2xl overflow-hidden">
-      {/* Panel de contenido (solo si hay uno abierto) */}
-      {active && (
-        <div ref={panelRef} className="w-full lg:w-80 bg-white p-4 sm:p-5 lg:h-full lg:overflow-y-auto scrollbar-none">
-          <div className="flex items-center justify-between gap-2 mb-3">
-            <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
-              <active.Icon className="w-4 h-4 text-titi-dark" />
-              {title}
-            </h2>
-            <button
-              type="button"
-              onClick={() => onChange(null)}
-              className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-              aria-label="Cerrar panel"
+      {/* Panel colapsable: alto en móvil, ancho en desktop (grid 0fr→1fr + fade),
+          ease neutro, no pop. Abre y cierra. Ver motion.md §3. */}
+      <div
+        onTransitionEnd={(e) => {
+          if (e.target === e.currentTarget && !expanded) setDisplayKey(null);
+        }}
+        className={`grid min-w-0 transition-[grid-template-rows,grid-template-columns] duration-300 ease-out motion-reduce:transition-none ${
+          expanded
+            ? 'grid-rows-[1fr] lg:grid-cols-[1fr]'
+            : 'grid-rows-[0fr] lg:grid-rows-[1fr] lg:grid-cols-[0fr]'
+        }`}
+      >
+        <div className="overflow-hidden min-w-0 min-h-0">
+          {active && (
+            <div
+              className={`w-full lg:w-80 bg-white p-4 sm:p-5 lg:h-full lg:overflow-y-auto scrollbar-none transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+                expanded ? 'opacity-100' : 'opacity-0'
+              }`}
             >
-              ✕
-            </button>
-          </div>
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
+                  <active.Icon className="w-4 h-4 text-titi-dark" />
+                  {title}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => onChange(null)}
+                  className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                  aria-label="Cerrar panel"
+                >
+                  ✕
+                </button>
+              </div>
 
-          {open === 'notas' && (
-            <NotesPanel
-              value={noteText}
-              onChange={onNoteChange}
-              onSave={onNoteSave}
-              saving={noteSaving}
-              saved={noteSaved}
-            />
-          )}
-          {open === 'materiales' && <MaterialsPanel materiales={materiales} />}
-          {open === 'comentarios' && (
-            <LessonComments lessonId={lessonId} hideHeader onCount={onCommentCount} />
+              {displayKey === 'notas' && (
+                <NotesPanel
+                  value={noteText}
+                  onChange={onNoteChange}
+                  onSave={onNoteSave}
+                  saving={noteSaving}
+                  saved={noteSaved}
+                />
+              )}
+              {displayKey === 'materiales' && <MaterialsPanel materiales={materiales} />}
+              {displayKey === 'comentarios' && (
+                <LessonComments lessonId={lessonId} hideHeader onCount={onCommentCount} />
+              )}
+            </div>
           )}
         </div>
-      )}
+      </div>
 
       {/* Riel de íconos */}
-      <nav className={`flex lg:flex-col gap-1 p-2 bg-white lg:w-24 lg:h-full shrink-0 justify-center lg:justify-start ${active ? 'lg:border-l border-gray-100' : ''}`}>
+      <nav className={`flex lg:flex-col gap-1 p-2 bg-white lg:w-24 lg:h-full shrink-0 justify-center lg:justify-start ${expanded ? 'lg:border-l border-gray-100' : ''}`}>
         {PANELS.map(({ key, label, Icon }) => {
           const isOpen = open === key;
           return (
