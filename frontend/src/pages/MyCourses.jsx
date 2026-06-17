@@ -142,19 +142,25 @@ function EnrolledCard({ inscripcion, progress, onContinue, onOpenDetail }) {
   const porcentaje = progress?.porcentaje ?? 0;
   const hasProgressData = Boolean(progress && progress.total > 0);
 
-  // Relleno animado: monta en 0 y sube al % real en el siguiente frame, así la
-  // transición CSS hace el llenado "cargando". Reduced-motion salta al final.
+  // Relleno animado: el bloque aparece con un fade y la barra monta en 0 y sube
+  // al % real en el siguiente frame, así la transición CSS hace el llenado
+  // "cargando". Reduced-motion salta al estado final.
   const [fill, setFill] = useState(0);
+  const [revealed, setRevealed] = useState(false);
   useEffect(() => {
     if (!hasProgressData) return undefined;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setFill(porcentaje);
+      setRevealed(true);
       return undefined;
     }
     setFill(0);
     let raf2 = 0;
     const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => setFill(porcentaje));
+      raf2 = requestAnimationFrame(() => {
+        setFill(porcentaje);
+        setRevealed(true);
+      });
     });
     return () => {
       cancelAnimationFrame(raf1);
@@ -239,7 +245,11 @@ function EnrolledCard({ inscripcion, progress, onContinue, onOpenDetail }) {
 
         {/* Barra de progreso */}
         {hasProgressData && (
-          <div className="mt-1">
+          <div
+            className={`mt-1 transition-opacity duration-500 ease-out motion-reduce:transition-none ${
+              revealed ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
             <div className="flex justify-between text-xs font-medium text-gray-400 mb-1">
               <span>
                 {progress.completadas} / {progress.total}{' '}
