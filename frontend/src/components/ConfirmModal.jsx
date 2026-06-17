@@ -1,3 +1,5 @@
+import { usePopIn } from '../lib/motion.js';
+
 export default function ConfirmModal({
   open,
   title,
@@ -8,11 +10,13 @@ export default function ConfirmModal({
   onCancel,
   danger = false,
 }) {
+  const panelRef = usePopIn([open]);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="neo-card w-full max-w-md p-6 mx-4">
+    <div className="titi-backdrop-in fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div ref={panelRef} className="neo-card w-full max-w-md p-6 mx-4">
         <h2 className="text-xl font-bold mb-2">
           {title}
         </h2>

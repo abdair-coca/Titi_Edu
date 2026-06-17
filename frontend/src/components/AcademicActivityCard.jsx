@@ -41,7 +41,7 @@ export default function AcademicActivityCard({ item }) {
       {esCurso && item.curso && (
         <Link
           to={`/courses/${item.curso.id}`}
-          className="mt-3 flex items-center gap-3 bg-titi-cream border border-titi-border rounded-xl p-3 hover:border-titi-yellow transition-colors group"
+          className="titi-card-pop mt-3 flex items-center gap-3 bg-titi-cream border border-titi-border rounded-xl p-3 hover:border-titi-yellow group"
         >
           <span className="text-2xl select-none shrink-0" aria-hidden="true">
             {item.curso.categoria?.icono || '📘'}

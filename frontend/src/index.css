@@ -36,7 +36,8 @@
   /* Hover pop para cards: lift + escala con rebote leve. La sombra amarilla
      la pone cada card con su clase hover:shadow-* de Tailwind. */
   .titi-card-pop {
-    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 0.3s ease, border-color 0.2s ease;
   }
   .titi-card-pop:hover {
     transform: translateY(-4px) scale(1.03);
@@ -131,7 +132,16 @@
   .titi-achievement-toast-out { animation: none; }
 }
 
-/* Reduced-motion: desactiva el pop de cards y el press de botones */
+/* Fade del fondo oscuro de los modales */
+@keyframes titi-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.titi-backdrop-in {
+  animation: titi-backdrop-in 0.2s ease-out;
+}
+
+/* Reduced-motion: desactiva pop de cards, press de botones y fade del backdrop */
 @media (prefers-reduced-motion: reduce) {
   .titi-card-pop {
     transition: none;
@@ -141,6 +151,9 @@
   }
   .titi-btn:active {
     transform: none;
+  }
+  .titi-backdrop-in {
+    animation: none;
   }
 }
 

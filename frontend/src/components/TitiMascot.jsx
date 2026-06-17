@@ -1,6 +1,7 @@
 // TitiMascot — componente reutilizable de la mascota Titi
 // Mientras solo hay una imagen, todos los moods comparten /Titi.png.
 // En etapas futuras se reemplazarán por variantes (happy.png, sad.png, etc.)
+import { usePopIn } from '../lib/motion.js';
 
 const moods = {
   happy: { emoji: '🎉', default: '¡Así se hace!' },
@@ -29,9 +30,10 @@ export default function TitiMascot({
   const { emoji, default: defaultMsg } = moods[mood] || moods.happy;
   const sizeClass = sizes[size] || sizes.md;
   const text = message ?? defaultMsg;
+  const popRef = usePopIn();
 
   return (
-    <div className={`flex flex-col items-center gap-3 ${className}`}>
+    <div ref={popRef} className={`flex flex-col items-center gap-3 ${className}`}>
       <img
         src="/Titi.png"
         alt="Titi"

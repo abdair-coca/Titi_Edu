@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import client from '../api/client.js';
+import { usePopIn } from '../lib/motion.js';
 
 const MAX_LEN = 500;
 
@@ -8,6 +9,7 @@ export default function EditPostModal({ open, post, onSaved, onClose }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const textareaRef = useRef(null);
+  const panelRef = usePopIn([open]);
 
   // Pre-llena cuando se abre o cambia el post objetivo
   useEffect(() => {
@@ -71,11 +73,12 @@ export default function EditPostModal({ open, post, onSaved, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
+      className="titi-backdrop-in fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4"
       onClick={() => !saving && onClose?.()}
       role="presentation"
     >
       <div
+        ref={panelRef}
         className="neo-card w-full max-w-lg p-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
