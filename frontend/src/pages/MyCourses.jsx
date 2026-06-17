@@ -154,17 +154,22 @@ function EnrolledCard({ inscripcion, progress, onContinue, onOpenDetail }) {
       setRevealed(true);
       return undefined;
     }
+    // 1) el bloque crece + fade (mueve el botón). 2) recién terminado eso,
+    // arranca el llenado de la barra, así no se interrumpen.
     setFill(0);
+    setRevealed(false);
     let raf2 = 0;
+    let fillTimer = 0;
     const raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => {
-        setFill(porcentaje);
         setRevealed(true);
+        fillTimer = setTimeout(() => setFill(porcentaje), 520);
       });
     });
     return () => {
       cancelAnimationFrame(raf1);
       cancelAnimationFrame(raf2);
+      clearTimeout(fillTimer);
     };
   }, [hasProgressData, porcentaje]);
 
