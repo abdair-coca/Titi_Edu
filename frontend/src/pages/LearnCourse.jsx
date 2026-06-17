@@ -538,6 +538,7 @@ export default function LearnCourse() {
               />
             ) : activeLesson ? (
               <LessonView
+                key={activeLesson.id}
                 leccion={activeLesson}
                 completed={completed.has(activeLesson.id)}
                 completing={completing}
@@ -614,6 +615,8 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
     () => normalizeVideoUrl(leccion.videoUrl),
     [leccion.videoUrl],
   );
+  // Descripción colapsada por defecto (se despliega a pedido).
+  const [showDesc, setShowDesc] = useState(false);
 
   return (
     <article>
@@ -644,15 +647,31 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
         </button>
       </div>
 
-      {/* Descripción de la lección, debajo del título */}
+      {/* Descripción de la lección — colapsada por defecto, desplegable */}
       {leccion.contenido ? (
-        <div className="text-sm sm:text-base text-gray-600 leading-relaxed whitespace-pre-line mb-6 sm:mb-8">
-          {leccion.contenido}
+        <div className="mb-6">
+          <button
+            type="button"
+            onClick={() => setShowDesc((s) => !s)}
+            aria-expanded={showDesc}
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-titi-dark hover:text-titi-yellow-dark transition-colors"
+          >
+            <span
+              className={`text-xs transition-transform duration-200 ${showDesc ? 'rotate-90' : ''}`}
+              aria-hidden="true"
+            >
+              ▶
+            </span>
+            {showDesc ? 'Ocultar descripción' : 'Ver descripción'}
+          </button>
+          {showDesc && (
+            <div className="text-sm sm:text-base text-gray-600 leading-relaxed whitespace-pre-line mt-3">
+              {leccion.contenido}
+            </div>
+          )}
         </div>
       ) : (
-        <p className="text-sm text-gray-400 font-medium mb-8">
-          Cargando contenido…
-        </p>
+        <p className="text-sm text-gray-400 font-medium mb-6">Cargando contenido…</p>
       )}
 
       {/* Profundiza en este tema (chips de IA — stub por ahora) */}
