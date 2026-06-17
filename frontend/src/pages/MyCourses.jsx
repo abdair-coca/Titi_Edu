@@ -243,27 +243,36 @@ function EnrolledCard({ inscripcion, progress, onContinue, onOpenDetail }) {
           Inscrito el {formatDateEs(inscripcion.fechaInscripcion)}
         </p>
 
-        {/* Barra de progreso */}
+        {/* Barra de progreso — el bloque crece en alto (acordeón) + fade para
+            que el botón de abajo no salte al aparecer. Ver motion.md §3. */}
         {hasProgressData && (
           <div
-            className={`mt-1 transition-opacity duration-500 ease-out motion-reduce:transition-none ${
-              revealed ? 'opacity-100' : 'opacity-0'
+            className={`grid transition-[grid-template-rows] duration-500 ease-out motion-reduce:transition-none ${
+              revealed ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
             }`}
           >
-            <div className="flex justify-between text-xs font-medium text-gray-400 mb-1">
-              <span>
-                {progress.completadas} / {progress.total}{' '}
-                {progress.total === 1 ? 'lección' : 'lecciones'}
-              </span>
-              <span className="tabular-nums">{porcentaje}%</span>
-            </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="overflow-hidden">
               <div
-                className={`h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${
-                  completado ? 'bg-green-500' : 'bg-titi-yellow'
+                className={`mt-1 transition-opacity duration-500 ease-out motion-reduce:transition-none ${
+                  revealed ? 'opacity-100' : 'opacity-0'
                 }`}
-                style={{ width: `${fill}%` }}
-              />
+              >
+                <div className="flex justify-between text-xs font-medium text-gray-400 mb-1">
+                  <span>
+                    {progress.completadas} / {progress.total}{' '}
+                    {progress.total === 1 ? 'lección' : 'lecciones'}
+                  </span>
+                  <span className="tabular-nums">{porcentaje}%</span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${
+                      completado ? 'bg-green-500' : 'bg-titi-yellow'
+                    }`}
+                    style={{ width: `${fill}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}
