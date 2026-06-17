@@ -8,23 +8,23 @@ cualquier animación que no sea una transición CSS trivial.
 
 ## 1. Filosofía de motion
 
-El movimiento está al servicio de la **calidez**, no del espectáculo. Coherente
-con `design.md` §1: "Cálido antes que agresivo", UI plana.
+El feel de Titi es **juguetón con rebote leve**: cálido y con vida, sin marear ni
+hacer esperar. Coherente con `design.md` §1 (UI plana, cálida).
 
-- El motion **confirma** acciones y **guía** la atención. No decora ni impresiona
-  por impresionar.
-- Sutil > llamativo. Si dudás entre dos intensidades, elegí la menor.
+- El motion **confirma** acciones y **da vida** a la entrada de contenido.
+- Rebote **leve** (`back.out(1.5)`), nunca exagerado.
+- **Snappy**: todo entra rápido. Tope duro **400ms**.
 - **No** scroll cinematográfico, **no** parallax, **no** timelines de landing.
-  El producto es una red social/educativa (sidebar + feed): importan las
-  micro-interacciones, no el show.
+  Micro-interacciones, no show.
 
-### Reglas duras (heredadas de design.md §10)
+### Reglas duras
 
-- Duración máxima **500ms**. Si tarda más, se pierde la sensación de respuesta.
-- Nunca animar simultáneamente más de **3 elementos** (el stagger cuenta como
-  secuencia, no como simultáneo).
-- **Siempre** respetar `prefers-reduced-motion`. Sin excepción.
-- Nada de gradientes ni blur decorativos animados (memoria de diseño: rechazados).
+- Duración máxima **400ms** (`MOTION.dur.slow`). Default de entradas: 300ms.
+- Nunca animar simultáneamente más de **3 elementos** (el stagger es secuencia, no
+  simultáneo).
+- **Siempre** respetar `prefers-reduced-motion` → **desactivar todo** (entradas,
+  hover, press, transición de página, fade de modal).
+- Nada de gradientes ni blur decorativos animados.
 
 ---
 
@@ -34,78 +34,84 @@ Definidos en `frontend/src/lib/motion.js` (`MOTION`). Usar estos, no valores sue
 
 | Token | Valor | Uso |
 |---|---|---|
-| `dur.fast` | `0.15s` | hover, micro-feedback |
-| `dur.base` | `0.30s` | transiciones estándar |
-| `dur.slow` | `0.50s` | entradas de contenido (techo) |
-| `ease.out` | `power2.out` | entradas (algo que aparece) |
-| `ease.in` | `power2.in` | salidas (algo que se va) |
-| `ease.pop` | `back.out(1.7)` | celebraciones (equivale al `cubic-bezier(0.34, 1.56, 0.64, 1)` de los toasts) |
+| `dur.fast` | `0.15s` | micro-feedback |
+| `dur.base` | `0.30s` | entradas (default) |
+| `dur.slow` | `0.40s` | tope; casos puntuales |
+| `ease.pop` | `back.out(1.5)` | **entradas con rebote** (el feel Titi) |
+| `ease.out` | `power2.out` | movimiento neutro |
+| `ease.in` | `power2.in` | salidas |
 
-> GSAP usa **segundos**, no milisegundos. `dur.slow = 0.5` = 500ms.
-
----
-
-## 3. Qué se queda en CSS (NO migrar a GSAP)
-
-Ya funciona, no usa JS, y respeta reduced-motion. **No tocar:**
-
-- Toasts de racha y de logros (`titi-streak-toast-*`, `titi-achievement-toast-*`
-  en `index.css`).
-- Flama de racha (`titi-flame-flicker`).
-- Animaciones utilitarias de `design.md` §10 (`animate-slide-in-right`,
-  `animate-bounce-in`, `animate-fade-up`).
-- `hover:-translate-y` / sombras de botones y cards (Tailwind).
-
-Regla: si CSS lo resuelve con una keyframe simple o una transición, **es CSS**.
+> GSAP usa **segundos**, no milisegundos. `dur.slow = 0.4` = 400ms.
+> Hover de cards (CSS): `cubic-bezier(0.34, 1.56, 0.64, 1)` (mismo rebote).
+> Transición de página: rebote más leve (`back.out(1.2)`), es toda la pantalla.
 
 ---
 
-## 4. Qué usa GSAP (donde CSS no alcanza)
+## 3. Reparto GSAP vs CSS
 
-GSAP entra solo para coreografías que CSS hace mal: **stagger** de listas,
-timelines compuestos, secuencias coordinadas.
+- **GSAP** → entradas y secuencias: montaje de listas, transición de página,
+  entrada de modal, mascota Titi.
+- **CSS** → estados de interacción: hover de cards, press de botones, fade del
+  backdrop. Más liviano, sin listeners JS por elemento.
 
-- Entrada escalonada de cards en grids/timelines (Courses, Feed). ← implementado.
-- (Futuro) hover compuesto en CourseCard más allá del `-translate-y` actual.
-- (Futuro) transiciones de página entre rutas.
+Regla: si CSS lo resuelve con una transición o keyframe simple, **es CSS**.
 
-Librerías: `gsap` + `@gsap/react`.
+---
+
+## 4. Catálogo de interacciones (estado actual)
+
+| Interacción | Cómo | Implementación |
+|---|---|---|
+| Entrada de listas | pop por escala (0.9→1) + fade, escalonado | `useStaggerReveal` en Courses/Feed |
+| Entrada de un elemento | pop por escala + fade | `usePopIn` |
+| Transición de página | zoom-in pop (scale 0.98) al cambiar de ruta | `PageTransition` + `key={location.pathname}` en `App.jsx` |
+| Hover de card | lift (-4px) + escala (1.03) + sombra amarilla, con rebote | clase CSS `.titi-card-pop` |
+| Press de botón | se hunde (`active:scale-0.96`) | clase `.titi-btn` |
+| Modal | panel con pop + backdrop con fade | `usePopIn` + `.titi-backdrop-in` |
+| Mascota Titi | pop al montar | `usePopIn` en `TitiMascot` |
+| Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
+
+**Hover pop solo en tiles clickeables de navegación**: `CourseCard`,
+`RecommendedCourseCard`, mini-card de curso dentro de `AcademicActivityCard`.
+**`PostCard` NO escala**: hovering para dar like/comentar no debe mover el post.
+
+**Límite conocido**: los modales usan `if(!open) return null`, así que la **salida**
+es instantánea (sin animar). Aceptable; animar la salida requiere mantener montado.
 
 ---
 
 ## 5. Patrón React obligatorio
 
-**Siempre** `useGSAP()` de `@gsap/react` con un `scope` ref. Nunca `gsap.to`
-suelto en un `useEffect` sin cleanup — rompe en StrictMode (doble montaje).
+**Siempre** `useGSAP()` (de `@gsap/react`) con un `scope` ref. Nunca `gsap.to`
+suelto en `useEffect` sin cleanup — rompe en StrictMode.
 
-**Siempre** chequear `prefers-reduced-motion` y, si el usuario pide menos
-movimiento, no animar: el elemento queda en su estado final.
+**Siempre** chequear `prefers-reduced-motion` y, si está activo, no animar (el
+elemento queda en su estado final).
 
-Preferí `gsap.fromTo` (estado inicial **y** final explícitos) sobre `gsap.from`.
-`from` infiere el estado final del DOM y es frágil con re-render / StrictMode
-(deja cards congeladas a media opacidad). Usá `autoAlpha` (opacity + visibility)
-y `clearProps` al terminar para no dejar estilos inline que estorben al hover.
-No mezcles `gsap.matchMedia().add(...)` con un `mm.revert()` manual dentro de
-`useGSAP`: useGSAP ya revierte, el doble cleanup mata el tween antes de tiempo.
+Preferí `gsap.fromTo` (estado inicial **y** final explícitos) sobre `gsap.from`,
+que infiere el final del DOM y es frágil con re-render / StrictMode (deja cards
+congeladas a media opacidad). Usá `autoAlpha` (opacity + visibility) y `clearProps`
+al terminar para no dejar estilos inline que estorben al hover.
 
-El hook reutilizable `useStaggerReveal` (`src/lib/motion.js`) ya encapsula ambas
-reglas. Úsalo en vez de reescribir GSAP a mano:
+Los hooks de `src/lib/motion.js` ya encapsulan todo esto — usalos:
 
 ```jsx
-import { useStaggerReveal } from '../lib/motion.js';
+import { useStaggerReveal, usePopIn } from '../lib/motion.js';
 
-function Lista({ items }) {
-  // Re-anima cuando cambia la lista. Respeta reduced-motion y limpia solo.
+// Lista: entrada escalonada de los hijos directos.
+function Grid({ items }) {
   const ref = useStaggerReveal([items]);
-  return (
-    <div ref={ref} className="grid ...">
-      {items.map((it) => <Card key={it.id} {...it} />)}
-    </div>
-  );
+  return <div ref={ref} className="grid ...">{items.map(...)}</div>;
+}
+
+// Elemento único: pop al montar / cambiar deps.
+function Panel({ open }) {
+  const ref = usePopIn([open]);   // re-anima cada vez que abre
+  return <div ref={ref}>…</div>;
 }
 ```
 
-Si necesitás algo a mano (timeline custom), seguí el mismo esqueleto:
+Si necesitás algo a mano:
 
 ```jsx
 import { useRef } from 'react';
@@ -119,8 +125,8 @@ function Componente() {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     gsap.fromTo(
       '.target',
-      { y: 12, autoAlpha: 0 },
-      { y: 0, autoAlpha: 1, duration: MOTION.dur.slow, ease: MOTION.ease.out, clearProps: 'transform,opacity,visibility' },
+      { scale: 0.9, autoAlpha: 0 },
+      { scale: 1, autoAlpha: 1, duration: MOTION.dur.base, ease: MOTION.ease.pop, clearProps: 'transform,opacity,visibility' },
     );
   }, { scope });
   return <div ref={scope}>…</div>;
@@ -133,10 +139,13 @@ function Componente() {
 
 Antes de dar por terminada una animación:
 
-- [ ] ¿Respeta `prefers-reduced-motion` (vía `window.matchMedia` o `@media` CSS)?
-- [ ] ¿Duración ≤ 500ms?
+- [ ] ¿Respeta `prefers-reduced-motion` (`window.matchMedia` en GSAP, `@media` en CSS)?
+- [ ] ¿Duración ≤ 400ms?
 - [ ] ¿≤ 3 elementos simultáneos (stagger acotado)?
-- [ ] ¿Usa `useGSAP` con `scope` (cleanup automático, seguro en StrictMode)?
+- [ ] ¿Entradas con `ease.pop` (rebote leve, no exagerado)?
+- [ ] ¿GSAP con `useGSAP` + `scope` (cleanup automático, seguro en StrictMode)?
+- [ ] ¿`fromTo` + `autoAlpha` + `clearProps` (no `gsap.from`)?
 - [ ] ¿Usa los tokens de `MOTION`, no valores hardcodeados?
-- [ ] ¿Es sutil y coherente con la UI plana/cálida — no choca con design.md §1?
-- [ ] ¿GSAP solo donde CSS no alcanzaba (no reemplazó keyframes que ya andaban)?
+- [ ] ¿Hover pop solo en tiles de navegación, no en posts ni botones?
+- [ ] ¿GSAP solo en entradas/secuencias; hover/press en CSS?
+- [ ] ¿No tocó los toasts CSS que ya funcionan?
