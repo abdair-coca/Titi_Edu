@@ -649,6 +649,9 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
         </p>
       )}
 
+      {/* Profundiza en este tema (chips de IA — stub por ahora) */}
+      <DeepenCard />
+
       {completeError && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-4">
           <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
@@ -693,6 +696,60 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
         )}
       </div>
     </article>
+  );
+}
+
+// ---- Profundiza en este tema (chips de IA — STUB, sin IA real todavía) ----
+const DEEPEN_PROMPTS = [
+  'Quiero preguntas de práctica',
+  'Explica este tema de forma sencilla',
+  'Hazme un resumen',
+  'Dame ejemplos de la vida real',
+];
+
+function DeepenCard() {
+  const [selected, setSelected] = useState(null);
+
+  return (
+    <section className="bg-titi-yellow-light/60 border border-titi-yellow/40 rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8">
+      <h2 className="text-base font-bold text-titi-dark flex items-center gap-2 mb-3">
+        <span aria-hidden="true">✨</span> Profundiza en este tema
+      </h2>
+      <div className="flex flex-wrap gap-2">
+        {DEEPEN_PROMPTS.map((prompt) => (
+          <button
+            key={prompt}
+            type="button"
+            onClick={() => setSelected(prompt)}
+            className={[
+              'text-sm font-semibold px-4 py-2.5 rounded-xl border transition-all duration-150',
+              selected === prompt
+                ? 'bg-titi-yellow text-titi-dark border-titi-yellow'
+                : 'bg-white text-titi-dark border-gray-200 hover:border-titi-yellow hover:bg-titi-cream',
+            ].join(' ')}
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
+
+      {selected && (
+        <div className="mt-4 bg-white border border-titi-border rounded-xl p-4 flex items-start gap-3">
+          <img
+            src="/Titi.png"
+            alt="Titi"
+            className="w-10 h-10 object-contain select-none shrink-0"
+            draggable={false}
+          />
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-titi-dark">{selected}</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Titi va a responder esto con IA muy pronto. Función en construcción 🛠️
+            </p>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
