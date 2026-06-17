@@ -26,6 +26,10 @@ export default function CourseDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // Entrada al ver el curso: las dos columnas (contenido + inscripción) entran
+  // escalonadas con pop. Dep = id del curso (primitivo, estable) → anima una vez
+  // al aparecer, no en cada churn de estado. Ver motion.md §5.
+  const contentRef = useStaggerReveal([curso?.id]);
   const modulesRef = useStaggerReveal([curso?.modulos?.length]);
 
   // Enrollment state
@@ -167,7 +171,7 @@ export default function CourseDetail() {
         ← Volver al catálogo
       </button>
 
-      <div className="lg:grid lg:grid-cols-3 lg:gap-8">
+      <div ref={contentRef} className="lg:grid lg:grid-cols-3 lg:gap-8">
         {/* --- Columna izquierda: contenido --- */}
         <div className="lg:col-span-2 flex flex-col gap-4 sm:gap-6">
           {/* Hero del curso */}

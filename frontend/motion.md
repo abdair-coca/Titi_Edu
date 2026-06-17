@@ -76,7 +76,8 @@ Regla: si CSS lo resuelve con una transición o keyframe simple, **es CSS**.
 Toda lista o grid que se llena desde la API entra escalonada. Aplicado en:
 `Feed`, `Courses` (catálogo + recomendados), `MyCourses`, `MyTeaching`,
 `Explore`, `Notifications`, `HashtagFeed`, `Certificates`, `Profile` (posts),
-`CourseDetail` (módulos), `AchievementsSection`, `AdminDashboard` (stats + paneles),
+`CourseDetail` (las dos columnas al entrar — contenido + inscripción — y los
+módulos), `AchievementsSection`, `AdminDashboard` (stats + paneles),
 `AdminCourses`, `AdminCategories`.
 
 **Regla**: cuando agregues una página/sección con una lista, ponele
