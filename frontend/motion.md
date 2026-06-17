@@ -84,10 +84,13 @@ Toda lista o grid que se llena desde la API entra escalonada. Aplicado en:
 
 ### Excepciones (decisiones, no olvidos)
 
-- **Hover pop (lift+escala) solo en tiles de navegación puros**: `CourseCard`,
-  `RecommendedCourseCard`, mini-card de `AcademicActivityCard`, paneles de
-  `AdminDashboard`. Cards con controles internos (PostCard, EnrolledCard,
-  TeachingCard) **no escalan**: el hover no debe estorbar los botones de adentro.
+- **Hover pop (lift+escala) en tiles de curso/navegación**: `CourseCard`,
+  `RecommendedCourseCard`, `EnrolledCard` (Mis cursos), mini-card de
+  `AcademicActivityCard`, paneles de `AdminDashboard`. Son grids de tiles y deben
+  sentirse iguales en toda la app.
+- **`PostCard` NO escala**: es full-width en el feed y hovering para dar
+  like/comentar no debe mover el post. `TeachingCard` tampoco (varios botones de
+  acción internos).
 - **Tabla de `AdminUsers` (`<tbody><tr>`)**: sin stagger. `transform/scale` sobre
   `table-row` renderiza inconsistente entre navegadores.
 - **Landing (`Home`) y `VerifyCertificate`**: fuera del shell de la app (no hay

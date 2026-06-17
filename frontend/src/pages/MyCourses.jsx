@@ -143,7 +143,7 @@ function EnrolledCard({ inscripcion, progress, onContinue, onOpenDetail }) {
   const hasProgressData = Boolean(progress && progress.total > 0);
 
   return (
-    <article className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-1 transition-all duration-200 overflow-hidden flex flex-col">
+    <article className="titi-card-pop bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] overflow-hidden flex flex-col">
       {/* Portada con badges */}
       <button
         type="button"
