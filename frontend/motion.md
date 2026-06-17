@@ -56,6 +56,12 @@ Definidos en `frontend/src/lib/motion.js` (`MOTION`). Usar estos, no valores sue
 
 Regla: si CSS lo resuelve con una transición o keyframe simple, **es CSS**.
 
+**Colapsables (acordeón)**: usar `grid-template-rows: 0fr→1fr` con un hijo
+`overflow-hidden` y `transition-[grid-template-rows]` + `transition-opacity`,
+ease neutro (`ease-out`, **no** pop), 300ms. El contenido queda montado, así
+que anima al abrir **y** al cerrar. Reduced-motion con el variant
+`motion-reduce:transition-none` de Tailwind.
+
 ---
 
 ## 4. Catálogo de interacciones (estado actual)
@@ -69,6 +75,7 @@ Regla: si CSS lo resuelve con una transición o keyframe simple, **es CSS**.
 | Press de botón | se hunde (`active:scale-0.96`) | clase `.titi-btn` |
 | Modal | panel con pop + backdrop con fade | `usePopIn` + `.titi-backdrop-in` |
 | Cambio de lección (Learn) | pop del contenido al cambiar de lección + pop del panel lateral y de la respuesta de "Profundiza" | `usePopIn` en `LearnCourse` (`LessonView`, `LessonSidePanels`, `DeepenCard`) |
+| Colapsable (ver/ocultar) | acordeón: `grid-rows` 0fr→1fr + fade, ease neutro (no pop), abre **y** cierra | CSS Tailwind en `LearnCourse` ("Ver descripción", `DeepenCard`) |
 | Mascota Titi | pop al montar | `usePopIn` en `TitiMascot` |
 | Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
 

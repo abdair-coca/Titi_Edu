@@ -671,11 +671,22 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
             </span>
             {showDesc ? 'Ocultar descripción' : 'Ver descripción'}
           </button>
-          {showDesc && (
-            <div className="text-sm sm:text-base text-gray-600 leading-relaxed whitespace-pre-line mt-3">
-              {leccion.contenido}
+          {/* Colapsable: grid-rows 0fr→1fr + fade, ease neutro (no pop). Ver motion.md §3. */}
+          <div
+            className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${
+              showDesc ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+            }`}
+          >
+            <div className="overflow-hidden">
+              <div
+                className={`text-sm sm:text-base text-gray-600 leading-relaxed whitespace-pre-line mt-3 transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+                  showDesc ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                {leccion.contenido}
+              </div>
             </div>
-          )}
+          </div>
         </div>
       ) : (
         <p className="text-sm text-gray-400 font-medium mb-6">Cargando contenido…</p>
@@ -763,8 +774,18 @@ function DeepenCard() {
         </span>
       </button>
 
-      {open && (
-        <div className="px-4 sm:px-5 pb-4 sm:pb-5">
+      {/* Colapsable: grid-rows 0fr→1fr + fade, ease neutro (no pop). Ver motion.md §3. */}
+      <div
+        className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${
+          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        }`}
+      >
+        <div className="overflow-hidden">
+          <div
+            className={`px-4 sm:px-5 pb-4 sm:pb-5 transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+              open ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
           <div className="flex flex-wrap gap-2">
             {DEEPEN_PROMPTS.map((prompt) => (
               <button
@@ -799,8 +820,9 @@ function DeepenCard() {
               </div>
             </div>
           )}
+          </div>
         </div>
-      )}
+      </div>
     </section>
   );
 }
