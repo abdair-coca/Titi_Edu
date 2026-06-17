@@ -193,6 +193,16 @@ export default function LearnCourse() {
   const progressPct =
     totalLessons === 0 ? 0 : Math.round((completedCount / totalLessons) * 100);
 
+  // --- Lecciones en orden plano (para "Siguiente lección") ---
+  const orderedLessons = useMemo(
+    () => curso?.modulos?.flatMap((m) => m.lecciones || []) || [],
+    [curso],
+  );
+  const currentIndex = orderedLessons.findIndex((l) => l.id === activeId);
+  const nextLesson =
+    currentIndex >= 0 ? orderedLessons[currentIndex + 1] : null;
+  const hasNext = Boolean(nextLesson || curso?.evaluacionFinal);
+
   // --- Handlers ---
   const handleSelectLesson = (lessonId) => {
     setActiveId(lessonId);
@@ -205,6 +215,11 @@ export default function LearnCourse() {
     setActiveEvalId(evalId);
     setCompleteError(null);
     setDrawerOpen(false);
+  };
+
+  const handleNext = () => {
+    if (nextLesson) handleSelectLesson(nextLesson.id);
+    else if (curso?.evaluacionFinal) handleSelectEval(curso.evaluacionFinal.id);
   };
 
   // Procesa racha / logros / curso completado que devuelven complete y attempt
@@ -323,6 +338,24 @@ export default function LearnCourse() {
             {completedCount} de {totalLessons}{' '}
             {totalLessons === 1 ? 'lección' : 'lecciones'}
           </p>
+
+          {/* Progreso del curso */}
+          <div className="mt-4">
+            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+              Progreso del curso
+            </p>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-titi-yellow rounded-full transition-all duration-500 ease-out"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+              <span className="text-xs font-bold text-gray-400 tabular-nums">
+                {progressPct}%
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Lista de módulos + lecciones */}
@@ -424,68 +457,56 @@ export default function LearnCourse() {
         />
       )}
 
-      {/* === Panel derecho: lección activa === */}
-      <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto md:ml-0">
-        <div className="max-w-3xl mx-auto">
-          {/* Toggle del drawer en móvil */}
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="md:hidden mb-4 w-full text-sm font-semibold text-titi-dark bg-white border border-gray-200 rounded-xl px-4 py-3 hover:bg-gray-50 transition-colors inline-flex items-center gap-2 justify-center"
-          >
-            ☰ Ver lecciones ({completedCount}/{totalLessons})
-          </button>
-
-          {/* Barra de progreso */}
-          <div className="flex items-center gap-3 mb-5 sm:mb-6">
+      {/* === Centro + columna derecha === */}
+      <div className="flex-1 flex flex-col lg:flex-row min-w-0">
+        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto min-w-0">
+          <div className="max-w-3xl mx-auto">
+            {/* Toggle del drawer en móvil */}
             <button
               type="button"
-              onClick={() => navigate('/my-courses')}
-              className="w-9 h-9 grid place-items-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 text-lg leading-none transition-colors shrink-0"
-              aria-label="Cerrar curso"
-              title="Salir del curso"
+              onClick={() => setDrawerOpen(true)}
+              className="md:hidden mb-4 w-full text-sm font-semibold text-titi-dark bg-white border border-gray-200 rounded-xl px-4 py-3 hover:bg-gray-50 transition-colors inline-flex items-center gap-2 justify-center"
             >
-              ✕
+              ☰ Ver lecciones ({completedCount}/{totalLessons})
             </button>
-            <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-titi-yellow rounded-full transition-all duration-500 ease-out"
-                style={{ width: `${progressPct}%` }}
+
+            {certBanner && (
+              <CertificateBanner onClose={() => setCertBanner(null)} />
+            )}
+
+            {activeEvalId ? (
+              <EvaluationQuiz
+                key={activeEvalId}
+                evaluationId={activeEvalId}
+                onResult={handleProgressEvents}
               />
-            </div>
-            <span className="text-sm font-bold text-gray-400 tabular-nums">
-              {progressPct}%
-            </span>
+            ) : activeLesson ? (
+              <LessonView
+                leccion={activeLesson}
+                completed={completed.has(activeLesson.id)}
+                completing={completing}
+                completeError={completeError}
+                onComplete={handleComplete}
+                hasNext={hasNext}
+                onNext={handleNext}
+              />
+            ) : (
+              <EmptyLessonState
+                onBack={() => navigate(`/courses/${courseId}`)}
+              />
+            )}
           </div>
+        </main>
 
-          {certBanner && (
-            <CertificateBanner
-              onClose={() => setCertBanner(null)}
-            />
-          )}
-
-          {activeEvalId ? (
-            <EvaluationQuiz
-              key={activeEvalId}
-              evaluationId={activeEvalId}
-              onResult={handleProgressEvents}
-            />
-          ) : activeLesson ? (
-            <LessonView
-              leccion={activeLesson}
-              materiales={materialsByLesson[activeLesson.id]}
-              completed={completed.has(activeLesson.id)}
-              completing={completing}
-              completeError={completeError}
-              onComplete={handleComplete}
-            />
-          ) : (
-            <EmptyLessonState
-              onBack={() => navigate(`/courses/${courseId}`)}
-            />
-          )}
-        </div>
-      </main>
+        {/* Columna derecha — solo en vista de lección */}
+        {activeLesson && !activeEvalId && (
+          <aside className="w-full lg:w-80 shrink-0 p-4 sm:p-6 lg:pl-0 lg:py-8 lg:pr-8 space-y-4">
+            <LessonNotesCard />
+            <LessonMaterialsCard materiales={materialsByLesson[activeLesson.id]} />
+            <LessonCommentsCard lessonId={activeLesson.id} />
+          </aside>
+        )}
+      </div>
     </div>
   );
 }
@@ -523,7 +544,7 @@ function MaterialChip({ material }) {
   );
 }
 
-function LessonView({ leccion, materiales, completed, completing, completeError, onComplete }) {
+function LessonView({ leccion, completed, completing, completeError, onComplete, hasNext, onNext }) {
   const videoEmbed = useMemo(
     () => normalizeVideoUrl(leccion.videoUrl),
     [leccion.videoUrl],
@@ -548,6 +569,7 @@ function LessonView({ leccion, materiales, completed, completing, completeError,
         {leccion.titulo}
       </h1>
 
+      {/* Descripción de la lección, debajo del título */}
       {leccion.contenido ? (
         <div className="text-sm sm:text-base text-gray-600 leading-relaxed whitespace-pre-line mb-6 sm:mb-8">
           {leccion.contenido}
@@ -557,25 +579,6 @@ function LessonView({ leccion, materiales, completed, completing, completeError,
           Cargando contenido…
         </p>
       )}
-
-      {/* Materiales */}
-      {materiales === undefined ? (
-        <div className="mb-6 sm:mb-8">
-          <h2 className="text-sm font-bold text-titi-dark uppercase tracking-wide mb-2">Materiales</h2>
-          <p className="text-xs text-gray-400 font-medium">Cargando…</p>
-        </div>
-      ) : materiales.length > 0 ? (
-        <div className="mb-6 sm:mb-8">
-          <h2 className="text-sm font-bold text-titi-dark uppercase tracking-wide mb-3">
-            Materiales
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            {materiales.map((m) => (
-              <MaterialChip key={m.id} material={m} />
-            ))}
-          </div>
-        </div>
-      ) : null}
 
       {completeError && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-4">
@@ -589,7 +592,17 @@ function LessonView({ leccion, materiales, completed, completing, completeError,
         </div>
       )}
 
-      <div>
+      {/* Fila de acción */}
+      <div className="flex flex-wrap items-center gap-3">
+        {hasNext && (
+          <button
+            type="button"
+            onClick={onNext}
+            className="bg-white text-titi-dark font-semibold text-sm px-5 py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all inline-flex items-center gap-2"
+          >
+            Siguiente lección →
+          </button>
+        )}
         {completed ? (
           <button
             type="button"
@@ -610,11 +623,72 @@ function LessonView({ leccion, materiales, completed, completing, completeError,
           </button>
         )}
       </div>
-
-      {/* Comentarios */}
-      <hr className="border-titi-border my-8" />
-      <LessonComments lessonId={leccion.id} />
     </article>
+  );
+}
+
+// ---- Paneles de la columna derecha ----
+function LessonNotesCard() {
+  // Placeholder de layout — la persistencia (Postgres) llega en el paso de Notas.
+  return (
+    <section className="titi-card p-4">
+      <div className="mb-2">
+        <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
+          <span aria-hidden="true">📝</span> Notas
+        </h2>
+        <p className="text-xs text-gray-400 font-medium">
+          Tus apuntes personales de esta lección.
+        </p>
+      </div>
+      <textarea
+        rows={4}
+        placeholder="Escribí tus apuntes…"
+        className="titi-input resize-none text-sm"
+        disabled
+      />
+      <p className="text-[10px] text-gray-300 mt-1">
+        Guardado de notas: próximo paso.
+      </p>
+    </section>
+  );
+}
+
+function LessonMaterialsCard({ materiales }) {
+  return (
+    <section className="titi-card p-4">
+      <div className="mb-3">
+        <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
+          <span aria-hidden="true">📑</span> Materiales
+        </h2>
+        <p className="text-xs text-gray-400 font-medium">
+          Recursos descargables de la lección.
+        </p>
+      </div>
+      {materiales === undefined ? (
+        <p className="text-xs text-gray-400 font-medium">Cargando…</p>
+      ) : materiales.length > 0 ? (
+        <div className="flex flex-col gap-2">
+          {materiales.map((m) => (
+            <MaterialChip key={m.id} material={m} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-gray-400 font-medium">
+          No hay materiales disponibles por el momento.
+        </p>
+      )}
+    </section>
+  );
+}
+
+function LessonCommentsCard({ lessonId }) {
+  return (
+    <section className="titi-card p-4">
+      <h2 className="text-base font-bold text-titi-dark flex items-center gap-2 mb-3">
+        <span aria-hidden="true">💬</span> Comentarios
+      </h2>
+      <LessonComments lessonId={lessonId} />
+    </section>
   );
 }
 
