@@ -15,6 +15,7 @@ import Profile from './pages/Profile.jsx';
 import HashtagFeed from './pages/HashtagFeed.jsx';
 import Notifications from './pages/Notifications.jsx';
 import Navbar from './components/Navbar.jsx';
+import PageTransition from './components/PageTransition.jsx';
 import Courses from './pages/Courses.jsx'
 import CourseDetail from './pages/CourseDetail.jsx'
 import MyCourses from './pages/MyCourses.jsx'
@@ -47,7 +48,9 @@ function ProtectedLayout() {
       {/* En desktop (md+): solo padding-left para el sidebar (w-64). */}
       <main className="min-h-screen pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
-          <Outlet />
+          <PageTransition key={location.pathname}>
+            <Outlet />
+          </PageTransition>
         </div>
       </main>
     </div>
@@ -57,8 +60,13 @@ function ProtectedLayout() {
 // Si ya hay sesión, /login y /register redirigen al feed
 function PublicOnlyLayout() {
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
   if (isAuthenticated) return <Navigate to="/feed" replace />;
-  return <Outlet />;
+  return (
+    <PageTransition key={location.pathname}>
+      <Outlet />
+    </PageTransition>
+  );
 }
 
 // Sub-rutas de creación/edición de cursos exigen rol PROFESOR/ADMIN.
