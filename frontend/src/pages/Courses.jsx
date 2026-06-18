@@ -5,6 +5,20 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useStaggerReveal } from '../lib/motion.js';
 import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
 
+// Copys estáticos de los paneles de comunidad (marketing, sin backend).
+const PERKS = [
+  'Lecciones cortas que terminás en una sentada',
+  'Profes de la comunidad, no robots',
+  'Seguí tu progreso y tu racha de gotas',
+  'Aprendé gratis, a tu propio ritmo',
+];
+
+const BADGES = [
+  { glyph: '🔥', title: 'Racha activa', note: '7 días seguidos' },
+  { glyph: '💧', title: 'Coleccionista', note: '50 gotas ganadas' },
+  { glyph: '🏅', title: 'Primer curso', note: 'curso completado' },
+];
+
 export default function Courses() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -144,6 +158,20 @@ export default function Courses() {
     () => categorias.filter((c) => coursesByCat[c.id]?.length),
     [categorias, coursesByCat],
   );
+
+  // Total de lecciones del catálogo (para el stat strip).
+  const lessonsTotal = useMemo(
+    () =>
+      allCursos.reduce(
+        (sum, c) => sum + (c._count?.lecciones ?? c._count?.modulos ?? 0),
+        0,
+      ),
+    [allCursos],
+  );
+
+  function goToTrending() {
+    document.getElementById('trending')?.scrollIntoView();
+  }
 
   function clearFilters() {
     setQuery('');
@@ -306,7 +334,7 @@ export default function Courses() {
       )}
 
       {/* Trending — tabs de categoría + grid */}
-      <section aria-label="Cursos en tendencia">
+      <section id="trending" aria-label="Cursos en tendencia">
         <h2 className="text-2xl font-bold text-titi-dark mb-4">
           Cursos en tendencia
         </h2>
@@ -375,6 +403,119 @@ export default function Courses() {
         )}
       </section>
 
+      {/* Dark promo — reimaginá tu forma de aprender */}
+      <section aria-label="Reimaginá tu forma de aprender">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-titi-dark rounded-2xl p-8 sm:p-10">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-titi-cream leading-tight mb-3">
+              Reimaginá tu forma de{' '}
+              <span className="text-titi-yellow">aprender</span>
+            </h2>
+            <p className="text-sm font-medium text-white/60 leading-relaxed mb-6 max-w-md">
+              Lecciones cortas, hechas por la comunidad, pensadas para que
+              avances a tu ritmo y sin frustrarte.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mb-7">
+              {PERKS.map((perk) => (
+                <div key={perk} className="flex items-start gap-2.5">
+                  <span className="w-6 h-6 rounded-lg bg-titi-yellow/15 grid place-items-center shrink-0 mt-0.5">
+                    <svg
+                      viewBox="0 0 14 14"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="w-3 h-3 text-titi-yellow"
+                      aria-hidden="true"
+                    >
+                      <path d="M2 7 6 11l6-8" />
+                    </svg>
+                  </span>
+                  <span className="text-sm font-medium text-white/85 leading-snug">
+                    {perk}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={goToTrending}
+              className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
+            >
+              Empezar a aprender
+            </button>
+          </div>
+
+          {/* Visual plano */}
+          <div className="hidden lg:block relative">
+            <div className="h-56 rounded-2xl bg-titi-dark-mid flex items-center justify-center">
+              <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">
+                imagen / collage
+              </span>
+            </div>
+            <div className="absolute -bottom-4 -left-4 bg-titi-cream rounded-xl px-4 py-3 shadow-lg flex items-center gap-2.5">
+              <span className="text-xl" aria-hidden="true">💧</span>
+              <div className="leading-tight">
+                <p className="text-base font-extrabold text-titi-dark">+1 gota</p>
+                <p className="text-xs font-bold text-gray-400">por lección</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Stat strip — la comunidad en números (data real) */}
+      <section aria-label="La comunidad Titi en números">
+        <p className="text-center text-sm font-bold text-gray-400 mb-5">
+          Lo que está construyendo la comunidad Titi
+        </p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <StripStat num={allCursos.length} label="cursos publicados" />
+          <StripStat num={profesCount} label="profes de la comunidad" />
+          <StripStat num={categorias.length} label="categorías" />
+          <StripStat num={lessonsTotal} label="lecciones disponibles" />
+        </div>
+      </section>
+
+      {/* Logros — sumá gotas y desbloqueá logros */}
+      <section aria-label="Sumá gotas y desbloqueá logros">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-titi-dark rounded-2xl p-8 sm:p-10">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-titi-cream leading-tight mb-3">
+              Sumá gotas y desbloqueá logros
+            </h2>
+            <p className="text-sm font-medium text-white/60 leading-relaxed mb-6 max-w-sm">
+              Cada lección suma. Mantené tu racha, ganá insignias y subí en el
+              ranking de la comunidad.
+            </p>
+            <button
+              type="button"
+              onClick={() => navigate('/certificates')}
+              className="bg-white text-titi-dark font-semibold text-sm px-5 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 hover:border-gray-300 transition-all duration-150"
+            >
+              Ver mis logros
+            </button>
+          </div>
+          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+            {BADGES.map((b) => (
+              <div
+                key={b.title}
+                className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center"
+              >
+                <div className="w-12 h-12 rounded-xl bg-white/10 grid place-items-center mx-auto mb-3 text-2xl">
+                  <span aria-hidden="true">{b.glyph}</span>
+                </div>
+                <div className="text-sm font-bold text-titi-cream mb-0.5">
+                  {b.title}
+                </div>
+                <div className="text-xs font-medium text-white/50">{b.note}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Categorías populares — columnas con cursos por categoría */}
       {popularCats.length > 0 && (
         <section aria-label="Categorías populares">
@@ -420,6 +561,18 @@ export default function Courses() {
           </div>
         </section>
       )}
+    </div>
+  );
+}
+
+// ---- Stat del strip de comunidad ----
+function StripStat({ num, label }) {
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+      <div className="text-3xl font-extrabold text-titi-dark tabular-nums">
+        {num}
+      </div>
+      <div className="text-sm font-bold text-gray-400 mt-1">{label}</div>
     </div>
   );
 }
