@@ -271,7 +271,7 @@ export default function Courses() {
           </span>
 
           {/* Título */}
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-titi-dark leading-tight mb-3">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-titi-dark leading-[1.05] tracking-tight mb-4">
             Aprendé algo nuevo, <span className="text-titi-streak">hoy</span>.
           </h1>
           <p className="text-base sm:text-lg font-medium text-gray-500 leading-relaxed mb-6 max-w-md">
@@ -280,14 +280,14 @@ export default function Courses() {
           </p>
 
           {/* Search grande */}
-          <div className="relative max-w-md mb-6">
+          <div className="relative max-w-lg mb-6">
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="¿Qué querés aprender hoy?"
               aria-label="Buscar cursos"
-              className="w-full bg-titi-cream border border-gray-200 rounded-xl pl-12 pr-4 py-4 text-base font-medium text-titi-dark placeholder:text-gray-300 focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
+              className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-5 py-5 text-base font-medium text-titi-dark placeholder:text-gray-400 shadow-[0_4px_14px_rgba(0,0,0,0.06)] focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
             />
             <svg
               viewBox="0 0 24 24"
