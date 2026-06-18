@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -110,6 +110,12 @@ export default function Courses() {
 
   const hasFilters = debouncedQuery || nivel !== 'all' || categoria !== 'all';
 
+  // Stats del hero, derivados de data real.
+  const profesCount = useMemo(
+    () => new Set(cursos.map((c) => c.creador?.username).filter(Boolean)).size,
+    [cursos],
+  );
+
   function clearFilters() {
     setQuery('');
     setDebouncedQuery('');
@@ -118,20 +124,119 @@ export default function Courses() {
   }
 
   return (
-    <div>
-      {/* Header */}
-      <header className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark mb-1">
-          Catálogo de Cursos
-        </h1>
-        <p className="text-sm font-medium text-gray-500">
-          Aprendé algo nuevo con la comunidad Titi
-        </p>
-      </header>
+    <div className="flex flex-col gap-8 sm:gap-10">
+      {/* Promo bar */}
+      <div className="flex items-center justify-center gap-2 bg-titi-yellow text-titi-dark rounded-xl px-4 py-2.5 text-center text-sm font-bold">
+        <svg
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-4 h-4 shrink-0"
+          aria-hidden="true"
+        >
+          <path d="M8 1.5 9.5 6l4.5 1.5L9.5 9 8 13.5 6.5 9 2 7.5 6.5 6Z" />
+        </svg>
+        Cursos nuevos cada semana, creados por la comunidad Titi
+      </div>
+
+      {/* Hero */}
+      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-center">
+        <div>
+          {/* Badge */}
+          <span className="inline-flex items-center gap-2 bg-white border border-gray-100 rounded-full pl-1.5 pr-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] mb-5">
+            <span className="w-5 h-5 rounded-full bg-titi-yellow grid place-items-center shrink-0">
+              <svg
+                viewBox="0 0 12 12"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-3 h-3 text-titi-dark"
+                aria-hidden="true"
+              >
+                <path d="M2 6 5 9l5-6" />
+              </svg>
+            </span>
+            <span className="text-xs font-bold text-titi-dark">
+              Comunidad de aprendizaje
+            </span>
+          </span>
+
+          {/* Título */}
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-titi-dark leading-tight mb-3">
+            Aprendé algo nuevo, <span className="text-titi-streak">hoy</span>.
+          </h1>
+          <p className="text-base sm:text-lg font-medium text-gray-500 leading-relaxed mb-6 max-w-md">
+            Cursos creados por personas como vos. Sumá lecciones cortas, ganá
+            gotas y seguí tu propio ritmo en la comunidad Titi.
+          </p>
+
+          {/* Search grande */}
+          <div className="relative max-w-md mb-6">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="¿Qué querés aprender hoy?"
+              aria-label="Buscar cursos"
+              className="w-full bg-titi-cream border border-gray-200 rounded-xl pl-12 pr-4 py-4 text-base font-medium text-titi-dark placeholder:text-gray-300 focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
+            />
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              aria-hidden="true"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <line x1="21" y1="21" x2="16.5" y2="16.5" />
+            </svg>
+          </div>
+
+          {/* Stats */}
+          <div className="flex items-center gap-5 flex-wrap">
+            <HeroStat num={cursos.length} label="cursos" />
+            <span className="w-px h-5 bg-gray-200" aria-hidden="true" />
+            <HeroStat num={categorias.length} label="categorías" />
+            <span className="w-px h-5 bg-gray-200" aria-hidden="true" />
+            <HeroStat
+              num={profesCount}
+              label={profesCount === 1 ? 'profe de la comunidad' : 'profes de la comunidad'}
+            />
+          </div>
+        </div>
+
+        {/* Visual del hero — plano (sin gradiente ni blur) */}
+        <div className="hidden lg:flex relative h-[300px] rounded-2xl bg-titi-dark items-center justify-center overflow-hidden">
+          <span
+            aria-hidden="true"
+            className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-titi-yellow/15"
+          />
+          <span
+            aria-hidden="true"
+            className="absolute -bottom-12 -left-8 w-40 h-40 rounded-full bg-titi-streak/15"
+          />
+          <div className="relative text-center px-6">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/50 mb-2">
+              Comunidad
+            </p>
+            <p className="text-2xl font-extrabold text-titi-cream leading-tight">
+              Aprendé · Enseñá · Crecé
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Recomendados por tus amigos */}
       {recommended.length > 0 && (
-        <section aria-label="Recomendados por tus amigos" className="mb-8">
+        <section aria-label="Recomendados por tus amigos">
           <h2 className="text-lg font-bold text-titi-dark mb-3">
             Tus amigos están aprendiendo
           </h2>
@@ -150,32 +255,7 @@ export default function Courses() {
       )}
 
       {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3 mb-6 sm:mb-8">
-        {/* Search */}
-        <div className="relative flex-1">
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscá un curso por título…"
-            aria-label="Buscar cursos"
-            className="w-full bg-titi-cream border border-gray-200 rounded-xl pl-11 pr-4 py-3 text-sm font-medium text-titi-dark placeholder:text-gray-300 focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
-          />
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-            aria-hidden="true"
-          >
-            <circle cx="11" cy="11" r="7" />
-            <line x1="21" y1="21" x2="16.5" y2="16.5" />
-          </svg>
-        </div>
-
+      <div className="flex flex-col sm:flex-row gap-3">
         {/* Categoría select */}
         <select
           value={categoria}
@@ -250,6 +330,18 @@ export default function Courses() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// ---- Stat del hero ----
+function HeroStat({ num, label }) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <span className="text-2xl font-extrabold text-titi-dark tabular-nums">
+        {num}
+      </span>
+      <span className="text-sm font-bold text-gray-400">{label}</span>
     </div>
   );
 }
