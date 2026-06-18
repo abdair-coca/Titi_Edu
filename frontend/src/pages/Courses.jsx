@@ -63,6 +63,15 @@ const FOOTER_COLS = [
   { title: 'Titi', items: ['Sobre nosotros', 'Ayuda', 'Contacto'] },
 ];
 
+// Normaliza texto para buscar: saca acentos/diacríticos y pasa a minúsculas,
+// así "ingles" matchea "Inglés" y "PYTHON" matchea "python".
+function normalizeText(s) {
+  return (s || '')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase();
+}
+
 export default function Courses() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -72,9 +81,8 @@ export default function Courses() {
   const [categoria, setCategoria] = useState('all');
 
   const [categorias, setCategorias] = useState([]);
-  const [cursos, setCursos] = useState([]);
-  // Catálogo completo (sin filtros) — para stats estables, conteos por categoría
-  // y la sección "Categorías populares".
+  // Catálogo completo (sin filtros) — única fuente: el filtrado (búsqueda +
+  // categoría) se hace en cliente. Sirve también para stats, conteos y populares.
   const [allCursos, setAllCursos] = useState([]);
   const [recommended, setRecommended] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -120,17 +128,25 @@ export default function Courses() {
     };
   }, []);
 
-  // Catálogo completo (una vez por refresh) — independiente de los filtros.
+  // Catálogo completo (una vez por refresh). Es la única carga: el filtrado por
+  // búsqueda y categoría se hace en cliente (búsqueda insensible a acentos).
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     client
       .get('/api/courses')
       .then(({ data }) => {
         if (cancelled) return;
         if (data?.success) setAllCursos(data.data?.cursos || []);
+        else setError(data?.message || 'No se pudo cargar el catálogo');
       })
-      .catch(() => {
-        // Silencioso: si falla, featured/populares quedan vacíos.
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err.response?.data?.message || err.message || 'Error de red');
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
@@ -143,35 +159,22 @@ export default function Courses() {
     return () => clearTimeout(id);
   }, [query]);
 
-  // Fetch del catálogo
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-
-    const params = {};
-    if (debouncedQuery) params.search = debouncedQuery;
-    if (categoria !== 'all') params.categoria = categoria;
-
-    client
-      .get('/api/courses', { params })
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.success) setCursos(data.data?.cursos || []);
-        else setError(data?.message || 'No se pudo cargar el catálogo');
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err.response?.data?.message || err.message || 'Error de red');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [debouncedQuery, categoria, refreshTick]);
+  // Lista visible: filtrado en cliente sobre el catálogo completo.
+  // Búsqueda insensible a acentos/mayúsculas y por múltiples palabras (AND),
+  // sobre título + categoría + autor.
+  const cursos = useMemo(() => {
+    const tokens = normalizeText(debouncedQuery).split(/\s+/).filter(Boolean);
+    return allCursos.filter((c) => {
+      if (categoria !== 'all' && c.categoria?.id !== categoria) return false;
+      if (!tokens.length) return true;
+      const hay = normalizeText(
+        [c.titulo, c.categoria?.nombre, c.creador?.username]
+          .filter(Boolean)
+          .join(' '),
+      );
+      return tokens.every((t) => hay.includes(t));
+    });
+  }, [allCursos, debouncedQuery, categoria]);
 
   // Entrada escalonada de las cards (GSAP, respeta reduced-motion).
   const gridRef = useStaggerReveal([cursos.length]);
