@@ -225,7 +225,25 @@ export default function Courses() {
   );
 
   function goToTrending() {
-    document.getElementById('trending')?.scrollIntoView();
+    document
+      .getElementById('trending')
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // El buscador siempre busca en TODO el catálogo: al escribir, resetea la
+  // categoría activa a "Todas".
+  function handleSearchChange(e) {
+    const v = e.target.value;
+    setQuery(v);
+    if (v.trim()) setCategoria('all');
+  }
+
+  // Enter en el buscador → baja a "Cursos en tendencia".
+  function handleSearchKeyDown(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      goToTrending();
+    }
   }
 
   function clearFilters() {
@@ -291,7 +309,8 @@ export default function Courses() {
             <input
               type="search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={handleSearchChange}
+              onKeyDown={handleSearchKeyDown}
               placeholder="¿Qué querés aprender hoy?"
               aria-label="Buscar cursos"
               className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-5 py-5 text-base font-medium text-titi-dark placeholder:text-gray-400 shadow-[0_4px_14px_rgba(0,0,0,0.06)] focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
@@ -814,12 +833,41 @@ function CategoryPill({ active, onClick, children }) {
   );
 }
 
+// Conteo animado 0→target (ease-out), respeta prefers-reduced-motion.
+function useCountUp(target, duration = 900) {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setValue(target);
+      return undefined;
+    }
+    if (!target) {
+      setValue(0);
+      return undefined;
+    }
+    let raf;
+    const start = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 4); // ease-out cuártico, arranque vivo
+      setValue(Math.round(target * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+
+  return value;
+}
+
 // ---- Stat del hero ----
 function HeroStat({ num, label }) {
+  const display = useCountUp(num);
   return (
     <div className="flex items-baseline gap-1.5">
       <span className="text-2xl font-extrabold text-titi-dark tabular-nums">
-        {num}
+        {display}
       </span>
       <span className="text-sm font-bold text-gray-400">{label}</span>
     </div>
