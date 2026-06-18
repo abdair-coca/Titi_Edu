@@ -6,6 +6,104 @@ ver el `AGENTS.md` de la raíz.
 
 ---
 
+## Rediseño — Catálogo de Cursos (`pages/Courses.jsx`)
+
+> **Estado:** PLANIFICADO (no implementado). Propuesta de diseño en
+> `frontend/design-proposal/.../Catalogo de Cursos v2.dc.html`. Se implementa en
+> **5 pasos**; al terminar cada paso se entrega **qué testear** y se **espera
+> feedback** del usuario antes de seguir al siguiente.
+
+### Objetivo visual
+
+Convertir el catálogo (hoy: header + filtros + grid de cards) en una página tipo
+landing de comunidad, con varias secciones apiladas dentro del shell de la app
+(sidebar intacto). Secciones de la propuesta, de arriba a abajo:
+
+1. **Promo bar** amarilla — "Cursos nuevos cada semana, creados por la comunidad".
+2. **Hero** (2 columnas) — badge, título grande ("Aprendé algo nuevo, hoy."),
+   subtítulo, **search grande**, y stats (N cursos / N categorías / N profes).
+   Columna derecha: ilustración/hero (placeholder).
+3. **Featured categories** — "Aprendé habilidades esenciales": 3 cards de área.
+4. **Trending** — "Cursos en tendencia": **tabs de categoría** (pills) + grid de
+   **cards de curso v2**.
+5. **Dark promo panel** — "Reimaginá tu forma de aprender" + perks + CTA.
+6. **Stat strip** — 4 stats de la comunidad.
+7. **Testimonios** — "Historias de la comunidad" (4 quotes).
+8. **Panel de logros** — "Sumá gotas y desbloqueá logros" + 3 badges + CTA.
+9. **Learning paths** — "¿Listo para seguir aprendiendo?": 3 rutas.
+10. **Popular categories** — columnas de links por categoría.
+11. **Footer**.
+
+### Adaptaciones a las convenciones de Titi (no copiar el HTML literal)
+
+- **UI plana**: la propuesta usa gradientes, radiales y blur. **Se descartan**
+  (design.md + memoria `no-gradients-no-blur`). Thumbs y paneles oscuros → color
+  **sólido** (`titi-dark` para fondos oscuros, tinte de categoría/`titi-cream`
+  para thumbs). Nada de `blur-*` ni `bg-gradient-*`.
+- **Tipografía y paleta**: usar las del proyecto (`design.md`), no importar
+  Poppins/Nunito ni los hex sueltos del HTML. Mapear: `#facc15`→`titi-yellow`,
+  `#14213d`/`#0e1626`→`titi-dark`, `#fbf6e3`→`titi-cream`, `#dd5a2c`→acento.
+- **Mascota**: `<img src="/Titi.png">` / `<TitiMascot>`, nunca emoji de mono.
+- **Motion**: entradas por sección con `useStaggerReveal`/`usePopIn` (deps por
+  valor, ver `motion.md` §5); hover de tiles con `.titi-card-pop`. Tope 400ms.
+
+### Huecos de backend / decisiones (CONFIRMADAS)
+
+El mock del HTML trae datos que **no existen** en la API actual. Decisiones:
+
+- **Rating (estrellas) y nº de students** → **OMITIR** en las cards v2 (no
+  inventar datos).
+- **Testimonios** y **Learning paths** → **PLACEHOLDER ESTÁTICO**, claramente
+  marcado como demo (contenido fijo en el front; sin backend).
+- **Filtro de nivel** → **OMITIR**. El catálogo filtra solo por **search** (hero)
+  + **tabs de categoría**. Se elimina el `<select>` de nivel.
+- **Featured / Popular categories / tabs** → se derivan de `GET /api/categories`
+  (reales). Los "perks", "badges" y copys de marketing son estáticos.
+- **Stats del hero y strip** → derivados de data real (`cursos.length`,
+  `categorias.length`, profes distintos). "valoración promedio" se **omite** (no
+  hay rating).
+
+### Plan de 5 pasos (cada uno: implementar → "qué testear" → esperar feedback)
+
+**Paso 1 — Shell + Promo bar + Hero.**
+Reestructurar `Courses.jsx` al nuevo layout (contenedor `max-w`, secciones
+apiladas). Promo bar amarilla. Hero plano: badge, título, subtítulo, search
+grande (reusa el estado/debounce actual), stats reales. Sin gradientes.
+- *Qué testear:* el hero se ve bien en desktop y móvil; escribir en el search
+  filtra (aunque el grid todavía sea el viejo o esté vacío); los números de stats
+  coinciden con los datos; nada de gradientes/blur.
+
+**Paso 2 — Trending: tabs de categoría + CourseCard v2.**
+Reemplazar los `<select>` por **pills** (Todas + categorías reales) que filtran.
+Nueva `CourseCard` v2 (thumb plano con tópico, badge de nivel, categoría, título,
+autor con avatar/iniciales, texto de lecciones). Mantener `useStaggerReveal`,
+empty/skeleton/error. Rating/students omitidos (según decisión).
+- *Qué testear:* las pills filtran por categoría; las cards nuevas se ven y
+  hacen hover-pop; click abre `/courses/:id`; buscar + tab combinan; empty state
+  cuando no hay resultados.
+
+**Paso 3 — Featured + Popular categories.**
+"Aprendé habilidades esenciales" (3 cards de categoría destacada) y "Categorías
+populares" (columnas de links). Click en una categoría filtra el Trending (o
+navega con el filtro aplicado). Derivado de categorías reales.
+- *Qué testear:* las 3 destacadas y las columnas reflejan categorías reales;
+  click lleva al curso/filtra; responsive (columnas colapsan en móvil).
+
+**Paso 4 — Paneles de comunidad (dark promo + stat strip + logros).**
+Dark promo panel plano + perks + CTA "Empezar a aprender". Stat strip (4 stats
+reales). Panel de logros + 3 badges + CTA a `/certificates`. Copys estáticos.
+- *Qué testear:* paneles planos (sin gradiente), CTAs navegan a destinos reales,
+  stats correctos, se ve bien apilado en móvil.
+
+**Paso 5 — Testimonios + Learning paths + Footer + pulido.**
+Testimonios y rutas según la decisión (placeholder marcado u omitidos). Footer.
+Entradas por sección (`useStaggerReveal`), repaso responsive y
+`prefers-reduced-motion`. Checklist `design.md` §12 + `motion.md`.
+- *Qué testear:* scroll completo de la página; entradas suaves; reduced-motion
+  desactiva animaciones; footer y secciones finales correctas en móvil/desktop.
+
+---
+
 ## Rediseño — Sección Learn (`pages/LearnCourse.jsx`)
 
 > **Estado:** IMPLEMENTADO (pasos 1–5). `LearnCourse.jsx` ya es de 3 columnas:
