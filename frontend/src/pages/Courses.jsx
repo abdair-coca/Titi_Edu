@@ -5,20 +5,12 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useStaggerReveal } from '../lib/motion.js';
 import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
 
-const NIVELES = [
-  { value: 'all', label: 'Todos los niveles' },
-  { value: 'principiante', label: 'Principiante' },
-  { value: 'intermedio', label: 'Intermedio' },
-  { value: 'avanzado', label: 'Avanzado' },
-];
-
 export default function Courses() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [nivel, setNivel] = useState('all');
   const [categoria, setCategoria] = useState('all');
 
   const [categorias, setCategorias] = useState([]);
@@ -81,7 +73,6 @@ export default function Courses() {
 
     const params = {};
     if (debouncedQuery) params.search = debouncedQuery;
-    if (nivel !== 'all') params.nivel = nivel;
     if (categoria !== 'all') params.categoria = categoria;
 
     client
@@ -102,13 +93,13 @@ export default function Courses() {
     return () => {
       cancelled = true;
     };
-  }, [debouncedQuery, nivel, categoria, refreshTick]);
+  }, [debouncedQuery, categoria, refreshTick]);
 
   // Entrada escalonada de las cards del catálogo (GSAP, respeta reduced-motion).
   const gridRef = useStaggerReveal([cursos.length]);
   const recommendedRef = useStaggerReveal([recommended.length]);
 
-  const hasFilters = debouncedQuery || nivel !== 'all' || categoria !== 'all';
+  const hasFilters = debouncedQuery || categoria !== 'all';
 
   // Stats del hero, derivados de data real.
   const profesCount = useMemo(
@@ -119,7 +110,6 @@ export default function Courses() {
   function clearFilters() {
     setQuery('');
     setDebouncedQuery('');
-    setNivel('all');
     setCategoria('all');
   }
 
@@ -254,83 +244,95 @@ export default function Courses() {
         </section>
       )}
 
-      {/* Filtros */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        {/* Categoría select */}
-        <select
-          value={categoria}
-          onChange={(e) => setCategoria(e.target.value)}
-          aria-label="Filtrar por categoría"
-          className="sm:w-56 bg-titi-cream border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-titi-dark cursor-pointer focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
-        >
-          <option value="all">Todas las categorías</option>
-          {categorias.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.icono} {c.nombre}
-            </option>
-          ))}
-        </select>
+      {/* Trending — tabs de categoría + grid */}
+      <section aria-label="Cursos en tendencia">
+        <h2 className="text-2xl font-bold text-titi-dark mb-4">
+          Cursos en tendencia
+        </h2>
 
-        {/* Nivel select */}
-        <select
-          value={nivel}
-          onChange={(e) => setNivel(e.target.value)}
-          aria-label="Filtrar por nivel"
-          className="sm:w-56 bg-titi-cream border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-titi-dark cursor-pointer focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
-        >
-          {NIVELES.map((n) => (
-            <option key={n.value} value={n.value}>
-              {n.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Contenido principal */}
-      {loading ? (
-        <SkeletonGrid />
-      ) : error ? (
-        <ErrorState
-          message={error}
-          onRetry={() => setRefreshTick((t) => t + 1)}
-        />
-      ) : cursos.length === 0 ? (
-        <EmptyState hasFilters={hasFilters} onClear={clearFilters} />
-      ) : (
-        <>
-          {/* Contador de resultados */}
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-semibold text-gray-500">
-              {cursos.length === 1
-                ? '1 curso encontrado'
-                : `${cursos.length} cursos encontrados`}
-              {hasFilters && (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="ml-2 text-titi-dark font-bold hover:text-titi-yellow-dark transition-colors"
-                >
-                  · Limpiar filtros
-                </button>
-              )}
-            </p>
-          </div>
-
-          <div
-            ref={gridRef}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
+        {/* Tabs de categoría */}
+        <div className="flex flex-wrap gap-2 mb-6">
+          <CategoryPill
+            active={categoria === 'all'}
+            onClick={() => setCategoria('all')}
           >
-            {cursos.map((curso) => (
-              <CourseCard
-                key={curso.id}
-                curso={curso}
-                onOpen={() => navigate(`/courses/${curso.id}`)}
-              />
-            ))}
-          </div>
-        </>
-      )}
+            Todas
+          </CategoryPill>
+          {categorias.map((c) => (
+            <CategoryPill
+              key={c.id}
+              active={categoria === c.id}
+              onClick={() => setCategoria(c.id)}
+            >
+              {c.icono} {c.nombre}
+            </CategoryPill>
+          ))}
+        </div>
+
+        {loading ? (
+          <SkeletonGrid />
+        ) : error ? (
+          <ErrorState
+            message={error}
+            onRetry={() => setRefreshTick((t) => t + 1)}
+          />
+        ) : cursos.length === 0 ? (
+          <EmptyState hasFilters={hasFilters} onClear={clearFilters} />
+        ) : (
+          <>
+            {/* Contador de resultados */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold text-gray-500">
+                {cursos.length === 1
+                  ? '1 curso encontrado'
+                  : `${cursos.length} cursos encontrados`}
+                {hasFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="ml-2 text-titi-dark font-bold hover:text-titi-yellow-dark transition-colors"
+                  >
+                    · Limpiar filtros
+                  </button>
+                )}
+              </p>
+            </div>
+
+            <div
+              ref={gridRef}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
+            >
+              {cursos.map((curso) => (
+                <CourseCard
+                  key={curso.id}
+                  curso={curso}
+                  onOpen={() => navigate(`/courses/${curso.id}`)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </section>
     </div>
+  );
+}
+
+// ---- Pill de categoría (tabs del Trending) ----
+function CategoryPill({ active, onClick, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={[
+        'h-9 px-4 rounded-full border text-sm font-bold cursor-pointer transition-colors duration-150',
+        active
+          ? 'bg-titi-dark text-titi-cream border-titi-dark'
+          : 'bg-white text-titi-dark border-gray-200 hover:border-titi-yellow',
+      ].join(' ')}
+    >
+      {children}
+    </button>
   );
 }
 
@@ -346,14 +348,29 @@ function HeroStat({ num, label }) {
   );
 }
 
-// ---- CourseCard (sección 5.2 del DESIGN.md) ----
+// Color del punto de nivel (clase Tailwind, sin hex hardcodeado en JSX).
+function nivelDotClass(nivel) {
+  switch ((nivel || '').toLowerCase()) {
+    case 'principiante':
+      return 'bg-green-500';
+    case 'intermedio':
+      return 'bg-titi-certificate';
+    case 'avanzado':
+      return 'bg-titi-streak';
+    default:
+      return 'bg-gray-300';
+  }
+}
+
+// ---- CourseCard v2 (propuesta catálogo, plano + DESIGN.md §5.2) ----
 function CourseCard({ curso, onOpen }) {
   const cantidadLecciones =
-    curso._count?.lecciones ??
-    curso._count?.modulos ??
-    0;
+    curso._count?.lecciones ?? curso._count?.modulos ?? 0;
   const lessonsLabel =
     cantidadLecciones === 1 ? '1 lección' : `${cantidadLecciones} lecciones`;
+  const nivel = curso.nivel || 'sin nivel';
+  const author = curso.creador?.username;
+  const initial = author?.[0]?.toUpperCase() ?? '?';
 
   return (
     <div
@@ -368,8 +385,8 @@ function CourseCard({ curso, onOpen }) {
       tabIndex={0}
       className="titi-card-pop bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] overflow-hidden cursor-pointer flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
     >
-      {/* Imagen de portada */}
-      <div className="relative h-44 bg-gradient-to-br from-titi-yellow-light via-titi-yellow-light to-titi-yellow/40 overflow-hidden">
+      {/* Thumb — plano (sin gradiente ni blur) */}
+      <div className="relative h-40 bg-titi-yellow-light flex items-center justify-center overflow-hidden">
         {curso.portadaUrl ? (
           <img
             src={curso.portadaUrl}
@@ -381,25 +398,20 @@ function CourseCard({ curso, onOpen }) {
             }}
           />
         ) : (
-          <>
-            {/* Decoraciones de fondo — círculos suaves */}
-            <span
-              aria-hidden="true"
-              className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/40 blur-xl"
-            />
-            <span
-              aria-hidden="true"
-              className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-titi-yellow/30 blur-xl"
-            />
-            <div className="relative w-full h-full grid place-items-center text-6xl select-none drop-shadow-sm">
-              {curso.categoria?.icono || '📚'}
-            </div>
-          </>
+          <span className="text-5xl select-none" aria-hidden="true">
+            {curso.categoria?.icono || '📚'}
+          </span>
         )}
 
-        {/* Badge de nivel */}
-        <span className="absolute top-3 left-3 bg-white text-titi-dark text-xs font-semibold capitalize px-2.5 py-1 rounded-full shadow-sm">
-          {curso.nivel || 'sin nivel'}
+        {/* Badge de nivel — punto de color + texto */}
+        <span className="absolute top-3 left-3 inline-flex items-center gap-1.5 bg-white rounded-full px-2.5 py-1 shadow-sm">
+          <span
+            className={`w-2 h-2 rounded-full ${nivelDotClass(nivel)}`}
+            aria-hidden="true"
+          />
+          <span className="text-xs font-semibold text-titi-dark capitalize">
+            {nivel}
+          </span>
         </span>
       </div>
 
@@ -417,13 +429,18 @@ function CourseCard({ curso, onOpen }) {
           {curso.titulo}
         </h3>
 
-        {/* Meta info */}
-        <p className="text-sm text-gray-500 font-medium">
-          {lessonsLabel}
-          {curso.creador?.username && (
-            <> · Por {curso.creador.username}</>
-          )}
-        </p>
+        {/* Autor + lecciones */}
+        <div className="mt-auto pt-2 flex items-center gap-2">
+          <span className="w-7 h-7 rounded-full bg-titi-dark text-titi-cream grid place-items-center text-xs font-bold shrink-0">
+            {initial}
+          </span>
+          <span className="text-sm font-bold text-titi-dark truncate">
+            {author || 'Anónimo'}
+          </span>
+          <span className="ml-auto text-xs font-medium text-gray-400 shrink-0">
+            {lessonsLabel}
+          </span>
+        </div>
       </div>
     </div>
   );
@@ -438,7 +455,7 @@ function SkeletonGrid() {
           key={i}
           className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
         >
-          <div className="h-44 bg-gray-100" />
+          <div className="h-40 bg-gray-100" />
           <div className="p-4 flex flex-col gap-3">
             <div className="h-3 bg-gray-100 rounded w-1/3" />
             <div className="h-4 bg-gray-100 rounded w-3/4" />
