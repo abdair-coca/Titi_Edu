@@ -15,6 +15,9 @@ export default function Courses() {
 
   const [categorias, setCategorias] = useState([]);
   const [cursos, setCursos] = useState([]);
+  // Catálogo completo (sin filtros) — para stats estables, conteos por categoría
+  // y la sección "Categorías populares".
+  const [allCursos, setAllCursos] = useState([]);
   const [recommended, setRecommended] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -59,6 +62,23 @@ export default function Courses() {
     };
   }, []);
 
+  // Catálogo completo (una vez por refresh) — independiente de los filtros.
+  useEffect(() => {
+    let cancelled = false;
+    client
+      .get('/api/courses')
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.success) setAllCursos(data.data?.cursos || []);
+      })
+      .catch(() => {
+        // Silencioso: si falla, featured/populares quedan vacíos.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshTick]);
+
   // Debounce del search input
   useEffect(() => {
     const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
@@ -101,10 +121,28 @@ export default function Courses() {
 
   const hasFilters = debouncedQuery || categoria !== 'all';
 
-  // Stats del hero, derivados de data real.
+  // Stats del hero, derivados del catálogo completo (estables, no cambian al
+  // filtrar/buscar).
   const profesCount = useMemo(
-    () => new Set(cursos.map((c) => c.creador?.username).filter(Boolean)).size,
-    [cursos],
+    () => new Set(allCursos.map((c) => c.creador?.username).filter(Boolean)).size,
+    [allCursos],
+  );
+
+  // Cursos agrupados por categoría (del catálogo completo).
+  const coursesByCat = useMemo(() => {
+    const map = {};
+    for (const c of allCursos) {
+      const id = c.categoria?.id;
+      if (!id) continue;
+      (map[id] ||= []).push(c);
+    }
+    return map;
+  }, [allCursos]);
+
+  // Categorías que tienen al menos un curso (para "Categorías populares").
+  const popularCats = useMemo(
+    () => categorias.filter((c) => coursesByCat[c.id]?.length),
+    [categorias, coursesByCat],
   );
 
   function clearFilters() {
@@ -192,7 +230,7 @@ export default function Courses() {
 
           {/* Stats */}
           <div className="flex items-center gap-5 flex-wrap">
-            <HeroStat num={cursos.length} label="cursos" />
+            <HeroStat num={allCursos.length} label="cursos" />
             <span className="w-px h-5 bg-gray-200" aria-hidden="true" />
             <HeroStat num={categorias.length} label="categorías" />
             <span className="w-px h-5 bg-gray-200" aria-hidden="true" />
@@ -223,6 +261,29 @@ export default function Courses() {
           </div>
         </div>
       </section>
+
+      {/* Featured — habilidades esenciales (3 categorías destacadas) */}
+      {categorias.length > 0 && (
+        <section aria-label="Habilidades esenciales">
+          <h2 className="text-2xl font-bold text-titi-dark mb-1">
+            Aprendé habilidades{' '}
+            <span className="italic text-titi-streak">esenciales</span>
+          </h2>
+          <p className="text-sm font-medium text-gray-500 mb-5">
+            Áreas destacadas para impulsar lo que estás construyendo.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {categorias.slice(0, 3).map((c) => (
+              <FeaturedCategoryCard
+                key={c.id}
+                categoria={c}
+                count={coursesByCat[c.id]?.length || 0}
+                onClick={() => setCategoria(c.id)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Recomendados por tus amigos */}
       {recommended.length > 0 && (
@@ -313,7 +374,93 @@ export default function Courses() {
           </>
         )}
       </section>
+
+      {/* Categorías populares — columnas con cursos por categoría */}
+      {popularCats.length > 0 && (
+        <section aria-label="Categorías populares">
+          <h2 className="text-2xl font-bold text-titi-dark mb-6">
+            Categorías populares
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
+            {popularCats.slice(0, 6).map((c) => (
+              <div key={c.id}>
+                <button
+                  type="button"
+                  onClick={() => setCategoria(c.id)}
+                  className="text-base font-bold text-titi-streak uppercase tracking-wide mb-3 hover:text-titi-yellow-dark transition-colors"
+                >
+                  {c.nombre}
+                </button>
+                <div className="flex flex-col gap-3">
+                  {coursesByCat[c.id].slice(0, 4).map((curso) => (
+                    <button
+                      key={curso.id}
+                      type="button"
+                      onClick={() => navigate(`/courses/${curso.id}`)}
+                      className="flex items-center justify-between gap-2 text-left text-sm font-bold text-titi-dark hover:text-titi-streak transition-colors"
+                    >
+                      <span className="truncate">{curso.titulo}</span>
+                      <svg
+                        viewBox="0 0 13 13"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="w-3 h-3 shrink-0"
+                        aria-hidden="true"
+                      >
+                        <path d="m4 2 5 4.5-5 4.5" />
+                      </svg>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
+  );
+}
+
+// ---- Card de categoría destacada (Featured) ----
+function FeaturedCategoryCard({ categoria, count, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="titi-card-pop text-left bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] overflow-hidden flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
+    >
+      {/* Thumb plano */}
+      <div className="h-32 bg-titi-yellow-light flex items-center justify-center">
+        <span className="text-5xl select-none" aria-hidden="true">
+          {categoria.icono || '📚'}
+        </span>
+      </div>
+      <div className="p-5 flex flex-col gap-1.5">
+        <h3 className="text-lg font-bold text-titi-dark">{categoria.nombre}</h3>
+        <p className="text-sm font-medium text-gray-500">
+          {count} {count === 1 ? 'curso' : 'cursos'} en esta área.
+        </p>
+        <span className="mt-1 inline-flex items-center gap-1.5 text-sm font-bold text-titi-streak">
+          Explorar área
+          <svg
+            viewBox="0 0 15 15"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-3.5 h-3.5"
+            aria-hidden="true"
+          >
+            <path d="M3 7.5h9" />
+            <path d="m8 3.5 4 4-4 4" />
+          </svg>
+        </span>
+      </div>
+    </button>
   );
 }
 
