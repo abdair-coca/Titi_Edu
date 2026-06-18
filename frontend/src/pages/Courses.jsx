@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useStaggerReveal } from '../lib/motion.js';
+import { useStaggerReveal, usePopIn } from '../lib/motion.js';
 import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
 
 // Copys estáticos de los paneles de comunidad (marketing, sin backend).
@@ -179,6 +179,13 @@ export default function Courses() {
   const featuredRef = useStaggerReveal([categorias.length]);
   const testimonialsRef = useStaggerReveal([TESTIMONIALS.length]);
   const pathsRef = useStaggerReveal([PATHS.length]);
+  const stripRef = useStaggerReveal([4]);
+  const badgesRef = useStaggerReveal([BADGES.length]);
+  // Bloques sueltos (no-lista) que también deben entrar (motion.md §4).
+  const promoRef = usePopIn([]);
+  const heroRef = usePopIn([]);
+  const darkPromoRef = usePopIn([]);
+  const footerRef = usePopIn([]);
 
   const hasFilters = debouncedQuery || categoria !== 'all';
 
@@ -230,7 +237,7 @@ export default function Courses() {
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
       {/* Promo bar */}
-      <div className="flex items-center justify-center gap-2 bg-titi-yellow text-titi-dark rounded-xl px-4 py-2.5 text-center text-sm font-bold">
+      <div ref={promoRef} className="flex items-center justify-center gap-2 bg-titi-yellow text-titi-dark rounded-xl px-4 py-2.5 text-center text-sm font-bold">
         <svg
           viewBox="0 0 16 16"
           fill="none"
@@ -247,7 +254,7 @@ export default function Courses() {
       </div>
 
       {/* Hero */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-center">
+      <section ref={heroRef} className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-center">
         <div>
           {/* Badge */}
           <span className="inline-flex items-center gap-2 bg-white border border-gray-100 rounded-full pl-1.5 pr-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] mb-5">
@@ -452,7 +459,7 @@ export default function Courses() {
       </section>
 
       {/* Dark promo — reimaginá tu forma de aprender */}
-      <section aria-label="Reimaginá tu forma de aprender">
+      <section ref={darkPromoRef} aria-label="Reimaginá tu forma de aprender">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-titi-dark rounded-2xl p-8 sm:p-10">
           <div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-titi-cream leading-tight mb-3">
@@ -518,7 +525,7 @@ export default function Courses() {
         <p className="text-center text-sm font-bold text-gray-400 mb-5">
           Lo que está construyendo la comunidad Titi
         </p>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div ref={stripRef} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StripStat num={allCursos.length} label="cursos publicados" />
           <StripStat num={profesCount} label="profes de la comunidad" />
           <StripStat num={categorias.length} label="categorías" />
@@ -593,7 +600,7 @@ export default function Courses() {
               Ver mis logros
             </button>
           </div>
-          <div className="grid grid-cols-3 gap-3 sm:gap-4">
+          <div ref={badgesRef} className="grid grid-cols-3 gap-3 sm:gap-4">
             {BADGES.map((b) => (
               <div
                 key={b.title}
@@ -697,7 +704,7 @@ export default function Courses() {
       )}
 
       {/* Footer */}
-      <footer className="bg-titi-dark rounded-2xl p-8 sm:p-10 text-white/60">
+      <footer ref={footerRef} className="bg-titi-dark rounded-2xl p-8 sm:p-10 text-white/60">
         <div className="flex items-center gap-2.5 mb-6">
           <img
             src="/favicon.png"

@@ -91,7 +91,10 @@ el cierre tenga qué animar.
 ### Cobertura — `useStaggerReveal` en toda lista/grid
 
 Toda lista o grid que se llena desde la API entra escalonada. Aplicado en:
-`Feed`, `Courses` (catálogo + recomendados), `MyCourses`, `MyTeaching`,
+`Feed`, `Courses` (landing v2: cada grid —recomendados, featured, trending,
+stat strip, badges, testimonios, rutas, populares— con `useStaggerReveal`; y los
+bloques sueltos —promo bar, hero, dark promo, footer— con `usePopIn`),
+`MyCourses`, `MyTeaching`,
 `Explore`, `Notifications`, `HashtagFeed`, `Certificates`, `Profile` (posts),
 `CourseDetail` (las dos columnas al entrar — contenido + inscripción — y los
 módulos), `LearnCourse` (módulos del índice lateral; ver además el pop de
