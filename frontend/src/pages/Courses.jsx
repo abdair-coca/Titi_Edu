@@ -19,6 +19,50 @@ const BADGES = [
   { glyph: '🏅', title: 'Primer curso', note: 'curso completado' },
 ];
 
+// Testimonios — placeholder estático (sin backend, contenido de ejemplo).
+const TESTIMONIALS = [
+  {
+    quote:
+      'Empecé sin saber nada de código y hoy mantengo el back-end de mi propio proyecto.',
+    name: 'Lucía R.',
+    role: 'Estudiante de Back-End',
+    tint: 'bg-titi-dark',
+  },
+  {
+    quote:
+      'Las lecciones cortas hacen que sea fácil sumar aunque tenga poco tiempo.',
+    name: 'Martín D.',
+    role: 'Estudiante de Python',
+    tint: 'bg-titi-streak',
+  },
+  {
+    quote: 'La comunidad responde rapidísimo, nunca te quedás trabado.',
+    name: 'Sofía G.',
+    role: 'Estudiante de Diseño',
+    tint: 'bg-titi-achievement',
+  },
+  {
+    quote:
+      'Pasé de tenerle miedo al inglés a leer documentación sin traductor.',
+    name: 'Diego F.',
+    role: 'Estudiante de Inglés',
+    tint: 'bg-titi-certificate',
+  },
+];
+
+// Rutas de aprendizaje — placeholder estático (sin backend, contenido de ejemplo).
+const PATHS = [
+  { title: 'Ingeniero Back-End', meta: '6 cursos', rating: '4.7' },
+  { title: 'Científico de Datos', meta: '5 cursos', rating: '4.8' },
+  { title: 'Diseñador de Producto', meta: '4 cursos', rating: '4.6' },
+];
+
+const FOOTER_COLS = [
+  { title: 'Explorar', items: ['Cursos', 'Categorías', 'Rutas'] },
+  { title: 'Comunidad', items: ['Profes', 'Logros', 'Ranking'] },
+  { title: 'Titi', items: ['Sobre nosotros', 'Ayuda', 'Contacto'] },
+];
+
 export default function Courses() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -129,9 +173,12 @@ export default function Courses() {
     };
   }, [debouncedQuery, categoria, refreshTick]);
 
-  // Entrada escalonada de las cards del catálogo (GSAP, respeta reduced-motion).
+  // Entrada escalonada de las cards (GSAP, respeta reduced-motion).
   const gridRef = useStaggerReveal([cursos.length]);
   const recommendedRef = useStaggerReveal([recommended.length]);
+  const featuredRef = useStaggerReveal([categorias.length]);
+  const testimonialsRef = useStaggerReveal([TESTIMONIALS.length]);
+  const pathsRef = useStaggerReveal([PATHS.length]);
 
   const hasFilters = debouncedQuery || categoria !== 'all';
 
@@ -158,6 +205,7 @@ export default function Courses() {
     () => categorias.filter((c) => coursesByCat[c.id]?.length),
     [categorias, coursesByCat],
   );
+  const popularRef = useStaggerReveal([popularCats.length]);
 
   // Total de lecciones del catálogo (para el stat strip).
   const lessonsTotal = useMemo(
@@ -300,7 +348,7 @@ export default function Courses() {
           <p className="text-sm font-medium text-gray-500 mb-5">
             Áreas destacadas para impulsar lo que estás construyendo.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <div ref={featuredRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {categorias.slice(0, 3).map((c) => (
               <FeaturedCategoryCard
                 key={c.id}
@@ -478,6 +526,54 @@ export default function Courses() {
         </div>
       </section>
 
+      {/* Testimonios — placeholder estático (contenido de ejemplo) */}
+      <section aria-label="Historias de la comunidad">
+        <div className="flex items-end justify-between gap-3 mb-5">
+          <h2 className="text-2xl font-bold text-titi-dark">
+            Historias de la comunidad
+          </h2>
+          <span className="text-xs font-semibold text-gray-400 italic shrink-0">
+            contenido de ejemplo
+          </span>
+        </div>
+        <div
+          ref={testimonialsRef}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        >
+          {TESTIMONIALS.map((t) => (
+            <div
+              key={t.name}
+              className="bg-white border border-gray-100 rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col"
+            >
+              <span
+                className="text-titi-yellow text-3xl font-black leading-none h-5"
+                aria-hidden="true"
+              >
+                “
+              </span>
+              <p className="text-sm font-medium text-titi-dark leading-relaxed mb-4 flex-1">
+                {t.quote}
+              </p>
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`w-9 h-9 rounded-full grid place-items-center text-white text-sm font-bold shrink-0 ${t.tint}`}
+                >
+                  {t.name[0]}
+                </span>
+                <div className="leading-tight min-w-0">
+                  <p className="text-sm font-bold text-titi-dark truncate">
+                    {t.name}
+                  </p>
+                  <p className="text-xs font-medium text-gray-400 truncate">
+                    {t.role}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Logros — sumá gotas y desbloqueá logros */}
       <section aria-label="Sumá gotas y desbloqueá logros">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-titi-dark rounded-2xl p-8 sm:p-10">
@@ -516,13 +612,51 @@ export default function Courses() {
         </div>
       </section>
 
+      {/* Learning paths — placeholder estático (contenido de ejemplo) */}
+      <section aria-label="Rutas de aprendizaje">
+        <div className="flex items-end justify-between gap-3 mb-1">
+          <h2 className="text-2xl font-bold text-titi-dark">
+            ¿Listo para seguir aprendiendo?
+          </h2>
+          <span className="text-xs font-semibold text-gray-400 italic shrink-0">
+            contenido de ejemplo
+          </span>
+        </div>
+        <p className="text-sm font-medium text-gray-500 mb-5">
+          Rutas armadas por la comunidad para llevarte de cero a proyecto real.
+        </p>
+        <div
+          ref={pathsRef}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+        >
+          {PATHS.map((p) => (
+            <div
+              key={p.title}
+              className="relative h-52 rounded-2xl bg-titi-dark overflow-hidden p-6 flex flex-col justify-end"
+            >
+              <span className="absolute top-4 left-4 inline-flex items-center bg-titi-cream text-titi-dark text-xs font-extrabold px-2.5 py-1 rounded-full">
+                RUTA
+              </span>
+              <h3 className="text-xl font-bold text-titi-cream mb-1">
+                {p.title}
+              </h3>
+              <div className="flex items-center gap-2 text-sm font-bold text-white/70">
+                <span>{p.meta}</span>
+                <span className="opacity-50" aria-hidden="true">·</span>
+                <span className="text-titi-yellow">★ {p.rating}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Categorías populares — columnas con cursos por categoría */}
       {popularCats.length > 0 && (
         <section aria-label="Categorías populares">
           <h2 className="text-2xl font-bold text-titi-dark mb-6">
             Categorías populares
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
+          <div ref={popularRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
             {popularCats.slice(0, 6).map((c) => (
               <div key={c.id}>
                 <button
@@ -561,6 +695,43 @@ export default function Courses() {
           </div>
         </section>
       )}
+
+      {/* Footer */}
+      <footer className="bg-titi-dark rounded-2xl p-8 sm:p-10 text-white/60">
+        <div className="flex items-center gap-2.5 mb-6">
+          <img
+            src="/favicon.png"
+            alt=""
+            className="w-9 h-9 object-contain select-none"
+            draggable={false}
+            onError={(e) => (e.currentTarget.style.display = 'none')}
+          />
+          <span className="text-xl font-extrabold lowercase tracking-tight text-titi-cream">
+            titi
+          </span>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pb-6 border-b border-white/10">
+          <p className="text-sm font-medium leading-relaxed max-w-xs col-span-2 md:col-span-1">
+            Una comunidad donde cualquiera puede aprender y enseñar. Lecciones
+            cortas, gente real, a tu ritmo.
+          </p>
+          {FOOTER_COLS.map((col) => (
+            <div key={col.title} className="flex flex-col gap-2.5">
+              <span className="text-sm font-bold text-titi-cream mb-0.5">
+                {col.title}
+              </span>
+              {col.items.map((item) => (
+                <span key={item} className="text-sm font-medium">
+                  {item}
+                </span>
+              ))}
+            </div>
+          ))}
+        </div>
+        <p className="text-xs font-medium text-white/40 pt-5">
+          © 2026 Titi · Hecho por y para la comunidad
+        </p>
+      </footer>
     </div>
   );
 }

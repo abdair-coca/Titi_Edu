@@ -8,10 +8,14 @@ ver el `AGENTS.md` de la raíz.
 
 ## Rediseño — Catálogo de Cursos (`pages/Courses.jsx`)
 
-> **Estado:** PLANIFICADO (no implementado). Propuesta de diseño en
-> `frontend/design-proposal/.../Catalogo de Cursos v2.dc.html`. Se implementa en
-> **5 pasos**; al terminar cada paso se entrega **qué testear** y se **espera
-> feedback** del usuario antes de seguir al siguiente.
+> **Estado:** IMPLEMENTADO (pasos 1–5). Propuesta de diseño en
+> `frontend/design-proposal/.../Catalogo de Cursos v2.dc.html`. `Courses.jsx` ya
+> es la landing v2: promo bar, hero (search + stats reales), featured/popular
+> categories (categorías reales), trending (tabs + CourseCard v2 sin
+> rating/students), paneles de comunidad (dark promo + stat strip + logros),
+> testimonios y learning paths (placeholder estático), y footer. Sin filtro de
+> nivel. UI plana (sin gradientes/blur). Entradas por sección con
+> `useStaggerReveal`.
 
 ### Objetivo visual
 
