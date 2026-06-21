@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import TitiSvg from '../components/titi/TitiSvg.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
 
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
@@ -44,14 +45,7 @@ export default function Register() {
           <div className="mb-6">
             <h1 className="text-3xl sm:text-4xl font-extrabold mb-2 inline-flex items-center gap-2 flex-wrap">
               <span>¡Únete a Titi!</span>
-              <img
-                src="/Titi.png"
-                alt=""
-                aria-hidden="true"
-                className="w-9 h-9 sm:w-10 sm:h-10 object-contain inline-block align-middle select-none"
-                draggable={false}
-                onError={(e) => (e.currentTarget.style.display = 'none')}
-              />
+              <TitiSvg className="w-9 h-9 sm:w-10 sm:h-10 inline-block align-middle select-none" />
             </h1>
             <p className="text-titi-muted">Empezá a compartir lo que te apasiona.</p>
           </div>

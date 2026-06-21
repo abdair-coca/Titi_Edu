@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TitiSvg from '../components/titi/TitiSvg.jsx';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -265,12 +266,7 @@ export default function CourseDetail() {
 
             {!curso.modulos || curso.modulos.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-                <img
-                  src="/Titi.png"
-                  alt="Titi"
-                  className="w-20 h-20 mb-3 object-contain drop-shadow-sm select-none"
-                  draggable={false}
-                />
+                <TitiSvg className="w-20 h-20 mb-3 drop-shadow-sm select-none" />
                 <h3 className="text-base font-bold text-titi-dark mb-1">
                   Aún no hay módulos
                 </h3>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import TitiSvg from '../components/titi/TitiSvg.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
 
 export default function Login() {
@@ -36,7 +37,7 @@ export default function Login() {
         <div className="titi-card p-8 sm:p-10 order-2 lg:order-1">
           <div className="mb-6">
             <Link to="/" className="inline-flex items-center gap-2 mb-6">
-              <img src="/Titi.png" alt="" className="w-10 h-10 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
+              <TitiSvg className="w-10 h-10" />
               <span className="text-2xl font-extrabold lowercase tracking-tight">titi</span>
             </Link>
             <h1 className="text-3xl sm:text-4xl font-extrabold mb-2">

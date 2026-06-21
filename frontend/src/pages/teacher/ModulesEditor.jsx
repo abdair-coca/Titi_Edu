@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import TitiSvg from '../../components/titi/TitiSvg.jsx';
 import { useNavigate, useParams } from 'react-router-dom';
 import client from '../../api/client.js';
 import ConfirmModal from '../../components/ConfirmModal.jsx';
@@ -676,12 +677,7 @@ function LessonEditor({ leccion, onSave, onUpload, onDeleteMaterial }) {
 function EmptyLessonPanel() {
   return (
     <div className="flex flex-col items-center justify-center text-center py-12">
-      <img
-        src="/Titi.png"
-        alt="Titi"
-        className="w-20 h-20 mb-3 object-contain drop-shadow-sm select-none"
-        draggable={false}
-      />
+      <TitiSvg className="w-20 h-20 mb-3 drop-shadow-sm select-none" />
       <h3 className="text-base font-bold text-titi-dark mb-1">Elegí una lección para editarla</h3>
       <p className="text-sm text-gray-400 max-w-xs">
         O agregá un módulo nuevo desde el panel de la izquierda.

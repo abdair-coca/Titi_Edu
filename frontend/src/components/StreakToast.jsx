@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TitiSvg from './titi/TitiSvg.jsx';
 
 /**
  * StreakToast — aparece desde arriba cuando la racha sube.
@@ -62,12 +63,7 @@ export default function StreakToast({ racha, shown, onDone, durationMs = 3500 })
           </p>
         </div>
 
-        <img
-          src="/Titi.png"
-          alt="Titi"
-          className="w-12 h-12 object-contain shrink-0 drop-shadow-sm select-none"
-          draggable={false}
-        />
+        <TitiSvg className="w-12 h-12 shrink-0 drop-shadow-sm select-none" />
       </div>
     </div>
   );

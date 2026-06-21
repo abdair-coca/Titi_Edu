@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import TitiSvg from '../components/titi/TitiSvg.jsx';
 import { useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -448,12 +449,7 @@ function PostsList({ loading, error, posts, onRetry, emptyTitle, emptyDescriptio
   if (posts.length === 0) {
     return (
       <div className="titi-card p-8 text-center flex flex-col items-center">
-        <img
-          src="/Titi.png"
-          alt="Titi"
-          className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
-          draggable={false}
-        />
+        <TitiSvg className="w-24 h-24 mb-4 drop-shadow-sm select-none" />
         <h3 className="text-xl font-bold text-titi-dark mb-2">{emptyTitle}</h3>
         <p className="text-sm text-titi-muted max-w-xs">{emptyDescription}</p>
       </div>

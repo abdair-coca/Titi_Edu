@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TitiSvg from './titi/TitiSvg.jsx';
 
 /**
  * AchievementToast — aparece desde la derecha al desbloquear logros.
@@ -76,12 +77,7 @@ export default function AchievementToast({ logros = [], onDone, durationMs = 320
           )}
         </div>
 
-        <img
-          src="/Titi.png"
-          alt="Titi"
-          className="w-7 h-7 ml-auto object-contain shrink-0 select-none"
-          draggable={false}
-        />
+        <TitiSvg className="w-7 h-7 ml-auto shrink-0 select-none" />
       </div>
     </div>
   );

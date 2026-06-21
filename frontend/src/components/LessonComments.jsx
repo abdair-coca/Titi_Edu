@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { relativeTime } from '../lib/format.js';
+import TitiSvg from './titi/TitiSvg.jsx';
 
 export default function LessonComments({ lessonId, hideHeader = false, onCount }) {
   const { isAuthenticated, user } = useAuth();
@@ -153,12 +154,7 @@ export default function LessonComments({ lessonId, hideHeader = false, onCount }
         </div>
       ) : comments.length === 0 ? (
         <div className="flex flex-col items-center text-center py-10 px-6 bg-titi-cream rounded-2xl border border-titi-border">
-          <img
-            src="/Titi.png"
-            alt="Titi"
-            className="w-20 h-20 mb-3 object-contain drop-shadow-sm select-none"
-            draggable={false}
-          />
+          <TitiSvg className="w-20 h-20 mb-3 drop-shadow-sm select-none" />
           <h3 className="text-base font-bold text-titi-dark mb-1">Sé el primero en comentar</h3>
           <p className="text-sm text-gray-500 max-w-xs">
             Tu duda puede ser la duda de otro. ¡Animate!

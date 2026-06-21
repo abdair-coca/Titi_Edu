@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import TitiSvg from '../../components/titi/TitiSvg.jsx';
 import { useNavigate } from 'react-router-dom';
 import client from '../../api/client.js';
 import { useAuth } from '../../context/AuthContext.jsx';
@@ -230,12 +231,7 @@ function TeachingCard({ curso, busy, onEdit, onContent, onTogglePublish, onDelet
 function EmptyState({ onCreate }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
-      <img
-        src="/Titi.png"
-        alt="Titi"
-        className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
-        draggable={false}
-      />
+      <TitiSvg className="w-24 h-24 mb-4 drop-shadow-sm select-none" />
       <h3 className="text-xl font-bold text-titi-dark mb-2">Aún no creaste ningún curso</h3>
       <p className="text-sm text-gray-400 mb-6 max-w-xs">
         Compartí lo que sabés con la comunidad. Empezá creando tu primer curso.

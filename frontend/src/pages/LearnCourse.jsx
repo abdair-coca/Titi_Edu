@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import TitiSvg from '../components/titi/TitiSvg.jsx';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -806,12 +807,7 @@ function DeepenCard() {
 
           {selected && (
             <div ref={respRef} className="mt-4 bg-white border border-titi-border rounded-xl p-4 flex items-start gap-3">
-              <img
-                src="/Titi.png"
-                alt="Titi"
-                className="w-10 h-10 object-contain select-none shrink-0"
-                draggable={false}
-              />
+              <TitiSvg className="w-10 h-10 select-none shrink-0" />
               <div className="min-w-0">
                 <p className="text-sm font-bold text-titi-dark">{selected}</p>
                 <p className="text-sm text-gray-500 mt-1">
@@ -1036,12 +1032,7 @@ function BookmarkIcon({ className }) {
 function CertificateBanner({ onClose }) {
   return (
     <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 sm:p-5 pr-10 mb-6 bg-titi-yellow-light border-2 border-titi-yellow rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-      <img
-        src="/Titi.png"
-        alt="Titi"
-        className="w-14 h-14 sm:w-16 sm:h-16 object-contain select-none shrink-0"
-        draggable={false}
-      />
+      <TitiSvg className="w-14 h-14 sm:w-16 sm:h-16 select-none shrink-0" />
       <div className="min-w-0 flex-1 w-full">
         <p className="text-base sm:text-lg font-extrabold text-titi-dark leading-tight">
           ¡Curso completado! 🎓
@@ -1072,12 +1063,7 @@ function CertificateBanner({ onClose }) {
 function EmptyLessonState({ onBack }) {
   return (
     <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
-      <img
-        src="/Titi.png"
-        alt="Titi"
-        className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
-        draggable={false}
-      />
+      <TitiSvg className="w-24 h-24 mb-4 drop-shadow-sm select-none" />
       <h3 className="text-xl font-bold text-titi-dark mb-2">
         Aún no hay lecciones
       </h3>
