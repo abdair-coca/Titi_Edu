@@ -951,8 +951,8 @@ Cada **cierre de etapa** sube una **nueva versión** a git: merge a `main` + tag
 
 | Subfase | Tag | Estado |
 |---|---|---|
-| 6.1 Gotas | `v1.1.0` | 📋 |
-| 6.2 Misiones diarias | `v1.2.0` | 📋 |
+| 6.1 Gotas | `v1.1.0` | ✅ |
+| 6.2 Misiones diarias | `v1.2.0` | ✅ |
 | 6.3 Ranking de amigos | `v1.3.0` | 📋 |
 | 6.4 Titi vivo (SVG + Framer) | `v1.4.0` | 📋 |
 | 6.5 UI de gamificación | `v1.5.0` | 📋 |

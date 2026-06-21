@@ -51,6 +51,35 @@ model Usuario {
   certificados    Certificado[]
   notas           NotaLeccion[]
   movimientosGota MovimientoGota[]
+  misionesUsuario MisionUsuario[]
+}
+
+// Etapa 6 — catálogo de misiones diarias. Se siembran en seed.js (idempotente por codigo).
+model Mision {
+  id           String          @id @default(uuid())
+  codigo       String          @unique
+  titulo       String
+  descripcion  String
+  evento       String // qué evento la avanza: 'leccion'|'evaluacion'|'post'|'comentario'|'follow'
+  meta         Int // cuántas veces hay que hacer la acción
+  recompensa   Int // gotas al completar
+  activa       Boolean         @default(true)
+  asignaciones MisionUsuario[]
+}
+
+// Etapa 6 — misión asignada a un usuario en un día concreto.
+model MisionUsuario {
+  id         String  @id @default(uuid())
+  usuarioId  String
+  misionId   String
+  fecha      String // 'YYYY-MM-DD' del día asignado (TZ server)
+  progreso   Int     @default(0)
+  completada Boolean @default(false)
+  usuario    Usuario @relation(fields: [usuarioId], references: [id])
+  mision     Mision  @relation(fields: [misionId], references: [id])
+
+  @@unique([usuarioId, misionId, fecha])
+  @@index([usuarioId, fecha])
 }
 
 // Etapa 6 — ledger de gotas. Fuente de verdad para auditar y sumar por semana.

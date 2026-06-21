@@ -4,6 +4,7 @@ import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { actualizarRacha, checkCursoCompletado } from '../services/progress.service.js';
 import { checkLogrosEvaluacion } from '../services/achievement.service.js';
 import { otorgarGotas } from '../services/gotas.service.js';
+import { avanzarMisiones } from '../services/mision.service.js';
 
 const router = Router();
 
@@ -563,6 +564,7 @@ router.post('/evaluations/:id/attempt', requireAuth, async (req, res) => {
       if (cursoCompletado?.nuevo) {
         gotas += (await otorgarGotas(usuario.id, 'curso', { refId: curso.id })).otorgadas;
       }
+      await avanzarMisiones(usuario.id, 'evaluacion');
     }
 
     res.status(201).json({
