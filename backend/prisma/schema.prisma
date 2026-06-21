@@ -52,6 +52,7 @@ model Usuario {
   notas           NotaLeccion[]
   movimientosGota MovimientoGota[]
   misionesUsuario MisionUsuario[]
+  insignias       InsigniaSemanal[]
 }
 
 // Etapa 6 — catálogo de misiones diarias. Se siembran en seed.js (idempotente por codigo).
@@ -80,6 +81,21 @@ model MisionUsuario {
 
   @@unique([usuarioId, misionId, fecha])
   @@index([usuarioId, fecha])
+}
+
+// Etapa 6 — premio al top del ranking de amigos de una semana. La semana se
+// identifica por la fecha del lunes ('YYYY-MM-DD'). Unique por (usuario, semana)
+// → el premio se otorga una sola vez por semana (idempotente).
+model InsigniaSemanal {
+  id          String   @id @default(uuid())
+  usuarioId   String
+  semana      String // lunes de la semana, 'YYYY-MM-DD'
+  puesto      Int
+  gotasSemana Int
+  createdAt   DateTime @default(now())
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+
+  @@unique([usuarioId, semana])
 }
 
 // Etapa 6 — ledger de gotas. Fuente de verdad para auditar y sumar por semana.
