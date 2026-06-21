@@ -1,6 +1,6 @@
 # AGENTS.md — Titi | Etapa 5: Pulido y Deploy
 
-> **🔄 ETAPA 5 EN CURSO.** Este documento es el **plan** de la etapa: qué falta para cortar la **v1.0.0** (primer release público). Fuente de verdad del producto: `AGENTSGoal.md`. El cierre de la Etapa 4 quedó archivado en el tag `v0.4.0` y resumido en `AGENTSGoal.md` §9.
+> **✅ ETAPA 5 CERRADA — `v1.0.0`.** Este documento es el **plan** de la etapa (ya completado); el cierre está en §11. Fuente de verdad del producto: `AGENTSGoal.md`. El cierre de la Etapa 4 quedó archivado en el tag `v0.4.0` y resumido en `AGENTSGoal.md` §9.
 
 > **Etapas 1–4 cerradas.** Ver `AGENTSGoal.md` §9. Esta etapa corta el `MAJOR` a `1` (`AGENTSGoal.md` §16).
 
@@ -314,4 +314,27 @@ Seis subfases en orden de dependencia. Cada una es una **unidad commitable**: ci
 
 ## 11. Cierre — Etapa 5
 
-> _Se llena al cerrar la etapa (mismo formato que Etapa 4 §10): changelog de commits por subfase, desvíos/deuda técnica, y tag `v1.0.0`._
+**Tag:** `v1.0.0` sobre `main`. Primer release público. Live: frontend `https://titiedu.vercel.app` (Vercel), backend `https://titiedu-production.up.railway.app` (Railway).
+
+### Changelog por subfase
+
+| Subfase | Commits | Resultado |
+|---|---|---|
+| **5.1 Cloudinary** | `41202a0` helper `upload.service.js`; `25ae0c8` posts+materiales con `memoryStorage` → Cloudinary; migración `material_public_id` | Ningún archivo nuevo toca el disco; fallback a disco solo en dev sin credenciales |
+| **5.2 Performance** | `5e1dc84` | Paginación cursor-based (`/feed`, `/explore`, `/feed/academic`) + scroll infinito; índices Postgres + Neo4j (`CursoRef.cursoId`); `Certificado.cursoId` nullable + `cursoTitulo` snapshot; delete admin desvincula en vez de borrar |
+| **5.3 Tests** | `f39ad52` | Vitest + supertest, suite hermética (prisma/Neo4j mockeados), 41 tests, cobertura 30.7% en `routes/`+`services/`; `app.js` exporta la app; seed académico idempotente (MERGE) |
+| **5.4 CI/CD** | `2464441` | `.github/workflows/ci.yml`: lint + tests (backend) + build (frontend) en PR a `main`; branch protection exige el check verde |
+| **5.5 Deploy** | `d166bf6` (`railway.json`, `vercel.json`) | Backend en Railway (`prisma migrate deploy` en release), frontend en Vercel, CORS vía `FRONTEND_URL`, imágenes en Cloudinary |
+| **5.6 Docs + cierre** | `d166bf6`, `93c7fd6` | README v1 (setup <15 min, arquitectura, tests, deploy) en UTF-8; `.env.example` completos; TODOs resueltos |
+
+### Desvíos / deuda técnica
+
+- **Tests herméticos en vez de Postgres efímero (§5A):** se mockean prisma y Neo4j en cada test en lugar de levantar un Postgres efímero en CI. Más simple y el CI no necesita servicios externos. `DATABASE_URL` apunta a una DB remota compartida, así que no se usa para tests.
+- **Tests de frontend pendientes (§5.3 paso 12):** `PostCard` y `EvaluationQuiz` (Vitest + Testing Library) no se implementaron; la cobertura objetivo del DoD es sobre `routes/`+`services/` (backend), que sí se cumplió.
+- **Dos backends en Railway durante el deploy:** se creó un servicio duplicado (`socialmedianeo4j-production`) que el frontend apuntaba por error; se consolidó en `titiedu-production` (con credenciales Cloudinary) y se eliminó el duplicado.
+- **Subida de portada de curso:** sigue siendo URL pública (no upload directo); fuera del alcance de 5.1 (solo posts + materiales). Copy re-etiquetado en `CourseEditor.jsx`.
+- **Decisiones:** `PUT /admin/courses/:id/approve` se mantiene (lo usa `AdminCourses.jsx`); estático `/uploads` se mantiene (fallback dev + archivos legacy).
+
+### DoD §9 — verificado
+
+Los 12 ítems tildados. Smoke E2E contra prod: registro → post con imagen (Cloudinary `titi/posts`) → inscripción → completar lección → certificado.

@@ -649,7 +649,7 @@ const MENSAJES_TITI = {
 
 ---
 
-### 📋 Etapa 5 — Pulido y Deploy
+### ✅ Etapa 5 — Pulido y Deploy (COMPLETADA)
 
 **Dependencias:** Etapa 4 cerrada.
 
@@ -672,11 +672,20 @@ const MENSAJES_TITI = {
 - Sitio live público.
 
 **Criterios de aceptación:**
-- [ ] Subir un material va a Cloudinary, no al disco.
-- [ ] CI rechaza PRs que rompen tests.
-- [ ] Feed paginado: scroll infinito o "cargar más".
-- [ ] Tiempo de carga inicial del feed < 2s con red 3G simulada.
-- [ ] Documentación permite a alguien nuevo arrancar el proyecto en < 15 min.
+- [x] Subir un material va a Cloudinary, no al disco.
+- [x] CI rechaza PRs que rompen tests.
+- [x] Feed paginado: scroll infinito o "cargar más".
+- [x] Tiempo de carga inicial del feed < 2s con red 3G simulada.
+- [x] Documentación permite a alguien nuevo arrancar el proyecto en < 15 min.
+
+**Cierre (`v1.0.0`):**
+- **Live:** frontend en `https://titiedu.vercel.app` (Vercel), backend en `https://titiedu-production.up.railway.app` (Railway), Postgres+Neo4j administrados, imágenes en Cloudinary (`titi/posts`, `titi/materials`).
+- **Storage:** posts y materiales suben a Cloudinary vía `upload.service.js` (memoryStorage), con fallback a disco en dev sin credenciales.
+- **Performance:** paginación cursor-based por `createdAt` en feed/explore/feed-academico + scroll infinito; índices Postgres (`Curso`, `Inscripcion`, `Progreso`, `Material`) y Neo4j (`CursoRef.cursoId`); certificados preservados al borrar curso (`cursoId` nullable + `cursoTitulo` snapshot).
+- **Tests:** suite hermética Vitest + supertest (prisma/Neo4j mockeados), 41 tests, cobertura 30.7% en `routes/` + `services/`; rechazos 401/403/409 cubiertos.
+- **CI/CD:** `.github/workflows/ci.yml` (lint + tests backend, build frontend) en cada PR a `main`; branch protection activa exige el check verde.
+- **Smoke E2E:** registro → post con imagen (Cloudinary) → inscripción → completar lección → certificado, contra prod.
+- **Subfases y commits:** detalle en `AGENTS.md` §11.
 
 ---
 
@@ -872,7 +881,7 @@ Cada **cierre de etapa** sube una **nueva versión** a git: merge a `main` + tag
 | Etapa 2 — Módulo Educativo Base | `v0.2.0` | `v0.2.0` | ✅ | Cursos / módulos / lecciones / materiales + inscripciones |
 | Etapa 3 — Evaluaciones y Progreso | `v0.3.0` | `v0.3.0` | ✅ | Quizzes, racha, logros, certificados |
 | Etapa 4 — Integración Social + Admin | `v0.4.0` | `v0.4.0` | ✅ | Feed académico, recomendaciones, panel admin |
-| Etapa 5 — Pulido y Deploy | `v1.0.0` | `v1.0.0` | 📋 | Cloudinary, tests, CI/CD, deploy público |
+| Etapa 5 — Pulido y Deploy | `v1.0.0` | `v1.0.0` | ✅ | Cloudinary, tests, CI/CD, deploy público |
 
 **Reglas:**
 - Solo se taggea sobre `main`, con árbol limpio y el smoke test de la etapa pasado.
