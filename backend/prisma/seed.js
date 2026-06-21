@@ -334,14 +334,56 @@ async function seedEvaluacionDemo(curso) {
   return evaluacion;
 }
 
+// Datos demo del feed académico (saldando deuda Etapa 4 §10.3: antes se
+// sembraban a mano). Todo con MERGE → idempotente: correr el seed N veces no
+// duplica relaciones. admin_demo sigue a profesor_demo y ve su actividad
+// (inscripción, curso completado, logro) en /api/posts/feed/academic.
+async function seedFeedAcademicoDemo(profesor, admin, curso) {
+  console.log('→ Sembrando feed académico demo...');
+  const profNeo = profesor.neoId;
+  const adminNeo = admin.neoId;
+  const cursoId = curso.id;
+
+  // admin_demo SIGUIO profesor_demo
+  await runQuery(
+    `MATCH (a:Usuario {id: $adminNeo}), (p:Usuario {id: $profNeo})
+     MERGE (a)-[:SIGUIO]->(p)`,
+    { adminNeo, profNeo },
+  );
+
+  // profesor_demo INSCRITO_EN + COMPLETO_CURSO sobre el CursoRef del curso demo
+  await runQuery(
+    `MATCH (p:Usuario {id: $profNeo})
+     MERGE (cref:CursoRef {cursoId: $cursoId})
+     MERGE (p)-[ri:INSCRITO_EN]->(cref)
+       ON CREATE SET ri.fechaInscripcion = datetime()
+     MERGE (p)-[rc:COMPLETO_CURSO]->(cref)
+       ON CREATE SET rc.fechaCompletado = datetime()`,
+    { profNeo, cursoId },
+  );
+
+  // Notificación de logro de profesor_demo que recibe admin_demo (id fijo → idempotente)
+  await runQuery(
+    `MATCH (a:Usuario {id: $adminNeo}), (p:Usuario {id: $profNeo})
+     MERGE (a)<-[:RECIBIO]-(n:Notificacion {id: 'seed-logro-profesor-demo'})
+       ON CREATE SET n.type = 'logro', n.logroNombre = 'Primer curso',
+                     n.read = false, n.createdAt = datetime()
+     MERGE (n)-[:SOBRE]->(p)`,
+    { adminNeo, profNeo },
+  );
+
+  console.log('  ✓ feed académico demo listo');
+}
+
 async function main() {
   try {
     const categorias = await seedCategorias();
     const profesor = await seedProfesorDemo();
-    await seedAdminDemo();
+    const admin = await seedAdminDemo();
     const curso = await seedCursoDemo(profesor, categorias);
     await seedLogros();
     await seedEvaluacionDemo(curso);
+    await seedFeedAcademicoDemo(profesor, admin, curso);
     console.log('\n✓ Seed completado correctamente.');
     console.log('  Login del profesor demo:');
     console.log('    email:    profesor.demo@titi.local');
