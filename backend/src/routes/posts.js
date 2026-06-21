@@ -9,6 +9,7 @@ import prisma from '../prisma.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { cloudinaryEnabled, uploadBuffer, destroyAsset } from '../services/upload.service.js';
 import { otorgarGotasPorNeoId } from '../services/gotas.service.js';
+import { avanzarMisionesPorNeoId } from '../services/mision.service.js';
 
 const router = Router();
 
@@ -341,6 +342,7 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
 
     // Gotas: +5 por publicar (tope 2/día). No bloquea la respuesta.
     await otorgarGotasPorNeoId(req.user.id, 'social_post', { refId: id });
+    await avanzarMisionesPorNeoId(req.user.id, 'post');
 
     res.status(201).json({ success: true, data: { id, content, imageUrl, hashtags } });
   } catch (err) {

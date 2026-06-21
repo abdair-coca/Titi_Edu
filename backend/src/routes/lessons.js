@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { actualizarRacha, checkCursoCompletado } from '../services/progress.service.js';
 import { checkLogrosLeccion } from '../services/achievement.service.js';
 import { otorgarGotas } from '../services/gotas.service.js';
+import { avanzarMisiones } from '../services/mision.service.js';
 
 const router = Router();
 
@@ -243,6 +244,7 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
       if (cursoCompletado?.nuevo) {
         gotas += (await otorgarGotas(usuario.id, 'curso', { refId: leccion.modulo.cursoId })).otorgadas;
       }
+      await avanzarMisiones(usuario.id, 'leccion');
     } else {
       racha = {
         racha: usuario.racha,

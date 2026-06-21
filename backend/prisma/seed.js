@@ -275,6 +275,27 @@ async function seedLogros() {
   console.log(`  ✓ ${LOGROS_CATALOGO.length} logros listos`);
 }
 
+// Etapa 6 — pool de misiones diarias. Idempotente por `codigo`.
+const MISIONES_CATALOGO = [
+  { codigo: 'completar_2_lecciones', titulo: 'Estudiá dos lecciones', descripcion: 'Completá 2 lecciones hoy', evento: 'leccion', meta: 2, recompensa: 15 },
+  { codigo: 'aprobar_1_evaluacion', titulo: 'Aprobá una evaluación', descripcion: 'Aprobá 1 evaluación hoy', evento: 'evaluacion', meta: 1, recompensa: 20 },
+  { codigo: 'publicar_1_post', titulo: 'Compartí algo', descripcion: 'Publicá 1 post hoy', evento: 'post', meta: 1, recompensa: 10 },
+  { codigo: 'comentar_1_vez', titulo: 'Sumate a la charla', descripcion: 'Dejá 1 comentario hoy', evento: 'comentario', meta: 1, recompensa: 10 },
+  { codigo: 'seguir_1_persona', titulo: 'Hacé un amigo', descripcion: 'Seguí a 1 persona hoy', evento: 'follow', meta: 1, recompensa: 10 },
+];
+
+async function seedMisiones() {
+  console.log('→ Sembrando pool de misiones...');
+  for (const m of MISIONES_CATALOGO) {
+    await prisma.mision.upsert({
+      where: { codigo: m.codigo },
+      update: { titulo: m.titulo, descripcion: m.descripcion, evento: m.evento, meta: m.meta, recompensa: m.recompensa, activa: true },
+      create: m,
+    });
+  }
+  console.log(`  ✓ ${MISIONES_CATALOGO.length} misiones listas`);
+}
+
 async function seedEvaluacionDemo(curso) {
   console.log('→ Sembrando evaluación final demo...');
   const existente = await prisma.evaluacion.findFirst({
@@ -382,6 +403,7 @@ async function main() {
     const admin = await seedAdminDemo();
     const curso = await seedCursoDemo(profesor, categorias);
     await seedLogros();
+    await seedMisiones();
     await seedEvaluacionDemo(curso);
     await seedFeedAcademicoDemo(profesor, admin, curso);
     console.log('\n✓ Seed completado correctamente.');

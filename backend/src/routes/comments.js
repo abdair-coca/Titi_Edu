@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { runQuery } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { otorgarGotasPorNeoId } from '../services/gotas.service.js';
+import { avanzarMisionesPorNeoId } from '../services/mision.service.js';
 
 const router = Router();
 
@@ -128,6 +129,7 @@ router.post('/:postId', requireAuth, async (req, res) => {
 
     // Gotas: +2 por comentar (tope 5/día). No bloquea la respuesta.
     await otorgarGotasPorNeoId(req.user.id, 'social_comment');
+    await avanzarMisionesPorNeoId(req.user.id, 'comentario');
 
     res.status(201).json({ success: true, data: { comment: serializeComment(records[0]) } });
   } catch (err) {
