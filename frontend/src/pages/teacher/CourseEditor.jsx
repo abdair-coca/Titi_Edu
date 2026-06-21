@@ -202,7 +202,7 @@ export default function CourseEditor() {
             className="titi-input"
           />
           <p className="text-xs text-gray-400 mt-1">
-            Por ahora dejá una URL pública. La subida directa llega en Etapa 5.
+            Pegá la URL pública de una imagen (por ejemplo de Unsplash o tu Drive).
           </p>
         </Field>
 

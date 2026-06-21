@@ -54,6 +54,10 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true }));
+// Estático /uploads: se mantiene para dos casos — el fallback a disco en dev
+// (cuando no hay credenciales de Cloudinary) y los archivos legacy previos a
+// la migración. En prod con Cloudinary configurado queda inactivo (Railway
+// tiene FS efímero, así que ningún archivo nuevo aterriza aquí).
 app.use('/uploads', express.static(uploadsDir));
 
 app.get('/api/health', (req, res) => {
