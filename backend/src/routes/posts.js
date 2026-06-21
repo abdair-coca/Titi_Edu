@@ -8,6 +8,7 @@ import { runQuery, toNumber } from '../db.js';
 import prisma from '../prisma.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { cloudinaryEnabled, uploadBuffer, destroyAsset } from '../services/upload.service.js';
+import { otorgarGotasPorNeoId } from '../services/gotas.service.js';
 
 const router = Router();
 
@@ -338,6 +339,9 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
       );
     }
 
+    // Gotas: +5 por publicar (tope 2/día). No bloquea la respuesta.
+    await otorgarGotasPorNeoId(req.user.id, 'social_post', { refId: id });
+
     res.status(201).json({ success: true, data: { id, content, imageUrl, hashtags } });
   } catch (err) {
     console.error('POST /posts error', err);
@@ -413,6 +417,8 @@ router.post('/:id/like', requireAuth, async (req, res) => {
            MERGE (n)-[:SOBRE]->(p)`,
           { ownerId, actorId: req.user.id, postId: id, notifId }
         );
+        // Gotas: +1 al dueño del post por recibir un like (tope 10/día).
+        await otorgarGotasPorNeoId(ownerId, 'social_like', { refId: id });
       }
     }
 

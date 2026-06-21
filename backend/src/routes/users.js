@@ -4,6 +4,7 @@ import { runQuery, toNumber } from '../db.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import prisma from '../prisma.js';
 import { checkLogroSocial } from '../services/achievement.service.js';
+import { otorgarGotasPorNeoId } from '../services/gotas.service.js';
 
 const router = Router();
 
@@ -166,6 +167,11 @@ router.post('/:username/follow', requireAuth, async (req, res) => {
       }
     } catch (logroErr) {
       console.error('follow: error chequeando logro social', logroErr);
+    }
+
+    // Gotas: +3 por seguir a alguien nuevo (tope 3/día). No bloquea la respuesta.
+    if (records[0].get('fresh')) {
+      await otorgarGotasPorNeoId(req.user.id, 'social_follow');
     }
 
     res.json({ success: true, data: { following: records[0].get('username'), logros } });
