@@ -90,17 +90,36 @@ const POST_QUERY_TAIL = `
          sound, location
 `;
 
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 50;
+
+// Lee ?cursor=<ISO>&limit=N. El cursor es el createdAt del último item de la
+// página previa: paginación cursor-based por createdAt, estable ante inserciones.
+function parsePageParams(req) {
+  const limit = Math.min(MAX_LIMIT, Math.max(1, Number(req.query.limit) || DEFAULT_LIMIT));
+  const cursor = (req.query.cursor ?? '').toString().trim() || null;
+  return { limit, cursor };
+}
+
+// nextCursor = createdAt del último item si la página vino llena (puede haber más).
+function nextCursorFrom(items, limit) {
+  return items.length === limit ? items[items.length - 1].createdAt : null;
+}
+
 // ---- Feed ----
 router.get('/feed', requireAuth, async (req, res) => {
   try {
+    const { limit, cursor } = parsePageParams(req);
     const records = await runQuery(
       `MATCH (me:Usuario {id: $userId})-[:SIGUIO]->(u:Usuario)-[:PUBLICO]->(p:Post)
+       ${cursor ? 'WHERE p.createdAt < datetime($cursor)' : ''}
        ${POST_QUERY_TAIL}
        ORDER BY p.createdAt DESC
-       LIMIT 50`,
-      { userId: req.user.id }
+       LIMIT toInteger($limit)`,
+      { userId: req.user.id, limit, cursor }
     );
-    res.json({ success: true, data: { posts: records.map(serializePost) } });
+    const posts = records.map(serializePost);
+    res.json({ success: true, data: { posts, nextCursor: nextCursorFrom(posts, limit) } });
   } catch (err) {
     console.error('GET /feed error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo feed' });
@@ -110,24 +129,32 @@ router.get('/feed', requireAuth, async (req, res) => {
 // ---- Feed académico — actividad de cursos/logros de gente que sigo ----
 router.get('/feed/academic', requireAuth, async (req, res) => {
   try {
+    const { limit, cursor } = parsePageParams(req);
+    // El cursor filtra cada rama del UNION por su propia fecha (createdAt mezclado).
+    const wInsc = cursor ? 'WHERE r.fechaInscripcion < datetime($cursor)' : '';
+    const wComp = cursor ? 'WHERE r.fechaCompletado < datetime($cursor)' : '';
+    const wLogro = cursor ? 'WHERE n.createdAt < datetime($cursor)' : '';
     // Para 'logro' se matchea vía RECIBIO (mi notificación), no vía SOBRE+SIGUIO:
     // las notificaciones se crean una por seguidor, así que SOBRE duplicaría.
     const records = await runQuery(
       `MATCH (me:Usuario {id: $userId})-[:SIGUIO]->(amigo:Usuario)-[r:INSCRITO_EN]->(ref:CursoRef)
+       ${wInsc}
        RETURN amigo.username AS actorUsername, amigo.avatarUrl AS actorAvatarUrl,
               'inscripcion' AS type, ref.cursoId AS cursoId, null AS logroNombre,
               r.fechaInscripcion AS createdAt
        UNION
        MATCH (me:Usuario {id: $userId})-[:SIGUIO]->(amigo:Usuario)-[r:COMPLETO_CURSO]->(ref:CursoRef)
+       ${wComp}
        RETURN amigo.username AS actorUsername, amigo.avatarUrl AS actorAvatarUrl,
               'curso_completado' AS type, ref.cursoId AS cursoId, null AS logroNombre,
               r.fechaCompletado AS createdAt
        UNION
        MATCH (me:Usuario {id: $userId})<-[:RECIBIO]-(n:Notificacion {type: 'logro'})-[:SOBRE]->(amigo:Usuario)
+       ${wLogro}
        RETURN amigo.username AS actorUsername, amigo.avatarUrl AS actorAvatarUrl,
               'logro' AS type, null AS cursoId, n.logroNombre AS logroNombre,
               n.createdAt AS createdAt`,
-      { userId: req.user.id }
+      { userId: req.user.id, cursor }
     );
 
     let activity = records.map((r) => ({
@@ -154,11 +181,11 @@ router.get('/feed/academic', requireAuth, async (req, res) => {
       );
     }
 
-    // Ordenar por fecha DESC y limitar (sin paginación pesada — Etapa 5)
+    // Ordenar por fecha DESC y recortar a la página pedida.
     activity.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    activity = activity.slice(0, 50);
+    activity = activity.slice(0, limit);
 
-    res.json({ success: true, data: { activity } });
+    res.json({ success: true, data: { activity, nextCursor: nextCursorFrom(activity, limit) } });
   } catch (err) {
     console.error('GET /feed/academic error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo feed académico' });
@@ -169,14 +196,17 @@ router.get('/feed/academic', requireAuth, async (req, res) => {
 router.get('/explore', optionalAuth, async (req, res) => {
   try {
     const userId = req.user?.id ?? null;
+    const { limit, cursor } = parsePageParams(req);
     const records = await runQuery(
       `MATCH (u:Usuario)-[:PUBLICO]->(p:Post)
+       ${cursor ? 'WHERE p.createdAt < datetime($cursor)' : ''}
        ${POST_QUERY_TAIL}
        ORDER BY p.createdAt DESC
-       LIMIT 50`,
-      { userId }
+       LIMIT toInteger($limit)`,
+      { userId, limit, cursor }
     );
-    res.json({ success: true, data: { posts: records.map(serializePost) } });
+    const posts = records.map(serializePost);
+    res.json({ success: true, data: { posts, nextCursor: nextCursorFrom(posts, limit) } });
   } catch (err) {
     console.error('GET /explore error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo explore' });

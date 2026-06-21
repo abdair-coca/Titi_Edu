@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import { useStaggerReveal } from '../lib/motion.js';
@@ -10,23 +10,31 @@ import TitiMascot from '../components/TitiMascot.jsx';
 export default function Feed() {
   const [posts, setPosts] = useState([]);
   const [academic, setAcademic] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
 
+  // Carga inicial: primera página de posts sociales + actividad académica.
+  // El académico es complementario (se carga una vez); la paginación es del social.
   const fetchFeed = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const [postsRes, acadRes] = await Promise.allSettled([
-        client.get('/api/posts/feed'),
+        client.get('/api/posts/feed', { params: { limit: 20 } }),
         client.get('/api/posts/feed/academic'),
       ]);
 
       // El feed social es el principal: si falla, mostramos error.
       if (postsRes.status === 'rejected') throw postsRes.reason;
       const postsData = postsRes.value.data;
-      if (postsData?.success) setPosts(postsData.data.posts || []);
-      else setError(postsData?.message || 'No se pudo cargar el feed');
+      if (postsData?.success) {
+        setPosts(postsData.data.posts || []);
+        setNextCursor(postsData.data.nextCursor ?? null);
+      } else {
+        setError(postsData?.message || 'No se pudo cargar el feed');
+      }
 
       // El feed académico es complementario: si falla, no rompe el feed.
       if (acadRes.status === 'fulfilled' && acadRes.value.data?.success) {
@@ -41,6 +49,22 @@ export default function Feed() {
     }
   }, []);
 
+  // Trae la siguiente página de posts sociales y la anexa.
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const { data } = await client.get('/api/posts/feed', {
+        params: { cursor: nextCursor, limit: 20 },
+      });
+      if (data?.success) {
+        setPosts((prev) => [...prev, ...(data.data.posts || [])]);
+        setNextCursor(data.data.nextCursor ?? null);
+      }
+    } catch { /* mantenemos lo cargado; el sentinel reintenta al volver a verse */ }
+    finally { setLoadingMore(false); }
+  }, [nextCursor, loadingMore]);
+
   useEffect(() => { fetchFeed(); }, [fetchFeed]);
 
   const handleDelete = useCallback((id) => {
@@ -49,6 +73,20 @@ export default function Feed() {
   const handleEdit = useCallback((updated) => {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
   }, []);
+
+  // Scroll infinito: el sentinel dispara loadMore al acercarse al viewport.
+  const sentinelRef = useRef(null);
+  useEffect(() => {
+    if (!nextCursor) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore(); },
+      { rootMargin: '300px' },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [nextCursor, loadMore]);
 
   // Mezclar posts + actividad académica en una sola línea de tiempo (DESC).
   const timeline = [
@@ -59,7 +97,8 @@ export default function Feed() {
   const isEmpty = timeline.length === 0;
 
   // Entrada escalonada de las tarjetas del feed (GSAP, respeta reduced-motion).
-  const timelineRef = useStaggerReveal([timeline.length]);
+  // Atada a [loading] para animar solo en la carga inicial, no al anexar páginas.
+  const timelineRef = useStaggerReveal([loading]);
 
   return (
     <div className="max-w-xl mx-auto">
@@ -110,6 +149,11 @@ export default function Feed() {
             )
           )}
         </div>
+      )}
+
+      {nextCursor && <div ref={sentinelRef} aria-hidden className="h-1" />}
+      {loadingMore && (
+        <div className="py-6 text-center text-sm text-titi-muted font-semibold">Cargando más…</div>
       )}
     </div>
   );

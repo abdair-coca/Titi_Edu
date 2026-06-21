@@ -170,9 +170,9 @@ router.put('/courses/:id/approve', async (req, res) => {
 
 // ---- DELETE /courses/:id  — borrado forzado (override del 409) ----
 // A diferencia del DELETE de courses.js, borra aunque tenga inscripciones.
-// Cascada completa en orden FK-safe. Nota: borra certificados — el schema
-// actual tiene `Certificado.cursoId` NOT NULL, así que no se pueden preservar
-// sin migración (la propuesta de §6.2 queda pendiente).
+// Cascada completa en orden FK-safe. Los certificados se PRESERVAN: se les
+// pone cursoId = null (el título ya está congelado en cursoTitulo), porque un
+// certificado emitido es un hecho histórico que no debe desaparecer.
 router.delete('/courses/:id', async (req, res) => {
   try {
     const curso = await prisma.curso.findUnique({
@@ -215,7 +215,8 @@ router.delete('/courses/:id', async (req, res) => {
         }
         if (moduloIds.length) await tx.modulo.deleteMany({ where: { id: { in: moduloIds } } });
         await tx.inscripcion.deleteMany({ where: { cursoId: curso.id } });
-        await tx.certificado.deleteMany({ where: { cursoId: curso.id } });
+        // Preservar certificados: desvincular del curso (el título queda congelado).
+        await tx.certificado.updateMany({ where: { cursoId: curso.id }, data: { cursoId: null } });
         await tx.cursoProfesor.deleteMany({ where: { cursoId: curso.id } });
         await tx.curso.delete({ where: { id: curso.id } });
       },

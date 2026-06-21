@@ -40,6 +40,9 @@ export async function initConstraints() {
     'CREATE CONSTRAINT notificacion_id IF NOT EXISTS FOR (n:Notificacion) REQUIRE n.id IS UNIQUE',
     'CREATE CONSTRAINT sonido_id IF NOT EXISTS FOR (s:Sonido) REQUIRE s.id IS UNIQUE',
     'CREATE CONSTRAINT ubicacion_id IF NOT EXISTS FOR (u:Ubicacion) REQUIRE u.id IS UNIQUE',
+    // CursoRef no es único (varias relaciones lo referencian), pero el feed
+    // académico y las recomendaciones filtran por cursoId — índice no-único.
+    'CREATE INDEX cursoref_cursoId IF NOT EXISTS FOR (r:CursoRef) ON (r.cursoId)',
   ];
   for (const c of constraints) await runQuery(c);
 }

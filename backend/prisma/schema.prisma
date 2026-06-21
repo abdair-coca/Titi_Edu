@@ -73,6 +73,8 @@ model Curso {
   modulos       Modulo[]
   inscripciones Inscripcion[]
   certificados  Certificado[]
+
+  @@index([publicado, categoriaId])
 }
 
 model CursoProfesor {
@@ -117,6 +119,8 @@ model Material {
   tipo      String // 'pdf' | 'word' | 'imagen' | 'codigo' | 'otro'
   leccionId String
   leccion   Leccion @relation(fields: [leccionId], references: [id])
+
+  @@index([leccionId])
 }
 
 model Evaluacion {
@@ -161,6 +165,7 @@ model Inscripcion {
   curso            Curso     @relation(fields: [cursoId], references: [id])
 
   @@unique([usuarioId, cursoId])
+  @@index([usuarioId])
 }
 
 model Progreso {
@@ -173,6 +178,7 @@ model Progreso {
   leccion         Leccion   @relation(fields: [leccionId], references: [id])
 
   @@unique([usuarioId, leccionId])
+  @@index([usuarioId])
 }
 
 model NotaLeccion {
@@ -232,9 +238,13 @@ model LogroUsuario {
 model Certificado {
   id           String   @id @default(uuid())
   usuarioId    String
-  cursoId      String
+  // cursoId nullable + cursoTitulo snapshot: un certificado emitido es un hecho
+  // histórico. Si se borra el curso, el FK queda en NULL (SetNull) pero el título
+  // queda congelado, así el certificado se preserva en vez de desaparecer.
+  cursoId      String?
+  cursoTitulo  String   @default("")
   codigoVerif  String   @unique @default(uuid())
   fechaEmision DateTime @default(now())
   usuario      Usuario  @relation(fields: [usuarioId], references: [id])
-  curso        Curso    @relation(fields: [cursoId], references: [id])
+  curso        Curso?   @relation(fields: [cursoId], references: [id], onDelete: SetNull)
 }

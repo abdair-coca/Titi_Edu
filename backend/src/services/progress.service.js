@@ -131,8 +131,13 @@ export async function checkCursoCompletado(usuarioId, cursoId) {
       where: { usuarioId, cursoId },
     });
     if (!certificado) {
+      // Snapshot del título: si el curso se borra luego, el certificado lo conserva.
+      const curso = await prisma.curso.findUnique({
+        where: { id: cursoId },
+        select: { titulo: true },
+      });
       certificado = await prisma.certificado.create({
-        data: { usuarioId, cursoId },
+        data: { usuarioId, cursoId, cursoTitulo: curso?.titulo ?? '' },
       });
     }
 

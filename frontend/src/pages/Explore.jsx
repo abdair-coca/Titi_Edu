@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import PostCard from '../components/PostCard.jsx';
@@ -56,23 +56,42 @@ function SearchBar({ value, onChange }) {
 
 function ExploreFeed() {
   const [posts, setPosts] = useState([]);
+  const [nextCursor, setNextCursor] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchExplore = useCallback(async () => {
+  // Trae una página: si hay cursor, anexa; si no, reemplaza (carga inicial).
+  const fetchPage = useCallback(async (cursor) => {
+    const { data } = await client.get('/api/posts/explore', {
+      params: { cursor: cursor || undefined, limit: 20 },
+    });
+    if (!data?.success) throw new Error(data?.message || 'No se pudo cargar');
+    setPosts((prev) => (cursor ? [...prev, ...(data.data.posts || [])] : data.data.posts || []));
+    setNextCursor(data.data.nextCursor ?? null);
+  }, []);
+
+  const fetchFirst = useCallback(async () => {
     setLoading(true); setError(null);
     try {
-      const { data } = await client.get('/api/posts/explore');
-      if (data?.success) setPosts(data.data.posts || []);
-      else setError(data?.message || 'No se pudo cargar');
+      await fetchPage(null);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Error de red');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [fetchPage]);
 
-  useEffect(() => { fetchExplore(); }, [fetchExplore]);
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      await fetchPage(nextCursor);
+    } catch { /* mantenemos lo cargado; el sentinel reintenta al volver a verse */ }
+    finally { setLoadingMore(false); }
+  }, [nextCursor, loadingMore, fetchPage]);
+
+  useEffect(() => { fetchFirst(); }, [fetchFirst]);
 
   const handleDelete = useCallback((id) => {
     setPosts((prev) => prev.filter((p) => p.id !== id));
@@ -81,7 +100,22 @@ function ExploreFeed() {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
   }, []);
 
-  const listRef = useStaggerReveal([posts.length]);
+  // Scroll infinito: el sentinel dispara loadMore al acercarse al viewport.
+  const sentinelRef = useRef(null);
+  useEffect(() => {
+    if (!nextCursor) return;
+    const el = sentinelRef.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) loadMore(); },
+      { rootMargin: '300px' },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [nextCursor, loadMore]);
+
+  // Anima una sola vez al terminar la carga inicial (no al anexar páginas).
+  const listRef = useStaggerReveal([loading]);
 
   if (loading) {
     return <div className="titi-card p-8 text-center text-titi-muted font-semibold">Cargando…</div>;
@@ -91,7 +125,7 @@ function ExploreFeed() {
       <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
         <p className="text-titi-red font-bold mb-2">Error</p>
         <p className="text-sm text-titi-muted mb-4">{error}</p>
-        <button onClick={fetchExplore} className="titi-btn-primary">Reintentar</button>
+        <button onClick={fetchFirst} className="titi-btn-primary">Reintentar</button>
       </div>
     );
   }
@@ -103,16 +137,22 @@ function ExploreFeed() {
     );
   }
   return (
-    <div ref={listRef}>
-      {posts.map((p) => (
-        <PostCard
-          key={p.id}
-          post={p}
-          onDelete={handleDelete}
-          onEdit={handleEdit}
-        />
-      ))}
-    </div>
+    <>
+      <div ref={listRef}>
+        {posts.map((p) => (
+          <PostCard
+            key={p.id}
+            post={p}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
+          />
+        ))}
+      </div>
+      {nextCursor && <div ref={sentinelRef} aria-hidden className="h-1" />}
+      {loadingMore && (
+        <div className="py-6 text-center text-sm text-titi-muted font-semibold">Cargando más…</div>
+      )}
+    </>
   );
 }
 
