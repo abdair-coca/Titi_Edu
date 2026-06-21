@@ -3,6 +3,7 @@ import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { actualizarRacha, checkCursoCompletado } from '../services/progress.service.js';
 import { checkLogrosLeccion } from '../services/achievement.service.js';
+import { otorgarGotas } from '../services/gotas.service.js';
 
 const router = Router();
 
@@ -229,12 +230,18 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
     let racha = null;
     let logros = [];
     let cursoCompletado = null;
+    let gotas = 0;
     if (primeraVez) {
       racha = await actualizarRacha(usuario.id);
       logros = await checkLogrosLeccion(usuario.id, { racha: racha?.racha ?? 0 });
       cursoCompletado = await checkCursoCompletado(usuario.id, leccion.modulo.cursoId);
       if (cursoCompletado?.logros?.length) {
         logros.push(...cursoCompletado.logros);
+      }
+      // Gotas: +10 por la lección (idempotente por leccionId) y +50 si recién completó el curso.
+      gotas += (await otorgarGotas(usuario.id, 'leccion', { refId: leccion.id })).otorgadas;
+      if (cursoCompletado?.nuevo) {
+        gotas += (await otorgarGotas(usuario.id, 'curso', { refId: leccion.modulo.cursoId })).otorgadas;
       }
     } else {
       racha = {
@@ -252,6 +259,7 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
         primeraVez,
         racha,
         logros,
+        gotas,
         cursoCompletado: cursoCompletado?.completado
           ? {
               nuevo: Boolean(cursoCompletado.nuevo),

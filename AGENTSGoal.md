@@ -47,6 +47,8 @@ PostgreSQL → Cursos, lecciones, evaluaciones, progreso, inscripciones
 ORM        → Prisma (PostgreSQL)
 Storage    → Disco local (Etapa 2) → Cloudinary (Etapa 5)
 Deploy     → Railway (backend) + Vercel (frontend)
+Motion     → GSAP (UI, desde Etapa 3) + Framer Motion (mascota Titi + gamificación, desde Etapa 6)
+Mascota    → /Titi.png estático (Etapas 1–5) → SVG por partes animado con Framer Motion (Etapa 6)
 ```
 
 **Versiones críticas**: Node 20 LTS, Prisma 5+, React 18 (no 19), Tailwind 3 (no 4).
@@ -689,6 +691,67 @@ const MENSAJES_TITI = {
 
 ---
 
+### 📋 Etapa 6 — Gamificación + Titi Vivo (v2.0.0)
+
+**Dependencias:** Etapa 5 cerrada (v1.0.0 live).
+
+**Objetivo:** **engagement y retención.** Convertir el "progreso visible" (principio de diseño §1.3) en un loop diario adictivo —gotas, misiones, racha— y darle a la mascota Titi una presencia viva que celebra y sufre con el usuario, todo en clave **social entre amigos** (sin presión de extraños, fiel a "cálido antes que agresivo").
+
+**Apuesta central:** un sistema de recompensa diario con identidad propia (las **gotas** como XP de Titi), rankings cálidos solo entre amigos, y una mascota Titi animada que reacciona a lo que pasa.
+
+#### Decisiones de stack (nuevas)
+
+- **Framer Motion** entra como dependencia nueva del frontend, para (a) la mascota Titi y (b) las animaciones de gamificación (toasts de gotas, subir de nivel, ranking). **GSAP se mantiene** para el resto de la UI (entradas, stagger de `motion.md`). Conviven; no se migra GSAP.
+- **Mascota Titi en SVG por partes:** se reemplaza el `/Titi.png` estático por un **SVG vectorial separado por capas** (cabeza, ojos, brazos, cola, cuerpo), animado con Framer Motion por estado. Esto **actualiza la regla de la mascota** (§8.3, §12): `TitiMascot` pasa a renderizar el SVG animado; el PNG queda como favicon/fallback. (Se descartó Rive por ser de pago.)
+
+#### Alcance
+
+**1. Sistema de gotas (XP).**
+- Las **gotas** son la unidad de XP de Titi. Se ganan por: **aprender** (completar lección / aprobar evaluación / completar curso), **misiones diarias**, y **actividad social** (publicar, recibir likes, comentar, seguir) con **topes diarios por acción** (anti-farmeo).
+- Modelo diseñado **para ambos usos**: cada usuario tiene gotas **acumuladas** (lifetime, alimentan ranking y futuros niveles) y un **saldo gastable** (se acumula, reservado para la tienda futura). **En esta etapa NO hay tienda** (queda para Etapa 7); el saldo solo se acumula.
+- **Ledger** de movimientos (`MovimientoGota`: cantidad, motivo, timestamp) como fuente de verdad para auditar y para sumar por semana. La racha **se mantiene separada** de las gotas (no las otorga directamente), pero se muestra junto a ellas.
+
+**2. Misiones diarias.**
+- **3 misiones por día** desde un pool de templates, asignadas por usuario, **reset a medianoche** (TZ server), idempotente. Cada una otorga gotas al completarse.
+
+**3. Ranking de amigos (semanal).**
+- Leaderboard de **gotas-de-la-semana** entre la gente que sigo: cruce del follow-graph de Neo4j ↔ gotas de Postgres (mismo patrón que el feed académico). **Solo amigos**, nunca extraños.
+- **Reset semanal** (lunes 00:00 TZ server). Al cierre, el **top recibe bonus de gotas + insignia "Top de la semana"**. Cómputo lazy (al primer acceso de la semana nueva) con opción de cron en Railway.
+
+**4. Titi vivo (SVG + Framer Motion).**
+- `TitiMascot` re-hecho: SVG por partes con prop `state` (idle, celebra, triste, racha, festejo-de-nivel…), que **reacciona a eventos**: completar lección, ganar gotas, subir en el ranking, mantener/romper racha, desbloquear logro. Respeta `prefers-reduced-motion`.
+
+#### Deliverables
+
+- Backend: `services/gotas.service.js`, `services/mision.service.js`, `services/ranking.service.js`; modelos Postgres nuevos (`MovimientoGota`, `Mision`, `MisionUsuario`, insignia/ranking semanal) + migraciones; endpoints `/api/gotas`, `/api/missions`, `/api/ranking/friends`; integración en los triggers existentes (lección complete, evaluación, post/like/comment/follow).
+- Frontend: `TitiMascot` (SVG + Framer), `GotasCounter`, `GotaToast`, `DailyMissions`, `FriendsLeaderboard`, `LevelUp`/celebración; contador de gotas + racha visibles en la navegación principal; dep `framer-motion`; doc de motion React (extender `motion.md` o nuevo `motion-react.md`).
+- Tests: unit de los 3 services (topes diarios, asignación/reset/claim de misiones, suma semanal + premio) + integration de los endpoints. Mantener **≥30%** en `routes/` + `services/`.
+
+#### Subfases (commitables, en orden)
+
+- **6.1 — Gotas:** modelo + ledger + `gotas.service` con topes + integración en triggers de aprendizaje y social.
+- **6.2 — Misiones diarias:** modelos + `mision.service` + endpoints + panel UI.
+- **6.3 — Ranking de amigos semanal:** cruce dual-DB + reset + premio (gotas + insignia) + UI leaderboard.
+- **6.4 — Titi vivo:** SVG de Titi por partes + Framer Motion + estados reactivos; reemplaza `TitiMascot`.
+- **6.5 — UI de gamificación:** contadores, toasts de gotas, level-up; surface en Feed/Learn/Profile/Navbar.
+- **6.6 — Tests + docs + cierre:** doc de motion React, actualizar convenciones de mascota, smoke, tag `v2.0.0`.
+
+#### Criterios de aceptación
+
+- [ ] Completar una lección otorga gotas y dispara una animación de Titi.
+- [ ] Las gotas por actividad social tienen tope diario (anti-farmeo).
+- [ ] Hay 3 misiones diarias que resetean cada día y otorgan gotas al completarse.
+- [ ] El ranking de amigos muestra gotas de la semana, solo de gente que sigo.
+- [ ] Al cerrar la semana, el top recibe gotas + insignia.
+- [ ] Titi es un SVG animado por partes (Framer Motion) que reacciona a eventos y respeta `prefers-reduced-motion`.
+- [ ] La economía guarda saldo gastable (listo para la tienda futura) aunque no haya tienda.
+- [ ] Contador de gotas + racha visibles en la navegación principal.
+- [ ] Tests verdes, cobertura ≥30% en `routes/` + `services/`.
+
+**Detalle de subfases y checkpoints:** se desarrolla en `AGENTS.md` (plan de la etapa) al arrancar.
+
+---
+
 ## 10. Workflow de desarrollo local
 
 ### Setup inicial
@@ -882,11 +945,25 @@ Cada **cierre de etapa** sube una **nueva versión** a git: merge a `main` + tag
 | Etapa 3 — Evaluaciones y Progreso | `v0.3.0` | `v0.3.0` | ✅ | Quizzes, racha, logros, certificados |
 | Etapa 4 — Integración Social + Admin | `v0.4.0` | `v0.4.0` | ✅ | Feed académico, recomendaciones, panel admin |
 | Etapa 5 — Pulido y Deploy | `v1.0.0` | `v1.0.0` | ✅ | Cloudinary, tests, CI/CD, deploy público |
+| Etapa 6 — Gamificación + Titi Vivo | `v2.0.0` | `v2.0.0` | 📋 | Gotas (XP), misiones diarias, ranking de amigos semanal, mascota SVG animada (Framer Motion) |
+
+**Subversiones de la Etapa 6** (una por subfase, ver `AGENTS.md` §9):
+
+| Subfase | Tag | Estado |
+|---|---|---|
+| 6.1 Gotas | `v1.1.0` | 📋 |
+| 6.2 Misiones diarias | `v1.2.0` | 📋 |
+| 6.3 Ranking de amigos | `v1.3.0` | 📋 |
+| 6.4 Titi vivo (SVG + Framer) | `v1.4.0` | 📋 |
+| 6.5 UI de gamificación | `v1.5.0` | 📋 |
+| 6.6 Tests + docs + cierre | `v2.0.0` | 📋 |
 
 **Reglas:**
 - Solo se taggea sobre `main`, con árbol limpio y el smoke test de la etapa pasado.
 - Un tag `vX.Y.0` marca el cierre de una etapa. Bugfixes sueltos dentro de una etapa ya cerrada → bump de patch (`v0.4.1`, `v0.4.2`…).
 - El `MAJOR` salta a `1` recién en Etapa 5 (deploy público). Antes todo es `0.x` (sin garantía de estabilidad).
+- El `MAJOR` salta a `2` en Etapa 6: es un salto grande de producto (nueva economía de gotas + nueva tecnología de mascota), la "versión 2" de la app.
+- **Desde la Etapa 6 se taggean subversiones por subfase.** Para documentar mejor el avance, cada subfase cierra con un **MINOR** (`v1.1.0`…`v1.5.0`) y el cierre de la etapa corta el **MAJOR** (`v2.0.0`). El número de MINOR sigue el orden de cierre real de las subfases. Detalle en `AGENTS.md` §9.
 - Mensaje de tag describe la etapa, no el detalle (el detalle vive en §9 y en `AGENTS.md`).
 
 **Proceso de release al cerrar una etapa:**
