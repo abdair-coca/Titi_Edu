@@ -14,7 +14,7 @@ const DIR = '/titi';
 export const TITI_STATES = {
   // 6.4.1 PRUEBA: idle apunta a un placeholder .svg animado para validar el flujo.
   // Cuando exista el GIF real, cambiar a `${DIR}/titi-idle.gif`.
-  idle:     { src: `${DIR}/titi-idle.svg`,     loop: true },
+  idle:     { src: `${DIR}/titi-idle.gif`,     loop: true },
   celebra:  { src: `${DIR}/titi-celebra.gif`,  loop: false },
   triste:   { src: `${DIR}/titi-triste.gif`,   loop: false },
   racha:    { src: `${DIR}/titi-racha.gif`,    loop: true },

@@ -105,7 +105,7 @@ export default function Login() {
         {/* Titi mascot */}
         <div className="order-1 lg:order-2 flex justify-center">
           <TitiMascot
-            customSrc="/titi/idleTiti.gif"
+            mood="happy"
             message="¡Bienvenido a Titi! 🎉"
             size="xl"
           />
