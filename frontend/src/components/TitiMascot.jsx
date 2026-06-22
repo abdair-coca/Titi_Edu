@@ -1,52 +1,57 @@
-// TitiMascot — componente reutilizable de la mascota Titi
-// Mientras solo hay una imagen, todos los moods comparten /Titi.png.
-// En etapas futuras se reemplazarán por variantes (happy.png, sad.png, etc.)
+// TitiMascot — la mascota Titi. Reproduce la animación (GIF/WebP/APNG) que
+// corresponde al estado, con entrada pop (GSAP) y burbuja de mensaje.
+//
+// - Fiel al arte real: usa los assets de /public/titi/ (las animaciones que
+//   vos creás). Mientras un asset no exista, cae al /Titi.png estático.
+// - Respeta prefers-reduced-motion: muestra el PNG estático (sin animación).
+// - API retrocompatible: acepta `mood` (como antes) o `state` directo.
 import { usePopIn } from '../lib/motion.js';
+import { TITI_STATES, TITI_POSTER, MOOD_TO_STATE } from './titi/titiAssets.js';
 
-const moods = {
-  happy: { emoji: '🎉', default: '¡Así se hace!' },
-  sad: { emoji: '😔', default: 'No encontré nada...' },
-  surprised: { emoji: '😮', default: '¡Wow!' },
-  motivating: { emoji: '💪', default: '¡Tú puedes!' },
-  idle: { emoji: '😊', default: 'Todo tranquilo por aquí' },
-  celebrating: { emoji: '🏆', default: '¡Lo lograste!' },
-  fire: { emoji: '🔥', default: '¡Estás en racha!' },
-  proud: { emoji: '⭐', default: '¡Sabía que podías!' },
+const sizes = { sm: 'w-16 h-16', md: 'w-24 h-24', lg: 'w-36 h-36', xl: 'w-48 h-48' };
+
+const moodMsg = {
+  happy: '¡Así se hace!', sad: 'No encontré nada...', surprised: '¡Wow!',
+  motivating: '¡Tú puedes!', idle: 'Todo tranquilo por aquí', celebrating: '¡Lo lograste!',
+  fire: '¡Estás en racha!', proud: '¡Sabía que podías!',
+};
+const moodEmoji = {
+  happy: '🎉', sad: '😔', surprised: '😮', motivating: '💪',
+  idle: '😊', celebrating: '🏆', fire: '🔥', proud: '⭐',
 };
 
-const sizes = {
-  sm: 'w-16 h-16',
-  md: 'w-24 h-24',
-  lg: 'w-36 h-36',
-  xl: 'w-48 h-48',
-};
+function prefersReducedMotion() {
+  return typeof window !== 'undefined'
+    && window.matchMedia
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
 
-export default function TitiMascot({
-  mood = 'happy',
-  message,
-  size = 'md',
-  className = '',
-}) {
-  const { emoji, default: defaultMsg } = moods[mood] || moods.happy;
-  const sizeClass = sizes[size] || sizes.md;
-  const text = message ?? defaultMsg;
+export default function TitiMascot({ mood = 'happy', state, message, size = 'md', className = '', customSrc }) {
   const popRef = usePopIn();
+  const resolved = state || MOOD_TO_STATE[mood] || 'idle';
+  const asset = TITI_STATES[resolved] || TITI_STATES.idle;
+  const sizeClass = sizes[size] || sizes.md;
+  const text = message ?? moodMsg[mood] ?? '';
+  const emoji = moodEmoji[mood] ?? '';
+
+  // Con reduced-motion mostramos el PNG estático; si no, la animación.
+  const src = prefersReducedMotion() ? TITI_POSTER : (customSrc || asset.src);
 
   return (
     <div ref={popRef} className={`flex flex-col items-center gap-3 ${className}`}>
       <img
-        src="/Titi.png"
+        src={src}
         alt="Titi"
         className={`${sizeClass} object-contain drop-shadow-lg select-none`}
         draggable={false}
+        // Si la animación todavía no existe, cae al Titi.png de siempre.
         onError={(e) => {
-          // Fallback si todavía no se subió la imagen
-          e.currentTarget.style.display = 'none';
+          if (!e.currentTarget.src.endsWith(TITI_POSTER)) e.currentTarget.src = TITI_POSTER;
         }}
       />
       {text && (
         <p className="text-titi-text font-bold text-center text-sm sm:text-base max-w-xs leading-snug">
-          <span aria-hidden="true" className="mr-1">{emoji}</span>
+          {emoji && <span aria-hidden="true" className="mr-1">{emoji}</span>}
           {text}
         </p>
       )}

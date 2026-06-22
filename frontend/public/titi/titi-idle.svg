@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 260" role="img" aria-label="Titi">
+  <!-- PLACEHOLDER de prueba (subfase 6.4.1). Reemplazar por titi-idle.gif real.
+       Es un SVG con animación CSS embebida: anima igual al cargarse como <img>,
+       así valida el flujo (carga, animación, fallback, reduced-motion). -->
+  <style>
+    @keyframes titiBob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-9px) } }
+    @keyframes titiBlink { 0%,90%,100% { transform: scaleY(1) } 95% { transform: scaleY(0.12) } }
+    #titi  { animation: titiBob 2.6s ease-in-out infinite; transform-origin: 120px 140px; }
+    #eyes  { animation: titiBlink 4.5s ease-in-out infinite; transform-origin: 120px 96px; }
+    @media (prefers-reduced-motion: reduce) { #titi, #eyes { animation: none } }
+  </style>
+
+  <!-- sombra -->
+  <ellipse cx="120" cy="244" rx="58" ry="11" fill="#000000" opacity="0.10"/>
+
+  <g id="titi">
+    <!-- cola -->
+    <path d="M168 196 q46 8 40 -34 q-4 -22 -23 -18 q-13 3 -8 16 q4 8 11 5"
+          fill="none" stroke="#F4B400" stroke-width="12" stroke-linecap="round"/>
+
+    <!-- cuerpo -->
+    <ellipse cx="120" cy="186" rx="50" ry="48" fill="#FFCE2E"/>
+    <ellipse cx="120" cy="194" rx="30" ry="32" fill="#FFF3D6"/>
+
+    <!-- patas -->
+    <ellipse cx="98" cy="232" rx="15" ry="9" fill="#F39A2B"/>
+    <ellipse cx="142" cy="232" rx="15" ry="9" fill="#F39A2B"/>
+
+    <!-- brazos -->
+    <ellipse cx="74" cy="184" rx="12" ry="22" fill="#FFCE2E" transform="rotate(10 74 184)"/>
+    <ellipse cx="166" cy="184" rx="12" ry="22" fill="#FFCE2E" transform="rotate(-10 166 184)"/>
+
+    <!-- orejas -->
+    <circle cx="74" cy="74" r="20" fill="#FFCE2E"/>
+    <circle cx="74" cy="74" r="10" fill="#FFE08A"/>
+    <circle cx="166" cy="74" r="20" fill="#FFCE2E"/>
+    <circle cx="166" cy="74" r="10" fill="#FFE08A"/>
+
+    <!-- cabeza -->
+    <circle cx="120" cy="98" r="52" fill="#FFD23D"/>
+
+    <!-- ojos -->
+    <g id="eyes">
+      <circle cx="102" cy="92" r="11" fill="#FFFFFF"/>
+      <circle cx="138" cy="92" r="11" fill="#FFFFFF"/>
+      <circle cx="104" cy="93" r="6.5" fill="#2B2533"/>
+      <circle cx="136" cy="93" r="6.5" fill="#2B2533"/>
+      <circle cx="106" cy="90" r="2.2" fill="#FFFFFF"/>
+      <circle cx="138" cy="90" r="2.2" fill="#FFFFFF"/>
+    </g>
+
+    <!-- nariz -->
+    <ellipse cx="120" cy="112" rx="6" ry="4.5" fill="#5A4632"/>
+
+    <!-- bigote blanco (la identidad de Titi) -->
+    <path d="M120 118 q-10 10 -34 8 q-22 -2 -28 -16 q16 8 30 4 q18 -5 32 4z" fill="#FFFFFF"/>
+    <path d="M120 118 q10 10 34 8 q22 -2 28 -16 q-16 8 -30 4 q-18 -5 -32 4z" fill="#FFFFFF"/>
+    <path d="M112 118 q8 9 16 0 q-8 5 -16 0z" fill="#FFFFFF"/>
+  </g>
+</svg>

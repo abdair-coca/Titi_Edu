@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #facc15; border-radius: 999px; }
+</style>
+</helmet>
+
+<div style="display:flex; height:100vh; width:100%; overflow:hidden; font-family:'Nunito Sans', sans-serif; background:#0e1626;">
+
+  <!-- ===== SIDEBAR (untouched) ===== -->
+  <aside style="width:92px; flex:none; background:#0e1626; display:flex; flex-direction:column; align-items:center; padding:18px 0 14px; height:100%;">
+    <div style="width:54px; height:54px; border-radius:16px; background:#fdfaf0; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 14px rgba(0,0,0,.25); margin-bottom:26px;">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="#0e1626"><path d="M12 2.6c-4 0-6.7 3-6.7 7v9.1c0 .9 1 1.4 1.7.9l1.3-.9 1.6 1.1c.4.3.9.3 1.3 0l1.5-1.1 1.5 1.1c.4.3.9.3 1.3 0l1.6-1.1 1.3.9c.7.5 1.7 0 1.7-.9V9.6c0-4-2.8-7-6.6-7Z"/><circle cx="9.4" cy="10.2" r="1.5" fill="#fdfaf0"/><circle cx="14.6" cy="10.2" r="1.5" fill="#fdfaf0"/></svg>
+    </div>
+    <nav style="display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center;">
+        <svg width="23" height="23" fill="none" stroke="#aeb6c6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 11.5 3 20 9.5V19a1.4 1.4 0 0 1-1.4 1.4H4.4A1.4 1.4 0 0 1 3 19Z"/><path d="M8.6 20.4V12h5.8v8.4"/></svg>
+      </div>
+      <div style="width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center;">
+        <svg width="23" height="23" fill="none" stroke="#aeb6c6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11.5" cy="11.5" r="8.5"/><path d="m15 8-2 5-5 2 2-5z"/></svg>
+      </div>
+      <div style="width:46px; height:46px; border-radius:13px; background:#facc15; display:flex; align-items:center; justify-content:center; box-shadow:0 6px 16px rgba(250,204,21,.35);">
+        <svg width="23" height="23" fill="none" stroke="#0e1626" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5h6a2.5 2.5 0 0 1 2.5 2.5v12a2 2 0 0 0-2-2H4Z"/><path d="M21 4.5h-6A2.5 2.5 0 0 0 12.5 7v12a2 2 0 0 1 2-2H21Z"/></svg>
+      </div>
+      <div style="width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center;">
+        <svg width="23" height="23" fill="none" stroke="#aeb6c6" stroke-width="1.8"><circle cx="11.5" cy="11.5" r="8.5"/><circle cx="11.5" cy="11.5" r="4.6"/><circle cx="11.5" cy="11.5" r="1"/></svg>
+      </div>
+      <div style="width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center;">
+        <svg width="23" height="23" fill="none" stroke="#aeb6c6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 3a5.5 5.5 0 0 0-5.5 5.5c0 5-2 6.5-2 6.5h15s-2-1.5-2-6.5A5.5 5.5 0 0 0 11.5 3Z"/><path d="M9.7 19a2 2 0 0 0 3.6 0"/></svg>
+      </div>
+      <div style="width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center;">
+        <svg width="23" height="23" fill="none" stroke="#aeb6c6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11.5" cy="8" r="4"/><path d="M4.5 20c0-3.6 3.1-5.6 7-5.6s7 2 7 5.6"/></svg>
+      </div>
+    </nav>
+    <div style="margin-top:auto; display:flex; flex-direction:column; align-items:center; gap:18px;">
+      <div style="display:flex; align-items:center; gap:5px; color:#fff; font-weight:700; font-size:15px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="#4aa8ff"><path d="M12 2.5S5 10 5 15a7 7 0 0 0 14 0c0-5-7-12.5-7-12.5Z"/></svg>1
+      </div>
+      <div style="width:42px; height:42px; border-radius:50%; background:#6b4a2e; overflow:hidden; display:flex; align-items:flex-end; justify-content:center; border:2px solid #1c2941;">
+        <svg width="34" height="34" viewBox="0 0 34 34"><circle cx="17" cy="13" r="7" fill="#f1c9a5"/><path d="M5 34c0-7 5.4-11 12-11s12 4 12 11Z" fill="#2b2b2b"/><path d="M10 9c0-4 3-6 7-6s7 2 7 6c0 0-3-2-7-2s-7 2-7 2Z" fill="#1a1a1a"/></svg>
+      </div>
+      <div style="width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center;">
+        <svg width="22" height="22" fill="none" stroke="#aeb6c6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5.5A1.5 1.5 0 0 0 4 4.5v14A1.5 1.5 0 0 0 5.5 20H9"/><path d="m15 16 4-4-4-4"/><path d="M19 12H9"/></svg>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN (scrolls) ===== -->
+  <main style="flex:1; height:100%; overflow-y:auto; background:#fbf6e3;">
+
+    <!-- Top promo bar -->
+    <div style="background:#facc15; color:#14213d; text-align:center; padding:11px 16px; font-size:14px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:9px;">
+      <svg width="15" height="15" fill="none" stroke="#14213d" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 1.5 9 6l4.5 1.5L9 9l-1.5 4.5L6 9 1.5 7.5 6 6Z"/></svg>
+      Cursos nuevos cada semana, creados por la comunidad Titi
+    </div>
+
+    <div style="max-width:1280px; margin:0 auto; padding:0 52px 0;">
+
+      <!-- ===== HERO ===== -->
+      <section style="display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.05fr); gap:40px; align-items:center; padding:46px 0 8px;">
+        <div>
+          <div style="display:inline-flex; align-items:center; gap:9px; background:#fff; border:1px solid #efe6c4; padding:6px 13px 6px 10px; border-radius:999px; margin-bottom:18px; box-shadow:0 2px 8px rgba(20,33,61,.05);">
+            <span style="width:22px; height:22px; border-radius:50%; background:#facc15; display:flex; align-items:center; justify-content:center;">
+              <svg width="12" height="12" fill="none" stroke="#0e1626" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6 5 9l5-6"/></svg>
+            </span>
+            <span style="font-size:12.5px; font-weight:700; color:#14213d;">Comunidad de aprendizaje</span>
+          </div>
+          <h1 style="font-family:'Poppins',sans-serif; font-weight:800; font-size:48px; line-height:1.03; color:#14213d; margin:0 0 16px; letter-spacing:-1px;">Aprendé algo nuevo, <span style="color:#dd5a2c;">hoy</span>.</h1>
+          <p style="font-size:18px; line-height:1.5; color:#6f6a52; margin:0 0 26px; font-weight:600; max-width:440px;">Cursos creados por personas como vos. Sumá lecciones cortas, ganá gotas y seguí tu propio ritmo en la comunidad Titi.</p>
+          <label style="position:relative; display:flex; align-items:center; max-width:460px; margin-bottom:18px;">
+            <svg style="position:absolute; left:18px;" width="19" height="19" fill="none" stroke="#a8a288" stroke-width="2" stroke-linecap="round"><circle cx="8.5" cy="8.5" r="6"/><path d="m17 17-4.2-4.2"/></svg>
+            <input value="{{ query }}" onInput="{{ onSearch }}" placeholder="¿Qué querés aprender hoy?" style="width:100%; height:58px; border-radius:16px; border:1.5px solid #ece2bf; background:#fff; padding:0 18px 0 46px; font-family:'Nunito Sans',sans-serif; font-size:16px; font-weight:600; color:#14213d; outline:none; box-shadow:0 4px 14px rgba(20,33,61,.06);" style-focus="border-color:#facc15; box-shadow:0 0 0 4px rgba(250,204,21,.18);" />
+          </label>
+          <div style="display:flex; align-items:center; gap:22px; flex-wrap:wrap;">
+            <div style="display:flex; align-items:baseline; gap:6px;"><span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:22px; color:#14213d;">8</span><span style="font-size:14px; color:#9a936f; font-weight:700;">cursos</span></div>
+            <div style="width:1px; height:22px; background:#e6dcb8;"></div>
+            <div style="display:flex; align-items:baseline; gap:6px;"><span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:22px; color:#14213d;">5</span><span style="font-size:14px; color:#9a936f; font-weight:700;">categorías</span></div>
+            <div style="width:1px; height:22px; background:#e6dcb8;"></div>
+            <div style="display:flex; align-items:baseline; gap:6px;"><span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:22px; color:#14213d;">4</span><span style="font-size:14px; color:#9a936f; font-weight:700;">profes de la comunidad</span></div>
+          </div>
+        </div>
+        <div style="position:relative; height:340px; border-radius:26px; background:linear-gradient(135deg,#14213d 0%,#243558 100%); overflow:hidden; display:flex; align-items:center; justify-content:center;">
+          <div style="position:absolute; width:230px; height:230px; border-radius:50%; background:radial-gradient(circle,#facc15 0%,rgba(250,204,21,0) 70%); top:-50px; right:-40px; opacity:.55;"></div>
+          <div style="position:absolute; width:170px; height:170px; border-radius:50%; background:radial-gradient(circle,#dd5a2c 0%,rgba(221,90,44,0) 70%); bottom:-40px; left:-30px; opacity:.5;"></div>
+          <div style="text-align:center; z-index:1;">
+            <div style="font-family:'Poppins',sans-serif; font-size:13px; letter-spacing:2px; text-transform:uppercase; color:rgba(253,250,240,.55); margin-bottom:8px;">ilustración</div>
+            <div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:26px; color:#fdfaf0;">Hero de la comunidad</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== FEATURED CATEGORIES ===== -->
+      <section style="padding:42px 0 8px;">
+        <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:22px;">
+          <div>
+            <h2 style="font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; color:#14213d; margin:0 0 4px; letter-spacing:-.3px;">Aprendé habilidades <span style="font-style:italic; color:#dd5a2c;">esenciales</span></h2>
+            <p style="font-size:15.5px; color:#8a8369; margin:0; font-weight:600;">Áreas destacadas para impulsar lo que estás construyendo.</p>
+          </div>
+          <div style="display:flex; gap:7px;">
+            <span style="width:9px; height:9px; border-radius:50%; background:#14213d;"></span>
+            <span style="width:9px; height:9px; border-radius:50%; background:#e0d6ac;"></span>
+            <span style="width:9px; height:9px; border-radius:50%; background:#e0d6ac;"></span>
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:22px;">
+          <sc-for list="{{ featured }}" as="f" hint-placeholder-count="3">
+            <article style="background:#fff; border:1.5px solid #efe6c4; border-radius:20px; overflow:hidden; cursor:pointer; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;" style-hover="transform:translateY(-5px); box-shadow:0 18px 34px rgba(20,33,61,.13); border-color:#facc15;">
+              <div style="height:150px; background:{{ f.thumb }}; display:flex; align-items:center; justify-content:center;">
+                <span style="font-family:'Poppins',sans-serif; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.75);">{{ f.topic }}</span>
+              </div>
+              <div style="padding:18px 20px 20px;">
+                <h3 style="font-family:'Poppins',sans-serif; font-weight:600; font-size:19px; color:#14213d; margin:0 0 6px;">{{ f.title }}</h3>
+                <p style="font-size:14px; color:#8a8369; margin:0 0 14px; font-weight:600; line-height:1.45;">{{ f.desc }}</p>
+                <span style="display:inline-flex; align-items:center; gap:7px; font-size:14px; font-weight:700; color:#dd5a2c;">Explorar área
+                  <svg width="15" height="15" fill="none" stroke="#dd5a2c" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5h9"/><path d="m8 3.5 4 4-4 4"/></svg>
+                </span>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- ===== TRENDING (skill tabs + cards) ===== -->
+      <section style="padding:46px 0 8px;">
+        <h2 style="font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; color:#14213d; margin:0 0 18px; letter-spacing:-.3px;">Cursos en tendencia</h2>
+        <div style="display:flex; gap:9px; flex-wrap:wrap; margin-bottom:24px;">
+          <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="6">
+            <button onClick="{{ t.onClick }}" style="border:1.5px solid {{ t.border }}; background:{{ t.bg }}; color:{{ t.color }}; height:38px; padding:0 17px; border-radius:999px; font-family:'Nunito Sans',sans-serif; font-size:14px; font-weight:700; cursor:pointer; transition:all .15s ease;" style-hover="border-color:#facc15;">{{ t.name }}</button>
+          </sc-for>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(252px, 1fr)); gap:22px;">
+          <sc-for list="{{ courses }}" as="c" hint-placeholder-count="4">
+            <article style="background:#fff; border:1.5px solid #efe6c4; border-radius:20px; overflow:hidden; cursor:pointer; transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease; display:flex; flex-direction:column;" style-hover="transform:translateY(-5px); box-shadow:0 18px 34px rgba(20,33,61,.13); border-color:#facc15;">
+              <div style="position:relative; height:150px; background:{{ c.thumb }}; display:flex; align-items:center; justify-content:center;">
+                <span style="font-family:'Poppins',sans-serif; font-size:13px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,.78);">{{ c.topic }}</span>
+                <div style="position:absolute; top:12px; left:12px; display:inline-flex; align-items:center; gap:6px; background:#fff; padding:5px 11px; border-radius:999px; box-shadow:0 3px 9px rgba(0,0,0,.16);">
+                  <span style="width:7px; height:7px; border-radius:50%; background:{{ c.levelColor }};"></span>
+                  <span style="font-size:12px; font-weight:700; color:#14213d;">{{ c.level }}</span>
+                </div>
+                <sc-if value="{{ c.badge }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:absolute; top:12px; right:12px; background:#14213d; color:#facc15; padding:5px 10px; border-radius:999px; font-size:11px; font-weight:800; letter-spacing:.4px;">{{ c.badge }}</div>
+                </sc-if>
+              </div>
+              <div style="padding:16px 18px 18px; display:flex; flex-direction:column; flex:1;">
+                <span style="font-size:11.5px; font-weight:700; letter-spacing:1.1px; text-transform:uppercase; color:#dd5a2c; margin-bottom:7px;">{{ c.category }}</span>
+                <h3 style="font-family:'Poppins',sans-serif; font-weight:600; font-size:18px; line-height:1.22; color:#14213d; margin:0 0 10px; text-wrap:pretty;">{{ c.title }}</h3>
+                <div style="display:flex; align-items:center; gap:7px; margin-bottom:14px;">
+                  <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:14px; color:#b8860b;">{{ c.rating }}</span>
+                  <span style="color:#facc15; font-size:14px; letter-spacing:1px;">★★★★★</span>
+                  <span style="font-size:12.5px; color:#9a936f; font-weight:600;">({{ c.students }})</span>
+                </div>
+                <div style="margin-top:auto; display:flex; align-items:center; gap:10px;">
+                  <span style="width:28px; height:28px; border-radius:50%; background:#14213d; color:#fbf6e3; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex:none;">{{ c.initial }}</span>
+                  <span style="font-size:13px; font-weight:700; color:#14213d; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ c.author }}</span>
+                  <span style="margin-left:auto; font-size:12.5px; color:#9a936f; font-weight:600;">{{ c.lessonsText }}</span>
+                </div>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+        <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="text-align:center; padding:50px 20px; color:#8a8369; font-weight:600;">No hay cursos para ese filtro todavía. Probá con otra búsqueda.</div>
+        </sc-if>
+      </section>
+
+      <!-- ===== DARK PROMO PANEL ===== -->
+      <section style="padding:46px 0 8px;">
+        <div style="background:#14213d; border-radius:26px; padding:44px 48px; display:grid; grid-template-columns:1fr 0.85fr; gap:40px; align-items:center; overflow:hidden; position:relative;">
+          <div style="z-index:1;">
+            <h2 style="font-family:'Poppins',sans-serif; font-weight:700; font-size:30px; line-height:1.12; color:#fdfaf0; margin:0 0 14px; letter-spacing:-.3px;">Reimaginá tu forma de <span style="color:#facc15;">aprender</span></h2>
+            <p style="font-size:15.5px; line-height:1.55; color:#aeb6c6; margin:0 0 26px; max-width:430px; font-weight:600;">Lecciones cortas, hechas por la comunidad, pensadas para que avances a tu ritmo y sin frustrarte.</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px 28px; margin-bottom:30px;">
+              <sc-for list="{{ perks }}" as="p" hint-placeholder-count="4">
+                <div style="display:flex; align-items:flex-start; gap:11px;">
+                  <span style="width:26px; height:26px; border-radius:8px; background:rgba(250,204,21,.16); display:flex; align-items:center; justify-content:center; flex:none; margin-top:1px;">
+                    <svg width="14" height="14" fill="none" stroke="#facc15" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7 6 11l6-8"/></svg>
+                  </span>
+                  <span style="font-size:14.5px; color:#e7eaf0; font-weight:600; line-height:1.35;">{{ p.text }}</span>
+                </div>
+              </sc-for>
+            </div>
+            <button style="background:#facc15; color:#14213d; border:none; height:50px; padding:0 26px; border-radius:14px; font-family:'Nunito Sans',sans-serif; font-size:15px; font-weight:800; cursor:pointer; transition:transform .15s ease;" style-hover="transform:translateY(-2px);">Empezar a aprender</button>
+          </div>
+          <div style="position:relative; height:280px; z-index:1;">
+            <div style="position:absolute; inset:0; border-radius:18px; background:linear-gradient(135deg,#243558,#3a4d78); display:flex; align-items:center; justify-content:center;">
+              <span style="font-family:'Poppins',sans-serif; font-size:12px; letter-spacing:2px; text-transform:uppercase; color:rgba(253,250,240,.5);">imagen / collage</span>
+            </div>
+            <div style="position:absolute; bottom:-14px; left:-14px; background:#fdfaf0; border-radius:14px; padding:12px 16px; box-shadow:0 12px 24px rgba(0,0,0,.25); display:flex; align-items:center; gap:10px;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="#4aa8ff"><path d="M12 2.5S5 10 5 15a7 7 0 0 0 14 0c0-5-7-12.5-7-12.5Z"/></svg>
+              <div style="line-height:1.1;"><div style="font-family:'Poppins',sans-serif; font-weight:700; font-size:18px; color:#14213d;">+1 gota</div><div style="font-size:11px; color:#8a8369; font-weight:700;">por lección</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== COMMUNITY STAT STRIP ===== -->
+      <section style="padding:44px 0 8px;">
+        <p style="text-align:center; font-size:14px; color:#9a936f; font-weight:700; margin:0 0 22px; letter-spacing:.2px;">Lo que está construyendo la comunidad Titi</p>
+        <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:18px;">
+          <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+            <div style="background:#fff; border:1.5px solid #efe6c4; border-radius:18px; padding:22px 20px; text-align:center;">
+              <div style="font-family:'Poppins',sans-serif; font-weight:800; font-size:30px; color:#14213d; letter-spacing:-.5px;">{{ s.num }}</div>
+              <div style="font-size:13.5px; color:#8a8369; font-weight:700; margin-top:4px;">{{ s.label }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- ===== TESTIMONIALS ===== -->
+      <section style="padding:46px 0 8px;">
+        <h2 style="font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; color:#14213d; margin:0 0 22px; letter-spacing:-.3px;">Historias de la comunidad</h2>
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(252px,1fr)); gap:20px;">
+          <sc-for list="{{ testimonials }}" as="t" hint-placeholder-count="4">
+            <div style="background:#fff; border:1.5px solid #efe6c4; border-radius:18px; padding:22px 22px 20px; display:flex; flex-direction:column;">
+              <div style="font-family:'Poppins',sans-serif; font-size:40px; line-height:0.6; color:#facc15; height:24px;">“</div>
+              <p style="font-size:14.5px; line-height:1.5; color:#3f3c2e; font-weight:600; margin:0 0 18px; flex:1;">{{ t.quote }}</p>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <span style="width:34px; height:34px; border-radius:50%; background:{{ t.tint }}; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:14px; flex:none;">{{ t.initial }}</span>
+                <div style="line-height:1.25;"><div style="font-size:13.5px; font-weight:700; color:#14213d;">{{ t.name }}</div><div style="font-size:12.5px; color:#9a936f; font-weight:600;">{{ t.role }}</div></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- ===== ACHIEVEMENTS / GAMIFICATION PANEL ===== -->
+      <section style="padding:46px 0 8px;">
+        <div style="background:#14213d; border-radius:26px; padding:44px 48px; display:grid; grid-template-columns:1fr 1.1fr; gap:40px; align-items:center;">
+          <div>
+            <h2 style="font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; line-height:1.14; color:#fdfaf0; margin:0 0 12px; letter-spacing:-.3px;">Sumá gotas y desbloqueá logros</h2>
+            <p style="font-size:15px; line-height:1.55; color:#aeb6c6; margin:0 0 24px; font-weight:600; max-width:380px;">Cada lección suma. Mantené tu racha, ganá insignias y subí en el ranking de la comunidad.</p>
+            <button style="background:transparent; color:#facc15; border:1.5px solid #facc15; height:48px; padding:0 24px; border-radius:14px; font-family:'Nunito Sans',sans-serif; font-size:15px; font-weight:800; cursor:pointer; transition:all .15s ease;" style-hover="background:#facc15; color:#14213d;">Ver mis logros</button>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px;">
+            <sc-for list="{{ badges }}" as="b" hint-placeholder-count="3">
+              <div style="background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:22px 16px; text-align:center;">
+                <div style="width:48px; height:48px; border-radius:14px; background:{{ b.tint }}; display:flex; align-items:center; justify-content:center; margin:0 auto 12px; font-size:22px;">{{ b.glyph }}</div>
+                <div style="font-family:'Poppins',sans-serif; font-weight:600; font-size:14px; color:#fdfaf0; margin-bottom:3px;">{{ b.title }}</div>
+                <div style="font-size:12px; color:#8d97aa; font-weight:600;">{{ b.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== LEARNING PATHS ===== -->
+      <section style="padding:46px 0 8px;">
+        <div style="margin-bottom:22px;">
+          <h2 style="font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; color:#14213d; margin:0 0 4px; letter-spacing:-.3px;">¿Listo para seguir aprendiendo?</h2>
+          <p style="font-size:15.5px; color:#8a8369; margin:0; font-weight:600;">Rutas armadas por la comunidad para llevarte de cero a proyecto real.</p>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:22px;">
+          <sc-for list="{{ paths }}" as="p" hint-placeholder-count="3">
+            <article style="position:relative; height:230px; border-radius:20px; overflow:hidden; cursor:pointer; background:{{ p.thumb }}; transition:transform .18s ease, box-shadow .18s ease;" style-hover="transform:translateY(-5px); box-shadow:0 18px 34px rgba(20,33,61,.18);">
+              <div style="position:absolute; inset:0; background:linear-gradient(180deg, rgba(20,33,61,0) 35%, rgba(20,33,61,.86) 100%);"></div>
+              <div style="position:absolute; left:20px; right:20px; bottom:18px; color:#fff;">
+                <div style="display:inline-flex; align-items:center; gap:6px; background:rgba(255,255,255,.92); color:#14213d; padding:4px 10px; border-radius:999px; font-size:11.5px; font-weight:800; margin-bottom:10px;">RUTA</div>
+                <h3 style="font-family:'Poppins',sans-serif; font-weight:700; font-size:20px; margin:0 0 6px;">{{ p.title }}</h3>
+                <div style="display:flex; align-items:center; gap:9px; font-size:13px; font-weight:700;">
+                  <span>{{ p.meta }}</span><span style="opacity:.6;">·</span>
+                  <span style="color:#facc15;">★ {{ p.rating }}</span>
+                </div>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+      </section>
+
+      <!-- ===== POPULAR CATEGORIES ===== -->
+      <section style="padding:50px 0 8px;">
+        <h2 style="font-family:'Poppins',sans-serif; font-weight:700; font-size:28px; color:#14213d; margin:0 0 26px; letter-spacing:-.3px;">Categorías populares</h2>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:40px;">
+          <div>
+            <h3 style="font-family:'Poppins',sans-serif; font-weight:700; font-size:16px; color:#dd5a2c; margin:0 0 16px; text-transform:uppercase; letter-spacing:.6px;">Programación</h3>
+            <div style="display:flex; flex-direction:column; gap:13px;">
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Introducción a Python<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Desarrollo Back-End<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Introducción a React<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Machine Learning desde Cero<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+            </div>
+          </div>
+          <div>
+            <h3 style="font-family:'Poppins',sans-serif; font-weight:700; font-size:16px; color:#dd5a2c; margin:0 0 16px; text-transform:uppercase; letter-spacing:.6px;">Diseño & Producto</h3>
+            <div style="display:flex; flex-direction:column; gap:13px;">
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Fundamentos de Diseño<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Diseño UX / UI<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Herramientas de prototipado<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Identidad & Branding<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+            </div>
+          </div>
+          <div>
+            <h3 style="font-family:'Poppins',sans-serif; font-weight:700; font-size:16px; color:#dd5a2c; margin:0 0 16px; text-transform:uppercase; letter-spacing:.6px;">Idiomas & Ciencias</h3>
+            <div style="display:flex; flex-direction:column; gap:13px;">
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Inglés para Desarrolladores<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Álgebra Lineal Aplicada<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Redes y Servidores<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+              <a style="font-size:15px; font-weight:700; color:#14213d; text-decoration:none; display:flex; align-items:center; justify-content:space-between; cursor:pointer;" style-hover="color:#dd5a2c;">Estadística aplicada<svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 2 5 5-5 5"/></svg></a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== FOOTER ===== -->
+      <footer style="margin:50px -52px 0; background:#0e1626; padding:40px 52px 30px; color:#aeb6c6;">
+        <div style="display:flex; align-items:center; gap:12px; margin-bottom:24px;">
+          <div style="width:40px; height:40px; border-radius:12px; background:#fdfaf0; display:flex; align-items:center; justify-content:center;">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="#0e1626"><path d="M12 2.6c-4 0-6.7 3-6.7 7v9.1c0 .9 1 1.4 1.7.9l1.3-.9 1.6 1.1c.4.3.9.3 1.3 0l1.5-1.1 1.5 1.1c.4.3.9.3 1.3 0l1.6-1.1 1.3.9c.7.5 1.7 0 1.7-.9V9.6c0-4-2.8-7-6.6-7Z"/><circle cx="9.4" cy="10.2" r="1.5" fill="#fdfaf0"/><circle cx="14.6" cy="10.2" r="1.5" fill="#fdfaf0"/></svg>
+          </div>
+          <span style="font-family:'Poppins',sans-serif; font-weight:700; font-size:20px; color:#fdfaf0;">Titi</span>
+        </div>
+        <div style="display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:30px; padding-bottom:28px; border-bottom:1px solid rgba(255,255,255,.08);">
+          <p style="font-size:14px; line-height:1.55; font-weight:600; margin:0; max-width:300px;">Una comunidad donde cualquiera puede aprender y enseñar. Lecciones cortas, gente real, a tu ritmo.</p>
+          <div style="display:flex; flex-direction:column; gap:11px;">
+            <span style="font-family:'Poppins',sans-serif; font-weight:700; color:#fdfaf0; font-size:14px; margin-bottom:3px;">Explorar</span>
+            <span style="font-size:13.5px; font-weight:600;">Cursos</span>
+            <span style="font-size:13.5px; font-weight:600;">Categorías</span>
+            <span style="font-size:13.5px; font-weight:600;">Rutas</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:11px;">
+            <span style="font-family:'Poppins',sans-serif; font-weight:700; color:#fdfaf0; font-size:14px; margin-bottom:3px;">Comunidad</span>
+            <span style="font-size:13.5px; font-weight:600;">Profes</span>
+            <span style="font-size:13.5px; font-weight:600;">Logros</span>
+            <span style="font-size:13.5px; font-weight:600;">Ranking</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:11px;">
+            <span style="font-family:'Poppins',sans-serif; font-weight:700; color:#fdfaf0; font-size:14px; margin-bottom:3px;">Titi</span>
+            <span style="font-size:13.5px; font-weight:600;">Sobre nosotros</span>
+            <span style="font-size:13.5px; font-weight:600;">Ayuda</span>
+            <span style="font-size:13.5px; font-weight:600;">Contacto</span>
+          </div>
+        </div>
+        <div style="padding-top:18px; font-size:12.5px; font-weight:600; color:#6b7488;">© 2026 Titi · Hecho por y para la comunidad</div>
+      </footer>
+
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { query: '', tab: 'Todas' };
+
+  COURSES = [
+    { id:1, title:'Desarrollo Back-End',          category:'Programación',   topic:'Back-End',         level:'Intermedio',   lessons:1, author:'profesor_demo', hue:214, rating:'4.7', students:'1.2k', badge:'' },
+    { id:2, title:'Introducción a Python',         category:'Programación',   topic:'Python',           level:'Principiante', lessons:2, author:'profesor_demo', hue:46,  rating:'4.9', students:'3.5k', badge:'Lo más visto' },
+    { id:3, title:'Inglés para Desarrolladores',   category:'Idiomas',        topic:'Inglés',           level:'Principiante', lessons:2, author:'maria_potosi',  hue:284, rating:'4.6', students:'2.1k', badge:'' },
+    { id:4, title:'Álgebra Lineal Aplicada',       category:'Matemáticas',    topic:'Álgebra',          level:'Intermedio',   lessons:2, author:'dev_carlos',    hue:8,   rating:'4.5', students:'980',  badge:'' },
+    { id:5, title:'Machine Learning desde Cero',   category:'Programación',   topic:'Machine Learning', level:'Avanzado',     lessons:3, author:'profesor_demo', hue:26,  rating:'4.8', students:'1.6k', badge:'Nuevo' },
+    { id:6, title:'Fundamentos de Diseño',         category:'Diseño',         topic:'Diseño',           level:'Principiante', lessons:2, author:'maria_potosi',  hue:198, rating:'4.7', students:'1.4k', badge:'' },
+    { id:7, title:'Redes y Servidores',            category:'Infraestructura',topic:'Redes',            level:'Intermedio',   lessons:2, author:'dev_carlos',    hue:158, rating:'4.4', students:'870',  badge:'' },
+    { id:8, title:'Introducción a React',          category:'Programación',   topic:'React',            level:'Principiante', lessons:3, author:'profesor_demo', hue:188, rating:'4.8', students:'2.7k', badge:'Lo más visto' },
+  ];
+
+  TABS = ['Todas','Programación','Diseño','Idiomas','Matemáticas','Infraestructura'];
+
+  FEATURED = [
+    { title:'Programación',        topic:'Código',   desc:'Del primer “hola mundo” a tu primer proyecto real.', hue:214 },
+    { title:'Diseño & Producto',   topic:'Diseño',   desc:'Pensá, prototipá y diseñá experiencias que enamoran.', hue:284 },
+    { title:'Idiomas',             topic:'Idiomas',  desc:'Hablá con el mundo: inglés para estudiar y trabajar.', hue:158 },
+  ];
+
+  PERKS = [
+    { text:'Lecciones cortas que terminás en una sentada' },
+    { text:'Profes de la comunidad, no robots' },
+    { text:'Seguí tu progreso y tu racha de gotas' },
+    { text:'Aprendé gratis, a tu propio ritmo' },
+  ];
+
+  STATS = [
+    { num:'8',   label:'cursos publicados' },
+    { num:'4',   label:'profes de la comunidad' },
+    { num:'15',  label:'lecciones disponibles' },
+    { num:'4.7', label:'valoración promedio' },
+  ];
+
+  TESTIMONIALS = [
+    { quote:'Empecé sin saber nada de código y hoy mantengo el back-end de mi propio proyecto.', name:'Lucía R.', role:'Estudiante de Back-End', hue:214 },
+    { quote:'Las lecciones cortas hacen que sea fácil sumar aunque tenga poco tiempo.', name:'Martín D.', role:'Estudiante de Python', hue:36 },
+    { quote:'La comunidad responde rapidísimo, nunca te quedás trabado.', name:'Sofía G.', role:'Estudiante de Diseño', hue:284 },
+    { quote:'Pasé de tenerle miedo al inglés a leer documentación sin traductor.', name:'Diego F.', role:'Estudiante de Inglés', hue:158 },
+  ];
+
+  BADGES = [
+    { glyph:'🔥', title:'Racha activa', note:'7 días seguidos', tint:'rgba(221,90,44,.25)' },
+    { glyph:'💧', title:'Coleccionista', note:'50 gotas ganadas', tint:'rgba(74,168,255,.22)' },
+    { glyph:'🏅', title:'Primer curso', note:'curso completado', tint:'rgba(250,204,21,.22)' },
+  ];
+
+  PATHS = [
+    { title:'Ingeniero Back-End',   meta:'6 cursos', rating:'4.7', hue:214 },
+    { title:'Científico de Datos',  meta:'5 cursos', rating:'4.8', hue:26 },
+    { title:'Diseñador de Producto',meta:'4 cursos', rating:'4.6', hue:284 },
+  ];
+
+  levelColor(l) { return l === 'Principiante' ? '#2e9e6b' : l === 'Intermedio' ? '#e0a011' : '#d4502a'; }
+  thumb(hue) {
+    return `repeating-linear-gradient(45deg, rgba(255,255,255,.05) 0 2px, transparent 2px 12px), linear-gradient(140deg, hsl(${hue} 44% 44%) 0%, hsl(${hue+20} 52% 27%) 100%)`;
+  }
+
+  renderVals() {
+    const { query, tab } = this.state;
+    const q = query.trim().toLowerCase();
+
+    let list = this.COURSES.filter(c =>
+      (!q || c.title.toLowerCase().includes(q)) &&
+      (tab === 'Todas' || c.category === tab)
+    );
+
+    const courses = list.map(c => ({
+      ...c,
+      thumb: this.thumb(c.hue),
+      levelColor: this.levelColor(c.level),
+      initial: c.author.charAt(0).toUpperCase(),
+      lessonsText: c.lessons === 1 ? '1 lección' : `${c.lessons} lecciones`,
+    }));
+
+    const tabs = this.TABS.map(name => {
+      const active = tab === name;
+      return {
+        name,
+        bg: active ? '#14213d' : '#fff',
+        color: active ? '#fdfaf0' : '#14213d',
+        border: active ? '#14213d' : '#ece2bf',
+        onClick: () => this.setState({ tab: name }),
+      };
+    });
+
+    const featured = this.FEATURED.map(f => ({ ...f, thumb: this.thumb(f.hue) }));
+    const testimonials = this.TESTIMONIALS.map(t => ({ ...t, initial: t.name.charAt(0), tint: `hsl(${t.hue} 44% 42%)` }));
+    const paths = this.PATHS.map(p => ({ ...p, thumb: this.thumb(p.hue) }));
+
+    return {
+      query, courses, tabs, featured, testimonials, paths,
+      perks: this.PERKS, stats: this.STATS, badges: this.BADGES,
+      isEmpty: courses.length === 0,
+      onSearch: e => this.setState({ query: e.target.value }),
+    };
+  }
+}
+</script>
+</body>
+</html>
