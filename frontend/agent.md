@@ -108,6 +108,161 @@ Entradas por sección (`useStaggerReveal`), repaso responsive y
 
 ---
 
+## Pulido visual / UX — Catálogo de Cursos v2.1 (`pages/Courses.jsx`)
+
+> **Estado:** PLAN CERRADO — decisiones tomadas (§Decisiones), listo para
+> implementar **por pasos** (OK del usuario por paso antes de avanzar). Continúa
+> el rediseño v2 (arriba, ya IMPLEMENTADO). Foco = **calidad visual** del
+> catálogo, con Titi de protagonista. UI plana (memoria `no-gradients-no-blur`).
+
+### Objetivo
+
+Que el catálogo deje de verse "maquetado con cajas y emojis" y pase a verse
+**profesional y terminado**: hero con una **imagen representativa real** de la
+app, categorías destacadas con **imágenes de alta calidad** (no emoji), tarjetas
+de curso con una **clasificación de dificultad fiel al estilo Titi**, y **rutas
+de aprendizaje reales** que no se pisen con las áreas/categorías.
+
+### Prioridades del usuario (lo que pidió, en orden)
+
+1. **Hero → imagen representativa de la app.** Hoy es un `<div>` placeholder
+   (`Courses.jsx:350-367`): caja oscura + círculos + texto. Quiere una **imagen**
+   real que represente la app. Titi protagonista.
+2. **Categorías destacadas → imágenes HQ.** Hoy `FeaturedCategoryCard`
+   (`:781-818`) usa solo un **emoji gigante** (`categoria.icono`, `:790`) sobre
+   `bg-titi-yellow-light`. Quiere que se vea **profesional**, con imágenes de alta
+   calidad por categoría.
+3. **CourseCard → rediseñar la dificultad.** No le gusta el badge de nivel actual
+   (`:936-944`): punto de color + texto en una píldora blanca. Quiere algo **más
+   fiel al estilo Titi**.
+4. **Armar las Learning paths + resolver redundancia con Áreas.** Hoy las rutas
+   son placeholder estático (`PATHS`, `:661-678`) y **se sienten redundantes** con
+   las "categorías destacadas" (áreas). Hay que **diferenciarlas** y darles
+   contenido real/curado.
+
+### Diagnóstico (estado real hoy, con líneas)
+
+| # | Punto | Dónde | Problema |
+|---|---|---|---|
+| A | **Hero visual** | `Courses.jsx:350-367` | Caja `bg-titi-dark` + círculos + texto. Placeholder, no imagen. `hidden lg:flex` → en móvil no se ve. |
+| B | **Featured categories** | `FeaturedCategoryCard :781-818` (thumb `:789-793`) | Solo emoji gigante sobre `bg-titi-yellow-light`. Poco profesional. |
+| C | **CourseCard dificultad** | `:936-944` (`nivelDotClass :881-892`) | Badge punto+texto poco fiel al estilo; querés rediseñarlo. |
+| D | **Learning paths** | `PATHS const` + `:644-680` | Estático/demo, con `★ rating` inventado. Redundante con áreas. |
+| E | Dark-promo visual | `:528-533` | Caja gris que dice "imagen / collage". Placeholder. |
+| F | Empty / error states | `:1007, :1033, :1061` | Usan `Titi.png` estático; error con emoji `⚠️`. |
+| G | Emoji hardcodeado | `:535 💧`, `:791/:931 📚`, `:1061 ⚠️` | Rompen la UI plana de SVG. (`categoria.icono` de data se respeta.) |
+| H | Microint. / ritmo | search `:311`, tabs `:420`, toda la página | Sin clear en search, tabs no sticky, sin back-to-top; 11 secciones mismo `gap`. |
+
+### Decisiones (TODAS CONFIRMADAS)
+
+- **Titi protagonista** del hero (y empty states), animado (`TitiMascot` 6.4),
+  respeta `prefers-reduced-motion` (cae a `Titi.png`).
+- **UI plana**: sin `bg-gradient-*` ni `blur-*`. Paneles oscuros = color sólido.
+- **Fuente de imágenes = IA local (ComfyUI)**. Ilustraciones on-brand generadas
+  con el rig local (mismo pipeline que Titi, memoria `titi-mascot-comfyui`).
+  Se dejan **optimizadas** (WebP/AVIF, lazy-load) en `public/`.
+- **Concepto del hero = "comunidad aprendiendo"**: escena ilustrada de gente
+  diversa aprendiendo con **Titi guiando** (protagonista). Cálida, plana, on-brand.
+- **Dificultad en CourseCard = etiqueta de texto con color de marca por nivel**
+  (sin forma/píldora): `PRINCIPIANTE` verde · `INTERMEDIO` ámbar · `AVANZADO`
+  naranja · `SIN NIVEL` gris. Ultra plano. Se reusa el mapeo de `nivelDotClass`
+  pero como **color de texto**, no punto.
+- **Áreas ≠ Rutas, rutas curadas estáticas (frontend):**
+  - **Áreas** (Featured/Popular categories) = *explorar por tema* (una categoría).
+  - **Rutas** (Learning paths) = *secuencia ORDENADA de cursos reales hacia un
+    objetivo* (ej. "De cero a programador"), curadas a mano en el front
+    referenciando cursos reales del catálogo. **Sin backend nuevo.** Se quita el
+    `★ rating` inventado.
+
+### Plan de pasos (cada uno: implementar → "qué testear" → esperar feedback)
+
+> El orden sigue las prioridades del usuario. Cada paso cierra con **commit**
+> (identidad `abdair-coca`, conventional commit, ver memoria `git-commit-identity`).
+
+**Paso 1 — Hero "comunidad aprendiendo" (Titi protagonista).**
+Generar en **ComfyUI** una ilustración on-brand de *comunidad aprendiendo con
+Titi guiando*, optimizarla (WebP/AVIF, lazy) → `public/`. Reemplazar el `<div>`
+placeholder (`:350-367`) por la imagen, con Titi animado superpuesto/integrado.
+**Visible en móvil** (quitar `hidden lg:flex`, reordenar). Sub-paso de generación
+de imagen primero (con su propio commit del asset si conviene).
+- *Qué testear:* el hero muestra la ilustración + Titi en desktop y móvil; nítido
+  en retina; reduced-motion deja a Titi estático; sin gradiente/blur; search/stats
+  siguen funcionando; peso de la imagen razonable.
+
+**Paso 2 — Categorías destacadas con imágenes IA.**
+Generar en ComfyUI una **imagen HQ por categoría** (on-brand, plana, cálida) →
+`public/categorias/<slug>.webp`. Rediseñar `FeaturedCategoryCard` (`:781-818`):
+thumb = imagen (no emoji), título, conteo real, CTA "Explorar área". Mapeo
+categoría→imagen por slug/id, con fallback a `categoria.icono` si falta la imagen.
+Mantener `titi-card-pop` y foco.
+- *Qué testear:* las 3 destacadas muestran imágenes HQ (no emoji); profesionales
+  y on-brand; fallback si falta una imagen; hover-pop; click filtra el Trending;
+  responsive; lazy-load.
+
+**Paso 3 — CourseCard: dificultad = etiqueta de texto color.**
+Reemplazar el badge punto+píldora (`:936-944`) por una **etiqueta de texto** en
+mayúsculas con **color de marca por nivel** (`PRINCIPIANTE` verde · `INTERMEDIO`
+ámbar · `AVANZADO` naranja · `SIN NIVEL` gris), sin forma. Convertir
+`nivelDotClass` (`:881-892`) en `nivelTextClass` (color de texto). Aplicar el
+mismo criterio en la card de recomendados para consistencia.
+- *Qué testear:* el nivel se lee claro y se siente Titi (plano); los 4 estados de
+  nivel se ven bien; consistente entre CourseCard y RecommendedCourseCard.
+
+**Paso 4 — Learning paths curadas + diferenciación de Áreas.**
+Definir una estructura curada en el front (ej. `PATHS = [{ titulo, objetivo,
+cursoIds: [...] }]`) que referencia **cursos reales** del catálogo en orden.
+Rediseñar la sección (`:644-680`): mostrar la ruta como **secuencia ordenada**
+(pasos/cursos), no como tile con `★ rating` (se quita el rating inventado).
+Reencuadrar copy/orden para que Áreas (explorar por tema) y Rutas (camino hacia
+un objetivo) se lean como cosas **distintas**. Click en un curso → `/courses/:id`.
+- *Qué testear:* rutas y áreas se entienden distintas; cada ruta muestra sus
+  cursos reales en orden; sin `★`/datos inventados; clicks navegan; si una ruta
+  referencia un curso inexistente, no rompe (se omite).
+
+**Paso 5 — Dark-promo + empty/error con Titi.**
+Matar la caja "imagen/collage" (`:528-533`) con composición real (Titi + card "+1
+gota"). `EmptyState`/`ErrorState` → `<TitiMascot>` animado + SVG (no emoji `⚠️`).
+- *Qué testear:* no quedan cajas "imagen/collage"; empty → Titi animado; error →
+  SVG; reduced-motion ok.
+
+**Paso 6 — Iconografía SVG + microinteracciones + ritmo final.**
+Emoji hardcodeados (`💧 📚 ⚠️`) → SVG de marca (no `categoria.icono`). Search con
+clear, tabs sticky, back-to-top. Repaso de ritmo/jerarquía entre secciones,
+responsive 375px→desktop, checklist `design.md` §12 + `motion.md`. Build verde.
+- *Qué testear:* sin emoji decorativos; microint. funcionan y respetan
+  reduced-motion; scroll completo sin quiebres; `npm run build` verde; §12 tildado.
+
+### Convenciones a respetar
+
+- **Paleta/componentes**: `frontend/design.md` (§5 cards, §8 estados, §12
+  checklist). **UI plana** (sin gradiente/blur, memoria `no-gradients-no-blur`).
+- **Mascota**: `<TitiMascot>` (animado, subfase 6.4), nunca emoji de mono 🐒.
+  Estados hoy: `idle`, `celebra` (los demás caen a `Titi.png`).
+- **Motion**: entradas con `useStaggerReveal`/`usePopIn` (deps por valor,
+  `motion.md` §5); tope 400ms; respeta `prefers-reduced-motion`.
+- **Imágenes**: optimizadas (WebP/AVIF, lazy-load), peso controlado (el catálogo
+  carga rápido). Si se generan con IA local, viven en `public/` ya optimizadas.
+- **Commits**: uno por paso cerrado, identidad `abdair-coca` (memoria
+  `git-commit-identity`), conventional commits en español.
+
+### Preguntas resueltas (Q&A 2026-06-22)
+
+1. Fuente de imágenes → **IA local (ComfyUI)**.
+2. Concepto del hero → **comunidad aprendiendo con Titi guiando**.
+3. Dificultad en CourseCard → **etiqueta de texto con color por nivel**.
+4. Learning paths → **curadas estáticas (frontend)**, distintas de las áreas.
+
+### Pendiente de definir en ejecución (no bloquea el plan)
+
+- **Prompts/estilo ComfyUI** exactos para hero y categorías (se afinan al generar,
+  vía skill `animate-comfyui` / rig en `C:\ComfyUI`).
+- **Qué categorías reales** existen (de `GET /api/categories`) → para cuántas
+  imágenes generar y el mapeo slug→imagen.
+- **Qué rutas curadas** armar y con qué cursos reales (depende del catálogo
+  actual en la DB).
+
+---
+
 ## Rediseño — Sección Learn (`pages/LearnCourse.jsx`)
 
 > **Estado:** IMPLEMENTADO (pasos 1–5). `LearnCourse.jsx` ya es de 3 columnas:
