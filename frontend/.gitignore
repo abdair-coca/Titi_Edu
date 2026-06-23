@@ -1,6 +1,7 @@
 node_modules
 dist
 .titi-src
+.hero-src
 .env.local
 .vite
 .DS_Store

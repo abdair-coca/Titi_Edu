@@ -158,9 +158,11 @@ de aprendizaje reales** que no se pisen con las áreas/categorías.
 - **Titi protagonista** del hero (y empty states), animado (`TitiMascot` 6.4),
   respeta `prefers-reduced-motion` (cae a `Titi.png`).
 - **UI plana**: sin `bg-gradient-*` ni `blur-*`. Paneles oscuros = color sólido.
-- **Fuente de imágenes = IA local (ComfyUI)**. Ilustraciones on-brand generadas
-  con el rig local (mismo pipeline que Titi, memoria `titi-mascot-comfyui`).
-  Se dejan **optimizadas** (WebP/AVIF, lazy-load) en `public/`.
+- **Fuente de imágenes = IA generativa hosted** (Flux/Midjourney/DALL·E). El rig
+  local (ComfyUI SD1.5/4GB) **no alcanza** calidad de hero/escena → se reserva
+  solo para animar a Titi (subfase 6.4). El usuario genera el PNG hosted, se
+  **optimiza a WebP** y los PNG fuente van a `frontend/.hero-src/` (gitignored)
+  para no shippearlos en el build de Vite.
 - **Concepto del hero = "comunidad aprendiendo"**: escena ilustrada de gente
   diversa aprendiendo con **Titi guiando** (protagonista). Cálida, plana, on-brand.
 - **Dificultad en CourseCard = etiqueta de texto con color de marca por nivel**
@@ -179,15 +181,16 @@ de aprendizaje reales** que no se pisen con las áreas/categorías.
 > El orden sigue las prioridades del usuario. Cada paso cierra con **commit**
 > (identidad `abdair-coca`, conventional commit, ver memoria `git-commit-identity`).
 
-**Paso 1 — Hero "comunidad aprendiendo" (Titi protagonista).**
-Generar en **ComfyUI** una ilustración on-brand de *comunidad aprendiendo con
-Titi guiando*, optimizarla (WebP/AVIF, lazy) → `public/`. Reemplazar el `<div>`
-placeholder (`:350-367`) por la imagen, con Titi animado superpuesto/integrado.
-**Visible en móvil** (quitar `hidden lg:flex`, reordenar). Sub-paso de generación
-de imagen primero (con su propio commit del asset si conviene).
-- *Qué testear:* el hero muestra la ilustración + Titi en desktop y móvil; nítido
-  en retina; reduced-motion deja a Titi estático; sin gradiente/blur; search/stats
-  siguen funcionando; peso de la imagen razonable.
+**Paso 1 — Hero "comunidad aprendiendo" (Titi protagonista). ✅ HECHO.**
+Imagen generada con modelo hosted (`community2.png`, elegida por el usuario),
+optimizada a `public/hero/community.webp` (1448×1086, **122 KB**, de 1.6 MB PNG).
+Reemplazado el `<div>` placeholder (`:349-367`) por la imagen, **visible en
+móvil** (quitado `hidden lg:flex`). `loading="eager"` + `fetchpriority="high"`
+(es LCP del hero) + `width/height` para evitar layout shift.
+- **Desvío:** la ilustración **ya contiene a Titi** de protagonista → NO se
+  superpone el `TitiMascot` animado (evita Titi doble). Cumple "Titi protagonista".
+- *Qué testear:* el hero muestra la ilustración en desktop y móvil; nítida; sin
+  gradiente/blur; search/stats siguen funcionando; peso 122 KB.
 
 **Paso 2 — Categorías destacadas con imágenes IA.**
 Generar en ComfyUI una **imagen HQ por categoría** (on-brand, plana, cálida) →

@@ -346,24 +346,18 @@ export default function Courses() {
           </div>
         </div>
 
-        {/* Visual del hero — plano (sin gradiente ni blur) */}
-        <div className="hidden lg:flex relative h-[300px] rounded-2xl bg-titi-dark items-center justify-center overflow-hidden">
-          <span
-            aria-hidden="true"
-            className="absolute -top-10 -right-10 w-44 h-44 rounded-full bg-titi-yellow/15"
+        {/* Visual del hero — ilustración de la comunidad (Titi protagonista) */}
+        <div className="rounded-2xl overflow-hidden bg-titi-cream">
+          <img
+            src="/hero/community.webp"
+            alt="Titi guiando a la comunidad Titi mientras aprenden juntos"
+            width={1448}
+            height={1086}
+            loading="eager"
+            fetchpriority="high"
+            className="w-full h-auto object-cover select-none"
+            draggable={false}
           />
-          <span
-            aria-hidden="true"
-            className="absolute -bottom-12 -left-8 w-40 h-40 rounded-full bg-titi-streak/15"
-          />
-          <div className="relative text-center px-6">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-white/50 mb-2">
-              Comunidad
-            </p>
-            <p className="text-2xl font-extrabold text-titi-cream leading-tight">
-              Aprendé · Enseñá · Crecé
-            </p>
-          </div>
         </div>
       </section>
 
