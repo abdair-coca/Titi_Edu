@@ -108,7 +108,35 @@ crean `celebra`, `triste`, `racha` (core), luego los plus.
 ## 6. Estado actual
 
 - ✅ `titiAssets.js` (config estado→archivo) y `TitiMascot.jsx` (reproductor con
-  fallback + reduced-motion) listos.
-- 🔄 **6.4.1 en curso:** prueba con una animación (placeholder) integrada a `idle`.
-- ⏳ Pendiente: animaciones reales `idle`/`celebra`/`triste`/`racha` y wiring
-  reactivo a eventos de gamificación (gota→celebra, etc.) en la subfase 6.5 (UI).
+  fallback + reduced-motion + lazy-load + `key` para re-disparar play-once).
+- ✅ **6.4.1 pasado:** pipeline validado con animaciones reales.
+- ✅ `idle` (998 KB) y `celebra` (2 MB) reales en WebP animado, integrados.
+  Formato WebP (no GIF): los `.gif` fuente viven en `frontend/.titi-src/`
+  (gitignored) y se convierten con el pipeline ffmpeg del `public/titi/README.md`.
+- ⏳ Pendiente: animaciones `triste` y `racha` (core), luego `saludo`/`pensando`
+  (plus). Optimización de peso: idle/celebra quedaron full-length (~1–2 MB) por
+  decisión; recortar a loops cortos bajaría a <500 KB si hace falta.
+- ⏳ Wiring reactivo a eventos de gamificación (gota→celebra, etc.) en la
+  subfase 6.5 (UI).
+
+---
+
+## 7. ⏸️ PAUSADO — retomar acá
+
+> Trabajo parado el **2026-06-22** para priorizar el rediseño de Courses. `idle` y
+> `celebra` quedaron funcionando en la app. Próximos pasos al retomar, en orden:
+
+1. **Crear `triste` y `racha` (core).** Mismo pipeline ffmpeg GIF→WebP del
+   `public/titi/README.md`. GIF fuente nuevo → `frontend/.titi-src/` → convertir →
+   `public/titi/titi-<estado>.webp`. Cero código (los toma `titiAssets.js`). Hasta
+   que existan, caen a `Titi.png` (verificado, no rompe).
+2. **(Opcional) Ruta de prueba `/titi-test`** descartable que muestre los 6 estados
+   lado a lado, para ver/ajustar todas sin loguearse. No se creó aún.
+3. **`saludo` / `pensando` (plus).**
+4. **Wiring reactivo (subfase 6.5):** que los eventos de gamificación cambien el
+   `state` de Titi (gota→`celebra`, racha rota→`triste`, racha activa→`racha`). Para
+   re-disparar `celebra` en eventos repetidos sin cambio de estado, pasar un `key`
+   que cambie por evento desde el componente padre (hoy `TitiMascot` re-monta solo
+   al cambiar de estado).
+5. **(Si hace falta) bajar peso:** idle/celebra quedaron full-length (~1–2 MB). Si
+   pesa en producción, recortar a loops cortos (~3 s) baja a <500 KB.

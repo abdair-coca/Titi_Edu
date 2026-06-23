@@ -4,22 +4,24 @@
 // estático (/Titi.png), así la app nunca se rompe por falta del asset.
 //
 // Cómo agregar las animaciones:
-//   1. Exportá cada animación como /public/titi/titi-<estado>.gif
-//      (idealmente WebP animado o APNG con transparencia — ver public/titi/README.md).
+//   1. Exportá cada animación como WebP animado en /public/titi/titi-<estado>.webp
+//      (transparencia suave, ~30x más liviano que GIF — ver public/titi/README.md).
 //   2. Listo: el componente las toma automáticamente por su `state`.
+//
+// El campo `loop` es informativo + lo respeta TitiMascot: las animaciones con
+// loop:false (celebra, triste, saludo) se exportan con loop-count=1 y el
+// componente las re-dispara con `key` cada vez que cambia el estado.
 
 const DIR = '/titi';
 
 // estado → { src: animación, loop: si corre en loop infinito }
 export const TITI_STATES = {
-  // 6.4.1 PRUEBA: idle apunta a un placeholder .svg animado para validar el flujo.
-  // Cuando exista el GIF real, cambiar a `${DIR}/titi-idle.gif`.
-  idle:     { src: `${DIR}/titi-idle.gif`,     loop: true },
-  celebra:  { src: `${DIR}/titi-celebra.gif`,  loop: false },
-  triste:   { src: `${DIR}/titi-triste.gif`,   loop: false },
-  racha:    { src: `${DIR}/titi-racha.gif`,    loop: true },
-  saludo:   { src: `${DIR}/titi-saludo.gif`,   loop: false },
-  pensando: { src: `${DIR}/titi-pensando.gif`, loop: true },
+  idle:     { src: `${DIR}/titi-idle.webp`,     loop: true },
+  celebra:  { src: `${DIR}/titi-celebra.webp`,  loop: false },
+  triste:   { src: `${DIR}/titi-triste.webp`,   loop: false },
+  racha:    { src: `${DIR}/titi-racha.webp`,    loop: true },
+  saludo:   { src: `${DIR}/titi-saludo.webp`,   loop: false },
+  pensando: { src: `${DIR}/titi-pensando.webp`, loop: true },
 };
 
 // El poster estático (y fallback universal) es el Titi.png de siempre.

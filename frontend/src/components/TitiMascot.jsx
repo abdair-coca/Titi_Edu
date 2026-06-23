@@ -35,13 +35,20 @@ export default function TitiMascot({ mood = 'happy', state, message, size = 'md'
   const emoji = moodEmoji[mood] ?? '';
 
   // Con reduced-motion mostramos el PNG estático; si no, la animación.
-  const src = prefersReducedMotion() ? TITI_POSTER : (customSrc || asset.src);
+  const reduced = prefersReducedMotion();
+  const src = reduced ? TITI_POSTER : (customSrc || asset.src);
 
   return (
     <div ref={popRef} className={`flex flex-col items-center gap-3 ${className}`}>
       <img
+        // `key` por estado: re-monta el <img> al cambiar de estado, así las
+        // animaciones play-once (celebra/triste/saludo, loop:false) vuelven a
+        // arrancar desde el frame 0 en vez de quedar congeladas.
+        key={reduced ? 'static' : resolved}
         src={src}
         alt="Titi"
+        loading="lazy"
+        decoding="async"
         className={`${sizeClass} object-contain drop-shadow-lg select-none`}
         draggable={false}
         // Si la animación todavía no existe, cae al Titi.png de siempre.

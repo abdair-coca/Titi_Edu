@@ -1,5 +1,6 @@
 node_modules
 dist
+.titi-src
 .env.local
 .vite
 .DS_Store

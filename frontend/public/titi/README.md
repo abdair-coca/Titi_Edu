@@ -8,14 +8,21 @@ su nombre de archivo. **Mientras un archivo no exista, la app cae al
 
 `TitiMascot` mapea cada estado a un archivo de esta carpeta:
 
-| Estado | Archivo | Loop | Cuándo aparece |
-|---|---|---|---|
-| **idle** | `titi-idle.gif` | sí (infinito) | Estado base / en reposo. Titi vivo aunque no pase nada (respira, parpadea). Es el default y el que más se ve. |
-| **celebra** | `titi-celebra.gif` | no (1–2 veces y queda) | Ganar gotas, completar misión, desbloquear logro, subir de nivel, completar curso, aprobar evaluación, bienvenida alegre. |
-| **triste** | `titi-triste.gif` | no | Racha rota, error, estados vacíos ("no encontré nada", feed vacío). Desánimo suave, nada dramático. |
-| **racha** | `titi-racha.gif` | sí (infinito) | Racha activa / motivado. Energía, llamita, ojos decididos. |
-| **saludo** | `titi-saludo.gif` | no | Bienvenida en Login/Register/onboarding. Saluda con la mano y queda en idle. |
-| **pensando** | `titi-pensando.gif` | sí (infinito) | (Opcional) esperas/carga larga. Mira, se rasca la cabeza. |
+| Estado | Archivo | Loop | Estado actual | Cuándo aparece |
+|---|---|---|---|---|
+| **idle** | `titi-idle.webp` | sí (infinito) | ✅ hecho (998 KB) | Estado base / en reposo. Titi vivo aunque no pase nada (respira, parpadea). Es el default y el que más se ve. |
+| **celebra** | `titi-celebra.webp` | no (1 vez y queda) | ✅ hecho (2 MB) | Ganar gotas, completar misión, desbloquear logro, subir de nivel, completar curso, aprobar evaluación, bienvenida alegre. |
+| **triste** | `titi-triste.webp` | no | ⏳ falta | Racha rota, error, estados vacíos ("no encontré nada", feed vacío). Desánimo suave, nada dramático. |
+| **racha** | `titi-racha.webp` | sí (infinito) | ⏳ falta | Racha activa / motivado. Energía, llamita, ojos decididos. |
+| **saludo** | `titi-saludo.webp` | no | ⏳ plus | Bienvenida en Login/Register/onboarding. Saluda con la mano y queda en idle. |
+| **pensando** | `titi-pensando.webp` | sí (infinito) | ⏳ plus | (Opcional) esperas/carga larga. Mira, se rasca la cabeza. |
+
+> **Formato:** **WebP animado** (los `.gif` fuente de ComfyUI viven en
+> `frontend/.titi-src/`, gitignored — NO van en `public/` porque Vite copiaría
+> los 19 MB al build). Pipeline de conversión GIF→WebP (384×384, transparente):
+> ```
+> ffmpeg -i titi-<estado>.gif -vf "fps=12,scale=384:384:force_original_aspect_ratio=decrease:flags=lanczos,pad=384:384:(ow-iw)/2:(oh-ih)/2:color=#00000000,format=rgba" -loop <0=inf|1=once> -q:v 40 -compression_level 6 titi-<estado>.webp
+> ```
 
 > **Prioridad para arrancar:** `idle`, `celebra`, `triste`, `racha` (las 4 que
 > usa la gamificación). `saludo` y `pensando` son un plus.
