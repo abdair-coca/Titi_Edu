@@ -192,15 +192,17 @@ móvil** (quitado `hidden lg:flex`). `loading="eager"` + `fetchpriority="high"`
 - *Qué testear:* el hero muestra la ilustración en desktop y móvil; nítida; sin
   gradiente/blur; search/stats siguen funcionando; peso 122 KB.
 
-**Paso 2 — Categorías destacadas con imágenes IA.**
-Generar en ComfyUI una **imagen HQ por categoría** (on-brand, plana, cálida) →
-`public/categorias/<slug>.webp`. Rediseñar `FeaturedCategoryCard` (`:781-818`):
-thumb = imagen (no emoji), título, conteo real, CTA "Explorar área". Mapeo
-categoría→imagen por slug/id, con fallback a `categoria.icono` si falta la imagen.
-Mantener `titi-card-pop` y foco.
-- *Qué testear:* las 3 destacadas muestran imágenes HQ (no emoji); profesionales
-  y on-brand; fallback si falta una imagen; hover-pop; click filtra el Trending;
-  responsive; lazy-load.
+**Paso 2 — Categorías destacadas con imágenes IA. ✅ HECHO.**
+8 imágenes HQ on-brand (modelo hosted, set cohesivo: fondo crema, navy+amarillo,
+acento naranja) optimizadas a `public/categories/<slug>.webp` (~9–18 KB c/u, de
+~950 KB PNG; PNG fuente en `.cat-src/` gitignored). Helper `categoriaImg(nombre)`
+mapea nombre→slug vía `normalizeText` (sin acentos/ñ). `FeaturedCategoryCard`
+(`:781+`) ahora muestra la imagen (thumb `h-40` `object-contain` sobre crema) con
+**fallback a `categoria.icono`** si falta (`onError`+estado). Lazy-load, foco y
+`titi-card-pop` intactos.
+- *Qué testear:* las 3 destacadas (Programación/Matemáticas/Idiomas) muestran
+  imágenes HQ (no emoji); on-brand y cohesivas; si falta una imagen cae al emoji;
+  hover-pop; click filtra el Trending; responsive; lazy-load.
 
 **Paso 3 — CourseCard: dificultad = etiqueta de texto color.**
 Reemplazar el badge punto+píldora (`:936-944`) por una **etiqueta de texto** en

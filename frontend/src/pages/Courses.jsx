@@ -771,19 +771,38 @@ function StripStat({ num, label }) {
   );
 }
 
+// Mapea el nombre de una categoría a su ilustración en /public/categories/
+// (slug = nombre sin acentos/ñ ni símbolos). Ej: "Diseño" → /categories/diseno.webp
+function categoriaImg(nombre) {
+  const slug = normalizeText(nombre).replace(/[^a-z0-9]/g, '');
+  return `/categories/${slug}.webp`;
+}
+
 // ---- Card de categoría destacada (Featured) ----
 function FeaturedCategoryCard({ categoria, count, onClick }) {
+  const [imgOk, setImgOk] = useState(true);
   return (
     <button
       type="button"
       onClick={onClick}
       className="titi-card-pop text-left bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] overflow-hidden flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
     >
-      {/* Thumb plano */}
-      <div className="h-32 bg-titi-yellow-light flex items-center justify-center">
-        <span className="text-5xl select-none" aria-hidden="true">
-          {categoria.icono || '📚'}
-        </span>
+      {/* Thumb — ilustración de la categoría (fallback al emoji si falta) */}
+      <div className="h-40 bg-titi-cream flex items-center justify-center p-3 overflow-hidden">
+        {imgOk ? (
+          <img
+            src={categoriaImg(categoria.nombre)}
+            alt={categoria.nombre}
+            className="max-h-full w-auto object-contain select-none"
+            draggable={false}
+            loading="lazy"
+            onError={() => setImgOk(false)}
+          />
+        ) : (
+          <span className="text-5xl select-none" aria-hidden="true">
+            {categoria.icono || '📚'}
+          </span>
+        )}
       </div>
       <div className="p-5 flex flex-col gap-1.5">
         <h3 className="text-lg font-bold text-titi-dark">{categoria.nombre}</h3>
