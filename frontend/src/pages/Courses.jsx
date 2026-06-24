@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -332,6 +332,21 @@ export default function Courses() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  // Detecta cuándo las tabs de categoría quedan "pegadas" arriba (sticky) para
+  // darles un look flotante (sombra/fondo) solo en ese momento.
+  const tabsSentinelRef = useRef(null);
+  const [tabsStuck, setTabsStuck] = useState(false);
+  useEffect(() => {
+    const el = tabsSentinelRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
+    const obs = new IntersectionObserver(
+      ([entry]) => setTabsStuck(!entry.isIntersecting),
+      { rootMargin: '-12px 0px 0px 0px', threshold: 1 },
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
       {/* Promo bar */}
@@ -387,7 +402,7 @@ export default function Courses() {
           {/* Search grande */}
           <div className="relative max-w-lg mb-6">
             <input
-              type="search"
+              type="text"
               value={query}
               onChange={handleSearchChange}
               onKeyDown={handleSearchKeyDown}
@@ -512,8 +527,19 @@ export default function Courses() {
           Cursos en tendencia
         </h2>
 
-        {/* Tabs de categoría — sticky al scrollear el grid */}
-        <div className="sticky top-14 md:top-2 z-20 bg-neo-bg py-3 -mt-3 mb-3 flex flex-wrap gap-2">
+        {/* Sentinel para detectar cuándo las tabs quedan pegadas arriba */}
+        <div ref={tabsSentinelRef} aria-hidden="true" className="h-px" />
+
+        {/* Tabs de categoría — sticky con look flotante al pegarse */}
+        <div
+          className={[
+            'sticky top-14 md:top-2 z-20 -mt-3 mb-3 py-3 flex flex-wrap gap-2',
+            'rounded-2xl border border-transparent transition-all duration-200',
+            tabsStuck
+              ? 'bg-white px-3 border-gray-100 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.22)]'
+              : '',
+          ].join(' ')}
+        >
           <CategoryPill
             active={categoria === 'all'}
             onClick={() => setCategoria('all')}
@@ -877,29 +903,37 @@ export default function Courses() {
         </p>
       </footer>
 
-      {/* Volver arriba (página larga) */}
-      {showTop && (
-        <button
-          type="button"
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          aria-label="Volver arriba"
-          className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-30 w-11 h-11 grid place-items-center rounded-full bg-titi-dark text-titi-cream shadow-lg hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow transition-transform duration-150"
+      {/* Volver arriba (página larga) — aparece/desaparece suave */}
+      <button
+        type="button"
+        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        aria-label="Volver arriba"
+        aria-hidden={!showTop}
+        tabIndex={showTop ? 0 : -1}
+        className={[
+          'fixed bottom-24 md:bottom-6 right-4 md:right-6 z-30 w-11 h-11 grid place-items-center',
+          'rounded-full bg-titi-dark text-titi-cream shadow-lg',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow',
+          'transition-all duration-300 ease-out hover:-translate-y-0.5',
+          showTop
+            ? 'opacity-100 translate-y-0 scale-100'
+            : 'opacity-0 translate-y-3 scale-95 pointer-events-none',
+        ].join(' ')}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-5 h-5"
+          aria-hidden="true"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-5 h-5"
-            aria-hidden="true"
-          >
-            <line x1="12" y1="19" x2="12" y2="5" />
-            <path d="m5 12 7-7 7 7" />
-          </svg>
-        </button>
-      )}
+          <line x1="12" y1="19" x2="12" y2="5" />
+          <path d="m5 12 7-7 7 7" />
+        </svg>
+      </button>
     </div>
   );
 }
@@ -987,10 +1021,11 @@ function CategoryPill({ active, onClick, children }) {
       onClick={onClick}
       aria-pressed={active}
       className={[
-        'h-9 px-4 rounded-full border text-sm font-bold cursor-pointer transition-colors duration-150',
+        'h-9 px-4 rounded-full text-sm font-bold cursor-pointer select-none',
+        'transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow',
         active
-          ? 'bg-titi-dark text-titi-cream border-titi-dark'
-          : 'bg-white text-titi-dark border-gray-200 hover:border-titi-yellow',
+          ? 'bg-titi-yellow text-titi-dark shadow-[0_3px_0_#E6B800] -translate-y-0.5'
+          : 'bg-white text-titi-dark border border-gray-200 hover:border-titi-yellow hover:bg-titi-yellow-light hover:-translate-y-0.5',
       ].join(' ')}
     >
       {children}
