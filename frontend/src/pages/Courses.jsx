@@ -72,6 +72,20 @@ function normalizeText(s) {
     .toLowerCase();
 }
 
+// Orden editorial de las "habilidades esenciales" (Featured): se muestran las
+// primeras 3 de esta lista que existan en la API. Curado a mano (no slice del
+// orden crudo) para destacar categorías con contenido y arte propio.
+const FEATURED_PREF = [
+  'Programación',
+  'Idiomas',
+  'Matemáticas',
+  'Diseño',
+  'Ciencias',
+  'Negocios',
+  'Humanidades',
+  'Música',
+];
+
 export default function Courses() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
@@ -215,6 +229,19 @@ export default function Courses() {
     () => categorias.filter((c) => coursesByCat[c.id]?.length),
     [categorias, coursesByCat],
   );
+
+  // Áreas destacadas (Featured): primeras 3 de FEATURED_PREF que existan;
+  // si faltaran, se completan con el resto de categorías sin repetir.
+  const featuredCats = useMemo(() => {
+    const picked = FEATURED_PREF
+      .map((n) => categorias.find((c) => c.nombre === n))
+      .filter(Boolean);
+    for (const c of categorias) {
+      if (picked.length >= 3) break;
+      if (!picked.includes(c)) picked.push(c);
+    }
+    return picked.slice(0, 3);
+  }, [categorias]);
   const popularRef = useStaggerReveal([popularCats.length]);
 
   // Total de lecciones del catálogo (para el stat strip).
@@ -372,7 +399,7 @@ export default function Courses() {
             Áreas destacadas para impulsar lo que estás construyendo.
           </p>
           <div ref={featuredRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {categorias.slice(0, 3).map((c) => (
+            {featuredCats.map((c) => (
               <FeaturedCategoryCard
                 key={c.id}
                 categoria={c}
@@ -788,18 +815,18 @@ function FeaturedCategoryCard({ categoria, count, onClick }) {
       className="titi-card-pop text-left bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] overflow-hidden flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
     >
       {/* Thumb — ilustración de la categoría (fallback al emoji si falta) */}
-      <div className="h-40 bg-titi-cream flex items-center justify-center p-3 overflow-hidden">
+      <div className="h-52 bg-titi-cream flex items-center justify-center overflow-hidden">
         {imgOk ? (
           <img
             src={categoriaImg(categoria.nombre)}
             alt={categoria.nombre}
-            className="max-h-full w-auto object-contain select-none"
+            className="w-full h-full object-cover select-none"
             draggable={false}
             loading="lazy"
             onError={() => setImgOk(false)}
           />
         ) : (
-          <span className="text-5xl select-none" aria-hidden="true">
+          <span className="text-6xl select-none" aria-hidden="true">
             {categoria.icono || '📚'}
           </span>
         )}

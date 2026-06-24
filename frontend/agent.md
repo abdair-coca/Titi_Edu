@@ -200,9 +200,12 @@ mapea nombre→slug vía `normalizeText` (sin acentos/ñ). `FeaturedCategoryCard
 (`:781+`) ahora muestra la imagen (thumb `h-40` `object-contain` sobre crema) con
 **fallback a `categoria.icono`** si falta (`onError`+estado). Lazy-load, foco y
 `titi-card-pop` intactos.
-- *Qué testear:* las 3 destacadas (Programación/Matemáticas/Idiomas) muestran
-  imágenes HQ (no emoji); on-brand y cohesivas; si falta una imagen cae al emoji;
-  hover-pop; click filtra el Trending; responsive; lazy-load.
+Las 3 destacadas se **curan** con `FEATURED_PREF` (primeras 3 que existan;
+Programación/Idiomas/Matemáticas), no por orden crudo de la API. Thumb `h-52`
+`object-cover` full-bleed (imágenes grandes/protagonistas).
+- *Qué testear:* las 3 destacadas muestran imágenes HQ (no emoji); on-brand y
+  cohesivas; si falta una imagen cae al emoji; hover-pop; click filtra el
+  Trending; responsive; lazy-load.
 
 **Paso 3 — CourseCard: dificultad = etiqueta de texto color.**
 Reemplazar el badge punto+píldora (`:936-944`) por una **etiqueta de texto** en
