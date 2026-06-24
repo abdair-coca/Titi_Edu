@@ -814,13 +814,15 @@ function FeaturedCategoryCard({ categoria, count, onClick }) {
       onClick={onClick}
       className="titi-card-pop text-left bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] overflow-hidden flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
     >
-      {/* Thumb — ilustración de la categoría (fallback al emoji si falta) */}
-      <div className="h-52 bg-titi-cream flex items-center justify-center overflow-hidden">
+      {/* Thumb — ilustración de la categoría (cuadrada, sin recortar; fallback
+          al emoji si falta). Contenedor cuadrado + object-contain = la imagen
+          llena exacto y el crema del thumb matchea el fondo del dibujo. */}
+      <div className="aspect-square bg-titi-cream flex items-center justify-center overflow-hidden">
         {imgOk ? (
           <img
             src={categoriaImg(categoria.nombre)}
             alt={categoria.nombre}
-            className="w-full h-full object-cover select-none"
+            className="w-full h-full object-contain select-none"
             draggable={false}
             loading="lazy"
             onError={() => setImgOk(false)}
