@@ -6,6 +6,7 @@ import { useStaggerReveal, usePopIn } from '../lib/motion.js';
 import { nivelTextClass } from '../lib/nivel.js';
 import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
+import { GotaIcon, BookIcon } from '../components/icons.jsx';
 
 // Copys estáticos de los paneles de comunidad (marketing, sin backend).
 const PERKS = [
@@ -591,7 +592,7 @@ export default function Courses() {
               <TitiMascot state="idle" size="xl" message="" />
             </div>
             <div className="absolute -bottom-4 -left-4 bg-titi-cream rounded-xl px-4 py-3 shadow-lg flex items-center gap-2.5">
-              <span className="text-xl" aria-hidden="true">💧</span>
+              <GotaIcon className="w-5 h-5 text-sky-400" />
               <div className="leading-tight">
                 <p className="text-base font-extrabold text-titi-dark">+1 gota</p>
                 <p className="text-xs font-bold text-gray-400">por lección</p>
@@ -886,10 +887,12 @@ function FeaturedCategoryCard({ categoria, count, onClick }) {
             loading="lazy"
             onError={() => setImgOk(false)}
           />
-        ) : (
+        ) : categoria.icono ? (
           <span className="text-6xl select-none" aria-hidden="true">
-            {categoria.icono || '📚'}
+            {categoria.icono}
           </span>
+        ) : (
+          <BookIcon className="w-16 h-16 text-titi-dark/30" />
         )}
       </div>
       <div className="p-5 flex flex-col gap-1.5">
@@ -1013,10 +1016,12 @@ function CourseCard({ curso, onOpen }) {
               e.currentTarget.style.display = 'none';
             }}
           />
-        ) : (
+        ) : curso.categoria?.icono ? (
           <span className="text-5xl select-none" aria-hidden="true">
-            {curso.categoria?.icono || '📚'}
+            {curso.categoria.icono}
           </span>
+        ) : (
+          <BookIcon className="w-14 h-14 text-titi-dark/30" />
         )}
       </div>
 

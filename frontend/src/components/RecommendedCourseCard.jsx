@@ -4,6 +4,7 @@
  * nombres de muestra en el tooltip.
  */
 import { nivelTextClass } from '../lib/nivel.js';
+import { BookIcon } from './icons.jsx';
 
 export default function RecommendedCourseCard({ curso, friendCount, sampleFriends = [], onOpen }) {
   const amigosLabel = friendCount === 1 ? '1 amigo' : `${friendCount} amigos`;
@@ -38,9 +39,13 @@ export default function RecommendedCourseCard({ curso, friendCount, sampleFriend
               e.currentTarget.style.display = 'none';
             }}
           />
-        ) : (
+        ) : curso.categoria?.icono ? (
           <div className="w-full h-full grid place-items-center text-5xl select-none">
-            {curso.categoria?.icono || '📚'}
+            {curso.categoria.icono}
+          </div>
+        ) : (
+          <div className="w-full h-full grid place-items-center">
+            <BookIcon className="w-12 h-12 text-titi-dark/30" />
           </div>
         )}
 
