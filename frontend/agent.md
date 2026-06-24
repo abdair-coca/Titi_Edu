@@ -207,12 +207,13 @@ Programación/Idiomas/Matemáticas), no por orden crudo de la API. Thumb `h-52`
   cohesivas; si falta una imagen cae al emoji; hover-pop; click filtra el
   Trending; responsive; lazy-load.
 
-**Paso 3 — CourseCard: dificultad = etiqueta de texto color.**
-Reemplazar el badge punto+píldora (`:936-944`) por una **etiqueta de texto** en
-mayúsculas con **color de marca por nivel** (`PRINCIPIANTE` verde · `INTERMEDIO`
-ámbar · `AVANZADO` naranja · `SIN NIVEL` gris), sin forma. Convertir
-`nivelDotClass` (`:881-892`) en `nivelTextClass` (color de texto). Aplicar el
-mismo criterio en la card de recomendados para consistencia.
+**Paso 3 — CourseCard: dificultad = etiqueta de texto color. ✅ HECHO.**
+Sacado el badge punto+píldora sobre el thumb. El nivel ahora es **etiqueta de
+texto** en mayúsculas con **color de marca por nivel** (`PRINCIPIANTE` verde ·
+`INTERMEDIO` ámbar · `AVANZADO` naranja · `SIN NIVEL` gris), sin forma, en la
+fila de meta junto a la categoría (`ml-auto`, alineada a la derecha).
+`nivelDotClass` (bg) → `nivelTextClass` (text), extraído a `lib/nivel.js` y
+reusado en `CourseCard` y `RecommendedCourseCard` (consistencia).
 - *Qué testear:* el nivel se lee claro y se siente Titi (plano); los 4 estados de
   nivel se ven bien; consistente entre CourseCard y RecommendedCourseCard.
 

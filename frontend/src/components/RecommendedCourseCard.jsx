@@ -3,8 +3,11 @@
  * UI plana (sin gradientes/blur). Muestra un chip "🤝 N amigos" con los
  * nombres de muestra en el tooltip.
  */
+import { nivelTextClass } from '../lib/nivel.js';
+
 export default function RecommendedCourseCard({ curso, friendCount, sampleFriends = [], onOpen }) {
   const amigosLabel = friendCount === 1 ? '1 amigo' : `${friendCount} amigos`;
+  const nivel = curso.nivel || 'sin nivel';
   const tooltip = sampleFriends.length
     ? sampleFriends.map((u) => `@${u}`).join(', ') +
       (friendCount > sampleFriends.length ? ' y más' : '')
@@ -52,11 +55,19 @@ export default function RecommendedCourseCard({ curso, friendCount, sampleFriend
 
       {/* Contenido */}
       <div className="p-4 flex flex-col gap-2 flex-1">
-        {curso.categoria?.nombre && (
-          <span className="text-xs font-semibold text-titi-streak uppercase tracking-wide">
-            {curso.categoria.nombre}
+        {/* Meta: categoría + nivel (etiqueta de texto color, sin forma) */}
+        <div className="flex items-center gap-2">
+          {curso.categoria?.nombre && (
+            <span className="text-xs font-semibold text-titi-streak uppercase tracking-wide truncate">
+              {curso.categoria.nombre}
+            </span>
+          )}
+          <span
+            className={`ml-auto text-xs font-bold uppercase tracking-wide shrink-0 ${nivelTextClass(nivel)}`}
+          >
+            {nivel}
           </span>
-        )}
+        </div>
         <h3 className="text-base font-bold text-titi-dark leading-snug line-clamp-2">
           {curso.titulo}
         </h3>
