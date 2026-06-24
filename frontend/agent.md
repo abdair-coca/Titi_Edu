@@ -217,13 +217,14 @@ reusado en `CourseCard` y `RecommendedCourseCard` (consistencia).
 - *Qué testear:* el nivel se lee claro y se siente Titi (plano); los 4 estados de
   nivel se ven bien; consistente entre CourseCard y RecommendedCourseCard.
 
-**Paso 4 — Learning paths curadas + diferenciación de Áreas.**
-Definir una estructura curada en el front (ej. `PATHS = [{ titulo, objetivo,
-cursoIds: [...] }]`) que referencia **cursos reales** del catálogo en orden.
-Rediseñar la sección (`:644-680`): mostrar la ruta como **secuencia ordenada**
-(pasos/cursos), no como tile con `★ rating` (se quita el rating inventado).
-Reencuadrar copy/orden para que Áreas (explorar por tema) y Rutas (camino hacia
-un objetivo) se lean como cosas **distintas**. Click en un curso → `/courses/:id`.
+**Paso 4 — Learning paths curadas + diferenciación de Áreas. ✅ HECHO.**
+`PATHS` curado a mano (`{ title, objetivo, cursos: [títulos] }`) con 3 rutas: "De
+cero a Programador", "Camino a Data Science", "Front-End Moderno". `learningPaths`
+resuelve cada título contra el catálogo real (`allCursos`), omite cursos
+inexistentes y rutas vacías. Sección rediseñada: cada ruta = card con badge
+"Ruta" + objetivo + **lista ordenada (1,2,3…)** de cursos reales (título + nivel);
+click en un paso → `/courses/:id`. Quitado el `★ rating`. Copy reencuadrado:
+Rutas = caminos ordenados hacia un objetivo (vs Áreas = explorar un tema).
 - *Qué testear:* rutas y áreas se entienden distintas; cada ruta muestra sus
   cursos reales en orden; sin `★`/datos inventados; clicks navegan; si una ruta
   referencia un curso inexistente, no rompe (se omite).

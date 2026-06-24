@@ -51,11 +51,39 @@ const TESTIMONIALS = [
   },
 ];
 
-// Rutas de aprendizaje — placeholder estático (sin backend, contenido de ejemplo).
+// Rutas de aprendizaje — curadas a mano (sin backend). A diferencia de las
+// "Áreas" (explorar un tema), una RUTA es una secuencia ORDENADA de cursos
+// reales hacia un objetivo. Los cursos se referencian por título y se resuelven
+// contra el catálogo real (si falta uno, se omite sin romper).
 const PATHS = [
-  { title: 'Ingeniero Back-End', meta: '6 cursos', rating: '4.7' },
-  { title: 'Científico de Datos', meta: '5 cursos', rating: '4.8' },
-  { title: 'Diseñador de Producto', meta: '4 cursos', rating: '4.6' },
+  {
+    title: 'De cero a Programador',
+    objetivo: 'Empezá sin saber nada y terminá creando apps completas.',
+    cursos: [
+      'Introducción a Python',
+      'Desarrollo Web con React',
+      'Desarrollo Back-End',
+      'Neo4j para Desarrolladores',
+    ],
+  },
+  {
+    title: 'Camino a Data Science',
+    objetivo: 'De los fundamentos al machine learning aplicado.',
+    cursos: [
+      'Introducción a Python',
+      'Álgebra Lineal Aplicada',
+      'Machine Learning con Python',
+    ],
+  },
+  {
+    title: 'Front-End Moderno',
+    objetivo: 'Diseñá y construí interfaces web profesionales.',
+    cursos: [
+      'Diseño de Interfaces Modernas',
+      'Desarrollo Web con React',
+      'Inglés para Desarrolladores',
+    ],
+  },
 ];
 
 const FOOTER_COLS = [
@@ -196,7 +224,7 @@ export default function Courses() {
   const recommendedRef = useStaggerReveal([recommended.length]);
   const featuredRef = useStaggerReveal([categorias.length]);
   const testimonialsRef = useStaggerReveal([TESTIMONIALS.length]);
-  const pathsRef = useStaggerReveal([PATHS.length]);
+  const pathsRef = useStaggerReveal([allCursos.length]);
   const stripRef = useStaggerReveal([4]);
   const badgesRef = useStaggerReveal([BADGES.length]);
   // Bloques sueltos (no-lista) que también deben entrar (motion.md §4).
@@ -243,6 +271,16 @@ export default function Courses() {
     }
     return picked.slice(0, 3);
   }, [categorias]);
+
+  // Rutas de aprendizaje resueltas: mapea cada título de PATHS a su curso real
+  // (por título). Omite cursos que no existan y rutas que queden vacías.
+  const learningPaths = useMemo(() => {
+    const byTitulo = new Map(allCursos.map((c) => [c.titulo, c]));
+    return PATHS.map((p) => ({
+      ...p,
+      cursos: p.cursos.map((t) => byTitulo.get(t)).filter(Boolean),
+    })).filter((p) => p.cursos.length > 0);
+  }, [allCursos]);
   const popularRef = useStaggerReveal([popularCats.length]);
 
   // Total de lecciones del catálogo (para el stat strip).
@@ -663,43 +701,64 @@ export default function Courses() {
         </div>
       </section>
 
-      {/* Learning paths — placeholder estático (contenido de ejemplo) */}
-      <section aria-label="Rutas de aprendizaje">
-        <div className="flex items-end justify-between gap-3 mb-1">
-          <h2 className="text-2xl font-bold text-titi-dark">
-            ¿Listo para seguir aprendiendo?
+      {/* Rutas de aprendizaje — secuencia ordenada de cursos reales (curadas) */}
+      {learningPaths.length > 0 && (
+        <section aria-label="Rutas de aprendizaje">
+          <h2 className="text-2xl font-bold text-titi-dark mb-1">
+            Rutas de aprendizaje
           </h2>
-          <span className="text-xs font-semibold text-gray-400 italic shrink-0">
-            contenido de ejemplo
-          </span>
-        </div>
-        <p className="text-sm font-medium text-gray-500 mb-5">
-          Rutas armadas por la comunidad para llevarte de cero a proyecto real.
-        </p>
-        <div
-          ref={pathsRef}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
-        >
-          {PATHS.map((p) => (
-            <div
-              key={p.title}
-              className="relative h-52 rounded-2xl bg-titi-dark overflow-hidden p-6 flex flex-col justify-end"
-            >
-              <span className="absolute top-4 left-4 inline-flex items-center bg-titi-cream text-titi-dark text-xs font-extrabold px-2.5 py-1 rounded-full">
-                RUTA
-              </span>
-              <h3 className="text-xl font-bold text-titi-cream mb-1">
-                {p.title}
-              </h3>
-              <div className="flex items-center gap-2 text-sm font-bold text-white/70">
-                <span>{p.meta}</span>
-                <span className="opacity-50" aria-hidden="true">·</span>
-                <span className="text-titi-yellow">★ {p.rating}</span>
+          <p className="text-sm font-medium text-gray-500 mb-5">
+            Caminos ordenados de varios cursos para llevarte de cero a un objetivo
+            concreto. Seguilos paso a paso.
+          </p>
+          <div
+            ref={pathsRef}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-start"
+          >
+            {learningPaths.map((p) => (
+              <div
+                key={p.title}
+                className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-5 flex flex-col"
+              >
+                <span className="self-start inline-flex items-center bg-titi-yellow text-titi-dark text-xs font-extrabold uppercase tracking-wide px-2.5 py-1 rounded-full mb-3">
+                  Ruta
+                </span>
+                <h3 className="text-lg font-bold text-titi-dark mb-1">
+                  {p.title}
+                </h3>
+                <p className="text-sm font-medium text-gray-500 mb-4">
+                  {p.objetivo}
+                </p>
+                <ol className="flex flex-col gap-2">
+                  {p.cursos.map((c, i) => (
+                    <li key={c.id}>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/courses/${c.id}`)}
+                        className="w-full flex items-center gap-3 text-left rounded-xl border border-gray-100 px-3 py-2 hover:border-titi-yellow hover:bg-titi-cream/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow transition-colors"
+                      >
+                        <span className="w-6 h-6 rounded-full bg-titi-dark text-titi-cream grid place-items-center text-xs font-bold shrink-0">
+                          {i + 1}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-bold text-titi-dark truncate">
+                            {c.titulo}
+                          </span>
+                          <span
+                            className={`block text-[11px] font-bold uppercase tracking-wide ${nivelTextClass(c.nivel)}`}
+                          >
+                            {c.nivel || 'sin nivel'}
+                          </span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ol>
               </div>
-            </div>
-          ))}
-        </div>
-      </section>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Categorías populares — columnas con cursos por categoría */}
       {popularCats.length > 0 && (
