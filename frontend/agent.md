@@ -229,11 +229,15 @@ Rutas = caminos ordenados hacia un objetivo (vs Áreas = explorar un tema).
   cursos reales en orden; sin `★`/datos inventados; clicks navegan; si una ruta
   referencia un curso inexistente, no rompe (se omite).
 
-**Paso 5 — Dark-promo + empty/error con Titi.**
-Matar la caja "imagen/collage" (`:528-533`) con composición real (Titi + card "+1
-gota"). `EmptyState`/`ErrorState` → `<TitiMascot>` animado + SVG (no emoji `⚠️`).
-- *Qué testear:* no quedan cajas "imagen/collage"; empty → Titi animado; error →
-  SVG; reduced-motion ok.
+**Paso 5 — Dark-promo + empty/error con Titi. ✅ HECHO.**
+Caja "imagen/collage" del dark-promo → `<TitiMascot state="idle" size="xl">`
+animado (se mantiene la card flotante "+1 gota"). `EmptyState`: sin filtros →
+`<TitiMascot state="idle">`; con filtros sin resultados → `state="triste"` (cae a
+`Titi.png` hasta que exista el webp). `ErrorState`: emoji `⚠️` → SVG de alerta
+inline. Todo respeta `prefers-reduced-motion` (TitiMascot cae a estático).
+- *Qué testear:* no queda la caja "imagen/collage" (ahora Titi animado en el
+  dark-promo); feed sin cursos → Titi idle animado; búsqueda sin match → Titi
+  (triste/fallback) + "limpiar filtros"; error → SVG (no emoji); reduced-motion ok.
 
 **Paso 6 — Iconografía SVG + microinteracciones + ritmo final.**
 Emoji hardcodeados (`💧 📚 ⚠️`) → SVG de marca (no `categoria.icono`). Search con

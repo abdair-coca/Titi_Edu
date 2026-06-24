@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useStaggerReveal, usePopIn } from '../lib/motion.js';
 import { nivelTextClass } from '../lib/nivel.js';
 import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
+import TitiMascot from '../components/TitiMascot.jsx';
 
 // Copys estáticos de los paneles de comunidad (marketing, sin backend).
 const PERKS = [
@@ -584,12 +585,10 @@ export default function Courses() {
             </button>
           </div>
 
-          {/* Visual plano */}
+          {/* Visual — Titi animado (reemplaza el placeholder "imagen/collage") */}
           <div className="hidden lg:block relative">
-            <div className="h-56 rounded-2xl bg-titi-dark-mid flex items-center justify-center">
-              <span className="text-xs font-bold uppercase tracking-[0.2em] text-white/40">
-                imagen / collage
-              </span>
+            <div className="h-56 rounded-2xl bg-titi-dark-mid flex items-center justify-center overflow-hidden">
+              <TitiMascot state="idle" size="xl" message="" />
             </div>
             <div className="absolute -bottom-4 -left-4 bg-titi-cream rounded-xl px-4 py-3 shadow-lg flex items-center gap-2.5">
               <span className="text-xl" aria-hidden="true">💧</span>
@@ -1087,12 +1086,7 @@ function EmptyState({ hasFilters, onClear }) {
   if (hasFilters) {
     return (
       <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
-        <img
-          src="/Titi.png"
-          alt="Titi"
-          className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
-          draggable={false}
-        />
+        <TitiMascot state="triste" size="lg" message="" className="mb-4" />
         <h3 className="text-xl font-bold text-titi-dark mb-2">
           No encontré cursos con esos filtros
         </h3>
@@ -1113,12 +1107,7 @@ function EmptyState({ hasFilters, onClear }) {
 
   return (
     <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
-      <img
-        src="/Titi.png"
-        alt="Titi"
-        className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
-        draggable={false}
-      />
+      <TitiMascot state="idle" size="lg" message="" className="mb-4" />
       <h3 className="text-xl font-bold text-titi-dark mb-2">
         ¡Aún no hay cursos disponibles!
       </h3>
@@ -1141,9 +1130,20 @@ function ErrorState({ message, onRetry }) {
   return (
     <div className="flex flex-col gap-4">
       <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-        <span className="text-red-500 text-lg" aria-hidden="true">
-          ⚠️
-        </span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="w-5 h-5 text-red-500 shrink-0 mt-0.5"
+          aria-hidden="true"
+        >
+          <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+          <line x1="12" y1="9" x2="12" y2="13" />
+          <line x1="12" y1="17" x2="12.01" y2="17" />
+        </svg>
         <div className="flex-1">
           <p className="text-sm font-semibold text-red-700">
             No pudimos cargar el catálogo
