@@ -323,6 +323,15 @@ export default function Courses() {
     setCategoria('all');
   }
 
+  // Botón "volver arriba" tras scrollear (página larga).
+  const [showTop, setShowTop] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShowTop(window.scrollY > 600);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
       {/* Promo bar */}
@@ -384,7 +393,7 @@ export default function Courses() {
               onKeyDown={handleSearchKeyDown}
               placeholder="¿Qué querés aprender hoy?"
               aria-label="Buscar cursos"
-              className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-5 py-5 text-base font-medium text-titi-dark placeholder:text-gray-400 shadow-[0_4px_14px_rgba(0,0,0,0.06)] focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
+              className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-12 py-5 text-base font-medium text-titi-dark placeholder:text-gray-400 shadow-[0_4px_14px_rgba(0,0,0,0.06)] focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
             />
             <svg
               viewBox="0 0 24 24"
@@ -399,6 +408,31 @@ export default function Courses() {
               <circle cx="11" cy="11" r="7" />
               <line x1="21" y1="21" x2="16.5" y2="16.5" />
             </svg>
+            {query && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  setDebouncedQuery('');
+                }}
+                aria-label="Limpiar búsqueda"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:text-titi-dark hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow transition-colors"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-4 h-4"
+                  aria-hidden="true"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Stats */}
@@ -478,8 +512,8 @@ export default function Courses() {
           Cursos en tendencia
         </h2>
 
-        {/* Tabs de categoría */}
-        <div className="flex flex-wrap gap-2 mb-6">
+        {/* Tabs de categoría — sticky al scrollear el grid */}
+        <div className="sticky top-14 md:top-2 z-20 bg-neo-bg py-3 -mt-3 mb-3 flex flex-wrap gap-2">
           <CategoryPill
             active={categoria === 'all'}
             onClick={() => setCategoria('all')}
@@ -842,6 +876,30 @@ export default function Courses() {
           © 2026 Titi · Hecho por y para la comunidad
         </p>
       </footer>
+
+      {/* Volver arriba (página larga) */}
+      {showTop && (
+        <button
+          type="button"
+          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          aria-label="Volver arriba"
+          className="fixed bottom-24 md:bottom-6 right-4 md:right-6 z-30 w-11 h-11 grid place-items-center rounded-full bg-titi-dark text-titi-cream shadow-lg hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow transition-transform duration-150"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-5 h-5"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="19" x2="12" y2="5" />
+            <path d="m5 12 7-7 7 7" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

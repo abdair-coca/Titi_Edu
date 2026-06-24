@@ -110,10 +110,13 @@ Entradas por sección (`useStaggerReveal`), repaso responsive y
 
 ## Pulido visual / UX — Catálogo de Cursos v2.1 (`pages/Courses.jsx`)
 
-> **Estado:** PLAN CERRADO — decisiones tomadas (§Decisiones), listo para
-> implementar **por pasos** (OK del usuario por paso antes de avanzar). Continúa
-> el rediseño v2 (arriba, ya IMPLEMENTADO). Foco = **calidad visual** del
-> catálogo, con Titi de protagonista. UI plana (memoria `no-gradients-no-blur`).
+> **Estado:** IMPLEMENTADO (pasos 1–6). Hero con ilustración de comunidad,
+> categorías destacadas con imágenes HQ, dificultad como etiqueta de texto color,
+> rutas de aprendizaje curadas, dark-promo/empty/error con Titi animado, e
+> iconografía SVG + microinteracciones (search clear, tabs sticky, back-to-top).
+> Pendiente opcional: repaso fino de ritmo/responsive 375px y checklist
+> `design.md` §12 (no bloqueante). Foco fue **calidad visual** con Titi
+> protagonista, UI plana (memoria `no-gradients-no-blur`).
 
 ### Objetivo
 
@@ -239,12 +242,19 @@ inline. Todo respeta `prefers-reduced-motion` (TitiMascot cae a estático).
   dark-promo); feed sin cursos → Titi idle animado; búsqueda sin match → Titi
   (triste/fallback) + "limpiar filtros"; error → SVG (no emoji); reduced-motion ok.
 
-**Paso 6 — Iconografía SVG + microinteracciones + ritmo final.**
-Emoji hardcodeados (`💧 📚 ⚠️`) → SVG de marca (no `categoria.icono`). Search con
-clear, tabs sticky, back-to-top. Repaso de ritmo/jerarquía entre secciones,
-responsive 375px→desktop, checklist `design.md` §12 + `motion.md`. Build verde.
-- *Qué testear:* sin emoji decorativos; microint. funcionan y respetan
-  reduced-motion; scroll completo sin quiebres; `npm run build` verde; §12 tildado.
+**Paso 6 — Iconografía SVG + microinteracciones. ✅ HECHO.**
+`components/icons.jsx` (GotaIcon, BookIcon). Reemplazados los emoji decorativos
+hardcodeados: `💧` (card +1 gota) → GotaIcon; `📚` fallbacks → BookIcon (cuando
+no hay imagen ni `categoria.icono`); `⚠️` ya era SVG (Paso 5). Microint.: search
+con botón **limpiar** (✕ cuando hay texto), **tabs sticky** (`top-14 md:top-2`,
+bg-neo-bg) al scrollear el grid, botón **volver arriba** (aparece tras 600px,
+`bottom-24 md:bottom-6` para no chocar el bottom-nav móvil).
+- **Nota:** los emoji de `BADGES` (🔥💧🏅) se dejan a propósito — es un panel de
+  marketing "contenido de ejemplo", set cohesivo. Los `categoria.icono` (data) se
+  mantienen.
+- *Qué testear:* gota/libro como SVG; limpiar search con un click; pills quedan
+  fijas al scrollear; "volver arriba" aparece y funciona; no choca el bottom-nav
+  en móvil; `npm run build` verde.
 
 ### Convenciones a respetar
 
