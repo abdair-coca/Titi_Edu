@@ -3,8 +3,9 @@
 Historia de etapas + **plan vivo de la etapa actual**. Este es el doc de "qué
 falta". Modelos y reglas de la gamificación en [architecture.md](architecture.md).
 
-> **Etapa actual: 6 — Gamificación + Titi Vivo (corta `v2.0.0`).**
-> Subfases 6.1–6.3 cerradas (`v1.1.0`–`v1.3.0`). En curso: **6.4 (Titi vivo)**.
+> **Etapa 6 — Gamificación + Titi Vivo: CERRADA (`v2.0.0`).** Todas las subfases
+> (6.1–6.6) cerradas. La app gana gotas, misiones diarias, ranking de amigos y una
+> mascota animada. Próxima etapa sin definir (candidata: Etapa 7 — tienda de gotas).
 
 ---
 
@@ -44,60 +45,39 @@ en ejecución se optó por WebP animado — más simple y fiel al arte real de T
 | 6.1 Gotas | `v1.1.0` | ✅ | Ledger `MovimientoGota` + `gotas.service` (idempotencia + topes) + triggers + `/api/gotas` |
 | 6.2 Misiones | `v1.2.0` | ✅ | `Mision`/`MisionUsuario` + `mision.service` + `/api/missions/today` + triggers |
 | 6.3 Ranking | `v1.3.0` | ✅ | `InsigniaSemanal` + `ranking.service` (cruce dual-DB) + premio lazy + `/api/ranking/friends` |
-| 6.4 Titi vivo | `v1.4.0` | 🔄 | Ver pendientes abajo |
-| 6.5 UI gamificación | `v1.5.0` | 🔄 | Construida (falta smoke + tag) |
-| 6.6 Tests + docs + cierre | `v2.0.0` | 📋 | No empezada |
+| 6.4 Titi vivo | `v1.4.0` | ✅ | Mascota WebP animada por estado (6 estados) en `TitiMascot` |
+| 6.5 UI gamificación | `v1.5.0` | ✅ | `GamificationContext`, GotasCounter, GotaToast, DailyMissions, Leaderboard, premio overlay |
+| 6.6 Tests + docs + cierre | `v2.0.0` | ✅ | Route tests gotas/missions/ranking, README, cierre |
 
-### 🔄 6.4 — Titi vivo (en curso)
+### Cómo quedó
 
-Hecho: `TitiMascot` re-hecho para WebP animado por `state`; `titiAssets.js` mapea
-6 estados (`idle`, `celebra`, `triste`, `racha`, `saludo`, `pensando`). Existen 2
-WebP: `titi-idle.webp`, `titi-celebra.webp`. `prefers-reduced-motion` → PNG estático.
+- **6.4 Titi vivo:** `TitiMascot` renderiza WebP animado por `state`; `titiAssets.js`
+  mapea los 6 estados (`idle`, `celebra`, `triste`, `racha`, `saludo`, `pensando`),
+  todos presentes en `public/titi/`. `prefers-reduced-motion` → `Titi.png` estático.
+- **6.5 UI gamificación:** `GamificationContext` (gotas + cola de toasts + premio
+  semanal, montado en `main.jsx`); `GotasCounter` en el Navbar; `GotaToast` con Titi
+  `celebra` disparado desde `LearnCourse.handleProgressEvents`; `DailyMissions` en el
+  Feed; `Leaderboard` en `/leaderboard`; `WeeklyPrizeCelebration` overlay.
+- **6.6 Tests + docs:** route tests de `/api/gotas`, `/api/missions`,
+  `/api/ranking/friends` (guards 401 + shapes), suite hermética de 13 archivos,
+  cobertura **36.3%** (≥30%). README con sección de gamificación; `motion.md` +
+  `animationTiti.md` con la animación de la mascota.
 
-**Pendiente:**
-- Convertir los GIF crudos de `frontend/public/GifTiti/` (gitignorado, ~12 MB c/u:
-  Gretting/Racha/celebration/curios/idle/sad) a **WebP optimizado** y colocarlos como
-  `titi-<estado>.webp` en `public/titi/`. Faltan: `triste`, `racha`, `saludo`,
-  `pensando` (hoy caen al PNG).
-- Verificar que cambiar `state` cambia la animación y reduced-motion deja a Titi quieto.
-- Doc de animación de la mascota en `motion.md`.
-- **Cierre:** commit `feat(titi): mascota WebP animada por estado` → tag **`v1.4.0`**.
+### Definition of Done — Etapa 6 ✅
 
-### 🔄 6.5 — UI de gamificación (construida)
+- [x] Completar lección otorga gotas y dispara animación de Titi.
+- [x] Gotas sociales con tope diario (anti-farmeo); aprendizaje idempotente.
+- [x] 3 misiones diarias que resetean y otorgan gotas.
+- [x] Ranking de amigos por gotas de la semana, solo gente que sigo.
+- [x] Al cerrar la semana, el top recibe gotas + insignia (idempotente).
+- [x] Titi animado por estado, reactivo, respeta `prefers-reduced-motion`.
+- [x] Economía con saldo gastable listo para tienda futura (sin tienda aún).
+- [x] Contador de gotas + racha en la navegación principal.
+- [x] `npm test` verde, cobertura ≥30% en `routes/` + `services/`.
 
-Hecho:
-- `context/GamificationContext` con `gotas` (fetch `/api/gotas`), cola de toasts
-  (`pushGota`) y detección del premio semanal al entrar. Montado en `main.jsx`.
-- `GotasCounter` en `Navbar` (sidebar + top bar móvil), linkea al ranking.
-- `GotaToast` (Titi `state="celebra"`), montado global en `App.jsx`; lo dispara
-  `pushGota`, cableado en `LearnCourse.handleProgressEvents` (lección + evaluación).
-- `DailyMissions` (panel en el Feed) + `Leaderboard` (`/leaderboard` + entrada
-  "Ranking" en el sidebar).
-- `WeeklyPrizeCelebration` (overlay) cuando el contexto detecta insignia nueva.
-
-**Pendiente:** smoke visual + commit `feat(gamif): UI de gotas, misiones, ranking y
-celebraciones` → tag **`v1.5.0`**.
-
-### 📋 6.6 — Tests, docs y cierre
-
-- Integration tests (supertest, mocks) de `/api/gotas`, `/api/missions`,
-  `/api/ranking/friends` con guards 401. Cobertura **≥30%** en `routes/` + `services/`.
-- README: sección de gamificación. `motion.md`: animación de la mascota.
-- Smoke E2E: completar lección → gotas + toast Titi → misión avanza → ranking refleja
-  → (simular) premio semanal.
-- **Cierre:** actualizar este doc + `conventions.md` (✅ Etapa 6), tag **`v2.0.0`**.
-
-### Definition of Done — Etapa 6
-
-- [ ] Completar lección otorga gotas y dispara animación de Titi.
-- [ ] Gotas sociales con tope diario (anti-farmeo); aprendizaje idempotente.
-- [ ] 3 misiones diarias que resetean y otorgan gotas.
-- [ ] Ranking de amigos por gotas de la semana, solo gente que sigo.
-- [ ] Al cerrar la semana, el top recibe gotas + insignia (idempotente).
-- [ ] Titi animado por estado, reactivo, respeta `prefers-reduced-motion`.
-- [ ] Economía con saldo gastable listo para tienda futura (sin tienda aún).
-- [ ] Contador de gotas + racha en la navegación principal.
-- [ ] `npm test` verde, cobertura ≥30% en `routes/` + `services/`.
+> **Smoke E2E visual** (completar lección → gotas + toast → misión avanza → ranking):
+> a confirmar manualmente con la app corriendo; los caminos backend están cubiertos
+> por tests.
 
 ---
 

@@ -52,11 +52,17 @@ Definidos en `frontend/src/lib/motion.js` (`MOTION`). Usar estos, no valores sue
 ## 3. Reparto GSAP vs CSS
 
 - **GSAP** → entradas y secuencias: montaje de listas, transición de página,
-  entrada de modal, mascota Titi.
+  entrada de modal, **pop-in** de la mascota (`usePopIn`).
 - **CSS** → estados de interacción: hover de cards, press de botones, fade del
   backdrop. Más liviano, sin listeners JS por elemento.
 
 Regla: si CSS lo resuelve con una transición o keyframe simple, **es CSS**.
+
+**Mascota Titi (animación interna):** no es GSAP ni CSS — es **WebP animado por
+estado** (`idle`, `celebra`, `triste`, `racha`, `saludo`, `pensando`) servido por
+`<TitiMascot state=…>`. GSAP solo le da el pop-in de entrada. Con
+`prefers-reduced-motion` cae al `Titi.png` estático. Spec y estados en
+`frontend/animationTiti.md`; mapeo en `src/components/titi/titiAssets.js`.
 
 **Colapsables (acordeón)**: usar `grid-template-rows: 0fr→1fr` con un hijo
 `overflow-hidden` y `transition-[grid-template-rows]` + `transition-opacity`,

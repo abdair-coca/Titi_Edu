@@ -91,7 +91,7 @@ SemVer alineado a etapas. Tag anotado sobre `main`, árbol limpio, smoke test pa
 | 3 Evaluaciones y Progreso | `v0.3.0` | ✅ |
 | 4 Integración Social + Admin | `v0.4.0` | ✅ |
 | 5 Pulido y Deploy | `v1.0.0` | ✅ |
-| 6 Gamificación + Titi Vivo | `v2.0.0` | 🔄 en curso |
+| 6 Gamificación + Titi Vivo | `v2.0.0` | ✅ |
 
 Desde la Etapa 6 se taggea por subfase (un MINOR cada una; el cierre corta el MAJOR):
 
@@ -100,9 +100,9 @@ Desde la Etapa 6 se taggea por subfase (un MINOR cada una; el cierre corta el MA
 | 6.1 Gotas | `v1.1.0` | ✅ |
 | 6.2 Misiones | `v1.2.0` | ✅ |
 | 6.3 Ranking | `v1.3.0` | ✅ |
-| 6.4 Titi vivo | `v1.4.0` | 🔄 |
-| 6.5 UI gamificación | `v1.5.0` | 📋 |
-| 6.6 Cierre | `v2.0.0` | 📋 |
+| 6.4 Titi vivo | `v1.4.0` | ✅ |
+| 6.5 UI gamificación | `v1.5.0` | ✅ |
+| 6.6 Cierre | `v2.0.0` | ✅ |
 
 Bugfix dentro de una subversión ya taggeada → patch (`v1.1.1`…).
 

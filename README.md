@@ -124,6 +124,28 @@ Listo. Abrí `http://localhost:5173` y entrá con una cuenta demo:
 
 ---
 
+## 🎮 Gamificación
+
+Un loop diario para enganchar, todo **entre amigos** (sin presión de extraños):
+
+- **Gotas (XP):** se ganan al **aprender** (lección +10, evaluación +20, curso +50)
+  y por **actividad social** (post, like, comentario, follow) con **topes diarios**
+  anti-farmeo. El aprendizaje es idempotente (una lección no paga dos veces). Hay un
+  ledger (`MovimientoGota`) + saldo/total denormalizados en `Usuario`. El saldo se
+  acumula para una tienda futura (aún sin tienda).
+- **Misiones diarias:** 3 por día desde un pool, resetean a medianoche, otorgan gotas
+  al completarse. Avanzan con eventos reales (lección, evaluación, post, comentario).
+- **Ranking de amigos (semanal):** leaderboard de gotas de la semana cruzando el
+  follow-graph de Neo4j con las gotas de Postgres. Reinicia los lunes; el #1 de su
+  grupo recibe un bonus + insignia (cálculo lazy al primer acceso de la semana nueva).
+- **Titi vivo:** la mascota es WebP animado por estado (`idle`, `celebra`, `triste`,
+  `racha`…), reacciona a los eventos (ganar gotas → Titi celebra) y respeta
+  `prefers-reduced-motion`. Ver `frontend/animationTiti.md`.
+
+Endpoints: `GET /api/gotas`, `/api/gotas/history`, `/api/missions/today`,
+`/api/ranking/friends`. Detalle de la economía en
+[`docs/architecture.md`](docs/architecture.md).
+
 ## 🧪 Tests
 
 Suite hermética (Vitest + supertest): Postgres y Neo4j están **mockeados**, así
