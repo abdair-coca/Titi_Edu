@@ -92,6 +92,7 @@ SemVer alineado a etapas. Tag anotado sobre `main`, árbol limpio, smoke test pa
 | 4 Integración Social + Admin | `v0.4.0` | ✅ |
 | 5 Pulido y Deploy | `v1.0.0` | ✅ |
 | 6 Gamificación + Titi Vivo | `v2.0.0` | ✅ |
+| 7 Tienda de gotas | `v3.0.0` | 📋 planificada |
 
 Desde la Etapa 6 se taggea por subfase (un MINOR cada una; el cierre corta el MAJOR):
 
@@ -103,6 +104,10 @@ Desde la Etapa 6 se taggea por subfase (un MINOR cada una; el cierre corta el MA
 | 6.4 Titi vivo | `v1.4.0` | ✅ |
 | 6.5 UI gamificación | `v1.5.0` | ✅ |
 | 6.6 Cierre | `v2.0.0` | ✅ |
+| 7.1 Tienda backend | `v2.1.0` | 📋 |
+| 7.2 Efectos consumibles | `v2.2.0` | 📋 |
+| 7.3 UI Tienda | `v2.3.0` | 📋 |
+| 7.4 Cierre | `v3.0.0` | 📋 |
 
 Bugfix dentro de una subversión ya taggeada → patch (`v1.1.1`…).
 

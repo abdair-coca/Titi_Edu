@@ -47,8 +47,9 @@ Postgres por `neoId`. Social → Neo4j; educativo + gotas → Postgres. Detalle 
 ## Estado actual
 
 **Etapa 6 — Gamificación + Titi Vivo: CERRADA (`v2.0.0`).** Gotas (XP), misiones
-diarias, ranking de amigos semanal y mascota WebP animada, todo en la app. Próxima
-etapa sin definir (candidata: Etapa 7 — tienda de gotas). Detalle en
+diarias, ranking de amigos semanal y mascota WebP animada, todo en la app.
+**Etapa 7 — Tienda de gotas: 📋 planificada (`v3.0.0`)** — consumibles que gastan
+`gotasSaldo` (proteger racha, power-ups educativos). Plan y DoD en
 [docs/roadmap.md](docs/roadmap.md).
 
 App live: frontend `https://titiedu.vercel.app` · backend `https://titiedu-production.up.railway.app`.
