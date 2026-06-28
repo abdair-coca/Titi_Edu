@@ -1,3 +1,3 @@
-AGENTS.md
-
-PLAN_3_DIAS.md
+# Assets fuente pesados de la mascota: solo se commitea el WebP optimizado
+# en frontend/public/titi/. Los GIF crudos (~12 MB c/u) no van al repo.
+frontend/public/GifTiti/
