@@ -30,14 +30,15 @@ frontend/
 ├── animationTiti.md                  ← este documento
 ├── public/
 │   ├── Titi.png                       ← PNG original (poster + fallback universal)
-│   └── titi/                          ← AQUÍ van las animaciones
-│       ├── README.md                  ← spec técnica para crear los archivos
-│       ├── titi-idle.gif              ← animación de reposo
-│       ├── titi-celebra.gif
-│       ├── titi-triste.gif
-│       ├── titi-racha.gif
-│       ├── titi-saludo.gif            (opcional)
-│       └── titi-pensando.gif          (opcional)
+│   ├── GifTiti/                       ← GIF fuente (gitignored, no van al build)
+│   └── titi/                          ← AQUÍ van las animaciones WebP
+│       ├── README.md                  ← estados → archivos
+│       ├── idleTiti.webp              ← animación de reposo
+│       ├── celebrationTiti.webp
+│       ├── sadTiti.webp
+│       ├── streakTiti.webp
+│       ├── grettingTiti.webp          (saludo)
+│       └── curiousTiti.webp           (pensando)
 └── src/
     └── components/
         ├── TitiMascot.jsx             ← componente que reproduce la animación del estado
@@ -45,8 +46,9 @@ frontend/
             └── titiAssets.js          ← config: mapea estado → archivo (único lugar a tocar)
 ```
 
-**Regla de oro:** los archivos de animación viven en `public/titi/` con el
-nombre exacto `titi-<estado>.<ext>`. El componente los toma por ese nombre.
+**Regla de oro:** los archivos de animación viven en `public/titi/`. El mapeo
+estado→archivo está en `titiAssets.js` (único lugar a tocar). Cambiar el nombre de
+un archivo = ajustar su `src` ahí; no hace falta renombrar para que funcione.
 
 ---
 
@@ -72,14 +74,14 @@ ideal WebP animado/APNG (GIF también sirve).
 
 ## 4. Animaciones necesarias
 
-| Estado | Archivo | Loop | Cuándo | Prioridad |
+| Estado | Archivo | Loop | Cuándo | Estado |
 |---|---|---|---|---|
-| idle | `titi-idle.gif` | sí | reposo (respira/parpadea) | 🔴 core |
-| celebra | `titi-celebra.gif` | no | gota, misión, logro, nivel, curso/eval aprobada | 🔴 core |
-| triste | `titi-triste.gif` | no | racha rota, error, estado vacío | 🔴 core |
-| racha | `titi-racha.gif` | sí | racha activa / motivado | 🔴 core |
-| saludo | `titi-saludo.gif` | no | bienvenida (login/register) | 🟡 plus |
-| pensando | `titi-pensando.gif` | sí | esperas/carga larga | 🟡 plus |
+| idle | `idleTiti.webp` | sí | reposo (respira/parpadea) | ✅ integrado |
+| celebra | `celebrationTiti.webp` | no | gota, misión, logro, nivel, curso/eval aprobada | ✅ integrado |
+| triste | `sadTiti.webp` | no | racha rota, error, estado vacío | ✅ integrado |
+| racha | `streakTiti.webp` | sí | racha activa / motivado | ✅ integrado |
+| saludo | `grettingTiti.webp` | no | bienvenida (login/register) | ✅ integrado |
+| pensando | `curiousTiti.webp` | sí | esperas/carga larga | ✅ integrado |
 
 ---
 
@@ -109,34 +111,33 @@ crean `celebra`, `triste`, `racha` (core), luego los plus.
 
 - ✅ `titiAssets.js` (config estado→archivo) y `TitiMascot.jsx` (reproductor con
   fallback + reduced-motion + lazy-load + `key` para re-disparar play-once).
-- ✅ **6.4.1 pasado:** pipeline validado con animaciones reales.
-- ✅ `idle` (998 KB) y `celebra` (2 MB) reales en WebP animado, integrados.
-  Formato WebP (no GIF): los `.gif` fuente viven en `frontend/.titi-src/`
-  (gitignored) y se convierten con el pipeline ffmpeg del `public/titi/README.md`.
-- ⏳ Pendiente: animaciones `triste` y `racha` (core), luego `saludo`/`pensando`
-  (plus). Optimización de peso: idle/celebra quedaron full-length (~1–2 MB) por
-  decisión; recortar a loops cortos bajaría a <500 KB si hace falta.
-- ⏳ Wiring reactivo a eventos de gamificación (gota→celebra, etc.) en la
-  subfase 6.5 (UI).
+- ✅ **Los 6 estados integrados** en WebP animado: `idle`, `celebra`, `triste`,
+  `racha`, `saludo`, `pensando`. Los GIF fuente viven en `public/GifTiti/`
+  (gitignored, no van al build de Vite).
+- ✅ Ya consumidos en la app (ej. `Courses.jsx`: empty states con `state="idle"` y
+  `state="triste"`).
+- ⏳ Wiring reactivo a eventos de gamificación (gota→celebra, racha rota→triste,
+  racha activa→racha) en la subfase **6.5** (UI).
 
 ---
 
-## 7. ⏸️ PAUSADO — retomar acá
+## 7. Pendiente para cerrar 6.4 → `v1.4.0`
 
-> Trabajo parado el **2026-06-22** para priorizar el rediseño de Courses. `idle` y
-> `celebra` quedaron funcionando en la app. Próximos pasos al retomar, en orden:
+1. **Smoke visual de los 6 estados.** Verificar que cada `state` muestra su WebP y
+   que con `prefers-reduced-motion` Titi queda estático (cae a `Titi.png`). Una ruta
+   de prueba `/titi-test` (descartable) que muestre los 6 lado a lado ayuda, pero no
+   es obligatoria.
+2. **Commit + tag `v1.4.0`** (`feat(titi): mascota WebP animada por estado`).
 
-1. **Crear `triste` y `racha` (core).** Mismo pipeline ffmpeg GIF→WebP del
-   `public/titi/README.md`. GIF fuente nuevo → `frontend/.titi-src/` → convertir →
-   `public/titi/titi-<estado>.webp`. Cero código (los toma `titiAssets.js`). Hasta
-   que existan, caen a `Titi.png` (verificado, no rompe).
-2. **(Opcional) Ruta de prueba `/titi-test`** descartable que muestre los 6 estados
-   lado a lado, para ver/ajustar todas sin loguearse. No se creó aún.
-3. **`saludo` / `pensando` (plus).**
-4. **Wiring reactivo (subfase 6.5):** que los eventos de gamificación cambien el
-   `state` de Titi (gota→`celebra`, racha rota→`triste`, racha activa→`racha`). Para
-   re-disparar `celebra` en eventos repetidos sin cambio de estado, pasar un `key`
-   que cambie por evento desde el componente padre (hoy `TitiMascot` re-monta solo
-   al cambiar de estado).
-5. **(Si hace falta) bajar peso:** idle/celebra quedaron full-length (~1–2 MB). Si
-   pesa en producción, recortar a loops cortos (~3 s) baja a <500 KB.
+## 8. Wiring reactivo (subfase 6.5)
+
+Que los eventos de gamificación cambien el `state` de Titi (gota→`celebra`, racha
+rota→`triste`, racha activa→`racha`). Para re-disparar `celebra` en eventos repetidos
+sin cambio de estado, pasar un `key` que cambie por evento desde el componente padre
+(hoy `TitiMascot` re-monta solo al cambiar de estado).
+
+## 9. (Si hace falta) bajar peso
+
+Los WebP actuales pesan ~2–5 MB c/u (decisión del usuario: no se tocan, "están muy
+buenos"). Si en producción pesan, se pueden reexportar a menor fps/escala sin tocar
+código (solo reemplazar el archivo).
