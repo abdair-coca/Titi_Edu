@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import client from '../api/client.js';
 import StreakBadge, { FlameIcon } from './StreakBadge.jsx';
 import useStreak from '../hooks/useStreak.js';
+import GotasCounter from './GotasCounter.jsx';
 
 // ---- Iconos inline ----
 const Icon = {
@@ -59,6 +60,12 @@ const Icon = {
   Shield: (p) => (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+    </svg>
+  ),
+  Trophy: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z" />
+      <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
     </svg>
   ),
 };
@@ -150,6 +157,10 @@ function Sidebar({ user, onLogout, unread, streak }) {
           <Icon.Target className="w-5 h-5 shrink-0" />
           <span className={sidebarLabel}>Mis cursos</span>
         </NavLink>
+        <NavLink to="/leaderboard" className={sidebarItemClass}>
+          <Icon.Trophy className="w-5 h-5 shrink-0" />
+          <span className={sidebarLabel}>Ranking</span>
+        </NavLink>
         {(user?.rol === 'PROFESOR' || user?.rol === 'ADMIN') && (
           <NavLink to="/teacher" className={sidebarItemClass}>
             <Icon.Cap className="w-5 h-5 shrink-0" />
@@ -177,6 +188,16 @@ function Sidebar({ user, onLogout, unread, streak }) {
         )}
       </nav>
 
+      {user && (
+        <Link
+          to="/leaderboard"
+          aria-label="Mis gotas"
+          className="mx-3 mb-1 flex items-center gap-1.5 px-2 py-2 rounded-xl hover:bg-white/10 transition-colors shrink-0"
+        >
+          <GotasCounter iconClass="w-7 h-7" className="text-xl" />
+          <span className={`text-sm font-bold text-white/70 ${sidebarLabel}`}>gotas</span>
+        </Link>
+      )}
       {user && (
         <div className="px-3 pb-3 shrink-0">
           {/* Crossfade racha: colapsado = llama + número; expandido = badge completo.
@@ -258,6 +279,15 @@ function MobileTopBar({ user, onLogout, unread, streak, showStreak }) {
               className="p-2 rounded-full text-white/85 hover:text-titi-yellow hover:bg-white/10 transition-colors"
             >
               <Icon.Shield className="w-5 h-5" />
+            </Link>
+          )}
+          {showStreak && (
+            <Link
+              to="/leaderboard"
+              aria-label="Mis gotas"
+              className="inline-flex items-center gap-1 bg-titi-dark-mid border border-titi-yellow/30 px-2.5 py-1 rounded-full"
+            >
+              <GotasCounter iconClass="w-3.5 h-3.5" className="text-sm" />
             </Link>
           )}
           {showStreak && (

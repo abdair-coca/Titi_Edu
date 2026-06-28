@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useGamification } from '../context/GamificationContext.jsx';
 import LessonComments from '../components/LessonComments.jsx';
 import StreakToast from '../components/StreakToast.jsx';
 import AchievementToast from '../components/AchievementToast.jsx';
@@ -13,6 +14,7 @@ export default function LearnCourse() {
   const { id: courseId } = useParams();
   const navigate = useNavigate();
   const { isAuthenticated, updateUser } = useAuth();
+  const { pushGota } = useGamification();
 
   // Toast de racha
   const [streakToast, setStreakToast] = useState({ shown: false, racha: 0 });
@@ -284,6 +286,7 @@ export default function LearnCourse() {
 
   // Procesa racha / logros / curso completado que devuelven complete y attempt
   const handleProgressEvents = (d) => {
+    if (d?.gotas > 0) pushGota(d.gotas);
     const r = d?.racha;
     if (r) {
       updateUser({ racha: r.racha });

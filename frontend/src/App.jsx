@@ -16,6 +16,9 @@ import HashtagFeed from './pages/HashtagFeed.jsx';
 import Notifications from './pages/Notifications.jsx';
 import Navbar from './components/Navbar.jsx';
 import PageTransition from './components/PageTransition.jsx';
+import GotaToast from './components/GotaToast.jsx';
+import WeeklyPrizeCelebration from './components/WeeklyPrizeCelebration.jsx';
+import Leaderboard from './pages/Leaderboard.jsx';
 import Courses from './pages/Courses.jsx'
 import CourseDetail from './pages/CourseDetail.jsx'
 import MyCourses from './pages/MyCourses.jsx'
@@ -49,6 +52,9 @@ function ProtectedLayout() {
   return (
     <div className="min-h-screen bg-neo-bg">
       <Navbar />
+      {/* Toasts/overlays globales de gamificación (fixed, no afectan el layout). */}
+      <GotaToast />
+      <WeeklyPrizeCelebration />
       {/* En móvil: deja espacio para el top bar (h-14) y el bottom nav (h-16 + safe area iOS). */}
       {/* En desktop (md+): solo padding-left para el sidebar (w-64). */}
       <main className="min-h-screen pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-20">
@@ -162,6 +168,7 @@ export default function App() {
         <Route path="/my-courses" element={<MyCourses />} />
         <Route path="/courses/:id/learn" element={<LearnCourse />} />
         <Route path="/certificates" element={<Certificates />} />
+        <Route path="/leaderboard" element={<Leaderboard />} />
         <Route path="/teacher" element={<MyTeaching />} />
         <Route element={<TeacherOnly />}>
           <Route path="/teacher/courses/new" element={<CourseEditor />} />

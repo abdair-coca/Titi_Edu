@@ -45,7 +45,7 @@ en ejecución se optó por WebP animado — más simple y fiel al arte real de T
 | 6.2 Misiones | `v1.2.0` | ✅ | `Mision`/`MisionUsuario` + `mision.service` + `/api/missions/today` + triggers |
 | 6.3 Ranking | `v1.3.0` | ✅ | `InsigniaSemanal` + `ranking.service` (cruce dual-DB) + premio lazy + `/api/ranking/friends` |
 | 6.4 Titi vivo | `v1.4.0` | 🔄 | Ver pendientes abajo |
-| 6.5 UI gamificación | `v1.5.0` | 📋 | No empezada |
+| 6.5 UI gamificación | `v1.5.0` | 🔄 | Construida (falta smoke + tag) |
 | 6.6 Tests + docs + cierre | `v2.0.0` | 📋 | No empezada |
 
 ### 🔄 6.4 — Titi vivo (en curso)
@@ -63,16 +63,20 @@ WebP: `titi-idle.webp`, `titi-celebra.webp`. `prefers-reduced-motion` → PNG es
 - Doc de animación de la mascota en `motion.md`.
 - **Cierre:** commit `feat(titi): mascota WebP animada por estado` → tag **`v1.4.0`**.
 
-### 📋 6.5 — UI de gamificación
+### 🔄 6.5 — UI de gamificación (construida)
 
-- Extender `context/ProgressContext` con `gotas` (fetch `/api/gotas`) + emisor de
-  eventos para que Titi reaccione.
-- `GotasCounter` + racha visibles en `Navbar` (desktop + bottom-nav móvil).
-- `GotaToast` (sobre la cola de `AchievementToast`): al ganar gotas, toast con Titi
-  en `state="celebra"`.
-- `DailyMissions` (panel) + `Leaderboard` (página/sección + ruta en `App.jsx`).
-- Celebración del premio semanal (overlay) cuando hay insignia nueva.
-- **Cierre:** commit `feat(gamif): UI de gotas, misiones, ranking y celebraciones` → tag **`v1.5.0`**.
+Hecho:
+- `context/GamificationContext` con `gotas` (fetch `/api/gotas`), cola de toasts
+  (`pushGota`) y detección del premio semanal al entrar. Montado en `main.jsx`.
+- `GotasCounter` en `Navbar` (sidebar + top bar móvil), linkea al ranking.
+- `GotaToast` (Titi `state="celebra"`), montado global en `App.jsx`; lo dispara
+  `pushGota`, cableado en `LearnCourse.handleProgressEvents` (lección + evaluación).
+- `DailyMissions` (panel en el Feed) + `Leaderboard` (`/leaderboard` + entrada
+  "Ranking" en el sidebar).
+- `WeeklyPrizeCelebration` (overlay) cuando el contexto detecta insignia nueva.
+
+**Pendiente:** smoke visual + commit `feat(gamif): UI de gotas, misiones, ranking y
+celebraciones` → tag **`v1.5.0`**.
 
 ### 📋 6.6 — Tests, docs y cierre
 

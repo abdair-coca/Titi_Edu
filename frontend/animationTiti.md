@@ -131,10 +131,13 @@ crean `celebra`, `triste`, `racha` (core), luego los plus.
 
 ## 8. Wiring reactivo (subfase 6.5)
 
-Que los eventos de gamificación cambien el `state` de Titi (gota→`celebra`, racha
-rota→`triste`, racha activa→`racha`). Para re-disparar `celebra` en eventos repetidos
-sin cambio de estado, pasar un `key` que cambie por evento desde el componente padre
-(hoy `TitiMascot` re-monta solo al cambiar de estado).
+✅ Hecho para gotas: ganar gotas dispara `GotaToast` con Titi en `state="celebra"`
+(vía `pushGota` del `GamificationContext`, cableado en `LearnCourse`). El premio
+semanal abre `WeeklyPrizeCelebration` con Titi celebrando.
+
+Pendiente/menor: usar `triste`/`racha` reactivos en más superficies (racha rota →
+`triste`, racha activa → `racha`). El `GotaToast` re-monta el `<TitiMascot>` por cada
+toast de la cola, así que `celebra` (play-once) re-arranca en cada evento.
 
 ## 9. (Si hace falta) bajar peso
 
