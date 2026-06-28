@@ -23,7 +23,7 @@ backend/src/
   prisma.js             ← singleton PrismaClient
   middleware/auth.js    ← requireAuth, optionalAuth (parsea JWT a req.user)
   routes/
-    auth.js             ← /api/auth (register, login, become-teacher* — *eliminar en Etapa 4)
+    auth.js             ← /api/auth (register, login, me)
     posts.js            ← /api/posts (feed, explore, like, save, comentarios via /comments.js)
     users.js            ← /api/users (perfil, follow, ubicación)
     courses.js          ← /api/courses (catálogo, detalle, inscribir, publish/unpublish/delete, mis-cursos)
@@ -33,10 +33,19 @@ backend/src/
     categories.js       ← /api/categories (GET público, POST admin)
     evaluations.js      ← /api/evaluations (CRUD + attempt con grading server-side)
     progress.js         ← /api/progress (streak, achievements, certificates + verify público)
+    gotas.js            ← /api/gotas (saldo/total/semana + history)         [Etapa 6]
+    missions.js         ← /api/missions/today (3 misiones diarias)          [Etapa 6]
+    ranking.js          ← /api/ranking/friends (leaderboard semanal)        [Etapa 6]
+    admin.js            ← /api/admin (users, courses, stats, categorías)
     notifications.js, search.js, comments.js, sounds.js, locations.js
   services/
     progress.service.js     ← actualizarRacha + checkCursoCompletado + rachaEstaActiva
     achievement.service.js  ← LOGROS_CATALOGO + ensureLogrosCatalog + checkers
+    neo4j-sync.service.js   ← propaga inscripción/completado a Neo4j (CursoRef)
+    upload.service.js       ← Cloudinary (fallback a disco)
+    gotas.service.js        ← otorgarGotas (idempotencia + topes) + sumas    [Etapa 6]
+    mision.service.js       ← asignar/avanzar misiones diarias               [Etapa 6]
+    ranking.service.js      ← ranking de amigos + premio semanal lazy        [Etapa 6]
 
 frontend/src/
   api/client.js         ← axios + interceptor JWT desde localStorage
@@ -51,6 +60,9 @@ frontend/src/
     StreakBadge.jsx (3 variantes), StreakToast.jsx
     AchievementToast.jsx, AchievementsSection.jsx
     EvaluationQuiz.jsx
+    AcademicActivityCard.jsx, RecommendedCourseCard.jsx   [Etapa 4]
+    titi/titiAssets.js  ← mapa estado→WebP de la mascota   [Etapa 6.4]
+    icons.jsx (GotaIcon, BookIcon), PageTransition.jsx
   pages/
     Feed, Explore, Profile, Notifications, HashtagFeed, Login, Register
     Courses, CourseDetail, LearnCourse, MyCourses
@@ -59,6 +71,7 @@ frontend/src/
     teacher/CourseEditor.jsx
     teacher/ModulesEditor.jsx
     teacher/EvaluationEditor.jsx (mode="module"|"final")
+    admin/  (AdminDashboard, AdminUsers, AdminCourses, AdminCategories)   [Etapa 4]
 ```
 
 ## El puente Neo4j ↔ Postgres (CRÍTICO)
@@ -89,7 +102,7 @@ async function loadCurrentUser(req, res) {
 | Texto en UI | Español, voseo opcional ("Inscribite") |
 | Código, variables, archivos | Inglés |
 | Modelos Prisma / nodos Neo4j | Español (`Usuario`, `Curso`, `LE_GUSTO`) |
-| Mascota Titi | **Siempre** `<img src="/Titi.png" />`. NUNCA emoji 🐒 |
+| Mascota Titi | **Siempre** `<TitiMascot>` (WebP animado, fallback `/Titi.png`). NUNCA emoji 🐒 |
 | Colores | Solo clases `titi-*` y `gray-*`. NUNCA hex hardcodeado en JSX |
 | Tipografía | `font-sans` (Nunito). `font-black` solo para números de racha |
 | Cards | `rounded-xl` o `rounded-2xl`. Nunca `rounded` solo |
@@ -97,24 +110,24 @@ async function loadCurrentUser(req, res) {
 ## Etapas del proyecto
 
 - ✅ **Etapa 1** — Red social Titi.
-- ✅ **Etapa 2** — Módulo educativo base (cursos / módulos / lecciones / materiales / inscripciones).
+- ✅ **Etapa 2** — Módulo educativo base.
 - ✅ **Etapa 3** — Evaluaciones, racha, logros, certificados.
-- 🔄 **Etapa 4** — Integración social + admin. **Ver `AGENTS.md` para checklist.**
-- 📋 **Etapa 5** — Cloudinary, tests, deploy.
+- ✅ **Etapa 4** — Integración social + admin.
+- ✅ **Etapa 5** — Cloudinary, tests, CI/CD, deploy público (`v1.0.0`).
+- 🔄 **Etapa 6** — Gamificación + Titi Vivo (gotas, misiones, ranking, mascota
+  animada). Subfases 6.1–6.3 ✅; **en curso 6.4**. Estado y qué falta en `docs/roadmap.md`.
 
-## Lecturas obligatorias antes de tocar código
+## Lecturas antes de tocar código
 
-1. `AGENTSGoal.md` — visión y arquitectura (este doc).
-2. `AGENTS.md` — qué falta en la etapa actual.
-3. `frontend/design.md` — si tocás UI.
+1. `AGENTS.md` (raíz) — entrada slim: mapa + punteros + estado actual.
+2. `docs/roadmap.md` — qué falta en la etapa actual.
+3. `docs/architecture.md` / `docs/api.md` / `docs/conventions.md` — según lo que toques.
+4. `frontend/design.md` — si tocás UI.
 
 ## Para preguntas estructurales sobre el código
 
-Usa `codegraph_*` antes que `grep`:
-- "¿Qué llama a X?" → `codegraph_callers`
-- "¿Qué llama X?" → `codegraph_callees`
-- "¿Dónde está definido X?" → `codegraph_search`
-- "Survey de área desconocida" → `codegraph_explore`
+Usa `Grep`/`Glob` para localizar, o las skills hermanas para patrones. Si existe
+`graphify-out/`, tratá la pregunta como query de `graphify` primero.
 
 ## Skills hermanas
 

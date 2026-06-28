@@ -2,7 +2,7 @@ import prisma from '../prisma.js';
 import { syncLogroNotificacion } from './neo4j-sync.service.js';
 
 /**
- * Catálogo base de logros (AGENTSGoal §8.2).
+ * Catálogo base de logros (docs/architecture.md — Lógica de negocio › Logros).
  * Se siembra con ensureLogrosCatalog() — upsert por nombre, idempotente.
  */
 export const LOGROS_CATALOGO = [
