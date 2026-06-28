@@ -8,7 +8,13 @@
 import { usePopIn } from '../lib/motion.js';
 import { TITI_STATES, TITI_POSTER, MOOD_TO_STATE } from './titi/titiAssets.js';
 
-const sizes = { sm: 'w-16 h-16', md: 'w-24 h-24', lg: 'w-36 h-36', xl: 'w-48 h-48' };
+const sizes = { sm: 'w-16 h-16', md: 'w-24 h-24', lg: 'w-36 h-36', xl: 'w-48 h-48', '2xl': 'w-64 h-64' };
+// La animación de "celebra" se muestra un escalón más grande en todos lados.
+const SIZE_ORDER = ['sm', 'md', 'lg', 'xl', '2xl'];
+function bumpForCelebra(size) {
+  const i = SIZE_ORDER.indexOf(size);
+  return i >= 0 && i < SIZE_ORDER.length - 1 ? SIZE_ORDER[i + 1] : size;
+}
 
 const moodMsg = {
   happy: '¡Así se hace!', sad: 'No encontré nada...', surprised: '¡Wow!',
@@ -30,7 +36,8 @@ export default function TitiMascot({ mood = 'happy', state, message, size = 'md'
   const popRef = usePopIn();
   const resolved = state || MOOD_TO_STATE[mood] || 'idle';
   const asset = TITI_STATES[resolved] || TITI_STATES.idle;
-  const sizeClass = sizes[size] || sizes.md;
+  const effectiveSize = resolved === 'celebra' ? bumpForCelebra(size) : size;
+  const sizeClass = sizes[effectiveSize] || sizes.md;
   const text = message ?? moodMsg[mood] ?? '';
   const emoji = moodEmoji[mood] ?? '';
 
