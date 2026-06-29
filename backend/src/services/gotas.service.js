@@ -62,7 +62,7 @@ export async function topeAlcanzado(usuarioId, motivo, desde = startOfDay()) {
  */
 export async function otorgarGotas(usuarioId, motivo, { refId = null, cantidad = null } = {}) {
   try {
-    const monto = cantidad ?? GOTAS[motivo];
+    let monto = cantidad ?? GOTAS[motivo];
     if (!monto || monto <= 0) return { otorgadas: 0 };
 
     // Idempotencia de aprendizaje: un mismo (usuario, motivo, refId) paga una vez.
@@ -73,6 +73,17 @@ export async function otorgarGotas(usuarioId, motivo, { refId = null, cantidad =
 
     // Tope diario anti-farmeo para los motivos sociales.
     if (await topeAlcanzado(usuarioId, motivo)) return { otorgadas: 0 };
+
+    // Etapa 7 — multiplicador x2 si está activo (no aplica al premio del ranking).
+    if (motivo !== 'ranking_semanal') {
+      const u = await prisma.usuario.findUnique({
+        where: { id: usuarioId },
+        select: { gotasMultiplicadorHasta: true },
+      });
+      if (u?.gotasMultiplicadorHasta && new Date(u.gotasMultiplicadorHasta) > new Date()) {
+        monto *= 2;
+      }
+    }
 
     const [, usuario] = await prisma.$transaction([
       prisma.movimientoGota.create({ data: { usuarioId, motivo, refId, cantidad: monto } }),

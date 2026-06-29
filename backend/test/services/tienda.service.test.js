@@ -12,7 +12,7 @@ vi.mock('../../src/prisma.js', () => ({
 }));
 
 import prisma from '../../src/prisma.js';
-import { comprarItem, consumirItem } from '../../src/services/tienda.service.js';
+import { comprarItem, consumirItem, activarMultiplicador } from '../../src/services/tienda.service.js';
 
 beforeEach(() => vi.clearAllMocks());
 
@@ -75,5 +75,28 @@ describe('consumirItem', () => {
     const r = await consumirItem('u1', 'congelar_racha');
     expect(r).toEqual({ ok: false });
     expect(prisma.inventarioItem.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('activarMultiplicador', () => {
+  it('consume 1 y abre la ventana x2', async () => {
+    prisma.itemTienda.findUnique.mockResolvedValue({ id: 'mult' });
+    prisma.inventarioItem.findUnique.mockResolvedValue({ cantidad: 1 });
+    prisma.inventarioItem.update.mockResolvedValue({ cantidad: 0 });
+    prisma.usuario.update.mockResolvedValue({});
+    const r = await activarMultiplicador('u1');
+    expect(r.ok).toBe(true);
+    expect(r.hasta).toBeInstanceOf(Date);
+    expect(prisma.usuario.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ gotasMultiplicadorHasta: expect.any(Date) }) }),
+    );
+  });
+
+  it('falla si no hay multiplicador en inventario', async () => {
+    prisma.itemTienda.findUnique.mockResolvedValue({ id: 'mult' });
+    prisma.inventarioItem.findUnique.mockResolvedValue({ cantidad: 0 });
+    const r = await activarMultiplicador('u1');
+    expect(r).toEqual({ ok: false, error: 'sin_stock' });
+    expect(prisma.usuario.update).not.toHaveBeenCalled();
   });
 });

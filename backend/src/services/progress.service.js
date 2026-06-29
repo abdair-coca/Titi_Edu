@@ -1,6 +1,7 @@
 import prisma from '../prisma.js';
 import { otorgarLogro } from './achievement.service.js';
 import { syncCursoCompletado } from './neo4j-sync.service.js';
+import { consumirItem } from './tienda.service.js';
 
 function startOfDay(date) {
   const d = new Date(date);
@@ -20,9 +21,10 @@ function sameDay(a, b) {
  * - Primera actividad → racha = 1
  * - Misma fecha que la última actividad → no cambia
  * - Día siguiente al de la última actividad → racha + 1
- * - Más de un día desde la última actividad → racha = 1 (rota y reinicia)
+ * - Exactamente un día perdido y tiene `congelar_racha` → consume 1 y continúa
+ * - Más de un día desde la última actividad (sin freeze) → racha = 1 (rota)
  *
- * @returns {Promise<{racha:number, subio:boolean, ultimaActividad:Date, rota:boolean}>}
+ * @returns {Promise<{racha:number, subio:boolean, ultimaActividad:Date, rota:boolean, congelada?:boolean}>}
  */
 export async function actualizarRacha(usuarioId) {
   const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId } });
@@ -30,6 +32,7 @@ export async function actualizarRacha(usuarioId) {
 
   const hoy = startOfDay(new Date());
   const ayer = startOfDay(new Date(Date.now() - 86_400_000));
+  const anteayer = startOfDay(new Date(Date.now() - 2 * 86_400_000));
   const rachaPrev = usuario.racha;
 
   // Primera actividad de la vida del usuario
@@ -55,6 +58,19 @@ export async function actualizarRacha(usuarioId) {
       data: { racha: usuario.racha + 1, ultimaActividad: hoy },
     });
     return { racha: u.racha, subio: true, ultimaActividad: u.ultimaActividad, rota: false };
+  }
+
+  // Perdió exactamente un día (última = anteayer): si tiene 'congelar_racha',
+  // se consume y la racha continúa en vez de romperse (consumo lazy).
+  if (sameDay(ultima, anteayer)) {
+    const freeze = await consumirItem(usuarioId, 'congelar_racha');
+    if (freeze.ok) {
+      const u = await prisma.usuario.update({
+        where: { id: usuarioId },
+        data: { racha: usuario.racha + 1, ultimaActividad: hoy },
+      });
+      return { racha: u.racha, subio: true, ultimaActividad: u.ultimaActividad, rota: false, congelada: true };
+    }
   }
 
   // Racha rota — reinicia a 1

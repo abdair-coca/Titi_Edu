@@ -81,6 +81,22 @@ export async function comprarItem(usuarioId, codigo) {
   return { ok: true, saldo: usuarioAct.gotasSaldo, cantidad: invAct.cantidad };
 }
 
+// Ventana del multiplicador de gotas: 1 hora desde que se activa.
+const MULTIPLICADOR_MS = 60 * 60 * 1000;
+
+/**
+ * Activa el multiplicador x2: consume 1 'multiplicador_gotas' y abre la ventana
+ * (gotasMultiplicadorHasta = now + 1 h). Si ya hay una ventana activa, la extiende
+ * desde ahora. Devuelve { ok, error?, hasta? }. error ∈ 'sin_stock'.
+ */
+export async function activarMultiplicador(usuarioId) {
+  const consumo = await consumirItem(usuarioId, 'multiplicador_gotas');
+  if (!consumo.ok) return { ok: false, error: 'sin_stock' };
+  const hasta = new Date(Date.now() + MULTIPLICADOR_MS);
+  await prisma.usuario.update({ where: { id: usuarioId }, data: { gotasMultiplicadorHasta: hasta } });
+  return { ok: true, hasta };
+}
+
 /**
  * Consume 1 unidad de un consumible del inventario, si hay. Lo usan los efectos
  * (7.2) y el endpoint /use. No rompe nunca el flujo que lo llama.

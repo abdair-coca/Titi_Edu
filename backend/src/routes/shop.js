@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
-import { catalogoConInventario, inventarioDe, comprarItem } from '../services/tienda.service.js';
+import { catalogoConInventario, inventarioDe, comprarItem, activarMultiplicador } from '../services/tienda.service.js';
 
 const router = Router();
 
@@ -68,6 +68,36 @@ router.post('/buy', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('POST /shop/buy error', err);
     res.status(500).json({ success: false, message: 'Error procesando la compra' });
+  }
+});
+
+// ---- POST /api/shop/use — uso manual de un consumible ----
+// Solo aplica a 'multiplicador_gotas' (abre la ventana x2). 'congelar_racha' e
+// 'intento_extra' se consumen solos en su trigger, no por acá.
+router.post('/use', requireAuth, async (req, res) => {
+  try {
+    const usuario = await loadCurrentUser(req, res);
+    if (!usuario) return;
+    const codigo = (req.body?.codigo ?? '').toString().trim();
+    if (!codigo) {
+      return res.status(400).json({ success: false, message: 'Falta el código del ítem' });
+    }
+
+    if (codigo === 'multiplicador_gotas') {
+      const r = await activarMultiplicador(usuario.id);
+      if (!r.ok) {
+        return res.status(409).json({ success: false, message: 'No tenés un multiplicador para usar' });
+      }
+      return res.json({ success: true, data: { multiplicadorHasta: r.hasta } });
+    }
+
+    return res.status(400).json({
+      success: false,
+      message: 'Este ítem se usa automáticamente cuando corresponde',
+    });
+  } catch (err) {
+    console.error('POST /shop/use error', err);
+    res.status(500).json({ success: false, message: 'Error usando el ítem' });
   }
 });
 

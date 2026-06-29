@@ -5,6 +5,7 @@ import { actualizarRacha, checkCursoCompletado } from '../services/progress.serv
 import { checkLogrosEvaluacion } from '../services/achievement.service.js';
 import { otorgarGotas } from '../services/gotas.service.js';
 import { avanzarMisiones } from '../services/mision.service.js';
+import { consumirItem } from '../services/tienda.service.js';
 
 const router = Router();
 
@@ -496,11 +497,20 @@ router.post('/evaluations/:id/attempt', requireAuth, async (req, res) => {
         message: 'Ya aprobaste esta evaluación',
       });
     }
+    // Bloqueo por intentos agotados. Se puede destrabar gastando un 'intento_extra'
+    // de la tienda si el cliente lo pide explícitamente (usarIntentoExtra).
+    let usoIntentoExtra = false;
     if (intentosPrevios.length >= ev.intentosMax) {
-      return res.status(403).json({
-        success: false,
-        message: `Alcanzaste el máximo de ${ev.intentosMax} intentos. Contactá a tu profesor.`,
-      });
+      if (req.body?.usarIntentoExtra === true) {
+        const extra = await consumirItem(usuario.id, 'intento_extra');
+        usoIntentoExtra = extra.ok;
+      }
+      if (!usoIntentoExtra) {
+        return res.status(403).json({
+          success: false,
+          message: `Alcanzaste el máximo de ${ev.intentosMax} intentos. Usá un "intento extra" de la tienda o contactá a tu profesor.`,
+        });
+      }
     }
 
     const respuestas = Array.isArray(req.body?.respuestas) ? req.body.respuestas : [];

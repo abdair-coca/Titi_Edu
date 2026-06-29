@@ -11,11 +11,12 @@ vi.mock('../../src/services/tienda.service.js', () => ({
   inventarioDe: vi.fn(),
   comprarItem: vi.fn(),
   consumirItem: vi.fn(),
+  activarMultiplicador: vi.fn(),
 }));
 
 import app from '../../src/app.js';
 import prisma from '../../src/prisma.js';
-import { catalogoConInventario, inventarioDe, comprarItem } from '../../src/services/tienda.service.js';
+import { catalogoConInventario, inventarioDe, comprarItem, activarMultiplicador } from '../../src/services/tienda.service.js';
 
 const tokenFor = (neoId) => jwt.sign({ id: neoId }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
@@ -87,5 +88,32 @@ describe('POST /api/shop/buy', () => {
     const res = await request(app).post('/api/shop/buy')
       .set('Authorization', `Bearer ${tokenFor('neo-1')}`).send({ codigo: 'xxx' });
     expect(res.status).toBe(404);
+  });
+});
+
+describe('POST /api/shop/use', () => {
+  it('200 activa el multiplicador', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', gotasSaldo: 0 });
+    const hasta = new Date(Date.now() + 3600_000);
+    activarMultiplicador.mockResolvedValue({ ok: true, hasta });
+    const res = await request(app).post('/api/shop/use')
+      .set('Authorization', `Bearer ${tokenFor('neo-1')}`).send({ codigo: 'multiplicador_gotas' });
+    expect(res.status).toBe(200);
+    expect(res.body.data.multiplicadorHasta).toBeTruthy();
+  });
+
+  it('409 si no tiene multiplicador', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', gotasSaldo: 0 });
+    activarMultiplicador.mockResolvedValue({ ok: false, error: 'sin_stock' });
+    const res = await request(app).post('/api/shop/use')
+      .set('Authorization', `Bearer ${tokenFor('neo-1')}`).send({ codigo: 'multiplicador_gotas' });
+    expect(res.status).toBe(409);
+  });
+
+  it('400 para ítems de uso automático', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', gotasSaldo: 0 });
+    const res = await request(app).post('/api/shop/use')
+      .set('Authorization', `Bearer ${tokenFor('neo-1')}`).send({ codigo: 'congelar_racha' });
+    expect(res.status).toBe(400);
   });
 });
