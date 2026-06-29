@@ -98,7 +98,7 @@ futura). Cada consumible tiene un **efecto** que toca un sistema existente.
 |---|---|---|---|
 | `congelar_racha` | Protección de racha | ~50 | Protege la racha 1 día sin actividad (no se rompe). Se consume solo al detectarse el gap. |
 | `intento_extra` | Power-up educativo | ~80 | Un intento adicional en una evaluación que agotó `intentosMax`. |
-| `multiplicador_gotas` | Power-up educativo | ~100 | x2 gotas por una ventana de tiempo (ej. 1 h). _(candidato; define en ejecución por el estado temporal extra)_ |
+| `multiplicador_gotas` | Power-up educativo | ~100 | x2 gotas durante 1 h desde que se usa (campo `gotasMultiplicadorHasta` en `Usuario`). |
 
 > Precios y el set final se afinan al sembrar (`seed.js`). El límite de acumulación
 > por ítem (`limiteStack`) evita farmear protección infinita (ej. máx 3 congelaciones).
@@ -108,6 +108,7 @@ futura). Cada consumible tiene un **efecto** que toca un sistema existente.
 ```prisma
 model Usuario {
   // ... + comprasItem CompraItem[]  + inventario InventarioItem[]
+  // + gotasMultiplicadorHasta DateTime?   // x2 gotas activo hasta este instante
 }
 
 model ItemTienda {
@@ -172,15 +173,15 @@ introduce el **gasto**:
 |---|---|---|
 | `congelar_racha` | `progress.service.js` → `actualizarRacha` | Al detectar que la racha se rompería por gap, si hay `congelar_racha` en inventario se **consume 1** y la racha se preserva en vez de reiniciar. Consumo **lazy** (en la próxima actividad/lectura de racha), como el premio del ranking. |
 | `intento_extra` | `routes/evaluations.js` → attempt | Cuando el intento está `bloqueado` (agotó `intentosMax`), permitir un intento más si el body trae `usarIntentoExtra: true`; se **consume 1** antes de calificar. |
-| `multiplicador_gotas` | `gotas.service.js` → `otorgarGotas` | _(candidato)_ requiere estado temporal (`gotasMultiplicadorHasta` en `Usuario`); al otorgar, si está activo, x2. Se define en ejecución. |
+| `multiplicador_gotas` | `gotas.service.js` → `otorgarGotas` | Al usarlo, setea `Usuario.gotasMultiplicadorHasta = now + 1 h`. Mientras esté activo, `otorgarGotas` duplica la cantidad (solo el aprendizaje/social, no el premio del ranking). |
 
-### Endpoints — `/api/tienda`
+### Endpoints — `/api/shop`
 
 ```
-GET  /api/tienda/items       → catálogo activo + mi cantidad por ítem
-GET  /api/tienda/inventory   → mi inventario de consumibles
-POST /api/tienda/buy         → { codigo } compra (debita gotas, 409 si no alcanza/stack lleno)
-POST /api/tienda/use         → { codigo } consumo manual (los auto-consumos van por su trigger)
+GET  /api/shop/items       → catálogo activo + mi cantidad por ítem
+GET  /api/shop/inventory   → mi inventario de consumibles
+POST /api/shop/buy         → { codigo } compra (debita gotas, 409 si no alcanza/stack lleno)
+POST /api/shop/use         → { codigo } consumo manual (los auto-consumos van por su trigger)
 ```
 
 ### Frontend
@@ -222,7 +223,8 @@ Como en la Etapa 6: cada subfase cierra con un **MINOR**; el cierre corta el **M
 | Gasto = `MovimientoGota` **negativo** | Un solo ledger audita ganancia y gasto; no se duplica contabilidad |
 | Debita `gotasSaldo`, no `gotasTotal` | El total es lifetime ganado (ranking/niveles futuros); el saldo es lo gastable |
 | Consumo de `congelar_racha` **lazy** | No hay scheduler; se aplica en la próxima actividad, como el premio del ranking |
-| `multiplicador_gotas` como **candidato** | Requiere estado temporal extra; se confirma al ejecutar 7.2 |
+| `multiplicador_gotas` por **ventana de 1 h** (`gotasMultiplicadorHasta`) | Estado temporal simple en `Usuario`, sin tabla de efectos activos ni scheduler |
+| Ruta `/api/shop` (no `/api/tienda`) | Consistencia con los paths en inglés del resto de la API |
 
 ---
 
