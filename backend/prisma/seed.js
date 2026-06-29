@@ -296,6 +296,25 @@ async function seedMisiones() {
   console.log(`  ✓ ${MISIONES_CATALOGO.length} misiones listas`);
 }
 
+// Etapa 7 — catálogo de ítems consumibles de la tienda. Idempotente por `codigo`.
+const ITEMS_TIENDA = [
+  { codigo: 'congelar_racha', nombre: 'Congelar racha', descripcion: 'Protegé tu racha: si un día no estudiás, no se rompe.', precio: 50, efecto: 'congelar_racha', icono: '🧊', limiteStack: 3 },
+  { codigo: 'intento_extra', nombre: 'Intento extra', descripcion: 'Un intento más en una evaluación que ya agotaste.', precio: 80, efecto: 'intento_extra', icono: '🔁', limiteStack: 5 },
+  { codigo: 'multiplicador_gotas', nombre: 'Multiplicador x2', descripcion: 'Duplicá las gotas que ganes durante 1 hora.', precio: 100, efecto: 'multiplicador_gotas', icono: '⚡', limiteStack: 3 },
+];
+
+async function seedItemsTienda() {
+  console.log('→ Sembrando ítems de la tienda...');
+  for (const it of ITEMS_TIENDA) {
+    await prisma.itemTienda.upsert({
+      where: { codigo: it.codigo },
+      update: { nombre: it.nombre, descripcion: it.descripcion, precio: it.precio, efecto: it.efecto, icono: it.icono, limiteStack: it.limiteStack, activo: true },
+      create: it,
+    });
+  }
+  console.log(`  ✓ ${ITEMS_TIENDA.length} ítems de tienda listos`);
+}
+
 async function seedEvaluacionDemo(curso) {
   console.log('→ Sembrando evaluación final demo...');
   const existente = await prisma.evaluacion.findFirst({
@@ -404,6 +423,7 @@ async function main() {
     const curso = await seedCursoDemo(profesor, categorias);
     await seedLogros();
     await seedMisiones();
+    await seedItemsTienda();
     await seedEvaluacionDemo(curso);
     await seedFeedAcademicoDemo(profesor, admin, curso);
     console.log('\n✓ Seed completado correctamente.');

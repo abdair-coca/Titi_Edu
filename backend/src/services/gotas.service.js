@@ -105,11 +105,41 @@ export async function otorgarGotasPorNeoId(neoId, motivo, opts = {}) {
   }
 }
 
-/** Suma de gotas ganadas por el usuario en la semana en curso (desde el lunes). */
+/**
+ * Suma de gotas **ganadas** por el usuario en la semana en curso (desde el lunes).
+ * Solo cuenta movimientos positivos: los gastos de la tienda (cantidad < 0) no
+ * bajan el ranking semanal, que mide actividad/ganancia, no saldo neto.
+ */
 export async function gotasDeLaSemana(usuarioId, desde = startOfWeek()) {
   const r = await prisma.movimientoGota.aggregate({
     _sum: { cantidad: true },
-    where: { usuarioId, createdAt: { gte: desde } },
+    where: { usuarioId, createdAt: { gte: desde }, cantidad: { gt: 0 } },
   });
   return r._sum.cantidad ?? 0;
+}
+
+/**
+ * Gasta gotas del saldo (no del total — el total es lifetime ganado). Escribe un
+ * MovimientoGota negativo. Valida saldo suficiente. Devuelve { ok, saldo }.
+ * No rompe el flujo; ante saldo insuficiente devuelve { ok: false }.
+ * @param {string} usuarioId
+ * @param {number} cantidad  monto positivo a descontar
+ * @param {{ motivo?: string, refId?: string }} opts
+ */
+export async function gastarGotas(usuarioId, cantidad, { motivo = 'compra_tienda', refId = null } = {}) {
+  try {
+    const monto = Number(cantidad) || 0;
+    if (monto <= 0) return { ok: false, saldo: null };
+    const usuario = await prisma.usuario.findUnique({ where: { id: usuarioId }, select: { gotasSaldo: true } });
+    if (!usuario || usuario.gotasSaldo < monto) return { ok: false, saldo: usuario?.gotasSaldo ?? 0 };
+
+    const [, actualizado] = await prisma.$transaction([
+      prisma.movimientoGota.create({ data: { usuarioId, motivo, refId, cantidad: -monto } }),
+      prisma.usuario.update({ where: { id: usuarioId }, data: { gotasSaldo: { decrement: monto } } }),
+    ]);
+    return { ok: true, saldo: actualizado.gotasSaldo };
+  } catch (err) {
+    console.error('gastarGotas error', err);
+    return { ok: false, saldo: null };
+  }
 }

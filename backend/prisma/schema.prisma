@@ -41,6 +41,9 @@ model Usuario {
   gotasSaldo Int @default(0)
   gotasTotal Int @default(0)
 
+  // Etapa 7 — tienda. x2 gotas activo hasta este instante (multiplicador_gotas).
+  gotasMultiplicadorHasta DateTime?
+
   cursosCreados      Curso[]         @relation("CursosCreados")
   cursosComoProfesor CursoProfesor[]
 
@@ -53,6 +56,8 @@ model Usuario {
   movimientosGota MovimientoGota[]
   misionesUsuario MisionUsuario[]
   insignias       InsigniaSemanal[]
+  comprasItem     CompraItem[]
+  inventario      InventarioItem[]
 }
 
 // Etapa 6 — catálogo de misiones diarias. Se siembran en seed.js (idempotente por codigo).
@@ -102,13 +107,54 @@ model InsigniaSemanal {
 model MovimientoGota {
   id        String   @id @default(uuid())
   usuarioId String
-  cantidad  Int // siempre > 0 en esta etapa (solo ganancia)
-  motivo    String // 'leccion'|'evaluacion'|'curso'|'mision'|'social_post'|'social_like'|'social_comment'|'social_follow'|'ranking_semanal'
-  refId     String? // id de lección/evaluación/post/etc — auditoría + idempotencia
+  cantidad  Int // > 0 ganancia; < 0 gasto (Etapa 7 — 'compra_tienda')
+  motivo    String // 'leccion'|'evaluacion'|'curso'|'mision'|'social_*'|'ranking_semanal'|'compra_tienda'
+  refId     String? // id de lección/evaluación/post/item — auditoría + idempotencia
   createdAt DateTime @default(now())
   usuario   Usuario  @relation(fields: [usuarioId], references: [id])
 
   @@index([usuarioId, createdAt])
+}
+
+// Etapa 7 — catálogo de ítems consumibles de la tienda. Se siembran en seed.js
+// (idempotente por codigo). El precio se paga en gotas (gotasSaldo).
+model ItemTienda {
+  id          String           @id @default(uuid())
+  codigo      String           @unique // 'congelar_racha'|'intento_extra'|'multiplicador_gotas'
+  nombre      String
+  descripcion String
+  precio      Int // en gotas
+  efecto      String // qué hace al consumirse (mismo set que codigo)
+  icono       String?
+  limiteStack Int? // tope de acumulación por usuario (null = sin tope)
+  activo      Boolean          @default(true)
+  compras     CompraItem[]
+  inventario  InventarioItem[]
+}
+
+// Etapa 7 — ledger de compras (auditoría). Cada compra debita gotas y suma 1 al inventario.
+model CompraItem {
+  id        String     @id @default(uuid())
+  usuarioId String
+  itemId    String
+  precio    Int // snapshot del precio pagado
+  createdAt DateTime   @default(now())
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id])
+  item      ItemTienda @relation(fields: [itemId], references: [id])
+
+  @@index([usuarioId, createdAt])
+}
+
+// Etapa 7 — saldo de consumibles por usuario. Unique por (usuario, item).
+model InventarioItem {
+  id        String     @id @default(uuid())
+  usuarioId String
+  itemId    String
+  cantidad  Int        @default(0)
+  usuario   Usuario    @relation(fields: [usuarioId], references: [id])
+  item      ItemTienda @relation(fields: [itemId], references: [id])
+
+  @@unique([usuarioId, itemId])
 }
 
 model Categoria {
