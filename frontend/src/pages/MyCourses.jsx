@@ -107,14 +107,18 @@ export default function MyCourses() {
           <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark">
             Mis cursos
           </h1>
-          <p className="text-sm font-medium text-gray-500 mt-1">
+          <span
+            aria-hidden="true"
+            className="block w-12 h-1.5 mt-1.5 bg-titi-yellow rounded-full"
+          />
+          <p className="text-sm font-medium text-gray-500 mt-1.5">
             Continuá donde lo dejaste
           </p>
         </div>
         <button
           type="button"
           onClick={() => navigate('/certificates')}
-          className="bg-white text-titi-dark font-semibold text-sm px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all whitespace-nowrap"
+          className="bg-white text-titi-dark font-semibold text-sm px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-titi-cream hover:border-titi-yellow transition-all whitespace-nowrap"
         >
           🎓 Mis certificados
         </button>
@@ -152,67 +156,70 @@ export default function MyCourses() {
   );
 }
 
-// ---- Una sola card con 3 stats separados por líneas divisorias ----
+// ---- 3 stat cards separadas (mockup), cada una con su acento de color:
+// progreso → amarillo Titi (XP), gotas → azul info, racha → naranja streak.
 function StatsRow({ progresoPromedio, gotasTotal, streak }) {
   const rachaActiva = streak.estaActiva && streak.racha > 0;
+  const cardClass =
+    'bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-0.5 transition-all duration-200 p-4 sm:p-5 flex items-center gap-3';
   return (
-    <section className="mb-6 sm:mb-8 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-5 sm:p-6">
-      <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
-        {/* Tu progreso */}
-        <div className="flex items-center gap-3 pb-4 sm:pb-0 sm:pr-6">
-          <StatIcon icon={<TargetIcon className="w-6 h-6 text-titi-dark" />} />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-medium text-gray-500">Tu progreso</p>
-            <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
-              {progresoPromedio}%
-            </p>
-            <p className="text-xs text-gray-400">Promedio general</p>
+    <section className="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+      {/* Tu progreso */}
+      <div className={cardClass}>
+        <StatIcon tint="bg-titi-yellow" icon={<TargetIcon className="w-6 h-6 text-titi-dark" />} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-gray-500">Tu progreso</p>
+          <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
+            {progresoPromedio}%
+          </p>
+          <p className="text-xs text-gray-400">Promedio general</p>
+          <div
+            className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden"
+            role="progressbar"
+            aria-valuenow={progresoPromedio}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Progreso general"
+          >
             <div
-              className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden"
-              role="progressbar"
-              aria-valuenow={progresoPromedio}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Progreso general"
-            >
-              <div
-                className="h-full bg-titi-yellow rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
-                style={{ width: `${progresoPromedio}%` }}
-              />
-            </div>
+              className="h-full bg-titi-yellow rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
+              style={{ width: `${progresoPromedio}%` }}
+            />
           </div>
         </div>
+      </div>
 
-        {/* Gotas totales */}
-        <div className="flex items-center gap-3 py-4 sm:py-0 sm:px-6">
-          <StatIcon icon={<BoltIcon className="w-6 h-6 text-titi-dark" />} />
-          <div className="min-w-0">
-            <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
-              {gotasTotal}
-            </p>
-            <p className="text-xs text-gray-400">Gotas totales</p>
-          </div>
+      {/* Gotas totales */}
+      <div className={cardClass}>
+        <StatIcon tint="bg-blue-100" icon={<GotaIcon className="w-6 h-6 text-blue-500" />} />
+        <div className="min-w-0">
+          <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
+            {gotasTotal}
+          </p>
+          <p className="text-xs text-gray-400">Gotas totales</p>
         </div>
+      </div>
 
-        {/* Racha actual */}
-        <div className="flex items-center gap-3 pt-4 sm:pt-0 sm:pl-6">
-          <StatIcon icon={<GotaIcon className="w-6 h-6 text-titi-dark" />} />
-          <div className="min-w-0">
-            <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
-              {streak.racha}
-            </p>
-            <p className="text-xs text-gray-400">Racha actual</p>
-            {rachaActiva && <p className="text-xs font-semibold text-gray-500">¡Sigue así!</p>}
-          </div>
+      {/* Racha actual */}
+      <div className={cardClass}>
+        <StatIcon tint="bg-orange-100" icon={<BoltIcon className="w-6 h-6 text-titi-streak" />} />
+        <div className="min-w-0">
+          <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
+            {streak.racha}
+          </p>
+          <p className="text-xs text-gray-400">Racha actual</p>
+          {rachaActiva && (
+            <p className="text-xs font-bold text-titi-streak">¡Sigue así!</p>
+          )}
         </div>
       </div>
     </section>
   );
 }
 
-function StatIcon({ icon }) {
+function StatIcon({ icon, tint = 'bg-titi-yellow' }) {
   return (
-    <div className="w-12 h-12 rounded-full bg-titi-yellow shadow-sm grid place-items-center shrink-0">
+    <div className={`w-12 h-12 rounded-full ${tint} shadow-sm grid place-items-center shrink-0`}>
       {icon}
     </div>
   );
@@ -721,18 +728,19 @@ function SkeletonGrid() {
   return (
     <div className="flex flex-col gap-6 sm:gap-8 animate-pulse">
       {/* Stats row */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-gray-100 shrink-0" />
-              <div className="flex-1 flex flex-col gap-2">
-                <div className="h-5 w-16 bg-gray-100 rounded" />
-                <div className="h-3 w-20 bg-gray-100 rounded" />
-              </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div
+            key={i}
+            className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 flex items-center gap-3"
+          >
+            <div className="w-12 h-12 rounded-full bg-gray-100 shrink-0" />
+            <div className="flex-1 flex flex-col gap-2">
+              <div className="h-5 w-16 bg-gray-100 rounded" />
+              <div className="h-3 w-20 bg-gray-100 rounded" />
             </div>
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
       {/* Ruta de aprendizaje */}
       <div>
