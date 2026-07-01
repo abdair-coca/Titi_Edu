@@ -433,13 +433,14 @@ function LearningPathMoreNode({ count, onClick }) {
   );
 }
 
-// ---- Explorar categorías: grid de accesos a /courses?categoria=<id> ----
-// Tinte plano rotado por índice (sin gradientes, clases de la paleta Titi).
+// ---- Explorar categorías: fila de accesos a /courses?categoria=<id> ----
+// Tinte plano rotado por índice — paleta semántica de design.md (sin inventar
+// colores nuevos): logro/info/éxito/racha.
 const CAT_TINTS = [
-  'bg-titi-yellow-light text-titi-yellow-dark',
   'bg-purple-50 text-titi-achievement',
-  'bg-green-50 text-green-600',
   'bg-blue-50 text-blue-500',
+  'bg-green-50 text-green-600',
+  'bg-orange-50 text-titi-streak',
 ];
 
 function CategoriesExplorer({ onOpen }) {
@@ -464,16 +465,16 @@ function CategoriesExplorer({ onOpen }) {
     };
   }, []);
 
-  // Solo categorías con al menos un curso; máximo 8 en la grilla.
+  // Solo categorías con al menos un curso; fila de 4 (como el mockup).
   const withCourses = (categorias || []).filter((c) => (c._count?.cursos ?? 0) > 0);
-  const visible = withCourses.slice(0, 8);
+  const visible = withCourses.slice(0, 4);
 
   if (error) return null;
 
   return (
-    <section className="mb-6 sm:mb-8">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg sm:text-xl font-bold text-titi-dark">Explorar categorías</h2>
+    <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-base font-bold text-titi-dark">Explorar categorías</h2>
         <button
           type="button"
           onClick={() => navigate('/courses')}
@@ -486,13 +487,13 @@ function CategoriesExplorer({ onOpen }) {
       {categorias === null ? (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-pulse">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 bg-gray-100 rounded-2xl" />
+            <div key={i} className="h-20 bg-gray-100 rounded-xl" />
           ))}
         </div>
       ) : visible.length === 0 ? (
         <p className="text-sm text-gray-400">Aún no hay categorías con cursos.</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {visible.map((cat, i) => {
             const Icon = categoryIcon(cat.nombre);
             const count = cat._count?.cursos ?? 0;
@@ -501,17 +502,17 @@ function CategoriesExplorer({ onOpen }) {
                 key={cat.id}
                 type="button"
                 onClick={() => onOpen(cat.id)}
-                className="flex flex-col items-center gap-2 text-center bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-0.5 p-4 transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
+                className="flex flex-col items-center gap-1.5 text-center rounded-xl py-3 px-1 hover:bg-titi-cream transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
               >
                 <span
-                  className={`w-11 h-11 rounded-xl grid place-items-center shrink-0 ${CAT_TINTS[i % CAT_TINTS.length]}`}
+                  className={`w-10 h-10 rounded-full grid place-items-center shrink-0 ${CAT_TINTS[i % CAT_TINTS.length]}`}
                 >
                   <Icon className="w-5 h-5" />
                 </span>
-                <span className="text-sm font-bold text-titi-dark leading-tight line-clamp-2">
+                <span className="text-xs font-bold text-titi-dark leading-tight line-clamp-2">
                   {cat.nombre}
                 </span>
-                <span className="text-xs font-medium text-gray-400">
+                <span className="text-[11px] font-medium text-gray-400">
                   {count} {count === 1 ? 'curso' : 'cursos'}
                 </span>
               </button>
@@ -642,10 +643,8 @@ function RecentActivity() {
 // ---- Banner de cierre: CTA plano a /courses ----
 function BottomBanner({ onExplore }) {
   return (
-    <section className="bg-titi-yellow-light border border-titi-yellow/40 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-5 sm:gap-6">
-      <span className="w-14 h-14 rounded-2xl bg-titi-yellow shadow-sm grid place-items-center shrink-0">
-        <TrophyIcon className="w-7 h-7 text-titi-dark" />
-      </span>
+    <section className="bg-titi-yellow-light border border-titi-yellow/40 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
+      <TrophyIcon className="w-10 h-10 text-titi-yellow-dark shrink-0" />
       <div className="flex-1 text-center sm:text-left">
         <h3 className="text-lg font-bold text-titi-dark">¡Sigue aprendiendo!</h3>
         <p className="text-sm font-medium text-titi-dark/70">
