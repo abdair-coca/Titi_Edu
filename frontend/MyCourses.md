@@ -64,15 +64,16 @@ título, estado, lecciones/% arriba de la barra). Columna de íconos por
 categoría conectados por línea, altura de card estandarizada (`sm:h-44`),
 hover del card colorea su nodo. Nodo "+N" para los cursos ocultos.
 
-### ⬜ Etapa 4 — Desafíos del día (reubicado) + Explorar categorías
+### ✅ Etapa 4 — Desafíos del día (reubicado) + Explorar categorías
 
-- Sacar `<DailyMissions />` de `Feed.jsx`.
-- Prop `title` opcional en `DailyMissions.jsx` (default actual, acá
-  "Desafíos del día").
-- Montar `<DailyMissions title="Desafíos del día" />` en `MyCourses.jsx`.
-- Nueva sección `CategoriesExplorer`: fetch `GET /api/categories` (ya trae
-  `_count.cursos`), grid de ícono+nombre+cantidad.
-- `Courses.jsx`: leer `?categoria=` de `useSearchParams` al montar.
+`DailyMissions` recibe prop `title` (default "Misiones de hoy") y se sacó de
+`Feed.jsx`; se monta en `MyCourses.jsx` como "Desafíos del día". Nueva sección
+`CategoriesExplorer`: fetch `GET /api/categories`, filtra las que tienen cursos
+(máx 8), grid con ícono de trazo por materia (`categoryIcon`) + nombre +
+conteo, tinte plano rotado por índice. Cada chip y "Ver todas" navegan a
+`/courses` (chips con `?categoria=<id>`). `Courses.jsx` lee `?categoria=` con
+`useSearchParams`, aplica el filtro, baja a Trending y limpia el param.
+Quedan full-width apilados; Etapa 5 los reacomoda en 2 columnas con Actividad.
 
 ### ⬜ Etapa 5 — Actividad reciente + banner de cierre
 
