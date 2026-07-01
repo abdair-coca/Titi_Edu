@@ -453,12 +453,12 @@ function LearningPathMoreNode({ count, onClick }) {
 
 // ---- Explorar categorías: fila de accesos a /courses?categoria=<id> ----
 // Tinte plano rotado por índice — paleta semántica de design.md (sin inventar
-// colores nuevos): logro/info/éxito/racha.
+// colores nuevos): logro/info/éxito/XP, como los 4 chips del mockup.
 const CAT_TINTS = [
-  'bg-purple-50 text-titi-achievement',
-  'bg-blue-50 text-blue-500',
-  'bg-green-50 text-green-600',
-  'bg-orange-50 text-titi-streak',
+  'bg-purple-100 text-titi-achievement',
+  'bg-blue-100 text-blue-500',
+  'bg-green-100 text-green-600',
+  'bg-titi-yellow-light text-titi-yellow-dark',
 ];
 
 function CategoriesExplorer({ onOpen }) {
@@ -496,7 +496,7 @@ function CategoriesExplorer({ onOpen }) {
         <button
           type="button"
           onClick={() => navigate('/courses')}
-          className="text-xs font-bold text-titi-dark hover:text-titi-yellow-dark uppercase tracking-wide transition-colors whitespace-nowrap"
+          className="text-xs font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors whitespace-nowrap"
         >
           Ver todas
         </button>
@@ -523,7 +523,7 @@ function CategoriesExplorer({ onOpen }) {
                 className="flex flex-col items-center gap-1.5 text-center rounded-xl py-3 px-1 hover:bg-titi-cream transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
               >
                 <span
-                  className={`w-10 h-10 rounded-full grid place-items-center shrink-0 ${CAT_TINTS[i % CAT_TINTS.length]}`}
+                  className={`w-11 h-11 rounded-full grid place-items-center shrink-0 shadow-sm ${CAT_TINTS[i % CAT_TINTS.length]}`}
                 >
                   <Icon className="w-5 h-5" />
                 </span>
@@ -598,17 +598,8 @@ function RecentActivity() {
 
   return (
     <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-3">
+      <div className="mb-3">
         <h2 className="text-base font-bold text-titi-dark">Actividad reciente</h2>
-        {showToggle && (
-          <button
-            type="button"
-            onClick={() => setExpanded((e) => !e)}
-            className="text-xs font-bold text-titi-dark hover:text-titi-yellow-dark uppercase tracking-wide transition-colors whitespace-nowrap"
-          >
-            {expanded ? 'Ver menos' : 'Ver toda la actividad'}
-          </button>
-        )}
       </div>
 
       {actividad === null ? (
@@ -654,6 +645,17 @@ function RecentActivity() {
           })}
         </ul>
       )}
+
+      {/* Toggle centrado al pie, como el mockup */}
+      {actividad !== null && showToggle && (
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="w-full mt-3 pt-3 border-t border-gray-50 text-center text-xs font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors"
+        >
+          {expanded ? 'Ver menos' : 'Ver toda la actividad'}
+        </button>
+      )}
     </section>
   );
 }
@@ -661,11 +663,13 @@ function RecentActivity() {
 // ---- Banner de cierre: CTA plano a /courses ----
 function BottomBanner({ onExplore }) {
   return (
-    <section className="bg-titi-yellow-light border border-titi-yellow/40 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
-      <TrophyIcon className="w-10 h-10 text-titi-yellow-dark shrink-0" />
+    <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
+      <div className="w-14 h-14 rounded-full bg-titi-yellow-light shadow-sm grid place-items-center shrink-0">
+        <TrophyIcon className="w-8 h-8 text-titi-certificate" />
+      </div>
       <div className="flex-1 text-center sm:text-left">
         <h3 className="text-lg font-bold text-titi-dark">¡Sigue aprendiendo!</h3>
-        <p className="text-sm font-medium text-titi-dark/70">
+        <p className="text-sm font-medium text-gray-500">
           La constancia es la clave del éxito.
         </p>
       </div>

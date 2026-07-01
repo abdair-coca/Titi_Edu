@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useGamification } from '../context/GamificationContext.jsx';
-import { GotaIcon } from './icons.jsx';
+import { BoltIcon, GotaIcon } from './icons.jsx';
 
 /**
  * DailyMissions — panel con las 3 misiones diarias del usuario y su progreso.
@@ -41,7 +41,12 @@ export default function DailyMissions({ title = 'Misiones de hoy' }) {
   return (
     <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-bold text-titi-dark">{title}</h2>
+        <div className="flex items-center gap-2">
+          <span className="w-8 h-8 rounded-full bg-titi-yellow shadow-sm grid place-items-center shrink-0">
+            <BoltIcon className="w-4 h-4 text-titi-dark" />
+          </span>
+          <h2 className="text-base font-bold text-titi-dark">{title}</h2>
+        </div>
         <span className="text-xs font-semibold text-gray-400">
           Se renuevan cada día
         </span>
