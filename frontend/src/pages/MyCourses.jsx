@@ -247,17 +247,22 @@ function LearningPathSection({ inscripciones, progressByCurso, onContinue, onOpe
 
   return (
     <section className="mb-6 sm:mb-8">
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg sm:text-xl font-bold text-titi-dark">Tu ruta de aprendizaje</h2>
         {showToggle && (
           <button
             type="button"
             onClick={toggle}
-            className="text-xs font-bold text-titi-dark hover:text-titi-yellow-dark uppercase tracking-wide transition-colors whitespace-nowrap"
+            className="text-xs font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors whitespace-nowrap"
           >
             {expanded ? 'Ver menos' : 'Ver toda la ruta'}
           </button>
         )}
+      </div>
+
+      {/* Punto de partida de la timeline (mockup) */}
+      <div aria-hidden="true" className="w-11 sm:w-12 flex justify-center mb-3">
+        <span className="w-3.5 h-3.5 rounded-full bg-titi-yellow shadow-sm ring-4 ring-titi-yellow-light" />
       </div>
 
       <ul ref={pathRef} className="flex flex-col gap-5">
@@ -315,7 +320,7 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
       </div>
 
       {/* Card horizontal — la portada queda al ras del contenedor (sin padding) */}
-      <article className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
+      <article className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
         <div className="flex flex-col sm:flex-row sm:h-44">
           {/* Portada (izquierda, al ras) */}
           <button
@@ -340,12 +345,12 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
               </div>
             )}
             {curso.nivel && (
-              <span className="absolute top-2.5 left-2.5 bg-white text-titi-dark text-[11px] font-semibold capitalize px-3 py-1 rounded-full shadow-sm">
+              <span className="absolute top-2.5 left-2.5 bg-titi-dark text-white text-[11px] font-semibold capitalize px-3 py-1 rounded-full shadow-sm">
                 {curso.nivel}
               </span>
             )}
             {completado && (
-              <span className="absolute top-2.5 right-2.5 bg-green-50 text-green-700 text-[11px] font-semibold px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
+              <span className="absolute top-2.5 right-2.5 bg-green-500 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
                 Completado ✓
               </span>
             )}
@@ -390,7 +395,13 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
                 <span>
                   {completadas} / {total} {total === 1 ? 'lección' : 'lecciones'}
                 </span>
-                <span className="tabular-nums font-semibold text-gray-500">{porcentaje}%</span>
+                <span
+                  className={`tabular-nums font-bold ${
+                    completado ? 'text-green-600' : 'text-titi-yellow-dark'
+                  }`}
+                >
+                  {porcentaje}%
+                </span>
               </div>
               <div
                 className="h-2.5 bg-gray-100 rounded-full overflow-hidden"
