@@ -75,15 +75,20 @@ conteo, tinte plano rotado por índice. Cada chip y "Ver todas" navegan a
 `useSearchParams`, aplica el filtro, baja a Trending y limpia el param.
 Quedan full-width apilados; Etapa 5 los reacomoda en 2 columnas con Actividad.
 
-### ⬜ Etapa 5 — Actividad reciente + banner de cierre
+### ✅ Etapa 5 — Actividad reciente + banner de cierre
 
-- `RecentActivity`: fetch `GET /api/gotas/activity?limit=20` una vez, toggle
-  inline "Ver toda la actividad" (primeros 4-5 / resto de la misma lista).
-  Ícono por `tipo`, texto, `relativeTime`, `+N gotas` en verde. Empty state
-  con `TitiMascot`.
-- `BottomBanner`: card amarilla plana, trofeo + "¡Sigue aprendiendo!" +
-  "La constancia es la clave del éxito." + botón "Explorar cursos" →
-  `/courses`.
+`RecentActivity` fetchea `GET /api/gotas/activity?limit=20` una sola vez;
+toggle inline "Ver toda la actividad" ↔ "Ver menos" sobre la misma lista
+(primeros 4 / las 20). Ícono por `tipo` (`CheckIcon` verde para lección,
+`AwardIcon` púrpura para evaluación, `GraduationIcon` amarillo para curso),
+texto (`Completaste "X"` / `Aprobaste "X"` / `Completaste el curso "X"`),
+`relativeTime`, `+N gotas` en verde. Empty state con `TitiMascot` +
+"Aún no tenés actividad"; si el fetch falla, la sección no se muestra
+(no bloquea la página). `BottomBanner`: card `bg-titi-yellow-light` +
+`TrophyIcon`, "¡Sigue aprendiendo!" / "La constancia es la clave del éxito."
++ botón "Explorar cursos" → `/courses`. Layout final: grid 2 columnas
+(izq: Desafíos del día + Explorar categorías apilados; der: Actividad
+reciente) y el banner full-width debajo — así queda igual al mockup.
 
 ### ⬜ Etapa 6 — Pulido, responsive y documentación final
 
