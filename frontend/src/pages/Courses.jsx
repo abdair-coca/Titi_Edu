@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useStaggerReveal, usePopIn } from '../lib/motion.js';
@@ -120,6 +120,7 @@ const FEATURED_PREF = [
 export default function Courses() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -197,6 +198,22 @@ export default function Courses() {
       cancelled = true;
     };
   }, [refreshTick]);
+
+  // Deep-link `?categoria=<id>` (viene de "Explorar categorías" en Mis cursos).
+  // Aplica el filtro cuando la categoría existe en el catálogo, baja a Trending
+  // y limpia el param para no re-forzarlo si el usuario cambia de tab.
+  useEffect(() => {
+    const catParam = searchParams.get('categoria');
+    if (!catParam || categorias.length === 0) return;
+    if (categorias.some((c) => c.id === catParam)) {
+      setCategoria(catParam);
+      setQuery('');
+      document
+        .getElementById('trending')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    setSearchParams({}, { replace: true });
+  }, [searchParams, categorias, setSearchParams]);
 
   // Debounce del search input
   useEffect(() => {

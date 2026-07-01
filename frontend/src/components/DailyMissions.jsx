@@ -7,9 +7,10 @@ import { GotaIcon } from './icons.jsx';
 /**
  * DailyMissions — panel con las 3 misiones diarias del usuario y su progreso.
  * Se refresca cuando cambian las gotas totales (una ganancia puede haber hecho
- * avanzar una misión). Pensado para el Feed.
+ * avanzar una misión). Se usa en "Mis cursos" ("Desafíos del día").
+ * `title` permite renombrar el encabezado según dónde se monte.
  */
-export default function DailyMissions() {
+export default function DailyMissions({ title = 'Misiones de hoy' }) {
   const { isAuthenticated } = useAuth();
   const { gotas } = useGamification();
   const [misiones, setMisiones] = useState(null);
@@ -40,7 +41,7 @@ export default function DailyMissions() {
   return (
     <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-bold text-titi-dark">Misiones de hoy</h2>
+        <h2 className="text-base font-bold text-titi-dark">{title}</h2>
         <span className="text-xs font-semibold text-gray-400">
           Se renuevan cada día
         </span>

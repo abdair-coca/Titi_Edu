@@ -6,7 +6,6 @@ import PostCard from '../components/PostCard.jsx';
 import CreatePost from '../components/CreatePost.jsx';
 import AcademicActivityCard from '../components/AcademicActivityCard.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
-import DailyMissions from '../components/DailyMissions.jsx';
 
 export default function Feed() {
   const [posts, setPosts] = useState([]);
@@ -119,10 +118,6 @@ export default function Feed() {
       </header>
 
       <CreatePost onCreated={fetchFeed} />
-
-      <div className="my-6">
-        <DailyMissions />
-      </div>
 
       {loading && isEmpty && <FeedSkeleton />}
 
