@@ -25,6 +25,21 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
   const [answers, setAnswers] = useState({}); // preguntaId → { opcionId | texto }
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
+  const [intentoExtra, setIntentoExtra] = useState(0); // cuántos 'intento_extra' tengo en inventario
+  const [usarExtra, setUsarExtra] = useState(false); // si el próximo submit debe consumir uno
+
+  const fetchIntentoExtra = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const { data } = await client.get('/api/shop/inventory');
+      if (data?.success) {
+        const item = (data.data.items || []).find((i) => i.codigo === 'intento_extra');
+        setIntentoExtra(item?.cantidad ?? 0);
+      }
+    } catch {
+      // silencioso — no bloquea la evaluación si la tienda falla
+    }
+  }, [isAuthenticated]);
 
   const fetchAll = useCallback(async () => {
     if (!evaluationId) return;
@@ -33,6 +48,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
     setPhase('intro');
     setAnswers({});
     setResult(null);
+    setUsarExtra(false);
     try {
       const [evRes, attRes] = await Promise.all([
         client.get(`/api/evaluations/${evaluationId}`),
@@ -59,7 +75,19 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
 
   useEffect(() => {
     fetchAll();
-  }, [fetchAll]);
+    fetchIntentoExtra();
+  }, [fetchAll, fetchIntentoExtra]);
+
+  function handleUseExtra() {
+    setUsarExtra(true);
+    setAnswers({});
+    setResult(null);
+    setError(null);
+    // `bloqueado` se deriva de attemptsInfo.bloqueado — hay que limpiarlo acá,
+    // si no el guard de "bloqueado" sigue ganando aunque cambiemos de fase.
+    setAttemptsInfo((prev) => (prev ? { ...prev, bloqueado: false } : prev));
+    setPhase('quiz');
+  }
 
   const totalPreguntas = evaluacion?.preguntas?.length ?? 0;
   const answeredCount = useMemo(
@@ -87,6 +115,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
       });
       const { data } = await client.post(`/api/evaluations/${evaluationId}/attempt`, {
         respuestas,
+        ...(usarExtra ? { usarIntentoExtra: true } : {}),
       });
       if (data?.success) {
         setResult(data.data);
@@ -103,6 +132,10 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
               }
             : prev,
         );
+        if (usarExtra) {
+          setUsarExtra(false);
+          fetchIntentoExtra();
+        }
         onResult?.(data.data);
       } else {
         setError(data?.message || 'No se pudo enviar el intento');
@@ -186,6 +219,9 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
           <p className="mt-4 text-sm font-semibold text-gray-500">
             {attemptsInfo.intentos.length} de {attemptsInfo.intentosMax} intentos usados
           </p>
+          {intentoExtra > 0 && (
+            <ExtraAttemptCta cantidad={intentoExtra} onUse={handleUseExtra} />
+          )}
         </div>
       </QuizShell>
     );
@@ -232,11 +268,16 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
           {aprobado ? (
             <TitiMascot mood="celebrating" message="¡Lo lograste!" size="md" />
           ) : result.bloqueado ? (
-            <TitiMascot
-              mood="sad"
-              message="Se acabaron los intentos. Hablá con tu profesor."
-              size="md"
-            />
+            <>
+              <TitiMascot
+                mood="sad"
+                message="Se acabaron los intentos. Hablá con tu profesor."
+                size="md"
+              />
+              {intentoExtra > 0 && (
+                <ExtraAttemptCta cantidad={intentoExtra} onUse={handleUseExtra} />
+              )}
+            </>
           ) : (
             <TitiMascot
               mood="motivating"
@@ -307,6 +348,11 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
   return (
     <QuizShell evaluacion={evaluacion}>
       <div className="flex flex-col gap-5">
+        {usarExtra && (
+          <p className="text-xs font-semibold text-titi-yellow-dark bg-titi-yellow-light border border-titi-yellow rounded-xl px-3 py-2">
+            🔁 Este intento va a consumir tu "intento extra" de la tienda.
+          </p>
+        )}
         {evaluacion.preguntas.map((p, i) => (
           <QuestionCard
             key={p.id}
@@ -338,6 +384,24 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
         </div>
       </div>
     </QuizShell>
+  );
+}
+
+// ---- CTA para destrabar con un ítem 'intento_extra' de la tienda ----
+function ExtraAttemptCta({ cantidad, onUse }) {
+  return (
+    <div className="mt-5 flex flex-col items-center gap-1.5">
+      <button
+        type="button"
+        onClick={onUse}
+        className="bg-titi-yellow text-titi-dark font-bold text-sm px-6 py-2.5 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
+      >
+        🔁 Usar intento extra
+      </button>
+      <span className="text-xs font-semibold text-gray-400 tabular-nums">
+        Te quedan {cantidad} en la tienda
+      </span>
+    </div>
   );
 }
 

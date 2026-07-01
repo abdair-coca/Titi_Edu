@@ -18,7 +18,8 @@ import Navbar from './components/Navbar.jsx';
 import PageTransition from './components/PageTransition.jsx';
 import GotaToast from './components/GotaToast.jsx';
 import WeeklyPrizeCelebration from './components/WeeklyPrizeCelebration.jsx';
-import Leaderboard from './pages/Leaderboard.jsx';
+import Leaderboard from './pages/Leaderboard.jsx'
+import Shop from './pages/Shop.jsx';
 import Courses from './pages/Courses.jsx'
 import CourseDetail from './pages/CourseDetail.jsx'
 import MyCourses from './pages/MyCourses.jsx'
@@ -169,6 +170,7 @@ export default function App() {
         <Route path="/courses/:id/learn" element={<LearnCourse />} />
         <Route path="/certificates" element={<Certificates />} />
         <Route path="/leaderboard" element={<Leaderboard />} />
+        <Route path="/shop" element={<Shop />} />
         <Route path="/teacher" element={<MyTeaching />} />
         <Route element={<TeacherOnly />}>
           <Route path="/teacher/courses/new" element={<CourseEditor />} />

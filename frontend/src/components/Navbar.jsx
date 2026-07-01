@@ -68,6 +68,12 @@ const Icon = {
       <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
     </svg>
   ),
+  Bag: (p) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
+      <path d="M6 8h12l1 12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1L6 8Z" />
+      <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+    </svg>
+  ),
 };
 
 function useUnreadNotifications() {
@@ -160,6 +166,10 @@ function Sidebar({ user, onLogout, unread, streak }) {
         <NavLink to="/leaderboard" className={sidebarItemClass}>
           <Icon.Trophy className="w-5 h-5 shrink-0" />
           <span className={sidebarLabel}>Ranking</span>
+        </NavLink>
+        <NavLink to="/shop" className={sidebarItemClass}>
+          <Icon.Bag className="w-5 h-5 shrink-0" />
+          <span className={sidebarLabel}>Tienda</span>
         </NavLink>
         {(user?.rol === 'PROFESOR' || user?.rol === 'ADMIN') && (
           <NavLink to="/teacher" className={sidebarItemClass}>

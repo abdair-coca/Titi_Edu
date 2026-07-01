@@ -202,18 +202,18 @@ Como en la Etapa 6: cada subfase cierra con un **MINOR**; el cierre corta el **M
 | Subfase | Tag | Qué entrega |
 |---|---|---|
 | 7.1 Tienda backend ✅ | `v2.1.0` | Modelos + migración + seed de ítems + `gastarGotas` + `tienda.service` (comprar/inventario) + `/api/shop` (items, inventory, buy) + tests |
-| 7.2 Efectos consumibles | `v2.2.0` | `congelar_racha` (en `actualizarRacha`) + `intento_extra` (en attempt) + `/use` + tests |
-| 7.3 UI Tienda | `v2.3.0` | `Shop` + `ItemCard` + nav + saldo/inventario + intento extra en `EvaluationQuiz` + toast |
+| 7.2 Efectos consumibles ✅ | `v2.2.0` | `congelar_racha` (en `actualizarRacha`) + `intento_extra` (en attempt) + `/use` + tests |
+| 7.3 UI Tienda ✅ | `v2.3.0` | `Shop` + `ItemCard` + nav + saldo/inventario + intento extra en `EvaluationQuiz` + toast |
 | 7.4 Tests + docs + cierre | `v3.0.0` | Route tests `/api/tienda`, README, smoke, cierre de etapa |
 
 ### Definition of Done — Etapa 7
 
-- [ ] Comprar un ítem debita gotas del saldo (no del total) y suma al inventario.
-- [ ] No se puede comprar sin saldo suficiente ni superar `limiteStack` (409).
-- [ ] `congelar_racha` evita que la racha se rompa una vez, consumiéndose.
-- [ ] `intento_extra` permite reintentar una evaluación bloqueada, consumiéndose.
-- [ ] La tienda muestra catálogo, precios, saldo e inventario.
-- [ ] `npm test` verde, cobertura ≥30% en `routes/` + `services/`.
+- [x] Comprar un ítem debita gotas del saldo (no del total) y suma al inventario.
+- [x] No se puede comprar sin saldo suficiente ni superar `limiteStack` (409).
+- [x] `congelar_racha` evita que la racha se rompa una vez, consumiéndose.
+- [x] `intento_extra` permite reintentar una evaluación bloqueada, consumiéndose.
+- [x] La tienda muestra catálogo, precios, saldo e inventario.
+- [ ] `npm test` verde, cobertura ≥30% en `routes/` + `services/` (falta suite de frontend/route tests de 7.3-7.4; backend ya en 38.4%).
 
 ### Decisiones tomadas
 
