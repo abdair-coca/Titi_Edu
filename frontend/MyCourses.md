@@ -90,6 +90,28 @@ texto (`Completaste "X"` / `Aprobaste "X"` / `Completaste el curso "X"`),
 (izq: Desafíos del día + Explorar categorías apilados; der: Actividad
 reciente) y el banner full-width debajo — así queda igual al mockup.
 
+### ✅ Repaso de color (post-Etapa 5) — página más colorida según mockup
+
+Sin cambios de contenido, solo estilo (paleta de `design.md`, plana):
+
+- **Header**: subrayado amarillo bajo el título; botón certificados con hover
+  cálido (`hover:bg-titi-cream hover:border-titi-yellow`).
+- **Stats**: de 1 card con divisores → **3 cards separadas** (mockup) con
+  hover amarillo y acento propio: progreso → amarillo (`TargetIcon`), gotas →
+  azul info (`GotaIcon`), racha → naranja streak (`BoltIcon`); "¡Sigue así!"
+  en `text-titi-streak`. (Se intercambiaron Gota/Bolt para que el ícono
+  coincida con la métrica.)
+- **Ruta**: punto de partida amarillo con ring, links de sección en
+  `text-blue-500` (info), badge de nivel oscuro (`bg-titi-dark text-white`),
+  badge "Completado ✓" verde sólido, hover de card con sombra amarilla +
+  lift, % en color (verde completado / amarillo-dark en curso).
+- **Desafíos del día**: chip amarillo con `BoltIcon` junto al título.
+- **Explorar categorías**: tintes al 100 (purple/blue/green/yellow-light,
+  como el mockup) y círculo `w-11` con `shadow-sm`.
+- **Actividad reciente**: toggle movido al pie, centrado, en azul (mockup).
+- **Banner**: card blanca con trofeo `text-titi-certificate` en círculo
+  `bg-titi-yellow-light`.
+
 ### ⬜ Etapa 6 — Pulido, responsive y documentación final
 
 - Responsive de las 2 columnas inferiores y de la fila de stats en mobile.
