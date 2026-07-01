@@ -11,6 +11,35 @@ export function GotaIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+// Rayo — usado en el stat card de "Gotas totales" del dashboard de Mis cursos.
+export function BoltIcon({ className = 'w-6 h-6' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12.9 2.3c.4-.4 1-.1 1 .4v7.8h5.4c.5 0 .8.6.4 1L10.6 21.6c-.4.5-1.2.1-1-.5l1.6-8.1H5.7c-.5 0-.8-.6-.4-1L12.9 2.3Z" />
+    </svg>
+  );
+}
+
+// Diana — usado en el stat card de "Tu progreso" del dashboard de Mis cursos.
+export function TargetIcon({ className = 'w-6 h-6' }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5.2" />
+      <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}
+
 // Libro abierto — fallback genérico cuando un curso/categoría no tiene
 // imagen ni ícono propio. Trazo (no relleno) para el estilo plano.
 export function BookIcon({ className = 'w-12 h-12' }) {
@@ -29,4 +58,134 @@ export function BookIcon({ className = 'w-12 h-12' }) {
       <line x1="12" y1="6.5" x2="12" y2="19.5" />
     </svg>
   );
+}
+
+// ---- Íconos de categoría (trazo monocromo) para la ruta de aprendizaje ----
+// Se muestran dentro del círculo de cada nodo, en relación a la materia del curso.
+
+function LineSvg({ className, children }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+// Programación — </>
+export function CodeIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <polyline points="8 8 4 12 8 16" />
+      <polyline points="16 8 20 12 16 16" />
+      <line x1="13.5" y1="6" x2="10.5" y2="18" />
+    </LineSvg>
+  );
+}
+
+// Ciencia de datos / Machine Learning — chip
+export function ChipIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <rect x="7" y="7" width="10" height="10" rx="1.5" />
+      <line x1="10" y1="3.5" x2="10" y2="6" />
+      <line x1="14" y1="3.5" x2="14" y2="6" />
+      <line x1="10" y1="18" x2="10" y2="20.5" />
+      <line x1="14" y1="18" x2="14" y2="20.5" />
+      <line x1="18" y1="10" x2="20.5" y2="10" />
+      <line x1="18" y1="14" x2="20.5" y2="14" />
+      <line x1="3.5" y1="10" x2="6" y2="10" />
+      <line x1="3.5" y1="14" x2="6" y2="14" />
+    </LineSvg>
+  );
+}
+
+// Matemáticas — √x / función
+export function SigmaIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <path d="M17 5H7l6 7-6 7h10" />
+    </LineSvg>
+  );
+}
+
+// Idiomas — globo
+export function GlobeIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18" />
+      <path d="M12 3a15 15 0 0 1 0 18 15 15 0 0 1 0-18Z" />
+    </LineSvg>
+  );
+}
+
+// Ciencias — matraz
+export function FlaskIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <path d="M9 3h6" />
+      <path d="M10 3v6l-5 8a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3l-5-8V3" />
+      <path d="M7 15h10" />
+    </LineSvg>
+  );
+}
+
+// Diseño — pincel/paleta
+export function PaletteIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <path d="M12 3a9 9 0 1 0 0 18c1 0 1.7-.8 1.7-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.1a1.7 1.7 0 0 1 1.7-1.7H16a5 5 0 0 0 5-5c0-4-4-7.3-9-7.3Z" />
+      <circle cx="7.5" cy="11.5" r="1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="8" r="1" fill="currentColor" stroke="none" />
+      <circle cx="16.5" cy="11.5" r="1" fill="currentColor" stroke="none" />
+    </LineSvg>
+  );
+}
+
+// Negocios — gráfico de barras/tendencia
+export function ChartIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <path d="M4 20V4" />
+      <path d="M4 20h16" />
+      <path d="M7 16l4-5 3 3 5-7" />
+    </LineSvg>
+  );
+}
+
+// Música — nota
+export function MusicIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <path d="M9 18V5l11-2v13" />
+      <circle cx="6" cy="18" r="3" />
+      <circle cx="17" cy="16" r="3" />
+    </LineSvg>
+  );
+}
+
+/**
+ * Devuelve el componente de ícono de trazo que mejor representa a la categoría
+ * de un curso (por su nombre). Fallback: BookIcon.
+ */
+export function categoryIcon(nombre) {
+  const n = (nombre || '').toLowerCase();
+  if (/(program|código|codigo|desarrollo|web|software)/.test(n)) return CodeIcon;
+  if (/(dato|data|machine|inteligencia|ia|analít|analit)/.test(n)) return ChipIcon;
+  if (/(matem|cálculo|calculo|álgebra|algebra|estadíst|estadist)/.test(n)) return SigmaIcon;
+  if (/(idioma|lenguaj|inglés|ingles|español|espanol)/.test(n)) return GlobeIcon;
+  if (/(cienc|física|fisica|químic|quimic|biolog)/.test(n)) return FlaskIcon;
+  if (/(diseñ|disen|design|arte|gráfic|grafic)/.test(n)) return PaletteIcon;
+  if (/(negoci|business|finanz|marketing|empren)/.test(n)) return ChartIcon;
+  if (/(music|músic)/.test(n)) return MusicIcon;
+  return BookIcon;
 }

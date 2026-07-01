@@ -1,23 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client.js';
 import { useStaggerReveal } from '../lib/motion.js';
+import { useGamification } from '../context/GamificationContext.jsx';
+import useStreak from '../hooks/useStreak.js';
+import { BoltIcon, GotaIcon, TargetIcon, categoryIcon } from '../components/icons.jsx';
 
-function formatDateEs(value) {
-  if (!value) return '';
-  try {
-    return new Date(value).toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  } catch {
-    return '';
-  }
-}
+// Cuántos nodos se ven en la ruta antes de "Ver toda la ruta".
+const RUTA_VISIBLE = 4;
 
 export default function MyCourses() {
   const navigate = useNavigate();
+  const { gotas } = useGamification();
+  const streak = useStreak();
 
   const [inscripciones, setInscripciones] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +24,17 @@ export default function MyCourses() {
   // cursos 100% completados aunque la Inscripcion no esté marcada como tal.
   const [progressByCurso, setProgressByCurso] = useState({});
 
-  const gridRef = useStaggerReveal([inscripciones.length]);
+  // Promedio simple del % de progreso entre TODOS los cursos inscritos
+  // (completados cuentan 100% aunque el progreso todavía no haya llegado).
+  const progresoPromedio = useMemo(() => {
+    if (inscripciones.length === 0) return 0;
+    const suma = inscripciones.reduce((acc, insc) => {
+      const p = progressByCurso[insc.cursoId];
+      const pct = p?.porcentaje ?? (insc.completado ? 100 : 0);
+      return acc + pct;
+    }, 0);
+    return Math.round(suma / inscripciones.length);
+  }, [inscripciones, progressByCurso]);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,204 +118,307 @@ export default function MyCourses() {
       ) : inscripciones.length === 0 ? (
         <EmptyState onExplore={() => navigate('/courses')} />
       ) : (
-        <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {inscripciones.map((insc) => (
-            <EnrolledCard
-              key={insc.id}
-              inscripcion={insc}
-              progress={progressByCurso[insc.cursoId]}
-              onContinue={() => navigate(`/courses/${insc.cursoId}/learn`)}
-              onOpenDetail={() => navigate(`/courses/${insc.cursoId}`)}
-            />
-          ))}
-        </div>
+        <>
+        <StatsRow progresoPromedio={progresoPromedio} gotasTotal={gotas.total} streak={streak} />
+        <LearningPathSection
+          inscripciones={inscripciones}
+          progressByCurso={progressByCurso}
+          onContinue={(cursoId) => navigate(`/courses/${cursoId}/learn`)}
+          onOpenDetail={(cursoId) => navigate(`/courses/${cursoId}`)}
+        />
+        </>
       )}
     </div>
   );
 }
 
-// ---- Card de curso inscrito ----
-function EnrolledCard({ inscripcion, progress, onContinue, onOpenDetail }) {
-  const curso = inscripcion.curso || {};
+// ---- Una sola card con 3 stats separados por líneas divisorias ----
+function StatsRow({ progresoPromedio, gotasTotal, streak }) {
+  const rachaActiva = streak.estaActiva && streak.racha > 0;
+  return (
+    <section className="mb-6 sm:mb-8 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-5 sm:p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-gray-100">
+        {/* Tu progreso */}
+        <div className="flex items-center gap-3 pb-4 sm:pb-0 sm:pr-6">
+          <StatIcon icon={<TargetIcon className="w-6 h-6 text-titi-dark" />} />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium text-gray-500">Tu progreso</p>
+            <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
+              {progresoPromedio}%
+            </p>
+            <p className="text-xs text-gray-400">Promedio general</p>
+            <div
+              className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden"
+              role="progressbar"
+              aria-valuenow={progresoPromedio}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Progreso general"
+            >
+              <div
+                className="h-full bg-titi-yellow rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
+                style={{ width: `${progresoPromedio}%` }}
+              />
+            </div>
+          </div>
+        </div>
 
-  // Completado real = lo que diga el backend OR todas las lecciones marcadas
+        {/* Gotas totales */}
+        <div className="flex items-center gap-3 py-4 sm:py-0 sm:px-6">
+          <StatIcon icon={<BoltIcon className="w-6 h-6 text-titi-dark" />} />
+          <div className="min-w-0">
+            <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
+              {gotasTotal}
+            </p>
+            <p className="text-xs text-gray-400">Gotas totales</p>
+          </div>
+        </div>
+
+        {/* Racha actual */}
+        <div className="flex items-center gap-3 pt-4 sm:pt-0 sm:pl-6">
+          <StatIcon icon={<GotaIcon className="w-6 h-6 text-titi-dark" />} />
+          <div className="min-w-0">
+            <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
+              {streak.racha}
+            </p>
+            <p className="text-xs text-gray-400">Racha actual</p>
+            {rachaActiva && <p className="text-xs font-semibold text-gray-500">¡Sigue así!</p>}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function StatIcon({ icon }) {
+  return (
+    <div className="w-12 h-12 rounded-full bg-titi-yellow shadow-sm grid place-items-center shrink-0">
+      {icon}
+    </div>
+  );
+}
+
+// ---- Ruta de aprendizaje: timeline vertical de cursos inscritos ----
+function LearningPathSection({ inscripciones, progressByCurso, onContinue, onOpenDetail }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const sorted = useMemo(
+    () =>
+      [...inscripciones].sort(
+        (a, b) => new Date(a.fechaInscripcion) - new Date(b.fechaInscripcion),
+      ),
+    [inscripciones],
+  );
+
+  const hiddenCount = sorted.length - RUTA_VISIBLE;
+  const showToggle = hiddenCount > 0;
+  const visible = expanded ? sorted : sorted.slice(0, RUTA_VISIBLE);
+  const toggle = () => setExpanded((e) => !e);
+  const showMoreNode = !expanded && showToggle;
+
+  const pathRef = useStaggerReveal([visible.length, expanded]);
+
+  return (
+    <section className="mb-6 sm:mb-8">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-lg sm:text-xl font-bold text-titi-dark">Tu ruta de aprendizaje</h2>
+        {showToggle && (
+          <button
+            type="button"
+            onClick={toggle}
+            className="text-xs font-bold text-titi-dark hover:text-titi-yellow-dark uppercase tracking-wide transition-colors whitespace-nowrap"
+          >
+            {expanded ? 'Ver menos' : 'Ver toda la ruta'}
+          </button>
+        )}
+      </div>
+
+      <ul ref={pathRef} className="flex flex-col gap-5">
+        {visible.map((insc, i) => (
+          <LearningPathNode
+            key={insc.id}
+            inscripcion={insc}
+            progress={progressByCurso[insc.cursoId]}
+            isLast={i === visible.length - 1 && !showMoreNode}
+            onContinue={() => onContinue(insc.cursoId)}
+            onOpenDetail={() => onOpenDetail(insc.cursoId)}
+          />
+        ))}
+        {showMoreNode && <LearningPathMoreNode count={hiddenCount} onClick={toggle} />}
+      </ul>
+    </section>
+  );
+}
+
+// ---- Círculo de la timeline con el ícono de trazo de la categoría ----
+// Plomo por default; se pone amarillo con el group-hover del curso asociado.
+function PathIcon({ categoria }) {
+  const Icon = categoryIcon(categoria);
+  return (
+    <div className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full grid place-items-center shrink-0 shadow-sm bg-gray-200 transition-colors duration-150 group-hover:bg-titi-yellow">
+      <Icon className="w-5 h-5 text-gray-500 transition-colors duration-150 group-hover:text-titi-dark" />
+    </div>
+  );
+}
+
+// ---- Un nodo de la ruta: círculo + línea + card horizontal (imagen | info) ----
+function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDetail }) {
+  const curso = inscripcion.curso || {};
   const computedComplete = Boolean(
     progress && progress.total > 0 && progress.completadas === progress.total,
   );
   const completado = Boolean(inscripcion.completado) || computedComplete;
-
-  const porcentaje = progress?.porcentaje ?? 0;
-  const hasProgressData = Boolean(progress && progress.total > 0);
-
-  // Relleno animado: el bloque aparece con un fade y la barra monta en 0 y sube
-  // al % real en el siguiente frame, así la transición CSS hace el llenado
-  // "cargando". Reduced-motion salta al estado final.
-  const [fill, setFill] = useState(0);
-  const [revealed, setRevealed] = useState(false);
-  useEffect(() => {
-    if (!hasProgressData) return undefined;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setFill(porcentaje);
-      setRevealed(true);
-      return undefined;
-    }
-    // 1) el bloque crece + fade (mueve el botón). 2) recién terminado eso,
-    // arranca el llenado de la barra, así no se interrumpen.
-    setFill(0);
-    setRevealed(false);
-    let raf2 = 0;
-    let fillTimer = 0;
-    const raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        setRevealed(true);
-        fillTimer = setTimeout(() => setFill(porcentaje), 520);
-      });
-    });
-    return () => {
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
-      clearTimeout(fillTimer);
-    };
-  }, [hasProgressData, porcentaje]);
+  const porcentaje = progress?.porcentaje ?? (completado ? 100 : 0);
+  const total = progress?.total ?? 0;
+  const completadas = progress?.completadas ?? 0;
 
   return (
-    <article className="titi-card-pop bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] overflow-hidden flex flex-col">
-      {/* Portada con badges */}
-      <button
-        type="button"
-        onClick={onOpenDetail}
-        aria-label={`Ver detalle de ${curso.titulo || 'curso'}`}
-        className="relative h-40 bg-gradient-to-br from-titi-yellow-light via-titi-yellow-light to-titi-yellow/40 overflow-hidden block w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
-      >
-        {curso.portadaUrl ? (
-          <img
-            src={curso.portadaUrl}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
+    <li className="group relative flex gap-3 sm:gap-4">
+      {/* Rail: círculo centrado verticalmente + línea conectora */}
+      <div className="relative w-11 sm:w-12 shrink-0 flex justify-center">
+        {!isLast && (
+          <span
+            aria-hidden="true"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 w-0.5 bg-gray-200 h-[calc(100%+1.25rem)]"
           />
-        ) : (
-          <>
-            <span
-              aria-hidden="true"
-              className="absolute -top-6 -right-6 w-28 h-28 rounded-full bg-white/40 blur-xl"
-            />
-            <span
-              aria-hidden="true"
-              className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-titi-yellow/30 blur-xl"
-            />
-            <div className="relative w-full h-full grid place-items-center text-6xl select-none drop-shadow-sm">
-              {curso.categoria?.icono || '📚'}
-            </div>
-          </>
         )}
+        <div className="self-center">
+          <PathIcon categoria={curso.categoria?.nombre} />
+        </div>
+      </div>
 
-        {/* Badge de nivel — top-left */}
-        {curso.nivel && (
-          <span className="absolute top-3 left-3 bg-white text-titi-dark text-xs font-semibold capitalize px-2.5 py-1 rounded-full shadow-sm">
-            {curso.nivel}
-          </span>
-        )}
-
-        {/* Badge "Completado" — top-right */}
-        {completado && (
-          <span className="absolute top-3 right-3 bg-green-50 text-green-700 border border-green-200 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap shadow-sm">
-            Completado ✓
-          </span>
-        )}
-      </button>
-
-      {/* Cuerpo */}
-      <div className="p-5 flex flex-col gap-2 flex-1">
-        {/* Categoría */}
-        {curso.categoria?.nombre && (
-          <span className="text-xs font-semibold text-titi-streak uppercase tracking-wide">
-            {curso.categoria.nombre}
-          </span>
-        )}
-
-        {/* Título */}
-        <button
-          type="button"
-          onClick={onOpenDetail}
-          className="text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow rounded-lg"
-        >
-          <h3 className="text-base font-bold text-titi-dark leading-snug line-clamp-2 hover:text-titi-yellow-dark transition-colors">
-            {curso.titulo || 'Curso sin título'}
-          </h3>
-        </button>
-
-        {/* Fecha de inscripción */}
-        <p className="text-sm font-medium text-gray-500">
-          Inscrito el {formatDateEs(inscripcion.fechaInscripcion)}
-        </p>
-
-        {/* Barra de progreso — el bloque crece en alto (acordeón) + fade para
-            que el botón de abajo no salte al aparecer. Ver motion.md §3. */}
-        {hasProgressData && (
-          <div
-            className={`grid transition-[grid-template-rows] duration-500 ease-out motion-reduce:transition-none ${
-              revealed ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-            }`}
+      {/* Card horizontal — la portada queda al ras del contenedor (sin padding) */}
+      <article className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:h-44">
+          {/* Portada (izquierda, al ras) */}
+          <button
+            type="button"
+            onClick={onOpenDetail}
+            aria-label={`Ver detalle de ${curso.titulo || 'curso'}`}
+            className="relative shrink-0 w-full sm:w-[42%] h-40 sm:h-full bg-titi-dark block focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-titi-yellow"
           >
-            <div className="overflow-hidden">
+            {curso.portadaUrl ? (
+              <img
+                src={curso.portadaUrl}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : (
+              <div className="w-full h-full grid place-items-center text-5xl select-none">
+                {curso.categoria?.icono || '📚'}
+              </div>
+            )}
+            {curso.nivel && (
+              <span className="absolute top-2.5 left-2.5 bg-white text-titi-dark text-[11px] font-semibold capitalize px-3 py-1 rounded-full shadow-sm">
+                {curso.nivel}
+              </span>
+            )}
+            {completado && (
+              <span className="absolute top-2.5 right-2.5 bg-green-50 text-green-700 text-[11px] font-semibold px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
+                Completado ✓
+              </span>
+            )}
+          </button>
+
+          {/* Info (derecha) */}
+          <div className="min-w-0 flex-1 flex flex-col p-4 sm:p-5 overflow-hidden">
+            {curso.categoria?.nombre && (
+              <p className="text-[11px] sm:text-xs font-bold text-titi-streak uppercase tracking-wide">
+                {curso.categoria.nombre}
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={onOpenDetail}
+              className="text-left w-fit max-w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow rounded-lg mt-0.5"
+            >
+              <h3 className="text-base sm:text-lg font-bold text-titi-dark leading-snug line-clamp-1 hover:text-titi-yellow-dark transition-colors">
+                {curso.titulo || 'Curso sin título'}
+              </h3>
+            </button>
+
+            <div className="mt-2">
+              {completado ? (
+                <p className="inline-flex items-center gap-1.5 text-sm font-bold text-green-600">
+                  <CheckCircle /> Completado
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={onContinue}
+                  className="inline-flex items-center gap-1.5 bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
+                >
+                  Continuar →
+                </button>
+              )}
+            </div>
+
+            {/* Lecciones + % + barra (abajo) */}
+            <div className="mt-auto pt-4">
+              <div className="flex items-center justify-between text-sm font-medium text-gray-400 mb-1.5">
+                <span>
+                  {completadas} / {total} {total === 1 ? 'lección' : 'lecciones'}
+                </span>
+                <span className="tabular-nums font-semibold text-gray-500">{porcentaje}%</span>
+              </div>
               <div
-                className={`mt-1 transition-opacity duration-500 ease-out motion-reduce:transition-none ${
-                  revealed ? 'opacity-100' : 'opacity-0'
-                }`}
+                className="h-2.5 bg-gray-100 rounded-full overflow-hidden"
+                role="progressbar"
+                aria-valuenow={porcentaje}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Progreso de ${curso.titulo || 'curso'}`}
               >
-                <div className="flex justify-between text-xs font-medium text-gray-400 mb-1">
-                  <span>
-                    {progress.completadas} / {progress.total}{' '}
-                    {progress.total === 1 ? 'lección' : 'lecciones'}
-                  </span>
-                  <span className="tabular-nums">{porcentaje}%</span>
-                </div>
-                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${
-                      completado ? 'bg-green-500' : 'bg-titi-yellow'
-                    }`}
-                    style={{ width: `${fill}%` }}
-                  />
-                </div>
+                <div
+                  className={`h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${
+                    completado ? 'bg-green-500' : 'bg-titi-yellow'
+                  }`}
+                  style={{ width: `${porcentaje}%` }}
+                />
               </div>
             </div>
           </div>
-        )}
-
-        {/* Acción */}
-        <div className="mt-auto pt-3">
-          {completado ? (
-            <div className="flex items-center justify-between gap-2">
-              {inscripcion.fechaCompletado && (
-                <span className="text-xs font-semibold text-gray-400">
-                  Completado el {formatDateEs(inscripcion.fechaCompletado)}
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={onOpenDetail}
-                className="text-sm font-semibold text-titi-dark hover:text-titi-yellow-dark transition-colors ml-auto"
-              >
-                Ver curso →
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={onContinue}
-              className="bg-titi-yellow text-titi-dark font-bold px-4 py-2 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
-            >
-              Continuar →
-            </button>
-          )}
         </div>
+      </article>
+    </li>
+  );
+}
+
+// Check verde inline para el estado "Completado".
+function CheckCircle() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+// ---- Nodo "+N": mismo estilo de círculo, dispara el toggle de la ruta ----
+function LearningPathMoreNode({ count, onClick }) {
+  return (
+    <li className="relative flex gap-3 sm:gap-4 items-center">
+      <div className="relative w-11 sm:w-12 shrink-0 flex justify-center">
+        <button
+          type="button"
+          onClick={onClick}
+          aria-label={`Ver ${count} cursos más de tu ruta`}
+          className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gray-200 grid place-items-center shrink-0 shadow-sm hover:bg-gray-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
+        >
+          <span className="text-xs font-black text-gray-600 tabular-nums">+{count}</span>
+        </button>
       </div>
-    </article>
+      <button
+        type="button"
+        onClick={onClick}
+        className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark transition-colors"
+      >
+        Ver {count} {count === 1 ? 'curso más' : 'cursos más'}
+      </button>
+    </li>
   );
 }
 
@@ -371,22 +479,43 @@ function ErrorState({ message, onRetry }) {
 // ---- Loading skeleton ----
 function SkeletonGrid() {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div
-          key={i}
-          className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col animate-pulse"
-        >
-          <div className="h-40 bg-gray-100" />
-          <div className="p-5 flex flex-col gap-3">
-            <div className="h-3 w-24 bg-gray-100 rounded-full" />
-            <div className="h-5 w-3/4 bg-gray-100 rounded" />
-            <div className="h-3 w-1/2 bg-gray-100 rounded" />
-            <div className="h-2 w-full bg-gray-100 rounded-full mt-2" />
-            <div className="h-9 w-32 bg-gray-100 rounded-xl mt-2" />
-          </div>
+    <div className="flex flex-col gap-6 sm:gap-8 animate-pulse">
+      {/* Stats row */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 sm:p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-full bg-gray-100 shrink-0" />
+              <div className="flex-1 flex flex-col gap-2">
+                <div className="h-5 w-16 bg-gray-100 rounded" />
+                <div className="h-3 w-20 bg-gray-100 rounded" />
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
+      {/* Ruta de aprendizaje */}
+      <div>
+        <div className="h-5 w-40 bg-gray-100 rounded mb-6" />
+        <div className="flex flex-col gap-5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex gap-4">
+              <div className="w-12 h-12 rounded-full bg-gray-100 shrink-0 self-center" />
+              <div className="flex-1 bg-white rounded-2xl border border-gray-100 p-3">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="w-full sm:w-[42%] h-32 sm:h-36 bg-gray-100 rounded-xl shrink-0" />
+                  <div className="flex-1 flex flex-col gap-2 py-1">
+                    <div className="h-3 w-24 bg-gray-100 rounded" />
+                    <div className="h-5 w-3/4 bg-gray-100 rounded" />
+                    <div className="h-8 w-28 bg-gray-100 rounded-xl mt-1" />
+                    <div className="h-2.5 w-full bg-gray-100 rounded-full mt-auto" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
