@@ -173,6 +173,49 @@ export function MusicIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+// Check — usado en "Completado" (ruta de aprendizaje y actividad reciente).
+export function CheckIcon({ className = 'w-4 h-4' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
+
+// Medalla — actividad reciente: evaluación aprobada.
+export function AwardIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="8" r="5" />
+      <path d="M9 12.5 7 21l5-3 5 3-2-8.5" />
+    </svg>
+  );
+}
+
+// Birrete — actividad reciente: curso completado.
+export function GraduationIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 9 12 4l10 5-10 5-10-5Z" />
+      <path d="M6 11.5V17c0 1.1 2.7 2 6 2s6-.9 6-2v-5.5" />
+      <path d="M21 9v6" />
+    </svg>
+  );
+}
+
+// Trofeo — banner de cierre de "Mis cursos".
+export function TrophyIcon({ className = 'w-6 h-6' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" />
+      <path d="M8 5H5a2 2 0 0 0 0 4c.6 0 1.2-.2 1.7-.6" />
+      <path d="M16 5h3a2 2 0 0 1 0 4c-.6 0-1.2-.2-1.7-.6" />
+      <path d="M12 13v3" />
+      <path d="M9.5 16.5h5l.7 3.5h-6.4l.7-3.5Z" />
+    </svg>
+  );
+}
+
 /**
  * Devuelve el componente de ícono de trazo que mejor representa a la categoría
  * de un curso (por su nombre). Fallback: BookIcon.

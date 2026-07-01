@@ -4,8 +4,19 @@ import client from '../api/client.js';
 import { useStaggerReveal } from '../lib/motion.js';
 import { useGamification } from '../context/GamificationContext.jsx';
 import useStreak from '../hooks/useStreak.js';
-import { BoltIcon, GotaIcon, TargetIcon, categoryIcon } from '../components/icons.jsx';
+import {
+  BoltIcon,
+  GotaIcon,
+  TargetIcon,
+  categoryIcon,
+  CheckIcon,
+  AwardIcon,
+  GraduationIcon,
+  TrophyIcon,
+} from '../components/icons.jsx';
 import DailyMissions from '../components/DailyMissions.jsx';
+import TitiMascot from '../components/TitiMascot.jsx';
+import { relativeTime } from '../lib/format.js';
 
 // Cuántos nodos se ven en la ruta antes de "Ver toda la ruta".
 const RUTA_VISIBLE = 4;
@@ -127,10 +138,14 @@ export default function MyCourses() {
           onContinue={(cursoId) => navigate(`/courses/${cursoId}/learn`)}
           onOpenDetail={(cursoId) => navigate(`/courses/${cursoId}`)}
         />
-        <div className="mb-6 sm:mb-8">
-          <DailyMissions title="Desafíos del día" />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8 items-start">
+          <div className="flex flex-col gap-6 sm:gap-8">
+            <DailyMissions title="Desafíos del día" />
+            <CategoriesExplorer onOpen={(catId) => navigate(`/courses?categoria=${catId}`)} />
+          </div>
+          <RecentActivity />
         </div>
-        <CategoriesExplorer onOpen={(catId) => navigate(`/courses?categoria=${catId}`)} />
+        <BottomBanner onExplore={() => navigate('/courses')} />
         </>
       )}
     </div>
@@ -349,7 +364,7 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
             <div className="mt-2">
               {completado ? (
                 <p className="inline-flex items-center gap-1.5 text-sm font-bold text-green-600">
-                  <CheckCircle /> Completado
+                  <CheckIcon className="w-4 h-4" /> Completado
                 </p>
               ) : (
                 <button
@@ -390,15 +405,6 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
         </div>
       </article>
     </li>
-  );
-}
-
-// Check verde inline para el estado "Completado".
-function CheckCircle() {
-  return (
-    <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
   );
 }
 
@@ -513,6 +519,146 @@ function CategoriesExplorer({ onOpen }) {
           })}
         </div>
       )}
+    </section>
+  );
+}
+
+// ---- Actividad reciente: eventos académicos (leccion/evaluacion/curso) ----
+// Se trae una sola vez (limit=20); "Ver toda la actividad" es un toggle
+// inline sobre la misma lista, sin segundo fetch.
+const ACTIVIDAD_VISIBLE = 4;
+
+function activityMeta(tipo, titulo) {
+  if (tipo === 'curso') {
+    return {
+      Icon: GraduationIcon,
+      tint: 'bg-titi-yellow-light text-titi-yellow-dark',
+      text: `Completaste el curso "${titulo}"`,
+    };
+  }
+  if (tipo === 'evaluacion') {
+    return {
+      Icon: AwardIcon,
+      tint: 'bg-purple-50 text-titi-achievement',
+      text: `Aprobaste "${titulo}"`,
+    };
+  }
+  return {
+    Icon: CheckIcon,
+    tint: 'bg-green-50 text-green-600',
+    text: `Completaste "${titulo}"`,
+  };
+}
+
+function RecentActivity() {
+  const [actividad, setActividad] = useState(null);
+  const [error, setError] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    client
+      .get('/api/gotas/activity', { params: { limit: 20 } })
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.success) setActividad(data.data?.actividad || []);
+        else setError(true);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (error) return null;
+
+  const showToggle = (actividad?.length || 0) > ACTIVIDAD_VISIBLE;
+  const visible = expanded ? actividad : (actividad || []).slice(0, ACTIVIDAD_VISIBLE);
+
+  return (
+    <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-5">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-base font-bold text-titi-dark">Actividad reciente</h2>
+        {showToggle && (
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            className="text-xs font-bold text-titi-dark hover:text-titi-yellow-dark uppercase tracking-wide transition-colors whitespace-nowrap"
+          >
+            {expanded ? 'Ver menos' : 'Ver toda la actividad'}
+          </button>
+        )}
+      </div>
+
+      {actividad === null ? (
+        <div className="flex flex-col gap-3 animate-pulse">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-gray-100 shrink-0" />
+              <div className="flex-1 flex flex-col gap-1.5">
+                <div className="h-3 w-3/4 bg-gray-100 rounded" />
+                <div className="h-2.5 w-1/3 bg-gray-100 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : actividad.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
+          <TitiMascot state="idle" size="sm" message="" className="mb-2" />
+          <p className="text-sm text-gray-400">Aún no tenés actividad</p>
+        </div>
+      ) : (
+        <ul className="flex flex-col">
+          {visible.map((item, i) => {
+            const { Icon, tint, text } = activityMeta(item.tipo, item.titulo);
+            return (
+              <li
+                key={`${item.tipo}-${item.titulo}-${item.createdAt}-${i}`}
+                className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"
+              >
+                <span className={`w-9 h-9 rounded-full grid place-items-center shrink-0 ${tint}`}>
+                  <Icon className="w-4 h-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-titi-dark leading-snug line-clamp-2">
+                    {text}
+                  </p>
+                  <p className="text-xs text-gray-400">{relativeTime(item.createdAt)}</p>
+                </div>
+                <span className="text-sm font-bold text-green-600 shrink-0 tabular-nums whitespace-nowrap">
+                  +{item.cantidad} gotas
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// ---- Banner de cierre: CTA plano a /courses ----
+function BottomBanner({ onExplore }) {
+  return (
+    <section className="bg-titi-yellow-light border border-titi-yellow/40 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-5 sm:gap-6">
+      <span className="w-14 h-14 rounded-2xl bg-titi-yellow shadow-sm grid place-items-center shrink-0">
+        <TrophyIcon className="w-7 h-7 text-titi-dark" />
+      </span>
+      <div className="flex-1 text-center sm:text-left">
+        <h3 className="text-lg font-bold text-titi-dark">¡Sigue aprendiendo!</h3>
+        <p className="text-sm font-medium text-titi-dark/70">
+          La constancia es la clave del éxito.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onExplore}
+        className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 whitespace-nowrap"
+      >
+        Explorar cursos
+      </button>
     </section>
   );
 }
