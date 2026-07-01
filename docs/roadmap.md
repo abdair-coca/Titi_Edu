@@ -5,7 +5,8 @@ falta". Modelos y reglas de la gamificación en [architecture.md](architecture.m
 
 > **Etapa 6 — Gamificación + Titi Vivo: CERRADA (`v2.0.0`).** La app gana gotas,
 > misiones diarias, ranking de amigos y una mascota animada.
-> **Etapa 7 — Tienda de gotas: 📋 PLANIFICADA (`v3.0.0`).** Plan detallado abajo.
+> **Etapa 7 — Tienda de gotas: CERRADA (`v3.0.0`).** Consumibles que se compran
+> con gotas: congelar racha, intento extra, multiplicador x2.
 
 ---
 
@@ -81,7 +82,7 @@ en ejecución se optó por WebP animado — más simple y fiel al arte real de T
 
 ---
 
-## Etapa 7 — Tienda de gotas (`v3.0.0`) 📋 PLANIFICADA
+## Etapa 7 — Tienda de gotas (`v3.0.0`) ✅ CERRADA
 
 **Objetivo:** darle un **sumidero** a la economía. Hasta ahora las gotas solo se
 acumulan; la tienda permite **gastarlas** en **consumibles que afectan la mecánica**:
@@ -204,7 +205,7 @@ Como en la Etapa 6: cada subfase cierra con un **MINOR**; el cierre corta el **M
 | 7.1 Tienda backend ✅ | `v2.1.0` | Modelos + migración + seed de ítems + `gastarGotas` + `tienda.service` (comprar/inventario) + `/api/shop` (items, inventory, buy) + tests |
 | 7.2 Efectos consumibles ✅ | `v2.2.0` | `congelar_racha` (en `actualizarRacha`) + `intento_extra` (en attempt) + `/use` + tests |
 | 7.3 UI Tienda ✅ | `v2.3.0` | `Shop` + `ItemCard` + nav + saldo/inventario + intento extra en `EvaluationQuiz` + toast |
-| 7.4 Tests + docs + cierre | `v3.0.0` | Route tests `/api/tienda`, README, smoke, cierre de etapa |
+| 7.4 Tests + docs + cierre ✅ | `v3.0.0` | Route tests `/api/shop` (ya cubiertos desde 7.1/7.2), README + architecture.md al día, smoke, cierre de etapa |
 
 ### Definition of Done — Etapa 7
 
@@ -213,7 +214,12 @@ Como en la Etapa 6: cada subfase cierra con un **MINOR**; el cierre corta el **M
 - [x] `congelar_racha` evita que la racha se rompa una vez, consumiéndose.
 - [x] `intento_extra` permite reintentar una evaluación bloqueada, consumiéndose.
 - [x] La tienda muestra catálogo, precios, saldo e inventario.
-- [ ] `npm test` verde, cobertura ≥30% en `routes/` + `services/` (falta suite de frontend/route tests de 7.3-7.4; backend ya en 38.4%).
+- [x] `npm test` verde (94 tests, 15 archivos), cobertura **38.4%** en `routes/` + `services/`.
+
+> **Smoke E2E visual** (comprar `congelar_racha` → saldo baja e inventario sube →
+> perder un día de racha → racha se preserva y se consume el ítem; agotar
+> intentos de una evaluación → comprar/usar `intento_extra` → reintentar):
+> a confirmar manualmente con la app corriendo, mismo criterio que la Etapa 6.
 
 ### Decisiones tomadas
 

@@ -131,8 +131,8 @@ Un loop diario para enganchar, todo **entre amigos** (sin presión de extraños)
 - **Gotas (XP):** se ganan al **aprender** (lección +10, evaluación +20, curso +50)
   y por **actividad social** (post, like, comentario, follow) con **topes diarios**
   anti-farmeo. El aprendizaje es idempotente (una lección no paga dos veces). Hay un
-  ledger (`MovimientoGota`) + saldo/total denormalizados en `Usuario`. El saldo se
-  acumula para una tienda futura (aún sin tienda).
+  ledger (`MovimientoGota`, positivo = ganancia, negativo = gasto) + saldo/total
+  denormalizados en `Usuario`.
 - **Misiones diarias:** 3 por día desde un pool, resetean a medianoche, otorgan gotas
   al completarse. Avanzan con eventos reales (lección, evaluación, post, comentario).
 - **Ranking de amigos (semanal):** leaderboard de gotas de la semana cruzando el
@@ -141,9 +141,15 @@ Un loop diario para enganchar, todo **entre amigos** (sin presión de extraños)
 - **Titi vivo:** la mascota es WebP animado por estado (`idle`, `celebra`, `triste`,
   `racha`…), reacciona a los eventos (ganar gotas → Titi celebra) y respeta
   `prefers-reduced-motion`. Ver `frontend/animationTiti.md`.
+- **Tienda de gotas (Etapa 7):** el sumidero de la economía. Consumibles que se
+  compran con `gotasSaldo` y se acumulan en un inventario: `congelar_racha`
+  (protege la racha 1 día), `intento_extra` (destraba una evaluación con
+  intentos agotados) y `multiplicador_gotas` (x2 gotas por 1 h). Página
+  `/shop`, componentes `Shop`/`ItemCard`.
 
 Endpoints: `GET /api/gotas`, `/api/gotas/history`, `/api/missions/today`,
-`/api/ranking/friends`. Detalle de la economía en
+`/api/ranking/friends`, `GET /api/shop/items`, `GET /api/shop/inventory`,
+`POST /api/shop/buy`, `POST /api/shop/use`. Detalle de la economía en
 [`docs/architecture.md`](docs/architecture.md).
 
 ## 🧪 Tests
@@ -159,9 +165,10 @@ npm run lint            # eslint (errores reales, no estilo)
 ```
 
 Cubre los flujos críticos y los rechazos importantes (401/403/409): `auth`,
-`posts`, `courses`, `evaluations` (calificación server-side) y el guard de
-`admin`, más unit tests de los servicios de racha y logros. Objetivo de
-cobertura: **≥30%** en `routes/` + `services/`.
+`posts`, `courses`, `evaluations` (calificación server-side), `gotas`,
+`missions`, `ranking`, `shop` y el guard de `admin`, más unit tests de los
+servicios de racha, logros, gotas y tienda. Objetivo de cobertura: **≥30%**
+en `routes/` + `services/`.
 
 CI (`.github/workflows/ci.yml`): cada PR a `main` corre lint + tests del backend
 y build del frontend. Un check rojo bloquea el merge.

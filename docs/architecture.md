@@ -59,8 +59,9 @@ Servicios externos (Neo4j, Cloudinary) van en `try/catch`: si fallan, loguean y
   `Logro`, `LogroUsuario`, `Certificado`, `NotaLeccion`.
 - Gamificación (Etapa 6): `MovimientoGota` (ledger), `Mision`, `MisionUsuario`,
   `InsigniaSemanal`.
+- Tienda (Etapa 7): `ItemTienda`, `CompraItem`, `InventarioItem`.
 - `Usuario` (espejo con `neoId`, `rol`, `verificado`, `racha`, `ultimaActividad`,
-  `gotasSaldo`, `gotasTotal`).
+  `gotasSaldo`, `gotasTotal`, `gotasMultiplicadorHasta`).
 
 ---
 
@@ -165,7 +166,8 @@ Constraints únicos: `Usuario.id`, `Usuario.username`, `Usuario.email`, `Post.id
 Modelos: `Usuario`, `Categoria`, `Curso`, `CursoProfesor`, `Modulo`, `Leccion`,
 `Material`, `Evaluacion`, `Pregunta`, `Opcion`, `Inscripcion`, `Progreso`,
 `Intento`, `ComentarioLeccion`, `NotaLeccion`, `Logro`, `LogroUsuario`,
-`Certificado`, `MovimientoGota`, `Mision`, `MisionUsuario`, `InsigniaSemanal`.
+`Certificado`, `MovimientoGota`, `Mision`, `MisionUsuario`, `InsigniaSemanal`,
+`ItemTienda`, `CompraItem`, `InventarioItem`.
 
 Enums: `Rol` = `ESTUDIANTE|PROFESOR|ADMIN`; `TipoPregunta` =
 `OPCION_MULTIPLE|VERDADERO_FALSO|RESPUESTA_CORTA`.
@@ -199,8 +201,9 @@ cualquier usuario.
 
 ### Gotas — economía (Etapa 6, `services/gotas.service.js`)
 
-Las **gotas** son la XP de Titi. `gotasSaldo` (gastable, sin tienda aún) +
-`gotasTotal` (lifetime) + ledger `MovimientoGota`.
+Las **gotas** son la XP de Titi. `gotasSaldo` (gastable en la tienda) +
+`gotasTotal` (lifetime, nunca baja) + ledger `MovimientoGota` (positivo =
+ganancia, negativo = gasto en la tienda).
 
 | Acción | Motivo | Gotas | Tope diario |
 |---|---|---|---|
@@ -217,6 +220,37 @@ Las **gotas** son la XP de Titi. `gotasSaldo` (gastable, sin tienda aún) +
 - **Idempotencia (aprendizaje):** `(usuarioId, motivo, refId)` paga una sola vez.
 - **Anti-farmeo (social):** al llegar al tope la acción sigue, pero no paga más ese día.
 - Otorgar gotas incrementa `gotasSaldo` + `gotasTotal` y escribe `MovimientoGota`.
+- Si `Usuario.gotasMultiplicadorHasta` está en el futuro, `otorgarGotas` duplica
+  el monto (no aplica a `ranking_semanal`).
+- `gastarGotas(usuarioId, cantidad, { motivo, refId })` (Etapa 7): valida saldo,
+  **decrementa `gotasSaldo`** (nunca `gotasTotal`) y escribe un `MovimientoGota`
+  negativo. Todo en transacción. Lo usa `tienda.service.js`.
+
+### Tienda de gotas (Etapa 7, `services/tienda.service.js`, `routes/shop.js`)
+
+Sumidero de la economía: consumibles que se compran con gotas y se acumulan en
+un inventario por usuario. Modelos: `ItemTienda` (catálogo), `CompraItem`
+(ledger de compras, auditoría), `InventarioItem` (saldo por ítem,
+`@@unique([usuarioId, itemId])`).
+
+- `comprarItem(usuarioId, codigo)`: transacción que valida ítem activo, saldo y
+  `limiteStack`, debita gotas (`MovimientoGota` negativo + `gotasSaldo`),
+  escribe `CompraItem` y suma 1 a `InventarioItem`. No usa `gastarGotas` para no
+  partir la transacción.
+- `consumirItem(usuarioId, codigo)`: decrementa 1 unidad si hay stock; la usan
+  los efectos y `/api/shop/use`.
+
+Catálogo inicial (`prisma/seed.js`) y sus efectos:
+
+| Ítem | Precio | Efecto | Dónde se aplica |
+|---|---|---|---|
+| `congelar_racha` | 50 | Protege la racha 1 día sin actividad | `progress.service.js` → `actualizarRacha`, consumo **lazy** al detectar el gap |
+| `intento_extra` | 80 | Un intento más en una evaluación bloqueada | `routes/evaluations.js` → `attempt`, si `usarIntentoExtra: true` en el body |
+| `multiplicador_gotas` | 100 | x2 gotas por 1 hora | `POST /api/shop/use` → `activarMultiplicador` abre `gotasMultiplicadorHasta` |
+
+Endpoints: `GET /api/shop/items` (catálogo + saldo + cantidad por ítem),
+`GET /api/shop/inventory`, `POST /api/shop/buy`, `POST /api/shop/use` (solo
+`multiplicador_gotas` — los otros dos se auto-consumen en su trigger).
 
 ### Misiones diarias (`services/mision.service.js`)
 
