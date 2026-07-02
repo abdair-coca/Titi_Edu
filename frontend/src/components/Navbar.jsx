@@ -5,75 +5,34 @@ import client from '../api/client.js';
 import StreakBadge, { FlameIcon } from './StreakBadge.jsx';
 import useStreak from '../hooks/useStreak.js';
 import GotasCounter from './GotasCounter.jsx';
+import {
+  HomeIcon,
+  CompassIcon,
+  BooksIcon,
+  TargetIcon,
+  TrophyIcon,
+  BagIcon,
+  GraduationIcon,
+  ShieldIcon,
+  BellIcon,
+  UserIcon,
+  LogoutIcon,
+} from './icons.jsx';
 
-// ---- Iconos inline ----
+// Íconos de navegación centralizados en icons.jsx (§5.6 de design.md) —
+// este objeto solo mapea nombres locales para no tocar cada uso.
 const Icon = {
-  Home: (p) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1V9.5Z" />
-    </svg>
-  ),
-  Compass: (p) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <circle cx="12" cy="12" r="9" />
-      <polygon points="15 9 13 13 9 15 11 11 15 9" />
-    </svg>
-  ),
-  User: (p) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <circle cx="12" cy="8" r="4" />
-      <path d="M4 21a8 8 0 0 1 16 0" />
-    </svg>
-  ),
-  Logout: (p) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <polyline points="16 17 21 12 16 7" />
-      <line x1="21" y1="12" x2="9" y2="12" />
-    </svg>
-  ),
-  Bell: (p) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-    </svg>
-  ),
-  Books: (p) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
-    </svg>
-  ),
-  Target: (p) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <circle cx="12" cy="12" r="9" />
-      <circle cx="12" cy="12" r="5" />
-      <circle cx="12" cy="12" r="1.5" />
-    </svg>
-  ),
-  Cap: (p) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M22 10 12 4 2 10l10 6 10-6z" />
-      <path d="M6 12v5c3 2 9 2 12 0v-5" />
-    </svg>
-  ),
-  Shield: (p) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
-    </svg>
-  ),
-  Trophy: (p) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M8 21h8M12 17v4M7 4h10v4a5 5 0 0 1-10 0V4Z" />
-      <path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3" />
-    </svg>
-  ),
-  Bag: (p) => (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" {...p}>
-      <path d="M6 8h12l1 12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1L6 8Z" />
-      <path d="M9 8V6a3 3 0 0 1 6 0v2" />
-    </svg>
-  ),
+  Home: HomeIcon,
+  Compass: CompassIcon,
+  User: UserIcon,
+  Logout: LogoutIcon,
+  Bell: BellIcon,
+  Books: BooksIcon,
+  Target: TargetIcon,
+  Cap: GraduationIcon,
+  Shield: ShieldIcon,
+  Trophy: TrophyIcon,
+  Bag: BagIcon,
 };
 
 function useUnreadNotifications() {

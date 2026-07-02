@@ -216,6 +216,106 @@ export function TrophyIcon({ className = 'w-6 h-6' }) {
   );
 }
 
+// ---- Íconos de navegación (navbar/chrome) ----
+// Trazo 2.2 — un punto más grueso que los de categoría: se leen chicos (w-5)
+// sobre el sidebar oscuro.
+
+function NavSvg({ className, children }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+// Casa — Inicio / feed.
+export function HomeIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M3 9.5 12 3l9 6.5V21a1 1 0 0 1-1 1h-5v-7h-6v7H4a1 1 0 0 1-1-1V9.5Z" />
+    </NavSvg>
+  );
+}
+
+// Brújula — Explorar.
+export function CompassIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <polygon points="15 9 13 13 9 15 11 11 15 9" />
+    </NavSvg>
+  );
+}
+
+// Libro cerrado — catálogo de Cursos (el abierto, BookIcon, es el fallback de portadas).
+export function BooksIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+    </NavSvg>
+  );
+}
+
+// Persona — Mi perfil.
+export function UserIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 21a8 8 0 0 1 16 0" />
+    </NavSvg>
+  );
+}
+
+// Campana — Notificaciones.
+export function BellIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+    </NavSvg>
+  );
+}
+
+// Escudo — panel Admin.
+export function ShieldIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+    </NavSvg>
+  );
+}
+
+// Bolsa — Tienda.
+export function BagIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M6 8h12l1 12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1L6 8Z" />
+      <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+    </NavSvg>
+  );
+}
+
+// Salir — logout.
+export function LogoutIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </NavSvg>
+  );
+}
+
 /**
  * Devuelve el componente de ícono de trazo que mejor representa a la categoría
  * de un curso (por su nombre). Fallback: BookIcon.
