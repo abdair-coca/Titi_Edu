@@ -13,6 +13,33 @@ Es la fuente de verdad visual del proyecto. Todo lo que generes debe ser consist
 
 ---
 
+## 0. Cómo usar este documento (para agentes / LLMs)
+
+Este documento es **suficiente por sí solo** para redisenar cualquier parte
+de la app de forma consistente, si seguís este orden:
+
+1. **Leé primero**: este archivo completo → [`motion.md`](./motion.md) (el
+   CÓMO de las animaciones). Si vas a tocar `MyCourses`, también
+   [`MyCourses.md`](./MyCourses.md) (decisiones ya confirmadas — no re-preguntar).
+2. **Antes de escribir un componente**: buscá en el inventario (§14) si ya
+   existe; buscá en el recetario (§15) el átomo exacto. **Crear algo nuevo es
+   el último recurso**, y se crea con los tokens de este documento.
+3. **Tokens**: usá solo los canónicos (§2, tabla "canónico vs legacy"). Si el
+   archivo que tocás usa tokens legacy, **migralos en el mismo cambio** —
+   regla boy scout: todo archivo tocado queda 100% v2 (§17).
+4. **Copy**: voseo y terminología según §16. "Gotas", nunca "XP".
+5. **Motion**: los 8 patrones de §10 son obligatorios en todo lo nuevo.
+6. **Al terminar**: checklist §12 + build del frontend (`npx vite build`)
+   verde. Cambios grandes se planifican por etapas en un `.md` junto al
+   código (patrón `MyCourses.md`) con un commit por etapa.
+7. **Imágenes del usuario** (mockups, capturas): protocolo §13.
+
+Lo que NO hay que hacer: inventar variantes, importar otras librerías de UI o
+íconos, usar las clases legacy `.titi-btn-*`/`.neo-*` (§5.0), o re-preguntar
+decisiones ya documentadas acá.
+
+---
+
 ## 1. Filosofía de diseño
 
 Titi no es Duolingo ni Udemy. Es **lo que pasa cuando ambos se juntan en Bolivia**.
@@ -152,6 +179,26 @@ module.exports = {
   }
 }
 ```
+
+### Tokens canónicos vs legacy — qué usar en código nuevo
+
+`tailwind.config.js` e `index.css` arrastran aliases de rediseños anteriores.
+**Código nuevo usa SOLO la columna canónica**; al tocar un archivo con legacy,
+se migra en el mismo cambio (§17).
+
+| Legacy (existe, NO usar) | Canónico v2 |
+|---|---|
+| `text-titi-text` | `text-titi-dark` |
+| `text-titi-muted` | `text-gray-500` (terciario: `text-gray-400`) |
+| `border-titi-border` (#F0E6C8) | `border-gray-100` (informativa) / `border-gray-200` (tile) |
+| `bg-titi-bg` | `bg-titi-cream` |
+| `bg-titi-card` | `bg-white` |
+| `titi-blue` (#4D96FF) | `blue-500` (info) |
+| `titi-green` (#6BCB77) | `green-500` (éxito) |
+| `titi-red` (#FF6B6B) | `red-500` (error/destructivo) |
+| `titi-orange` (#FF9A3C) | `titi-streak` (racha) o `titi-yellow-hover` (hover) |
+| `neo-*` (todos) | prohibido — mapear al token Titi equivalente |
+| `shadow-titi` / `shadow-neo` | `shadow-[0_2px_8px_rgba(0,0,0,0.06)]` (§4) |
 
 ### Duotono por rol — cómo se aplica cada color
 
@@ -371,6 +418,21 @@ El aire separa; el vacío aburre. Reglas:
 ---
 
 ## 5. Componentes — patrones de referencia
+
+### 5.0 Clases utilitarias de `index.css` — cuáles valen y cuáles no
+
+`index.css` define clases `@layer components`. Estado v2:
+
+| Clase | Estado | Uso |
+|---|---|---|
+| `.titi-card-pop` | ✅ canónica | hover pop de tiles (lift + escala con rebote) — §10 patrón 7 |
+| `.titi-btn` | ✅ canónica | base de press universal (`active:scale-[0.96]`) para clickeables sin sombra dura |
+| `.titi-backdrop-in`, `.titi-*-toast-*`, `.titi-flame-flicker` | ✅ canónicas | animaciones de modales/toasts/racha — **no tocar** (motion.md) |
+| `.titi-card` | ⚠️ legacy | usa `border-titi-border` — preferir el snippet de card informativa (§5.2) |
+| `.titi-btn-primary` | ❌ legacy | rounded-full + hover naranja, **contradice** el botón primario §5.1 — no usar |
+| `.titi-btn-secondary` | ❌ legacy | fondo azul — contradice §5.1 — no usar |
+| `.titi-btn-ghost` / `.titi-btn-danger` / `.titi-chip` / `.titi-input` | ⚠️ legacy | usar los snippets de §5.1/§9 en código nuevo |
+| `.neo-*` | ❌ prohibidas | aliases viejos |
 
 ### 5.1 Botones
 
@@ -1077,3 +1139,150 @@ parte del sistema: no se improvisa.
 > La imagen define **QUÉ** se ve y **DÓNDE**. Este documento define **CÓMO**
 > se ve. Si chocan, gana el documento — y se le explica al usuario qué se
 > adaptó y por qué.
+
+---
+
+## 14. Inventario — reusar antes de crear
+
+Todo vive en `frontend/src/`. Antes de crear un componente, revisá acá; si
+falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
+`title`) antes que duplicar.
+
+### Componentes (`components/`)
+
+| Componente | Qué es |
+|---|---|
+| `Navbar.jsx` | rail desktop + top bar y bottom nav mobile (por rol) |
+| `PageTransition.jsx` | transición de página (ya montada en `App.jsx`) |
+| `TitiMascot.jsx` | mascota animada por estado (`idle`, `celebra`, `triste`, `racha`, `saludo`, `pensando`) |
+| `icons.jsx` | **única fuente de íconos SVG**: navegación (trazo 2.2), categorías (`categoryIcon(nombre)`), Gota/Bolt/Target/Check/Award/Graduation/Trophy/Users |
+| `StreakBadge.jsx` | badge de racha (variants `sidebar`/compacta) + `FlameIcon` |
+| `GotasCounter.jsx` | contador de gotas (usa GamificationContext) |
+| `DailyMissions.jsx` | misiones diarias (prop `title`) |
+| `AchievementsSection.jsx` | grid de logros del perfil |
+| `AcademicActivityCard.jsx` | actividad académica del feed (chips sólidos por tipo) |
+| `RecommendedCourseCard.jsx` / `ItemCard.jsx` | tiles de curso recomendado / ítem de tienda |
+| `PostCard.jsx`, `CreatePost.jsx`, `CommentSection.jsx`, `LessonComments.jsx`, `EditPostModal.jsx`, `OptionsPosts.jsx` | social: post, composer, comentarios, edición |
+| `EvaluationQuiz.jsx` | quiz de evaluación en Learn |
+| `ConfirmModal.jsx` | confirmación destructiva — **nunca** `window.confirm` |
+| `GotaToast.jsx`, `StreakToast.jsx`, `AchievementToast.jsx`, `PurchaseToast.jsx`, `WeeklyPrizeCelebration.jsx` | toasts/celebraciones (animaciones cerradas, no tocar) |
+
+### Hooks y lib
+
+| Módulo | Qué da |
+|---|---|
+| `lib/motion.js` | `MOTION` (tokens), `useStaggerReveal`, `usePopIn` (§10) |
+| `lib/format.js` | `relativeTime`, `formatDate`, `resolveMediaUrl` — no reimplementar formateo |
+| `hooks/useStreak.js` | racha del usuario |
+| `context/AuthContext.jsx` / `context/GamificationContext.jsx` | `user`/`isAuthenticated` · `gotas` |
+| `api/client.js` | axios con JWT — **nunca** `fetch()` directo |
+
+---
+
+## 15. Recetario de átomos — clases exactas
+
+Copiar tal cual. Si un átomo no está acá ni en §5, se compone con los tokens
+de §2-4 y se agrega acá.
+
+```jsx
+// Header de página (título + subrayado + subtítulo + acción opcional)
+<header className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+  <div>
+    <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">{titulo}</h1>
+    <span aria-hidden="true" className="block w-12 h-1.5 mt-1.5 bg-titi-yellow rounded-full" />
+    <p className="text-base font-medium text-gray-500 mt-1.5">{subtitulo}</p>
+  </div>
+  {accion}
+</header>
+
+// Link de sección ("VER TODO" / toggles)
+<button className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors whitespace-nowrap">
+
+// Chip de rol (círculo sólido + SVG blanco; oscuro sobre amarillo)
+<span className="w-9 h-9 rounded-full bg-titi-achievement grid place-items-center shrink-0">
+  <AwardIcon className="w-4 h-4 text-white" />
+</span>
+
+// Badge de nivel sobre portada (pill oscuro)
+<span className="absolute top-2.5 left-2.5 bg-titi-dark text-white text-xs font-semibold capitalize px-3 py-1 rounded-full shadow-sm">
+
+// Badge de estado (sólido pleno)
+<span className="bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
+
+// Ícono de error (dentro del contenedor rojo de §8)
+<span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
+
+// Ícono de éxito
+<span className="w-8 h-8 rounded-full bg-green-500 grid place-items-center shrink-0" aria-hidden="true">
+  <CheckIcon className="w-4 h-4 text-white" />
+</span>
+
+// Stat card (informativa, acento por rol)
+<div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-0.5 transition-all duration-200 p-4 sm:p-5 flex items-center gap-3">
+  <div className="w-12 h-12 rounded-full bg-titi-yellow shadow-sm grid place-items-center shrink-0">{icono}</div>
+  <div className="min-w-0">
+    <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">{valor}</p>
+    <p className="text-xs font-semibold text-gray-500">{label}</p>
+  </div>
+</div>
+
+// Fila de lista densa
+<li className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+
+// Barra de progreso (siempre animada, §10)
+<div className="h-2 bg-gray-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
+  <div className="h-full bg-titi-yellow rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none" style={{ width: `${pct}%` }} />
+</div>
+```
+
+### Plantillas de layout por tipo de página
+
+| Tipo | Contenedor | Ejemplo |
+|---|---|---|
+| Dashboard | full-width del shell; stats en `grid sm:grid-cols-3`; secciones cortas emparejadas `grid lg:grid-cols-2`; banner full al pie | Mis cursos |
+| Feed / columna social | `max-w-xl mx-auto` (Feed, Explore) o `max-w-2xl` (listas) | Feed, Leaderboard |
+| Catálogo / grid | grid de tiles `sm:2 lg:3 xl:4` + `gap-4 sm:gap-5` | Courses |
+| Detalle | 2 columnas `lg:` (contenido + panel de acción sticky) | CourseDetail |
+| Admin / tablas | full-width, cards informativas, tablas sin stagger | AdminUsers |
+| Fuera del shell | centrado propio, sin sidebar (auth, verificación pública) | Login, VerifyCertificate |
+
+---
+
+## 16. Voz, terminología y copy
+
+- **Voseo** siempre ("Continuá", "tenés", "Descubrí", "Inscribite") — nunca
+  "tú"/"usted". Tono cálido, motivador, breve.
+- **"Gotas", NUNCA "XP" ni "EXP"** en ningún texto visible (el token CSS
+  `--color-xp` es interno, ok).
+- Vocabulario fijo: **gotas** (puntos) · **racha** (días seguidos) ·
+  **logros** (achievements) · **Desafíos del día** (misiones en Mis cursos;
+  el componente por default dice "Misiones de hoy") · **lecciones** dentro de
+  **módulos** · **certificados**.
+- Los mensajes de Titi llevan la voz de la mascota (§7) y son el único lugar
+  con emojis.
+- Errores: qué pasó + acción ("No pudimos cargar tus cursos" + botón
+  "Reintentar"). Nunca códigos crudos.
+- Estados vacíos: siempre venden el siguiente paso ("Explorá el catálogo…" +
+  CTA).
+- Mayúsculas: solo la primera palabra en títulos y botones ("Explorar
+  cursos", no "Explorar Cursos"). UPPERCASE solo en labels/links de sección.
+
+---
+
+## 17. Estado de migración v2 — qué está hecho y qué falta
+
+La app está **a mitad de migración** hacia este documento. Si redisenás algo,
+esto te dice qué esperar del código existente:
+
+| Etapa | Estado | Contenido |
+|---|---|---|
+| 1 — Íconos | ✅ | `icons.jsx` fuente única; navbar SVG; emojis de chrome reemplazados (error "!", éxito Check, chips del feed) |
+| 2 — Tipografía y densidad | ✅ | h1 `font-black`, subtítulos `text-base`, mínimo `text-xs` global; densidad aplicada en Mis cursos |
+| 3 — Tiles y sólidos | ⬜ | `CourseCard`/tiles a `border-2` + sombra dura (§5.2); chips pastel que quedan (stats de Mis cursos, categorías) → sólidos §2; botón secundario chunky |
+| 4 — Motion obligatorio | ⬜ | `useCountUp` (crear en `lib/motion.js`), micro-feedback universal, Titi animado en banners |
+| 5 — Limpieza legacy | ⬜ | migrar los ~180 usos de `titi-text`/`titi-muted`/`titi-border`/`neo-*` (§2) y matar `.titi-btn-*` legacy (§5.0); emojis restantes en editores teacher (`TIPO_ICON`, `TIPOS`) |
+| 6 — Layouts densos | ⬜ | revisar columnas muertas en Feed/Explore (§4 Densidad) |
+
+**Regla boy scout**: cualquier archivo que toques por otro motivo queda
+migrado completo a v2 en ese mismo cambio (tokens, tipografía, átomos).
+Marcá acá la etapa cuando se complete.
