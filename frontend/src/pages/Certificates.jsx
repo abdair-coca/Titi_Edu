@@ -139,7 +139,7 @@ export default function Certificates() {
                   <button
                     type="button"
                     onClick={() => copyCode(cert)}
-                    className="bg-white text-titi-dark font-semibold text-sm px-3 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all text-center"
+                    className="bg-white text-titi-dark font-bold text-sm px-3 py-2 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 text-center"
                   >
                     {copiedId === cert.id ? '✓ Copiado' : 'Copiar código'}
                   </button>

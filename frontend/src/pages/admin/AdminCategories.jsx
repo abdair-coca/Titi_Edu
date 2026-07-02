@@ -128,7 +128,7 @@ export default function AdminCategories() {
             <button
               type="button"
               onClick={cancelEdit}
-              className="bg-white text-titi-dark font-semibold text-sm px-4 py-3 rounded-xl border border-gray-200 hover:bg-gray-50 transition-all"
+              className="bg-white text-titi-dark font-bold text-sm px-4 py-3 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150"
             >
               Cancelar
             </button>

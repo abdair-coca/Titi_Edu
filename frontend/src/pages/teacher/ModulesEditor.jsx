@@ -298,7 +298,7 @@ export default function ModulesEditor() {
           <button
             type="button"
             onClick={() => navigate(`/teacher/courses/${courseId}/edit`)}
-            className="bg-white text-titi-dark font-semibold text-sm px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-50"
+            className="bg-white text-titi-dark font-bold text-sm px-4 py-2 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150"
           >
             Datos del curso
           </button>
@@ -624,7 +624,7 @@ function LessonEditor({ leccion, onSave, onUpload, onDeleteMaterial }) {
               <option key={t} value={t}>{TIPO_ICON[t]} {t}</option>
             ))}
           </select>
-          <label className="bg-white text-titi-dark font-semibold text-sm px-4 py-2 rounded-xl border border-gray-200 hover:bg-gray-50 cursor-pointer">
+          <label className="inline-block bg-white text-titi-dark font-bold text-sm px-4 py-2 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 cursor-pointer">
             Subir archivo
             <input
               type="file"

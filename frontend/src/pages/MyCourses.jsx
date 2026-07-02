@@ -118,7 +118,7 @@ export default function MyCourses() {
         <button
           type="button"
           onClick={() => navigate('/certificates')}
-          className="inline-flex items-center gap-2 bg-white text-titi-dark font-semibold text-sm px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-titi-cream hover:border-titi-yellow transition-all whitespace-nowrap"
+          className="inline-flex items-center gap-2 bg-white text-titi-dark font-bold text-sm px-4 py-2.5 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 whitespace-nowrap"
         >
           <GraduationIcon className="w-4 h-4 text-titi-certificate" />
           Mis certificados

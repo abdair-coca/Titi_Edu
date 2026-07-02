@@ -1278,7 +1278,7 @@ esto te dice qué esperar del código existente:
 |---|---|---|
 | 1 — Íconos | ✅ | `icons.jsx` fuente única; navbar SVG; emojis de chrome reemplazados (error "!", éxito Check, chips del feed) |
 | 2 — Tipografía y densidad | ✅ | h1 `font-black`, subtítulos `text-base`, mínimo `text-xs` global; densidad aplicada en Mis cursos |
-| 3 — Tiles y sólidos | ⬜ | `CourseCard`/tiles a `border-2` + sombra dura (§5.2); chips pastel que quedan (stats de Mis cursos, categorías) → sólidos §2; botón secundario chunky |
+| 3 — Tiles y sólidos | ✅ | `CourseCard`/`RecommendedCourseCard`/paneles admin a `border-2` + sombra dura; chips de stats/categorías/actividad en sólido pleno; botón secundario chunky en toda la app (12 sitios) |
 | 4 — Motion obligatorio | ⬜ | `useCountUp` (crear en `lib/motion.js`), micro-feedback universal, Titi animado en banners |
 | 5 — Limpieza legacy | ⬜ | migrar los ~180 usos de `titi-text`/`titi-muted`/`titi-border`/`neo-*` (§2) y matar `.titi-btn-*` legacy (§5.0); emojis restantes en editores teacher (`TIPO_ICON`, `TIPOS`) |
 | 6 — Layouts densos | ⬜ | revisar columnas muertas en Feed/Explore (§4 Densidad) |
