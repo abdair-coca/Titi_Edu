@@ -1,7 +1,7 @@
 // Sistema de motion de Titi — ver frontend/motion.md (fuente de verdad).
 // Feel: juguetón con rebote leve. GSAP para entradas/secuencias; CSS para hover/press.
 // Reglas: tope 400ms, y SIEMPRE respetar prefers-reduced-motion (desactiva todo).
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { useGSAP } from '@gsap/react';
 
@@ -69,6 +69,51 @@ export function useStaggerReveal(dependencies = [], options = {}) {
   );
 
   return scope;
+}
+
+/**
+ * useCountUp — cuenta un número hasta su valor real (design.md §10, patrón 5).
+ *
+ * Es visualización de dato (como el llenado de barras): ~700ms, fuera del
+ * tope de 400ms de las entradas. Anima desde el último valor mostrado (no
+ * siempre desde 0), así un refetch no "rebobina" el número.
+ *
+ * - Respeta prefers-reduced-motion: valor final al instante.
+ * - Renderizar SIEMPRE con `tabular-nums` para que el ancho no baile.
+ *
+ * @param {number} target   Valor final.
+ * @param {Object} options  duration en segundos (default 0.7).
+ * @returns número entero para renderizar.
+ */
+export function useCountUp(target, options = {}) {
+  const { duration = 0.7 } = options;
+  const to = Number(target) || 0;
+  const [value, setValue] = useState(() => (prefersReducedMotion() ? to : 0));
+  const shownRef = useRef(value);
+
+  useEffect(() => {
+    if (prefersReducedMotion()) {
+      shownRef.current = to;
+      setValue(to);
+      return undefined;
+    }
+    const from = shownRef.current;
+    if (from === to) return undefined;
+    let raf;
+    const start = performance.now();
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / (duration * 1000));
+      const eased = 1 - Math.pow(1 - p, 3); // easeOut — mismo feel que las barras
+      const next = Math.round(from + (to - from) * eased);
+      shownRef.current = next;
+      setValue(next);
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [to, duration]);
+
+  return value;
 }
 
 /**

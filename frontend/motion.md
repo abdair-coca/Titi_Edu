@@ -91,6 +91,7 @@ el cierre tenga qué animar.
 | Cambio de lección (Learn) | pop del contenido al cambiar de lección + pop de la respuesta de "Profundiza" | `usePopIn` en `LearnCourse` (`LessonView`, `DeepenCard`) |
 | Colapsable (ver/ocultar) | acordeón: grid `0fr→1fr` + fade, ease neutro (no pop), abre **y** cierra. Eje según layout: alto (vertical) o ancho (`grid-cols`, panel lateral en desktop) | CSS Tailwind en `LearnCourse` ("Ver descripción", `DeepenCard`, `LessonSidePanels`) |
 | Barra de progreso | "llenado": monta en 0 y anima el `width` hasta el % real, ease neutro | CSS `transition-[width]` + estado en `rAF` (`EnrolledCard` de `MyCourses`) |
+| Count-up de números | cuenta del último valor mostrado al nuevo, easeOut ~700ms (visualización de dato, como las barras) | `useCountUp` en `lib/motion.js` (stats de `MyCourses`) — siempre con `tabular-nums` |
 | Mascota Titi | pop al montar | `usePopIn` en `TitiMascot` |
 | Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
 
@@ -152,7 +153,13 @@ querés que re-anime en cada apertura.)
 Los hooks de `src/lib/motion.js` ya encapsulan todo esto — usalos:
 
 ```jsx
-import { useStaggerReveal, usePopIn } from '../lib/motion.js';
+import { useStaggerReveal, usePopIn, useCountUp } from '../lib/motion.js';
+
+// Número clave: cuenta de 0 (o del valor anterior) al real. tabular-nums SIEMPRE.
+function Stat({ total }) {
+  const anim = useCountUp(total);
+  return <p className="tabular-nums font-extrabold">{anim}</p>;
+}
 
 // Lista: entrada escalonada de los hijos directos. Dep = length (primitivo).
 function Grid({ items }) {

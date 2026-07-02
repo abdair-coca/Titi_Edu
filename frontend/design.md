@@ -988,7 +988,7 @@ cada pantalla: si el bloque no celebra, motiva o explica, no lleva mascota.
 | 2 | **Pop de entrada** | Bloques sueltos destacados, modales, mascota | `usePopIn` |
 | 3 | **Transición de página** | Todas las rutas del shell | `PageTransition` (ya en `App.jsx`) |
 | 4 | **Barra de progreso animada** | TODA barra de progreso, sin excepción | monta en 0 → `transition-[width] duration-700` hasta el % real |
-| 5 | **Count-up de números** | Stats clave: gotas, racha, % de progreso | de 0 al valor al entrar, ~700ms, `tabular-nums` (hook `useCountUp` en `lib/motion.js`; si no existe aún, crearlo ahí) |
+| 5 | **Count-up de números** | Stats clave: gotas, racha, % de progreso | de 0 al valor al entrar, ~700ms, `tabular-nums` (hook `useCountUp` de `lib/motion.js`) |
 | 6 | **Micro-feedback universal** | TODO clickeable: botones, chips, links, íconos, nodos | press hundido (sombra dura aplanada o `active:scale-[0.96]`) + transición ≤150ms |
 | 7 | **Hover pop de tiles** | Tiles de navegación (§5.2) | lift + sombra crece + borde amarillo (CSS, rebote `cubic-bezier(0.34,1.56,0.64,1)`) |
 | 8 | **Titi animado** | Empty states, banners, celebraciones | `<TitiMascot state=…>` (WebP), nunca PNG estático si es protagonista |

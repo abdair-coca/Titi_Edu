@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client.js';
-import { useStaggerReveal } from '../lib/motion.js';
+import { useStaggerReveal, useCountUp } from '../lib/motion.js';
 import { useGamification } from '../context/GamificationContext.jsx';
 import useStreak from '../hooks/useStreak.js';
 import {
@@ -161,6 +161,10 @@ export default function MyCourses() {
 // progreso → amarillo Titi (XP), gotas → azul info, racha → naranja streak.
 function StatsRow({ progresoPromedio, gotasTotal, streak }) {
   const rachaActiva = streak.estaActiva && streak.racha > 0;
+  // Count-up de los 3 números (§10 patrón 5); la barra ya anima su width.
+  const progresoAnim = useCountUp(progresoPromedio);
+  const gotasAnim = useCountUp(gotasTotal);
+  const rachaAnim = useCountUp(streak.racha);
   const cardClass =
     'bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-0.5 transition-all duration-200 p-4 sm:p-5 flex items-center gap-3';
   return (
@@ -171,7 +175,7 @@ function StatsRow({ progresoPromedio, gotasTotal, streak }) {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-gray-500">Tu progreso</p>
           <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">
-            {progresoPromedio}%
+            {progresoAnim}%
           </p>
           <p className="text-xs font-semibold text-gray-500">Promedio general</p>
           <div
@@ -195,7 +199,7 @@ function StatsRow({ progresoPromedio, gotasTotal, streak }) {
         <StatIcon tint="bg-blue-500" icon={<GotaIcon className="w-6 h-6 text-white" />} />
         <div className="min-w-0">
           <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">
-            {gotasTotal}
+            {gotasAnim}
           </p>
           <p className="text-xs font-semibold text-gray-500">Gotas totales</p>
         </div>
@@ -206,7 +210,7 @@ function StatsRow({ progresoPromedio, gotasTotal, streak }) {
         <StatIcon tint="bg-titi-streak" icon={<BoltIcon className="w-6 h-6 text-white" />} />
         <div className="min-w-0">
           <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">
-            {streak.racha}
+            {rachaAnim}
           </p>
           <p className="text-xs font-semibold text-gray-500">Racha actual</p>
           {rachaActiva && (
