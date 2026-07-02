@@ -1,11 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../api/client.js';
-import { useStaggerReveal } from '../lib/motion.js';
+import { useStaggerReveal, useCountUp } from '../lib/motion.js';
+import { useGamification } from '../context/GamificationContext.jsx';
+import useStreak from '../hooks/useStreak.js';
 import PostCard from '../components/PostCard.jsx';
 import CreatePost from '../components/CreatePost.jsx';
 import AcademicActivityCard from '../components/AcademicActivityCard.jsx';
+import CategoriesExplorer from '../components/CategoriesExplorer.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
+import { BoltIcon, GotaIcon } from '../components/icons.jsx';
 
 export default function Feed() {
   const [posts, setPosts] = useState([]);
@@ -101,7 +105,10 @@ export default function Feed() {
   const timelineRef = useStaggerReveal([loading]);
 
   return (
-    <div className="max-w-xl mx-auto">
+    // Sin columnas muertas (design.md §4): en lg el feed va acompañado por un
+    // rail lateral sticky con progreso + categorías.
+    <div className="max-w-5xl mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:items-start">
+      <div className="max-w-xl mx-auto lg:max-w-none lg:mx-0 min-w-0">
       <header className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">Inicio</h1>
@@ -155,7 +162,63 @@ export default function Feed() {
       {loadingMore && (
         <div className="py-6 text-center text-sm text-gray-500 font-semibold">Cargando más…</div>
       )}
+      </div>
+
+      {/* Rail lateral (solo desktop) */}
+      <aside className="hidden lg:flex flex-col gap-5 sticky top-8">
+        <SideStats />
+        <CategoriesExplorer />
+      </aside>
     </div>
+  );
+}
+
+// ---- Rail: progreso rápido (racha + gotas, con count-up) ----
+function SideStats() {
+  const { gotas } = useGamification();
+  const streak = useStreak();
+  const rachaActiva = streak.estaActiva && streak.racha > 0;
+  const gotasAnim = useCountUp(gotas.total);
+  const rachaAnim = useCountUp(streak.racha);
+
+  return (
+    <section className="titi-card p-4 sm:p-5">
+      <h2 className="text-lg font-bold text-titi-dark mb-3">Tu progreso</h2>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-3">
+          <span
+            className={`w-10 h-10 rounded-full grid place-items-center shrink-0 shadow-sm ${
+              rachaActiva ? 'bg-titi-streak' : 'bg-gray-200'
+            }`}
+          >
+            <BoltIcon className={`w-5 h-5 ${rachaActiva ? 'text-white' : 'text-gray-500'}`} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
+              {rachaAnim}
+            </p>
+            <p className="text-xs font-semibold text-gray-500">Racha actual</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="w-10 h-10 rounded-full bg-blue-500 grid place-items-center shrink-0 shadow-sm">
+            <GotaIcon className="w-5 h-5 text-white" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
+              {gotasAnim}
+            </p>
+            <p className="text-xs font-semibold text-gray-500">Gotas totales</p>
+          </div>
+        </div>
+      </div>
+      <Link
+        to="/my-courses"
+        className="inline-block mt-4 text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-all duration-150 active:scale-95"
+      >
+        Ver mi progreso →
+      </Link>
+    </section>
   );
 }
 

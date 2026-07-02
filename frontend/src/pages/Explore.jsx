@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import PostCard from '../components/PostCard.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
+import CategoriesExplorer from '../components/CategoriesExplorer.jsx';
+import { BooksIcon } from '../components/icons.jsx';
 import { useStaggerReveal } from '../lib/motion.js';
 import { relativeTime, resolveMediaUrl } from '../lib/format.js';
 
@@ -16,18 +18,48 @@ export default function Explore() {
   }, [query]);
 
   return (
-    <div className="max-w-xl mx-auto">
-      <header className="mb-6">
-        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Explorar</h1>
-        <p className="text-base text-gray-500 font-medium">
-          Descubrí usuarios, posts y hashtags en Titi
-        </p>
-      </header>
+    // Sin columnas muertas (design.md §4): en lg la búsqueda va acompañada por
+    // un rail lateral sticky con categorías + CTA al catálogo.
+    <div className="max-w-5xl mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:items-start">
+      <div className="max-w-xl mx-auto lg:max-w-none lg:mx-0 min-w-0">
+        <header className="mb-6">
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Explorar</h1>
+          <p className="text-base text-gray-500 font-medium">
+            Descubrí usuarios, posts y hashtags en Titi
+          </p>
+        </header>
 
-      <SearchBar value={query} onChange={setQuery} />
+        <SearchBar value={query} onChange={setQuery} />
 
-      {debouncedQuery ? <SearchResults q={debouncedQuery} /> : <ExploreFeed />}
+        {debouncedQuery ? <SearchResults q={debouncedQuery} /> : <ExploreFeed />}
+      </div>
+
+      {/* Rail lateral (solo desktop) */}
+      <aside className="hidden lg:flex flex-col gap-5 sticky top-8">
+        <CategoriesExplorer />
+        <CoursesCTA />
+      </aside>
     </div>
+  );
+}
+
+// ---- Rail: CTA plano al catálogo de cursos ----
+function CoursesCTA() {
+  return (
+    <section className="titi-card p-4 sm:p-5 flex flex-col items-start gap-3">
+      <span className="w-10 h-10 rounded-full bg-titi-yellow grid place-items-center shadow-sm">
+        <BooksIcon className="w-5 h-5 text-titi-dark" />
+      </span>
+      <div>
+        <h2 className="text-lg font-bold text-titi-dark">¿Algo nuevo para aprender?</h2>
+        <p className="text-sm font-medium text-gray-500">
+          Cursos gratis de la comunidad, a tu ritmo.
+        </p>
+      </div>
+      <Link to="/courses" className="titi-btn-primary text-sm px-4 py-2">
+        Explorar cursos
+      </Link>
+    </section>
   );
 }
 
