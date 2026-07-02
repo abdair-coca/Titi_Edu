@@ -90,8 +90,8 @@ export default function Shop() {
     <div className="max-w-3xl mx-auto">
       <header className="mb-5 flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-extrabold text-titi-dark">Tienda</h1>
-          <p className="text-sm font-medium text-gray-500 mt-1">
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">Tienda</h1>
+          <p className="text-base font-medium text-gray-500 mt-1">
             Gastá tus gotas en consumibles que te ayudan a estudiar.
           </p>
         </div>

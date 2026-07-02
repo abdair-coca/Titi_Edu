@@ -91,7 +91,7 @@ export default function MyTeaching() {
     <div>
       <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6 sm:mb-8">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark">
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">
             Mis cursos como profesor
           </h1>
           <p className="text-sm font-medium text-gray-500 mt-1">

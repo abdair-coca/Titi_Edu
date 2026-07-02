@@ -218,7 +218,7 @@ export default function CourseDetail() {
                 )}
               </div>
 
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark leading-tight">
+              <h1 className="text-3xl sm:text-4xl font-black text-titi-dark leading-tight">
                 {curso.titulo}
               </h1>
 

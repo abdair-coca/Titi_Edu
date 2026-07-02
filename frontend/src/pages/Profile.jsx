@@ -253,7 +253,7 @@ export default function Profile() {
 
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-text">@{user.username}</h1>
+              <h1 className="text-2xl sm:text-3xl font-black text-titi-text">@{user.username}</h1>
               {!isSelf && isAuthenticated && (
                 <button
                   type="button"

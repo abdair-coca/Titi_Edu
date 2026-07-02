@@ -57,7 +57,7 @@ export default function HashtagFeed() {
         <Link to="/explore" className="text-sm text-neo-muted hover:text-white inline-flex items-center gap-1">
           ← Explorar
         </Link>
-        <h1 className="text-3xl font-extrabold mt-2 break-all">
+        <h1 className="text-3xl sm:text-4xl font-black mt-2 break-all">
           <span className="text-neo-accent">#</span>{normalized}
         </h1>
         <p className="text-sm text-neo-muted mt-1">

@@ -70,7 +70,7 @@ export default function AchievementToast({ logros = [], onDone, durationMs = 320
             <p className="text-xs text-purple-500 line-clamp-2">{logro.descripcion}</p>
           )}
           {logros.length > 1 && (
-            <p className="text-[10px] font-semibold text-purple-400 mt-0.5 tabular-nums">
+            <p className="text-xs font-semibold text-purple-400 mt-0.5 tabular-nums">
               {idx + 1} de {logros.length}
             </p>
           )}

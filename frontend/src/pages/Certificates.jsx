@@ -115,7 +115,7 @@ export default function Certificates() {
                   {cert.curso?.categoria?.icono || '🎓'}
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wide text-titi-yellow-dark">
+                  <p className="text-xs sm:text-xs font-extrabold uppercase tracking-wide text-titi-yellow-dark">
                     Certificado Titi
                   </p>
                   <h3 className="text-sm sm:text-base font-bold text-titi-dark leading-snug line-clamp-2">
@@ -128,7 +128,7 @@ export default function Certificates() {
                   Emitido el {formatDate(cert.fechaEmision)}
                 </p>
                 <div className="bg-titi-cream rounded-xl px-3 py-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400 mb-0.5">
+                  <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-0.5">
                     Código de verificación
                   </p>
                   <p className="text-xs font-mono font-bold text-titi-dark break-all">
@@ -203,7 +203,7 @@ export function VerifyCertificate() {
             className="w-20 h-20 mx-auto mb-2 object-contain drop-shadow-sm select-none"
             draggable={false}
           />
-          <h1 className="text-2xl font-extrabold text-titi-dark">
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">
             Verificación de certificado
           </h1>
         </div>
@@ -227,21 +227,21 @@ export function VerifyCertificate() {
             <h2 className="text-lg font-bold text-green-700 mb-4">Certificado válido</h2>
             <dl className="text-left bg-titi-cream rounded-xl p-4 space-y-3">
               <div>
-                <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Curso</dt>
+                <dt className="text-xs font-bold uppercase tracking-wide text-gray-400">Curso</dt>
                 <dd className="text-base font-bold text-titi-dark">{certificado.curso?.titulo}</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Otorgado a</dt>
+                <dt className="text-xs font-bold uppercase tracking-wide text-gray-400">Otorgado a</dt>
                 <dd className="text-base font-bold text-titi-dark">@{certificado.username}</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Fecha de emisión</dt>
+                <dt className="text-xs font-bold uppercase tracking-wide text-gray-400">Fecha de emisión</dt>
                 <dd className="text-sm font-semibold text-titi-dark">
                   {formatDate(certificado.fechaEmision)}
                 </dd>
               </div>
               <div>
-                <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400">Código</dt>
+                <dt className="text-xs font-bold uppercase tracking-wide text-gray-400">Código</dt>
                 <dd className="text-xs font-mono font-bold text-titi-dark break-all">
                   {certificado.codigoVerif}
                 </dd>

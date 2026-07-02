@@ -288,7 +288,7 @@ export default function ModulesEditor() {
           >
             ← Mis cursos
           </button>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark line-clamp-2">{curso.titulo}</h1>
+          <h1 className="text-2xl sm:text-3xl font-black text-titi-dark line-clamp-2">{curso.titulo}</h1>
           <p className="text-sm font-medium text-gray-500 mt-1">
             {modulos.length} {modulos.length === 1 ? 'módulo' : 'módulos'} · {totalLessons}{' '}
             {totalLessons === 1 ? 'lección' : 'lecciones'}

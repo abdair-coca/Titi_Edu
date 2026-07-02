@@ -18,8 +18,8 @@ export default function Explore() {
   return (
     <div className="max-w-xl mx-auto">
       <header className="mb-6">
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-titi-text mb-1">Explorar</h1>
-        <p className="text-sm text-titi-muted font-semibold">
+        <h1 className="text-3xl sm:text-4xl font-black text-titi-text mb-1">Explorar</h1>
+        <p className="text-base text-titi-muted font-medium">
           Descubrí usuarios, posts y hashtags en Titi
         </p>
       </header>

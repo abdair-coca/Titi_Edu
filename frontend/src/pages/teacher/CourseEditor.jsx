@@ -142,7 +142,7 @@ export default function CourseEditor() {
         ← Mis cursos como profesor
       </button>
 
-      <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark mb-1">
+      <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">
         {isEdit ? 'Editar curso' : 'Crear nuevo curso'}
       </h1>
       <p className="text-sm font-medium text-gray-500 mb-6">

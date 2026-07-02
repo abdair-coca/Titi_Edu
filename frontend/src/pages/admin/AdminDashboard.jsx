@@ -46,7 +46,7 @@ export default function AdminDashboard() {
   return (
     <div>
       <header className="mb-6 sm:mb-8">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark mb-1">Panel de administración</h1>
+        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Panel de administración</h1>
         <p className="text-sm font-medium text-gray-500">Gobierná usuarios, cursos y categorías de Titi.</p>
       </header>
 

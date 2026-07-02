@@ -104,8 +104,8 @@ export default function Feed() {
     <div className="max-w-xl mx-auto">
       <header className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-titi-text">Inicio</h1>
-          <p className="text-sm text-titi-muted font-semibold">Lo que está pasando con quienes seguís</p>
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-text">Inicio</h1>
+          <p className="text-base text-titi-muted font-medium">Lo que está pasando con quienes seguís</p>
         </div>
         <button
           type="button"

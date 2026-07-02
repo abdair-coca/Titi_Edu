@@ -341,7 +341,7 @@ function SidebarVariant({ racha, estado, className }) {
     >
       <FlameIcon size={28} animated={encendida} dim={estado === 'apagada'} />
       <p className="text-white font-black text-2xl leading-none tabular-nums">{display}</p>
-      <p className="text-titi-streak text-[10px] font-bold uppercase tracking-wide">
+      <p className="text-titi-streak text-xs font-bold uppercase tracking-wide">
         {racha === 1 ? 'día' : 'días'}
       </p>
       {estado === 'riesgo' && (

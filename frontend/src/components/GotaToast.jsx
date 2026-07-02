@@ -48,7 +48,7 @@ export default function GotaToast({ durationMs = 2600 }) {
             +{current.cantidad}
           </p>
           {gotaQueue.length > 1 && (
-            <p className="text-[10px] font-semibold text-titi-yellow-dark/70 tabular-nums">
+            <p className="text-xs font-semibold text-titi-yellow-dark/70 tabular-nums">
               +{gotaQueue.length - 1} más
             </p>
           )}

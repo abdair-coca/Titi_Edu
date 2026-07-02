@@ -39,7 +39,7 @@ export default function Login() {
               <img src="/Titi.png" alt="" className="w-10 h-10 object-contain" onError={(e) => (e.currentTarget.style.display = 'none')} />
               <span className="text-2xl font-extrabold lowercase tracking-tight">titi</span>
             </Link>
-            <h1 className="text-3xl sm:text-4xl font-extrabold mb-2">
+            <h1 className="text-3xl sm:text-4xl font-black mb-2">
               ¡Hola de nuevo! <span aria-hidden="true">👋</span>
             </h1>
             <p className="text-titi-muted">Entrá a tu cuenta para seguir conectándote.</p>

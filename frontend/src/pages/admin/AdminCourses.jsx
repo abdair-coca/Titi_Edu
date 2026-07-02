@@ -67,7 +67,7 @@ export default function AdminCourses() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark mb-1">Cursos</h1>
+        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Cursos</h1>
         <p className="text-sm font-medium text-gray-500">Aprobá, moderá y eliminá cursos del catálogo.</p>
       </header>
 

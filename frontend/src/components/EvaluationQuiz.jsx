@@ -425,7 +425,7 @@ function QuizShell({ evaluacion, children }) {
 function InfoStat({ label, value }) {
   return (
     <div className="bg-titi-cream rounded-xl px-2 py-2 sm:px-3 sm:py-2.5">
-      <dt className="text-[10px] font-bold uppercase tracking-wide text-gray-400 leading-tight">
+      <dt className="text-xs font-bold uppercase tracking-wide text-gray-400 leading-tight">
         {label}
       </dt>
       <dd className="text-base sm:text-lg font-extrabold text-titi-dark tabular-nums mt-0.5">

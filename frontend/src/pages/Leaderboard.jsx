@@ -41,8 +41,8 @@ export default function Leaderboard() {
   return (
     <div className="max-w-2xl mx-auto">
       <header className="mb-5">
-        <h1 className="text-3xl font-extrabold text-titi-dark">Ranking semanal</h1>
-        <p className="text-sm font-medium text-gray-500 mt-1">
+        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">Ranking semanal</h1>
+        <p className="text-base font-medium text-gray-500 mt-1">
           Gotas de la semana entre vos y la gente que seguís. Se reinicia cada lunes.
         </p>
       </header>

@@ -55,7 +55,7 @@ function NotifBadge({ count }) {
   return (
     <span
       aria-label={`${count} notificaciones no leídas`}
-      className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-titi-red text-white text-[10px] font-extrabold leading-none tabular-nums shadow"
+      className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-titi-red text-white text-xs font-extrabold leading-none tabular-nums shadow"
     >
       {count > 99 ? '99+' : count}
     </span>

@@ -42,7 +42,7 @@ export default function Register() {
         {/* Form */}
         <div className="titi-card p-8 sm:p-10 order-2 lg:order-1">
           <div className="mb-6">
-            <h1 className="text-3xl sm:text-4xl font-extrabold mb-2 inline-flex items-center gap-2 flex-wrap">
+            <h1 className="text-3xl sm:text-4xl font-black mb-2 inline-flex items-center gap-2 flex-wrap">
               <span>¡Únete a Titi!</span>
               <img
                 src="/Titi.png"

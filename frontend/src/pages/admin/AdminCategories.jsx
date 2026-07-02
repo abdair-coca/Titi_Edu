@@ -91,7 +91,7 @@ export default function AdminCategories() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark mb-1">Categorías</h1>
+        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Categorías</h1>
         <p className="text-sm font-medium text-gray-500">Creá, editá y borrá las categorías del catálogo.</p>
       </header>
 

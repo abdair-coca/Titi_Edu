@@ -380,7 +380,7 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
           {index + 1}
         </span>
         <div className="flex-1 min-w-0">
-          <span className="text-[10px] sm:text-xs font-bold text-titi-achievement uppercase tracking-wide block">
+          <span className="text-xs sm:text-xs font-bold text-titi-achievement uppercase tracking-wide block">
             {tipo?.icon} {tipo?.label}
           </span>
           <textarea

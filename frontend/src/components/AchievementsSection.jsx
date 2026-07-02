@@ -92,15 +92,15 @@ export default function AchievementsSection({ username, isSelf = false }) {
               <span className="text-2xl sm:text-3xl block select-none" aria-hidden="true">
                 {l.icono}
               </span>
-              <p className="text-[11px] sm:text-xs font-bold text-titi-dark mt-1 sm:mt-1.5 leading-tight">
+              <p className="text-xs sm:text-xs font-bold text-titi-dark mt-1 sm:mt-1.5 leading-tight">
                 {l.nombre}
               </p>
               {l.desbloqueado ? (
-                <p className="text-[10px] font-semibold text-titi-achievement mt-0.5">
+                <p className="text-xs font-semibold text-titi-achievement mt-0.5">
                   {l.fechaObtenido ? formatDate(l.fechaObtenido) : 'Desbloqueado'}
                 </p>
               ) : (
-                <p className="text-[10px] font-semibold text-gray-400 mt-0.5 line-clamp-2">
+                <p className="text-xs font-semibold text-gray-400 mt-0.5 line-clamp-2">
                   {isSelf ? l.condicion : 'Bloqueado'}
                 </p>
               )}

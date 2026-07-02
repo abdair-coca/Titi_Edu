@@ -405,7 +405,7 @@ export default function LearnCourse() {
 
           {/* Progreso del curso */}
           <div className="mt-4">
-            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
               Progreso del curso
             </p>
             <div className="flex items-center gap-2">
@@ -937,7 +937,7 @@ function LessonSidePanels({
               ].join(' ')}
             >
               <Icon className="w-5 h-5" />
-              <span className="text-[11px] font-semibold leading-none">{label}</span>
+              <span className="text-xs font-semibold leading-none">{label}</span>
             </button>
           );
         })}
@@ -961,7 +961,7 @@ function NotesPanel({ value, onChange, onSave, saving, saved }) {
         className="titi-input resize-none text-sm"
       />
       <div className="flex items-center justify-between mt-2">
-        <span className="text-[11px] font-semibold text-green-500">
+        <span className="text-xs font-semibold text-green-500">
           {saved ? 'Guardado ✓' : ''}
         </span>
         <button

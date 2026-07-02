@@ -69,7 +69,7 @@ export default function AdminUsers() {
   return (
     <div>
       <header className="mb-6">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark mb-1">Usuarios</h1>
+        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Usuarios</h1>
         <p className="text-sm font-medium text-gray-500">{total} usuarios registrados</p>
       </header>
 

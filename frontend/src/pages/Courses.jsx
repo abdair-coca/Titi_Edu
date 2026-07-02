@@ -623,7 +623,7 @@ export default function Courses() {
       <section ref={darkPromoRef} aria-label="Reimaginá tu forma de aprender">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-titi-dark rounded-2xl p-8 sm:p-10">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-titi-cream leading-tight mb-3">
+            <h2 className="text-2xl sm:text-3xl font-black text-titi-cream leading-tight mb-3">
               Reimaginá tu forma de{' '}
               <span className="text-titi-yellow">aprender</span>
             </h2>
@@ -744,7 +744,7 @@ export default function Courses() {
       <section aria-label="Sumá gotas y desbloqueá logros">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-titi-dark rounded-2xl p-8 sm:p-10">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-titi-cream leading-tight mb-3">
+            <h2 className="text-2xl sm:text-3xl font-black text-titi-cream leading-tight mb-3">
               Sumá gotas y desbloqueá logros
             </h2>
             <p className="text-sm font-medium text-white/60 leading-relaxed mb-6 max-w-sm">
@@ -822,7 +822,7 @@ export default function Courses() {
                             {c.titulo}
                           </span>
                           <span
-                            className={`block text-[11px] font-bold uppercase tracking-wide ${nivelTextClass(c.nivel)}`}
+                            className={`block text-xs font-bold uppercase tracking-wide ${nivelTextClass(c.nivel)}`}
                           >
                             {c.nivel || 'sin nivel'}
                           </span>
@@ -1083,7 +1083,7 @@ function HeroStat({ num, label }) {
   const display = useCountUp(num);
   return (
     <div className="flex items-baseline gap-1.5">
-      <span className="text-2xl font-extrabold text-titi-dark tabular-nums">
+      <span className="text-3xl font-extrabold text-titi-dark tabular-nums">
         {display}
       </span>
       <span className="text-sm font-bold text-gray-400">{label}</span>
