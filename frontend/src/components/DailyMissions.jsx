@@ -64,7 +64,7 @@ export default function DailyMissions({ title = 'Misiones de hoy' }) {
           <button
             type="button"
             onClick={fetchMisiones}
-            className="text-xs font-bold text-titi-dark hover:text-titi-yellow-dark shrink-0"
+            className="text-xs font-bold text-titi-dark hover:text-titi-yellow-dark active:scale-95 transition-all duration-150 shrink-0"
           >
             Reintentar →
           </button>

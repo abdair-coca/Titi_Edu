@@ -12,7 +12,6 @@ import {
   CheckIcon,
   AwardIcon,
   GraduationIcon,
-  TrophyIcon,
 } from '../components/icons.jsx';
 import DailyMissions from '../components/DailyMissions.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
@@ -258,7 +257,7 @@ function LearningPathSection({ inscripciones, progressByCurso, onContinue, onOpe
           <button
             type="button"
             onClick={toggle}
-            className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors whitespace-nowrap"
+            className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-all duration-150 active:scale-95 whitespace-nowrap"
           >
             {expanded ? 'Ver menos' : 'Ver toda la ruta'}
           </button>
@@ -366,7 +365,7 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
             <button
               type="button"
               onClick={onOpenDetail}
-              className="text-left w-fit max-w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow rounded-lg mt-0.5"
+              className="text-left w-fit max-w-full rounded-lg mt-0.5 active:scale-[0.98] transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
             >
               <h3 className="text-lg font-bold text-titi-dark leading-snug line-clamp-1 hover:text-titi-yellow-dark transition-colors">
                 {curso.titulo || 'Curso sin título'}
@@ -435,7 +434,7 @@ function LearningPathMoreNode({ count, onClick }) {
           type="button"
           onClick={onClick}
           aria-label={`Ver ${count} cursos más de tu ruta`}
-          className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gray-200 grid place-items-center shrink-0 shadow-sm hover:bg-gray-300 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
+          className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gray-200 grid place-items-center shrink-0 shadow-sm hover:bg-gray-300 active:scale-90 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
         >
           <span className="text-xs font-black text-gray-600 tabular-nums">+{count}</span>
         </button>
@@ -443,7 +442,7 @@ function LearningPathMoreNode({ count, onClick }) {
       <button
         type="button"
         onClick={onClick}
-        className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark transition-colors"
+        className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark active:scale-95 transition-all duration-150"
       >
         Ver {count} {count === 1 ? 'curso más' : 'cursos más'}
       </button>
@@ -496,7 +495,7 @@ function CategoriesExplorer({ onOpen }) {
         <button
           type="button"
           onClick={() => navigate('/courses')}
-          className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors whitespace-nowrap"
+          className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-all duration-150 active:scale-95 whitespace-nowrap"
         >
           Ver todas
         </button>
@@ -520,7 +519,7 @@ function CategoriesExplorer({ onOpen }) {
                 key={cat.id}
                 type="button"
                 onClick={() => onOpen(cat.id)}
-                className="flex flex-col items-center gap-1.5 text-center rounded-xl py-3 px-1 hover:bg-titi-cream transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
+                className="flex flex-col items-center gap-1.5 text-center rounded-xl py-3 px-1 hover:bg-titi-cream active:scale-[0.96] transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
               >
                 <span
                   className={`w-11 h-11 rounded-full grid place-items-center shrink-0 shadow-sm ${CAT_TINTS[i % CAT_TINTS.length]}`}
@@ -651,7 +650,7 @@ function RecentActivity() {
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="w-full mt-3 pt-3 border-t border-gray-50 text-center text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors"
+          className="w-full mt-3 pt-3 border-t border-gray-50 text-center text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-all duration-150 active:scale-95"
         >
           {expanded ? 'Ver menos' : 'Ver toda la actividad'}
         </button>
@@ -663,10 +662,9 @@ function RecentActivity() {
 // ---- Banner de cierre: CTA plano a /courses ----
 function BottomBanner({ onExplore }) {
   return (
-    <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
-      <div className="w-14 h-14 rounded-full bg-titi-yellow-light shadow-sm grid place-items-center shrink-0">
-        <TrophyIcon className="w-8 h-8 text-titi-certificate" />
-      </div>
+    <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
+      {/* Titi animado en el banner motivacional (design.md §7 v2, máx 1/página) */}
+      <TitiMascot state="saludo" size="sm" message="" className="shrink-0" />
       <div className="flex-1 text-center sm:text-left">
         <h3 className="text-lg font-bold text-titi-dark">¡Sigue aprendiendo!</h3>
         <p className="text-base font-medium text-gray-500">

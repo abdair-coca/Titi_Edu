@@ -892,7 +892,9 @@ cada pantalla: si el bloque no celebra, motiva o explica, no lleva mascota.
 - En el catálogo de cursos navegando normalmente
 - En el perfil de otros usuarios
 - En el panel admin
-- Más de una vez por página (el banner O el empty state, no ambos)
+- Más de un Titi **protagonista** por página (banner O empty state de página
+  completa, no ambos). Un mini-Titi (`size="sm"`) en el empty de una sección
+  chica no cuenta para el límite.
 
 ---
 
@@ -1195,8 +1197,8 @@ de §2-4 y se agrega acá.
   {accion}
 </header>
 
-// Link de sección ("VER TODO" / toggles)
-<button className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors whitespace-nowrap">
+// Link de sección ("VER TODO" / toggles) — con press hundido (§10 patrón 6)
+<button className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-all duration-150 active:scale-95 whitespace-nowrap">
 
 // Chip de rol (círculo sólido + SVG blanco; oscuro sobre amarillo)
 <span className="w-9 h-9 rounded-full bg-titi-achievement grid place-items-center shrink-0">
