@@ -564,9 +564,13 @@ const gridRef = useStaggerReveal([cursos.length]);
 
 ### 5.4 Navbar (Sidebar vertical) — íconos SVG
 
-**Descripción:** Sidebar fijo, fondo oscuro (#1A1A2E), 240px. Los ítems usan
-**íconos SVG de `icons.jsx`** — nunca emoji (§5.6). Ítem activo: fondo
-azul-oscuro + ícono y texto amarillos.
+**Descripción (implementación real en `Navbar.jsx`):** rail fijo oscuro
+(#1A1A2E) de `w-20` que se **expande a `w-64` en hover** (labels con fade).
+Los ítems usan **íconos SVG de `icons.jsx`** — nunca emoji (§5.6). Ítem
+activo: **fondo amarillo sólido + texto oscuro** (`bg-titi-yellow
+text-titi-dark`). Al fondo: contador de gotas, racha (FlameIcon + StreakBadge
+en crossfade) y avatar. En mobile: top bar + bottom nav de 5 slots por rol.
+El snippet de abajo es la forma canónica de un ítem:
 
 ```jsx
 // Navbar.jsx — sidebar vertical
@@ -620,19 +624,23 @@ azul-oscuro + ícono y texto amarillos.
 </aside>
 ```
 
-**Ítems del navbar** (los íconos Home/Search/Bell/User todavía no existen en
-`icons.jsx` — agregarlos ahí al migrar, mismo estilo de trazo que los
-existentes):
+**Ítems del navbar** (todos los íconos ya existen en `icons.jsx`, sección
+"Íconos de navegación", trazo 2.2):
 
 ```js
 const navItems = [
   { path: '/feed',          Icon: HomeIcon,       label: 'Inicio' },
-  { path: '/explore',       Icon: SearchIcon,     label: 'Explorar' },
-  { path: '/courses',       Icon: BookIcon,       label: 'Cursos' },
+  { path: '/explore',       Icon: CompassIcon,    label: 'Explorar' },
+  { path: '/courses',       Icon: BooksIcon,      label: 'Cursos' },
   { path: '/my-courses',    Icon: TargetIcon,     label: 'Mis cursos' },
+  { path: '/leaderboard',   Icon: TrophyIcon,     label: 'Ranking' },
+  { path: '/shop',          Icon: BagIcon,        label: 'Tienda' },
+  { path: '/teacher',       Icon: GraduationIcon, label: 'Enseñar' },      // PROFESOR/ADMIN
+  { path: '/admin',         Icon: ShieldIcon,     label: 'Admin' },        // ADMIN
   { path: '/notifications', Icon: BellIcon,       label: 'Notificaciones' },
-  { path: '/profile',       Icon: UserIcon,       label: 'Mi perfil' },
+  { path: '/profile/:user', Icon: UserIcon,       label: 'Mi perfil' },
 ]
+// También disponibles: UsersIcon (estudiantes), LogoutIcon (cerrar sesión).
 ```
 
 ### 5.5 Feed — Tarjeta de actividad académica
