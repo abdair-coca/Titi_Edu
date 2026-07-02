@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useStaggerReveal } from '../lib/motion.js';
+import { BooksIcon, GraduationIcon, UsersIcon, CheckIcon } from '../components/icons.jsx';
 
 function formatDateEs(value) {
   if (!value) return '';
@@ -147,7 +148,7 @@ export default function CourseDetail() {
           ← Volver al catálogo
         </button>
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-          <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
+          <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-700">
               No pudimos cargar el curso
@@ -324,7 +325,7 @@ export default function CourseDetail() {
             {/* Stats rápidos */}
             <div className="flex flex-col gap-2 py-2 border-y border-gray-100">
               <Stat
-                icon="📚"
+                icon={<BooksIcon className="w-4 h-4" />}
                 label={
                   curso.modulos?.length
                     ? `${curso.modulos.length} ${curso.modulos.length === 1 ? 'módulo' : 'módulos'}`
@@ -332,7 +333,7 @@ export default function CourseDetail() {
                 }
               />
               <Stat
-                icon="🎓"
+                icon={<GraduationIcon className="w-4 h-4" />}
                 label={
                   curso.nivel
                     ? `Nivel ${curso.nivel}`
@@ -341,7 +342,7 @@ export default function CourseDetail() {
               />
               {typeof curso._count?.inscripciones === 'number' && (
                 <Stat
-                  icon="👥"
+                  icon={<UsersIcon className="w-4 h-4" />}
                   label={`${curso._count.inscripciones} ${
                     curso._count.inscripciones === 1
                       ? 'estudiante'
@@ -354,7 +355,9 @@ export default function CourseDetail() {
             {/* Mensajes de estado */}
             {successMsg && (
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center gap-3">
-                <span className="text-green-500 text-lg" aria-hidden="true">✅</span>
+                <span className="w-8 h-8 rounded-full bg-green-500 grid place-items-center shrink-0" aria-hidden="true">
+                  <CheckIcon className="w-4 h-4 text-white" />
+                </span>
                 <p className="text-sm font-semibold text-green-700">
                   {successMsg}
                 </p>
@@ -362,7 +365,7 @@ export default function CourseDetail() {
             )}
             {enrollError && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-                <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
+                <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-red-700">
                     No pudimos inscribirte
@@ -434,7 +437,7 @@ export default function CourseDetail() {
 function Stat({ icon, label }) {
   return (
     <div className="flex items-center gap-2.5 text-sm font-medium text-titi-dark">
-      <span className="text-base" aria-hidden="true">
+      <span className="text-titi-yellow-dark" aria-hidden="true">
         {icon}
       </span>
       <span>{label}</span>

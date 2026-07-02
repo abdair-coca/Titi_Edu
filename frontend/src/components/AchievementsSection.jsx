@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import client from '../api/client.js';
 import { formatDate } from '../lib/format.js';
 import { useStaggerReveal } from '../lib/motion.js';
+import { AwardIcon } from './icons.jsx';
 
 /**
  * AchievementsSection — grid de logros de un usuario para la página de perfil.
@@ -39,7 +40,10 @@ export default function AchievementsSection({ username, isSelf = false }) {
     <section aria-label="Logros" className="titi-card p-4 sm:p-6 mb-6">
       <div className="flex items-center justify-between gap-2 mb-4">
         <h2 className="text-base sm:text-lg font-bold text-titi-dark flex items-center gap-2">
-          <span aria-hidden="true">🏅</span> Logros
+          <span className="w-7 h-7 rounded-full bg-titi-achievement grid place-items-center shrink-0" aria-hidden="true">
+            <AwardIcon className="w-4 h-4 text-white" />
+          </span>
+          Logros
         </h2>
         {!loading && !error && (
           <span className="text-xs font-extrabold text-titi-achievement bg-purple-50 px-3 py-1 rounded-full tabular-nums">

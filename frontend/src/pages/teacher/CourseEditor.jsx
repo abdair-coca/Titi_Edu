@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import client from '../../api/client.js';
+import { CheckIcon } from '../../components/icons.jsx';
 
 const NIVELES = ['principiante', 'intermedio', 'avanzado'];
 
@@ -213,7 +214,9 @@ export default function CourseEditor() {
         )}
         {success && !error && (
           <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
-            <span className="text-green-500">✅</span>
+            <span className="w-6 h-6 rounded-full bg-green-500 grid place-items-center shrink-0" aria-hidden="true">
+              <CheckIcon className="w-3.5 h-3.5 text-white" />
+            </span>
             <p className="text-sm font-semibold text-green-700">{success}</p>
           </div>
         )}

@@ -118,9 +118,10 @@ export default function MyCourses() {
         <button
           type="button"
           onClick={() => navigate('/certificates')}
-          className="bg-white text-titi-dark font-semibold text-sm px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-titi-cream hover:border-titi-yellow transition-all whitespace-nowrap"
+          className="inline-flex items-center gap-2 bg-white text-titi-dark font-semibold text-sm px-4 py-2.5 rounded-xl border border-gray-200 hover:bg-titi-cream hover:border-titi-yellow transition-all whitespace-nowrap"
         >
-          🎓 Mis certificados
+          <GraduationIcon className="w-4 h-4 text-titi-certificate" />
+          Mis certificados
         </button>
       </header>
 
@@ -258,11 +259,6 @@ function LearningPathSection({ inscripciones, progressByCurso, onContinue, onOpe
             {expanded ? 'Ver menos' : 'Ver toda la ruta'}
           </button>
         )}
-      </div>
-
-      {/* Punto de partida de la timeline (mockup) */}
-      <div aria-hidden="true" className="w-11 sm:w-12 flex justify-center mb-3">
-        <span className="w-3.5 h-3.5 rounded-full bg-titi-yellow shadow-sm ring-4 ring-titi-yellow-light" />
       </div>
 
       <ul ref={pathRef} className="flex flex-col gap-5">
@@ -717,7 +713,7 @@ function ErrorState({ message, onRetry }) {
   return (
     <div className="flex flex-col gap-4 max-w-2xl">
       <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-        <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
+        <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
         <div className="flex-1">
           <p className="text-sm font-semibold text-red-700">
             No pudimos cargar tus cursos

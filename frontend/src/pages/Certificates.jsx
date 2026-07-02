@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { formatDate } from '../lib/format.js';
 import { useStaggerReveal } from '../lib/motion.js';
+import { CheckIcon } from '../components/icons.jsx';
 
 /**
  * Certificates — lista de mis certificados (ruta protegida /certificates).
@@ -68,7 +69,7 @@ export default function Certificates() {
         </div>
       ) : error ? (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 max-w-2xl">
-          <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
+          <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-700">{error}</p>
             <button
@@ -214,13 +215,15 @@ export function VerifyCertificate() {
           </div>
         ) : error ? (
           <div className="bg-white rounded-2xl border-2 border-red-200 p-8 text-center">
-            <span className="text-4xl block mb-3" aria-hidden="true">❌</span>
+            <span className="w-12 h-12 rounded-full bg-red-500 grid place-items-center mx-auto mb-3 text-white text-xl font-black" aria-hidden="true">✕</span>
             <h2 className="text-lg font-bold text-red-700 mb-1">Certificado no válido</h2>
             <p className="text-sm text-gray-500">{error}</p>
           </div>
         ) : (
           <div className="bg-white rounded-2xl border-2 border-green-300 p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-            <span className="text-4xl block mb-3" aria-hidden="true">✅</span>
+            <span className="w-12 h-12 rounded-full bg-green-500 grid place-items-center mx-auto mb-3" aria-hidden="true">
+              <CheckIcon className="w-6 h-6 text-white" />
+            </span>
             <h2 className="text-lg font-bold text-green-700 mb-4">Certificado válido</h2>
             <dl className="text-left bg-titi-cream rounded-xl p-4 space-y-3">
               <div>

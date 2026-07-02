@@ -305,6 +305,18 @@ export function BagIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+// Grupo de personas — estudiantes inscritos.
+export function UsersIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20a6.5 6.5 0 0 1 13 0" />
+      <path d="M16 5a3.5 3.5 0 0 1 0 7" />
+      <path d="M17.5 14.5a6.5 6.5 0 0 1 4 5.5" />
+    </NavSvg>
+  );
+}
+
 // Salir — logout.
 export function LogoutIcon({ className = 'w-5 h-5' }) {
   return (

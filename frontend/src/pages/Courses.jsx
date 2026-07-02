@@ -6,7 +6,7 @@ import { useStaggerReveal, usePopIn } from '../lib/motion.js';
 import { nivelTextClass } from '../lib/nivel.js';
 import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
-import { GotaIcon, BookIcon } from '../components/icons.jsx';
+import { GotaIcon, BookIcon, BoltIcon, AwardIcon } from '../components/icons.jsx';
 
 // Copys estáticos de los paneles de comunidad (marketing, sin backend).
 const PERKS = [
@@ -17,9 +17,9 @@ const PERKS = [
 ];
 
 const BADGES = [
-  { glyph: '🔥', title: 'Racha activa', note: '7 días seguidos' },
-  { glyph: '💧', title: 'Coleccionista', note: '50 gotas ganadas' },
-  { glyph: '🏅', title: 'Primer curso', note: 'curso completado' },
+  { Icon: BoltIcon, color: 'text-titi-streak', title: 'Racha activa', note: '7 días seguidos' },
+  { Icon: GotaIcon, color: 'text-titi-yellow', title: 'Coleccionista', note: '50 gotas ganadas' },
+  { Icon: AwardIcon, color: 'text-titi-achievement', title: 'Primer curso', note: 'curso completado' },
 ];
 
 // Testimonios — placeholder estático (sin backend, contenido de ejemplo).
@@ -765,8 +765,8 @@ export default function Courses() {
                 key={b.title}
                 className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center"
               >
-                <div className="w-12 h-12 rounded-xl bg-white/10 grid place-items-center mx-auto mb-3 text-2xl">
-                  <span aria-hidden="true">{b.glyph}</span>
+                <div className="w-12 h-12 rounded-xl bg-white/10 grid place-items-center mx-auto mb-3">
+                  <b.Icon className={`w-6 h-6 ${b.color}`} aria-hidden="true" />
                 </div>
                 <div className="text-sm font-bold text-titi-cream mb-0.5">
                   {b.title}

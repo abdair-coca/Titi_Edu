@@ -1,11 +1,12 @@
 import { Link } from 'react-router-dom';
 import { relativeTime } from '../lib/format.js';
+import { BooksIcon, GraduationIcon, AwardIcon, GotaIcon } from './icons.jsx';
 
-// Verbo + emoji según el tipo de actividad académica.
+// Verbo + chip sólido del rol según el tipo de actividad (design.md §5.5).
 const VERBO = {
-  inscripcion: { texto: 'se inscribió en', emoji: '📚' },
-  curso_completado: { texto: 'completó', emoji: '🎓' },
-  logro: { texto: 'desbloqueó el logro', emoji: '🏅' },
+  inscripcion: { texto: 'se inscribió en', Icon: BooksIcon, chip: 'bg-blue-500' },
+  curso_completado: { texto: 'completó', Icon: GraduationIcon, chip: 'bg-green-500' },
+  logro: { texto: 'desbloqueó el logro', Icon: AwardIcon, chip: 'bg-titi-achievement' },
 };
 
 /**
@@ -14,7 +15,7 @@ const VERBO = {
  *   { actorUsername, actorAvatarUrl, type, cursoId?, curso?, logroNombre?, createdAt }
  */
 export default function AcademicActivityCard({ item }) {
-  const v = VERBO[item.type] || { texto: 'tuvo actividad', emoji: '✨' };
+  const v = VERBO[item.type] || { texto: 'tuvo actividad', Icon: GotaIcon, chip: 'bg-titi-yellow' };
   const esCurso = item.type === 'inscripcion' || item.type === 'curso_completado';
 
   return (
@@ -29,13 +30,18 @@ export default function AcademicActivityCard({ item }) {
             >
               @{item.actorUsername}
             </Link>{' '}
-            <span className="font-semibold text-titi-muted">{v.texto}</span>{' '}
-            <span aria-hidden="true">{v.emoji}</span>
+            <span className="font-semibold text-titi-muted">{v.texto}</span>
           </p>
           <p className="text-xs text-titi-muted font-semibold mt-0.5">
             {relativeTime(item.createdAt)}
           </p>
         </div>
+        <span
+          className={`ml-auto w-9 h-9 rounded-full grid place-items-center shrink-0 ${v.chip}`}
+          aria-hidden="true"
+        >
+          <v.Icon className={`w-4 h-4 ${v.chip === 'bg-titi-yellow' ? 'text-titi-dark' : 'text-white'}`} />
+        </span>
       </header>
 
       {esCurso && item.curso && (
@@ -66,7 +72,7 @@ export default function AcademicActivityCard({ item }) {
 
       {item.type === 'logro' && item.logroNombre && (
         <div className="mt-3 inline-flex items-center gap-2 bg-titi-achievement/10 border border-titi-achievement/30 rounded-full px-3 py-1.5">
-          <span aria-hidden="true">🏅</span>
+          <AwardIcon className="w-4 h-4 text-titi-achievement" aria-hidden="true" />
           <span className="text-sm font-bold text-titi-achievement">{item.logroNombre}</span>
         </div>
       )}

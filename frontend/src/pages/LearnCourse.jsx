@@ -342,7 +342,7 @@ export default function LearnCourse() {
       <div className="flex min-h-screen bg-titi-cream items-center justify-center p-8">
         <div className="max-w-md w-full bg-red-50 border border-red-200 rounded-xl p-6">
           <div className="flex items-start gap-3 mb-4">
-            <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
+            <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
             <div className="flex-1">
               <p className="text-sm font-semibold text-red-700">
                 No pudimos cargar el curso
@@ -700,7 +700,7 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
 
       {completeError && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-4">
-          <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
+          <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
           <div className="flex-1">
             <p className="text-sm font-semibold text-red-700">
               No pudimos marcar la lección

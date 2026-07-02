@@ -171,7 +171,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
   if (error && !evaluacion) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-        <span className="text-red-500 text-lg" aria-hidden="true">⚠️</span>
+        <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
         <div className="flex-1">
           <p className="text-sm font-semibold text-red-700">No pudimos cargar la evaluación</p>
           <p className="text-xs text-red-500 mt-0.5">{error}</p>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { BagIcon } from './icons.jsx';
 
 /**
  * PurchaseToast — confirma o rechaza una compra de la tienda. Sigue el mismo
@@ -39,8 +40,13 @@ export default function PurchaseToast({ toast, onDone, durationMs = 2400 }) {
           ok ? 'bg-titi-yellow-light border-titi-yellow' : 'bg-red-50 border-red-200'
         }`}
       >
-        <span className="text-2xl shrink-0 select-none" aria-hidden="true">
-          {ok ? '🛍️' : '⚠️'}
+        <span
+          className={`w-9 h-9 rounded-full grid place-items-center shrink-0 ${
+            ok ? 'bg-titi-yellow text-titi-dark' : 'bg-red-500 text-white'
+          }`}
+          aria-hidden="true"
+        >
+          {ok ? <BagIcon className="w-5 h-5" /> : <span className="text-sm font-black">!</span>}
         </span>
         <p className={`text-sm font-bold ${ok ? 'text-titi-dark' : 'text-red-700'}`}>
           {toast.message}
