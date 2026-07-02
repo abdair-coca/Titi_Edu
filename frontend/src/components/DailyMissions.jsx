@@ -45,7 +45,7 @@ export default function DailyMissions({ title = 'Misiones de hoy' }) {
           <span className="w-8 h-8 rounded-full bg-titi-yellow shadow-sm grid place-items-center shrink-0">
             <BoltIcon className="w-4 h-4 text-titi-dark" />
           </span>
-          <h2 className="text-base font-bold text-titi-dark">{title}</h2>
+          <h2 className="text-lg font-bold text-titi-dark">{title}</h2>
         </div>
         <span className="text-xs font-semibold text-gray-400">
           Se renuevan cada día
@@ -115,7 +115,7 @@ function MissionRow({ mission }) {
             style={{ width: `${pct}%` }}
           />
         </div>
-        <span className="text-[11px] font-bold text-gray-400 tabular-nums shrink-0">
+        <span className="text-xs font-bold text-gray-500 tabular-nums shrink-0">
           {completada ? '¡Listo!' : `${progreso}/${meta}`}
         </span>
       </div>

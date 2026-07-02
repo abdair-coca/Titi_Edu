@@ -102,16 +102,16 @@ export default function MyCourses() {
   return (
     <div>
       {/* Header */}
-      <header className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <header className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-titi-dark">
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">
             Mis cursos
           </h1>
           <span
             aria-hidden="true"
             className="block w-12 h-1.5 mt-1.5 bg-titi-yellow rounded-full"
           />
-          <p className="text-sm font-medium text-gray-500 mt-1.5">
+          <p className="text-base font-medium text-gray-500 mt-1.5">
             Continuá donde lo dejaste
           </p>
         </div>
@@ -143,8 +143,8 @@ export default function MyCourses() {
           onContinue={(cursoId) => navigate(`/courses/${cursoId}/learn`)}
           onOpenDetail={(cursoId) => navigate(`/courses/${cursoId}`)}
         />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8 items-start">
-          <div className="flex flex-col gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 mb-6 sm:mb-8 items-start">
+          <div className="flex flex-col gap-5 sm:gap-6">
             <DailyMissions title="Desafíos del día" />
             <CategoriesExplorer onOpen={(catId) => navigate(`/courses?categoria=${catId}`)} />
           </div>
@@ -170,10 +170,10 @@ function StatsRow({ progresoPromedio, gotasTotal, streak }) {
         <StatIcon tint="bg-titi-yellow" icon={<TargetIcon className="w-6 h-6 text-titi-dark" />} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-medium text-gray-500">Tu progreso</p>
-          <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
+          <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">
             {progresoPromedio}%
           </p>
-          <p className="text-xs text-gray-400">Promedio general</p>
+          <p className="text-xs font-semibold text-gray-500">Promedio general</p>
           <div
             className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden"
             role="progressbar"
@@ -194,10 +194,10 @@ function StatsRow({ progresoPromedio, gotasTotal, streak }) {
       <div className={cardClass}>
         <StatIcon tint="bg-blue-100" icon={<GotaIcon className="w-6 h-6 text-blue-500" />} />
         <div className="min-w-0">
-          <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
+          <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">
             {gotasTotal}
           </p>
-          <p className="text-xs text-gray-400">Gotas totales</p>
+          <p className="text-xs font-semibold text-gray-500">Gotas totales</p>
         </div>
       </div>
 
@@ -205,10 +205,10 @@ function StatsRow({ progresoPromedio, gotasTotal, streak }) {
       <div className={cardClass}>
         <StatIcon tint="bg-orange-100" icon={<BoltIcon className="w-6 h-6 text-titi-streak" />} />
         <div className="min-w-0">
-          <p className="text-2xl font-extrabold text-titi-dark tabular-nums leading-tight">
+          <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">
             {streak.racha}
           </p>
-          <p className="text-xs text-gray-400">Racha actual</p>
+          <p className="text-xs font-semibold text-gray-500">Racha actual</p>
           {rachaActiva && (
             <p className="text-xs font-bold text-titi-streak">¡Sigue así!</p>
           )}
@@ -249,12 +249,12 @@ function LearningPathSection({ inscripciones, progressByCurso, onContinue, onOpe
   return (
     <section className="mb-6 sm:mb-8">
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-lg sm:text-xl font-bold text-titi-dark">Tu ruta de aprendizaje</h2>
+        <h2 className="text-xl sm:text-2xl font-extrabold text-titi-dark">Tu ruta de aprendizaje</h2>
         {showToggle && (
           <button
             type="button"
             onClick={toggle}
-            className="text-xs font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors whitespace-nowrap"
+            className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors whitespace-nowrap"
           >
             {expanded ? 'Ver menos' : 'Ver toda la ruta'}
           </button>
@@ -341,12 +341,12 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
               </div>
             )}
             {curso.nivel && (
-              <span className="absolute top-2.5 left-2.5 bg-titi-dark text-white text-[11px] font-semibold capitalize px-3 py-1 rounded-full shadow-sm">
+              <span className="absolute top-2.5 left-2.5 bg-titi-dark text-white text-xs font-semibold capitalize px-3 py-1 rounded-full shadow-sm">
                 {curso.nivel}
               </span>
             )}
             {completado && (
-              <span className="absolute top-2.5 right-2.5 bg-green-500 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
+              <span className="absolute top-2.5 right-2.5 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
                 Completado ✓
               </span>
             )}
@@ -355,7 +355,7 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
           {/* Info (derecha) */}
           <div className="min-w-0 flex-1 flex flex-col p-4 sm:p-5 overflow-hidden">
             {curso.categoria?.nombre && (
-              <p className="text-[11px] sm:text-xs font-bold text-titi-streak uppercase tracking-wide">
+              <p className="text-xs font-bold text-titi-streak uppercase tracking-wide">
                 {curso.categoria.nombre}
               </p>
             )}
@@ -364,7 +364,7 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
               onClick={onOpenDetail}
               className="text-left w-fit max-w-full focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow rounded-lg mt-0.5"
             >
-              <h3 className="text-base sm:text-lg font-bold text-titi-dark leading-snug line-clamp-1 hover:text-titi-yellow-dark transition-colors">
+              <h3 className="text-lg font-bold text-titi-dark leading-snug line-clamp-1 hover:text-titi-yellow-dark transition-colors">
                 {curso.titulo || 'Curso sin título'}
               </h3>
             </button>
@@ -387,7 +387,7 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
 
             {/* Lecciones + % + barra (abajo) */}
             <div className="mt-auto pt-4">
-              <div className="flex items-center justify-between text-sm font-medium text-gray-400 mb-1.5">
+              <div className="flex items-center justify-between text-sm font-medium text-gray-500 mb-1.5">
                 <span>
                   {completadas} / {total} {total === 1 ? 'lección' : 'lecciones'}
                 </span>
@@ -488,11 +488,11 @@ function CategoriesExplorer({ onOpen }) {
   return (
     <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-5">
       <div className="flex items-center justify-between mb-3">
-        <h2 className="text-base font-bold text-titi-dark">Explorar categorías</h2>
+        <h2 className="text-lg font-bold text-titi-dark">Explorar categorías</h2>
         <button
           type="button"
           onClick={() => navigate('/courses')}
-          className="text-xs font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors whitespace-nowrap"
+          className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors whitespace-nowrap"
         >
           Ver todas
         </button>
@@ -526,7 +526,7 @@ function CategoriesExplorer({ onOpen }) {
                 <span className="text-xs font-bold text-titi-dark leading-tight line-clamp-2">
                   {cat.nombre}
                 </span>
-                <span className="text-[11px] font-medium text-gray-400">
+                <span className="text-xs font-semibold text-gray-500">
                   {count} {count === 1 ? 'curso' : 'cursos'}
                 </span>
               </button>
@@ -595,7 +595,7 @@ function RecentActivity() {
   return (
     <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-5">
       <div className="mb-3">
-        <h2 className="text-base font-bold text-titi-dark">Actividad reciente</h2>
+        <h2 className="text-lg font-bold text-titi-dark">Actividad reciente</h2>
       </div>
 
       {actividad === null ? (
@@ -647,7 +647,7 @@ function RecentActivity() {
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="w-full mt-3 pt-3 border-t border-gray-50 text-center text-xs font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors"
+          className="w-full mt-3 pt-3 border-t border-gray-50 text-center text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-colors"
         >
           {expanded ? 'Ver menos' : 'Ver toda la actividad'}
         </button>
@@ -665,7 +665,7 @@ function BottomBanner({ onExplore }) {
       </div>
       <div className="flex-1 text-center sm:text-left">
         <h3 className="text-lg font-bold text-titi-dark">¡Sigue aprendiendo!</h3>
-        <p className="text-sm font-medium text-gray-500">
+        <p className="text-base font-medium text-gray-500">
           La constancia es la clave del éxito.
         </p>
       </div>
@@ -683,7 +683,7 @@ function BottomBanner({ onExplore }) {
 // ---- Empty state (sección 8 del DESIGN.md) ----
 function EmptyState({ onExplore }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+    <div className="flex flex-col items-center justify-center py-10 px-8 text-center">
       <img
         src="/Titi.png"
         alt="Titi"
@@ -693,7 +693,7 @@ function EmptyState({ onExplore }) {
       <h3 className="text-xl font-bold text-titi-dark mb-2">
         Aún no tienes cursos
       </h3>
-      <p className="text-sm text-gray-400 mb-6 max-w-xs">
+      <p className="text-base font-medium text-gray-500 mb-6 max-w-xs">
         Explorá el catálogo y encontrá algo nuevo para aprender con la
         comunidad Titi.
       </p>
