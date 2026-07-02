@@ -1164,6 +1164,7 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `StreakBadge.jsx` | badge de racha (variants `sidebar`/compacta) + `FlameIcon` |
 | `GotasCounter.jsx` | contador de gotas (usa GamificationContext) |
 | `DailyMissions.jsx` | misiones diarias (prop `title`) |
+| `CategoriesExplorer.jsx` | chips de categorías → `/courses?categoria=` (Mis cursos + rails de Feed/Explore) |
 | `AchievementsSection.jsx` | grid de logros del perfil |
 | `AcademicActivityCard.jsx` | actividad académica del feed (chips sólidos por tipo) |
 | `RecommendedCourseCard.jsx` / `ItemCard.jsx` | tiles de curso recomendado / ítem de tienda |
@@ -1286,7 +1287,10 @@ esto te dice qué esperar del código existente:
 | 3 — Tiles y sólidos | ✅ | `CourseCard`/`RecommendedCourseCard`/paneles admin a `border-2` + sombra dura; chips de stats/categorías/actividad en sólido pleno; botón secundario chunky en toda la app (12 sitios) |
 | 4 — Motion obligatorio | ✅ | `useCountUp` creado en `lib/motion.js` + aplicado a stats de Mis cursos; press hundido en links/chips/nodos/toggles; `TitiMascot state="saludo"` en el banner de cierre |
 | 5 — Limpieza legacy | ✅ | ~200 tokens legacy migrados y **eliminados** de `tailwind.config`; clases de `index.css` redefinidas al spec (§5.0); emojis de editores teacher/Learn → SVG (`FileIcon`/`PencilIcon`/`ImageIcon`/`ClipIcon`/`ListIcon` nuevos). Nota: `placeholder="💻"` de AdminCategories es data (campo `categoria.icono`), se queda |
-| 6 — Layouts densos | ⬜ | revisar columnas muertas en Feed/Explore (§4 Densidad) |
+| 6 — Layouts densos | ✅ | Feed y Explore con rail lateral sticky en `lg:` (grid `minmax(0,1fr)_320px`): Feed = mini-stats con count-up + categorías; Explore = categorías + CTA al catálogo. `CategoriesExplorer` extraído a `components/`. Candidatos futuros: Leaderboard (`max-w-2xl`) y Shop (`max-w-3xl`) siguen angostos |
+
+**Migración v2 completa (etapas 1-6, 2026-07-02).** Desde acá rige solo la
+regla boy scout: lo que se toque queda 100% v2.
 
 **Regla boy scout**: cualquier archivo que toques por otro motivo queda
 migrado completo a v2 en ese mismo cambio (tokens, tipografía, átomos).
