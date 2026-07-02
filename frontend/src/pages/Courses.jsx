@@ -1112,7 +1112,7 @@ function CourseCard({ curso, onOpen }) {
       }}
       role="button"
       tabIndex={0}
-      className="titi-card-pop bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] overflow-hidden cursor-pointer flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
+      className="titi-card-pop bg-white rounded-2xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none overflow-hidden cursor-pointer flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
     >
       {/* Thumb — plano (sin gradiente ni blur) */}
       <div className="relative h-40 bg-titi-yellow-light flex items-center justify-center overflow-hidden">

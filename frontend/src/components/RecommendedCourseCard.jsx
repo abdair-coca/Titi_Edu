@@ -4,7 +4,7 @@
  * nombres de muestra en el tooltip.
  */
 import { nivelTextClass } from '../lib/nivel.js';
-import { BookIcon } from './icons.jsx';
+import { BookIcon, UsersIcon } from './icons.jsx';
 
 export default function RecommendedCourseCard({ curso, friendCount, sampleFriends = [], onOpen }) {
   const amigosLabel = friendCount === 1 ? '1 amigo' : `${friendCount} amigos`;
@@ -25,7 +25,7 @@ export default function RecommendedCourseCard({ curso, friendCount, sampleFriend
       }}
       role="button"
       tabIndex={0}
-      className="titi-card-pop bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] overflow-hidden cursor-pointer flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
+      className="titi-card-pop bg-white rounded-2xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none overflow-hidden cursor-pointer flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
     >
       {/* Portada (plana) */}
       <div className="relative h-32 bg-titi-yellow-light overflow-hidden">
@@ -54,7 +54,7 @@ export default function RecommendedCourseCard({ curso, friendCount, sampleFriend
           title={tooltip}
           className="absolute top-3 left-3 inline-flex items-center gap-1 bg-white text-titi-dark text-xs font-bold px-2.5 py-1 rounded-full shadow-sm"
         >
-          <span aria-hidden="true">🤝</span> {amigosLabel}
+          <UsersIcon className="w-3.5 h-3.5 text-titi-dark" aria-hidden="true" /> {amigosLabel}
         </span>
       </div>
 

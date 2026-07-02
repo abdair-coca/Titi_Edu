@@ -2,11 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../../api/client.js';
 import { useStaggerReveal } from '../../lib/motion.js';
+import { UsersIcon, BooksIcon, TagIcon } from '../../components/icons.jsx';
 
 const PANELS = [
-  { to: '/admin/users', titulo: 'Usuarios', desc: 'Verificar profesores y cambiar roles', icon: '👥' },
-  { to: '/admin/courses', titulo: 'Cursos', desc: 'Aprobar y moderar el catálogo', icon: '📚' },
-  { to: '/admin/categories', titulo: 'Categorías', desc: 'Crear, editar y borrar categorías', icon: '🏷️' },
+  { to: '/admin/users', titulo: 'Usuarios', desc: 'Verificar profesores y cambiar roles', Icon: UsersIcon, chip: 'bg-blue-500 text-white' },
+  { to: '/admin/courses', titulo: 'Cursos', desc: 'Aprobar y moderar el catálogo', Icon: BooksIcon, chip: 'bg-titi-yellow text-titi-dark' },
+  { to: '/admin/categories', titulo: 'Categorías', desc: 'Crear, editar y borrar categorías', Icon: TagIcon, chip: 'bg-titi-achievement text-white' },
 ];
 
 export default function AdminDashboard() {
@@ -35,8 +36,8 @@ export default function AdminDashboard() {
 
   const cards = stats
     ? [
-        { label: 'Usuarios', value: stats.usuarios, color: 'text-titi-blue' },
-        { label: 'Profesores verificados', value: stats.profesoresVerificados, color: 'text-titi-green' },
+        { label: 'Usuarios', value: stats.usuarios, color: 'text-blue-500' },
+        { label: 'Profesores verificados', value: stats.profesoresVerificados, color: 'text-green-600' },
         { label: 'Cursos publicados', value: stats.cursosPublicados, color: 'text-titi-yellow-dark' },
         { label: 'Inscripciones', value: stats.inscripciones, color: 'text-titi-streak' },
         { label: 'Certificados', value: stats.certificados, color: 'text-titi-achievement' },
@@ -47,7 +48,7 @@ export default function AdminDashboard() {
     <div>
       <header className="mb-6 sm:mb-8">
         <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Panel de administración</h1>
-        <p className="text-sm font-medium text-gray-500">Gobierná usuarios, cursos y categorías de Titi.</p>
+        <p className="text-base font-medium text-gray-500">Gobierná usuarios, cursos y categorías de Titi.</p>
       </header>
 
       {loading ? (
@@ -82,12 +83,14 @@ export default function AdminDashboard() {
           <Link
             key={p.to}
             to={p.to}
-            className="titi-card-pop bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] p-5 flex items-center gap-4"
+            className="titi-card-pop bg-white rounded-2xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none p-5 flex items-center gap-4"
           >
-            <span className="text-3xl select-none" aria-hidden="true">{p.icon}</span>
+            <span className={`w-11 h-11 rounded-full grid place-items-center shrink-0 shadow-sm ${p.chip}`} aria-hidden="true">
+              <p.Icon className="w-5 h-5" />
+            </span>
             <div>
               <p className="text-base font-bold text-titi-dark">{p.titulo}</p>
-              <p className="text-xs text-gray-500">{p.desc}</p>
+              <p className="text-xs font-semibold text-gray-500">{p.desc}</p>
             </div>
           </Link>
         ))}
