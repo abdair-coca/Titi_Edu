@@ -192,7 +192,7 @@ function StatsRow({ progresoPromedio, gotasTotal, streak }) {
 
       {/* Gotas totales */}
       <div className={cardClass}>
-        <StatIcon tint="bg-blue-100" icon={<GotaIcon className="w-6 h-6 text-blue-500" />} />
+        <StatIcon tint="bg-blue-500" icon={<GotaIcon className="w-6 h-6 text-white" />} />
         <div className="min-w-0">
           <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">
             {gotasTotal}
@@ -203,7 +203,7 @@ function StatsRow({ progresoPromedio, gotasTotal, streak }) {
 
       {/* Racha actual */}
       <div className={cardClass}>
-        <StatIcon tint="bg-orange-100" icon={<BoltIcon className="w-6 h-6 text-titi-streak" />} />
+        <StatIcon tint="bg-titi-streak" icon={<BoltIcon className="w-6 h-6 text-white" />} />
         <div className="min-w-0">
           <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">
             {streak.racha}
@@ -448,13 +448,13 @@ function LearningPathMoreNode({ count, onClick }) {
 }
 
 // ---- Explorar categorías: fila de accesos a /courses?categoria=<id> ----
-// Tinte plano rotado por índice — paleta semántica de design.md (sin inventar
-// colores nuevos): logro/info/éxito/XP, como los 4 chips del mockup.
+// Chip sólido rotado por índice — duotono por rol de design.md §2
+// (logro/info/éxito/XP): color pleno + ícono blanco (oscuro sobre amarillo).
 const CAT_TINTS = [
-  'bg-purple-100 text-titi-achievement',
-  'bg-blue-100 text-blue-500',
-  'bg-green-100 text-green-600',
-  'bg-titi-yellow-light text-titi-yellow-dark',
+  'bg-titi-achievement text-white',
+  'bg-blue-500 text-white',
+  'bg-green-500 text-white',
+  'bg-titi-yellow text-titi-dark',
 ];
 
 function CategoriesExplorer({ onOpen }) {
@@ -547,20 +547,20 @@ function activityMeta(tipo, titulo) {
   if (tipo === 'curso') {
     return {
       Icon: GraduationIcon,
-      tint: 'bg-titi-yellow-light text-titi-yellow-dark',
+      tint: 'bg-titi-yellow text-titi-dark',
       text: `Completaste el curso "${titulo}"`,
     };
   }
   if (tipo === 'evaluacion') {
     return {
       Icon: AwardIcon,
-      tint: 'bg-purple-50 text-titi-achievement',
+      tint: 'bg-titi-achievement text-white',
       text: `Aprobaste "${titulo}"`,
     };
   }
   return {
     Icon: CheckIcon,
-    tint: 'bg-green-50 text-green-600',
+    tint: 'bg-green-500 text-white',
     text: `Completaste "${titulo}"`,
   };
 }
