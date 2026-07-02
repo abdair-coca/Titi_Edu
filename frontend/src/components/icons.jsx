@@ -397,6 +397,19 @@ export function ClockIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+// Regalo — eventos especiales (tienda).
+export function GiftIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <rect x="3.5" y="8" width="17" height="4" rx="1" />
+      <path d="M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" />
+      <line x1="12" y1="8" x2="12" y2="21" />
+      <path d="M12 8s-4.5.2-5.5-2C5.8 4.5 7 3 8.5 3.5 10.5 4.2 12 8 12 8Z" />
+      <path d="M12 8s4.5.2 5.5-2c.7-1.5-.5-3-2-2.5C13.5 4.2 12 8 12 8Z" />
+    </NavSvg>
+  );
+}
+
 // Grupo de personas — estudiantes inscritos.
 export function UsersIcon({ className = 'w-5 h-5' }) {
   return (
