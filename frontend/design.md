@@ -698,13 +698,15 @@ const navItems = [
   { path: '/explore',       Icon: CompassIcon,    label: 'Explorar' },
   { path: '/courses',       Icon: BooksIcon,      label: 'Cursos' },
   { path: '/my-courses',    Icon: TargetIcon,     label: 'Mis cursos' },
-  { path: '/leaderboard',   Icon: TrophyIcon,     label: 'Ranking' },
-  { path: '/shop',          Icon: BagIcon,        label: 'Tienda' },
   { path: '/teacher',       Icon: GraduationIcon, label: 'Enseñar' },      // PROFESOR/ADMIN
   { path: '/admin',         Icon: ShieldIcon,     label: 'Admin' },        // ADMIN
   { path: '/notifications', Icon: BellIcon,       label: 'Notificaciones' },
   { path: '/profile/:user', Icon: UserIcon,       label: 'Mi perfil' },
 ]
+// Ranking (/leaderboard) y Tienda (/shop) NO van en el navbar: son botones
+// amarillos (estilo primario) en el header de "Mis cursos", junto a
+// "Mis certificados". El contador de gotas del sidebar sigue linkeando a
+// /leaderboard.
 // También disponibles: UsersIcon (estudiantes), LogoutIcon (cerrar sesión).
 ```
 

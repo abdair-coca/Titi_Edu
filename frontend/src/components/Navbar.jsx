@@ -10,8 +10,6 @@ import {
   CompassIcon,
   BooksIcon,
   TargetIcon,
-  TrophyIcon,
-  BagIcon,
   GraduationIcon,
   ShieldIcon,
   BellIcon,
@@ -21,6 +19,7 @@ import {
 
 // Íconos de navegación centralizados en icons.jsx (§5.6 de design.md) —
 // este objeto solo mapea nombres locales para no tocar cada uso.
+// Ranking y Tienda no van acá: viven en el header de "Mis cursos".
 const Icon = {
   Home: HomeIcon,
   Compass: CompassIcon,
@@ -31,8 +30,6 @@ const Icon = {
   Target: TargetIcon,
   Cap: GraduationIcon,
   Shield: ShieldIcon,
-  Trophy: TrophyIcon,
-  Bag: BagIcon,
 };
 
 function useUnreadNotifications() {
@@ -122,14 +119,6 @@ function Sidebar({ user, onLogout, unread, streak }) {
           <Icon.Target className="w-5 h-5 shrink-0" />
           <span className={sidebarLabel}>Mis cursos</span>
         </NavLink>
-        <NavLink to="/leaderboard" className={sidebarItemClass}>
-          <Icon.Trophy className="w-5 h-5 shrink-0" />
-          <span className={sidebarLabel}>Ranking</span>
-        </NavLink>
-        <NavLink to="/shop" className={sidebarItemClass}>
-          <Icon.Bag className="w-5 h-5 shrink-0" />
-          <span className={sidebarLabel}>Tienda</span>
-        </NavLink>
         {(user?.rol === 'PROFESOR' || user?.rol === 'ADMIN') && (
           <NavLink to="/teacher" className={sidebarItemClass}>
             <Icon.Cap className="w-5 h-5 shrink-0" />
@@ -163,7 +152,7 @@ function Sidebar({ user, onLogout, unread, streak }) {
           aria-label="Mis gotas"
           className="mx-3 mb-1 flex items-center gap-1.5 px-2 py-2 rounded-xl hover:bg-white/10 transition-colors shrink-0"
         >
-          <GotasCounter iconClass="w-7 h-7" className="text-xl" />
+          <GotasCounter iconClass="w-7 h-7" className="text-xl" hidden={`${sidebarLabel}`} />
           <span className={`text-sm font-bold text-white/70 ${sidebarLabel}`}>gotas</span>
         </Link>
       )}
