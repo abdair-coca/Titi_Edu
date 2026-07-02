@@ -231,7 +231,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
       <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col gap-5">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold text-titi-dark">
-            Título <span className="text-titi-red">*</span>
+            Título <span className="text-red-500">*</span>
           </span>
           <input
             value={titulo}
@@ -267,7 +267,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
           </label>
         </div>
 
-        <hr className="border-titi-border" />
+        <hr className="border-gray-100" />
 
         {/* Preguntas */}
         {preguntas.length === 0 ? (
@@ -327,7 +327,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="w-full sm:w-auto text-titi-red font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-red-50 transition-all"
+              className="w-full sm:w-auto text-red-500 font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-red-50 transition-all"
             >
               Eliminar evaluación
             </button>
@@ -374,7 +374,7 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
   }
 
   return (
-    <div className="bg-titi-cream/50 border border-titi-border rounded-2xl p-3 sm:p-4">
+    <div className="bg-titi-cream/50 border border-gray-100 rounded-2xl p-3 sm:p-4">
       <div className="flex items-start gap-2 mb-3">
         <span className="shrink-0 w-7 h-7 rounded-full bg-titi-yellow-light text-titi-dark grid place-items-center text-xs font-extrabold mt-1">
           {index + 1}
@@ -396,7 +396,7 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
           type="button"
           onClick={onRemove}
           aria-label="Eliminar pregunta"
-          className="shrink-0 w-8 h-8 grid place-items-center rounded-lg text-titi-red hover:bg-red-50 mt-1"
+          className="shrink-0 w-8 h-8 grid place-items-center rounded-lg text-red-500 hover:bg-red-50 mt-1"
         >
           ✕
         </button>
@@ -422,7 +422,7 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
                   type="button"
                   onClick={() => removeOpcion(i)}
                   aria-label="Quitar respuesta"
-                  className="w-7 h-7 grid place-items-center rounded text-titi-red hover:bg-red-50 shrink-0"
+                  className="w-7 h-7 grid place-items-center rounded text-red-500 hover:bg-red-50 shrink-0"
                 >
                   ✕
                 </button>
@@ -432,7 +432,7 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
           <button
             type="button"
             onClick={addRespuesta}
-            className="self-start text-xs font-bold text-titi-dark bg-white border border-dashed border-titi-border hover:border-titi-yellow rounded-lg px-3 py-1.5"
+            className="self-start text-xs font-bold text-titi-dark bg-white border border-dashed border-gray-100 hover:border-titi-yellow rounded-lg px-3 py-1.5"
           >
             + Otra respuesta aceptada
           </button>
@@ -470,7 +470,7 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
                   type="button"
                   onClick={() => removeOpcion(i)}
                   aria-label="Quitar opción"
-                  className="w-7 h-7 grid place-items-center rounded text-titi-red hover:bg-red-50 shrink-0"
+                  className="w-7 h-7 grid place-items-center rounded text-red-500 hover:bg-red-50 shrink-0"
                 >
                   ✕
                 </button>
@@ -481,7 +481,7 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
             <button
               type="button"
               onClick={addOpcion}
-              className="self-start text-xs font-bold text-titi-dark bg-white border border-dashed border-titi-border hover:border-titi-yellow rounded-lg px-3 py-1.5"
+              className="self-start text-xs font-bold text-titi-dark bg-white border border-dashed border-gray-100 hover:border-titi-yellow rounded-lg px-3 py-1.5"
             >
               + Agregar opción
             </button>

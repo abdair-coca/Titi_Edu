@@ -19,20 +19,20 @@ export default function AcademicActivityCard({ item }) {
   const esCurso = item.type === 'inscripcion' || item.type === 'curso_completado';
 
   return (
-    <article className="bg-white rounded-2xl border border-titi-border shadow-titi p-4 mb-6">
+    <article className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 mb-6">
       <header className="flex items-center gap-3">
         <Avatar username={item.actorUsername} avatarUrl={item.actorAvatarUrl} />
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-titi-text leading-snug">
+          <p className="text-sm text-titi-dark leading-snug">
             <Link
               to={`/profile/${item.actorUsername}`}
               className="font-extrabold hover:text-titi-yellow-dark"
             >
               @{item.actorUsername}
             </Link>{' '}
-            <span className="font-semibold text-titi-muted">{v.texto}</span>
+            <span className="font-semibold text-gray-500">{v.texto}</span>
           </p>
-          <p className="text-xs text-titi-muted font-semibold mt-0.5">
+          <p className="text-xs text-gray-500 font-semibold mt-0.5">
             {relativeTime(item.createdAt)}
           </p>
         </div>
@@ -47,7 +47,7 @@ export default function AcademicActivityCard({ item }) {
       {esCurso && item.curso && (
         <Link
           to={`/courses/${item.curso.id}`}
-          className="titi-card-pop mt-3 flex items-center gap-3 bg-titi-cream border border-titi-border rounded-xl p-3 hover:border-titi-yellow group"
+          className="titi-card-pop mt-3 flex items-center gap-3 bg-titi-cream border border-gray-100 rounded-xl p-3 hover:border-titi-yellow group"
         >
           <span className="text-2xl select-none shrink-0" aria-hidden="true">
             {item.curso.categoria?.icono || '📘'}
@@ -67,7 +67,7 @@ export default function AcademicActivityCard({ item }) {
       )}
 
       {esCurso && !item.curso && (
-        <p className="mt-3 text-xs text-titi-muted italic">Este curso ya no está disponible.</p>
+        <p className="mt-3 text-xs text-gray-500 italic">Este curso ya no está disponible.</p>
       )}
 
       {item.type === 'logro' && item.logroNombre && (
@@ -86,7 +86,7 @@ function Avatar({ username, avatarUrl }) {
       <img
         src={avatarUrl}
         alt=""
-        className="w-11 h-11 rounded-full bg-titi-bg border-2 border-titi-yellow shrink-0"
+        className="w-11 h-11 rounded-full bg-titi-cream border-2 border-titi-yellow shrink-0"
       />
     );
   }

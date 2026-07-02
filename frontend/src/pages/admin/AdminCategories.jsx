@@ -135,7 +135,7 @@ export default function AdminCategories() {
           )}
         </div>
       </form>
-      {formError && <p className="text-sm font-semibold text-titi-red -mt-3 mb-6">{formError}</p>}
+      {formError && <p className="text-sm font-semibold text-red-500 -mt-3 mb-6">{formError}</p>}
 
       {/* Lista */}
       {loading ? (
@@ -172,7 +172,7 @@ export default function AdminCategories() {
                 type="button"
                 onClick={() => setConfirm(cat)}
                 disabled={busy === cat.id}
-                className="text-titi-red font-semibold text-xs hover:underline disabled:opacity-50"
+                className="text-red-500 font-semibold text-xs hover:underline disabled:opacity-50"
               >
                 Eliminar
               </button>

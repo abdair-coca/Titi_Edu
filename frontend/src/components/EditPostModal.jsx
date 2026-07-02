@@ -79,7 +79,7 @@ export default function EditPostModal({ open, post, onSaved, onClose }) {
     >
       <div
         ref={panelRef}
-        className="neo-card w-full max-w-lg p-6"
+        className="titi-card w-full max-w-lg p-6"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -99,7 +99,7 @@ export default function EditPostModal({ open, post, onSaved, onClose }) {
           onChange={(e) => setContent(e.target.value)}
           rows={5}
           maxLength={MAX_LEN}
-          className="neo-input resize-none"
+          className="titi-input resize-none"
           disabled={saving}
           placeholder="Escribí algo…"
         />
@@ -107,13 +107,13 @@ export default function EditPostModal({ open, post, onSaved, onClose }) {
         <div className="flex items-center justify-between mt-2 gap-3">
           <span
             className={`text-xs tabular-nums ${
-              content.length >= MAX_LEN ? 'text-neo-accent' : 'text-neo-muted'
+              content.length >= MAX_LEN ? 'text-titi-yellow-dark' : 'text-gray-500'
             }`}
           >
             {content.length}/{MAX_LEN}
           </span>
           {error && (
-            <span className="text-sm text-neo-accent" role="alert">
+            <span className="text-sm text-titi-yellow-dark" role="alert">
               {error}
             </span>
           )}
@@ -124,7 +124,7 @@ export default function EditPostModal({ open, post, onSaved, onClose }) {
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="neo-btn-ghost disabled:opacity-50"
+            className="titi-btn-ghost disabled:opacity-50"
           >
             Cancelar
           </button>
@@ -132,7 +132,7 @@ export default function EditPostModal({ open, post, onSaved, onClose }) {
             type="button"
             onClick={handleSave}
             disabled={saving || !content.trim() || unchanged}
-            className="neo-btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+            className="titi-btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Guardando…' : 'Guardar'}
           </button>

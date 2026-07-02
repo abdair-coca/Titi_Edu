@@ -288,7 +288,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
 
           <p
             className={`mt-4 text-5xl font-black tabular-nums ${
-              aprobado ? 'text-green-600' : 'text-titi-red'
+              aprobado ? 'text-green-600' : 'text-red-500'
             }`}
           >
             {result.intento.nota}%
@@ -316,7 +316,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
                   }`}
                 >
                   <span
-                    className={`text-sm font-black shrink-0 leading-relaxed ${ok ? 'text-green-600' : 'text-titi-red'}`}
+                    className={`text-sm font-black shrink-0 leading-relaxed ${ok ? 'text-green-600' : 'text-red-500'}`}
                     aria-label={ok ? 'Correcta' : 'Incorrecta'}
                   >
                     {ok ? '✓' : '✗'}
@@ -438,7 +438,7 @@ function InfoStat({ label, value }) {
 // ---- Una pregunta del formulario ----
 function QuestionCard({ pregunta, index, answer, onAnswer }) {
   return (
-    <fieldset className="bg-titi-cream/60 border border-titi-border rounded-2xl p-3 sm:p-4">
+    <fieldset className="bg-titi-cream/60 border border-gray-100 rounded-2xl p-3 sm:p-4">
       <legend className="sr-only">Pregunta {index + 1}</legend>
       <p className="text-sm sm:text-base font-bold text-titi-dark mb-3 break-words">
         <span className="text-gray-400 tabular-nums mr-1.5">{index + 1}.</span>

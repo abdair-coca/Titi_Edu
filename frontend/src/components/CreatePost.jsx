@@ -96,14 +96,14 @@ export default function CreatePost({ onCreated }) {
     <form
       onSubmit={handleSubmit}
       aria-label="Crear post"
-      className="bg-white rounded-2xl shadow-titi border border-titi-border border-t-4 border-t-titi-yellow p-5 mb-6"
+      className="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-gray-100 border-t-4 border-t-titi-yellow p-5 mb-6"
     >
       <div className="flex gap-3">
         {user?.avatarUrl ? (
           <img
             src={user.avatarUrl}
             alt=""
-            className="hidden sm:block w-11 h-11 rounded-full bg-titi-bg border-2 border-titi-yellow shrink-0 mt-1"
+            className="hidden sm:block w-11 h-11 rounded-full bg-titi-cream border-2 border-titi-yellow shrink-0 mt-1"
           />
         ) : (
           <div className="hidden sm:grid w-11 h-11 rounded-full bg-titi-yellow text-titi-dark place-items-center font-extrabold shrink-0 mt-1 border-2 border-titi-yellow">
@@ -131,7 +131,7 @@ export default function CreatePost({ onCreated }) {
                 type="button"
                 onClick={clearFile}
                 aria-label="Quitar imagen"
-                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-titi-dark/80 hover:bg-titi-red text-white grid place-items-center transition-colors font-bold"
+                className="absolute top-2 right-2 w-8 h-8 rounded-full bg-titi-dark/80 hover:bg-red-500 text-white grid place-items-center transition-colors font-bold"
               >
                 ×
               </button>
@@ -172,10 +172,10 @@ export default function CreatePost({ onCreated }) {
           )}
 
           {error && (
-            <p className="text-sm text-titi-red font-bold mt-2" role="alert">{error}</p>
+            <p className="text-sm text-red-500 font-bold mt-2" role="alert">{error}</p>
           )}
           {success && (
-            <p className="text-sm text-titi-green font-bold mt-2" role="status">
+            <p className="text-sm text-green-600 font-bold mt-2" role="status">
               ¡Genial! Tu post está en vivo 🚀
             </p>
           )}
@@ -195,7 +195,7 @@ export default function CreatePost({ onCreated }) {
             </label>
 
             <div className="flex items-center gap-3">
-              <span className={`text-xs tabular-nums font-bold ${content.length >= MAX_LEN ? 'text-titi-red' : 'text-titi-muted'}`}>
+              <span className={`text-xs tabular-nums font-bold ${content.length >= MAX_LEN ? 'text-red-500' : 'text-gray-500'}`}>
                 {content.length}/{MAX_LEN}
               </span>
               <button

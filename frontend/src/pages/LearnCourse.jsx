@@ -808,7 +808,7 @@ function DeepenCard() {
           </div>
 
           {selected && (
-            <div ref={respRef} className="mt-4 bg-white border border-titi-border rounded-xl p-4 flex items-start gap-3">
+            <div ref={respRef} className="mt-4 bg-white border border-gray-100 rounded-xl p-4 flex items-start gap-3">
               <img
                 src="/Titi.png"
                 alt="Titi"

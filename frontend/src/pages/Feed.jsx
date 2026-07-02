@@ -104,8 +104,8 @@ export default function Feed() {
     <div className="max-w-xl mx-auto">
       <header className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-black text-titi-text">Inicio</h1>
-          <p className="text-base text-titi-muted font-medium">Lo que está pasando con quienes seguís</p>
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">Inicio</h1>
+          <p className="text-base text-gray-500 font-medium">Lo que está pasando con quienes seguís</p>
         </div>
         <button
           type="button"
@@ -122,9 +122,9 @@ export default function Feed() {
       {loading && isEmpty && <FeedSkeleton />}
 
       {error && (
-        <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
-          <p className="text-titi-red font-extrabold mb-2">¡Ups!</p>
-          <p className="text-sm text-titi-muted mb-4">{error}</p>
+        <div className="bg-white border-2 border-red-500/40 rounded-2xl p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+          <p className="text-red-500 font-extrabold mb-2">¡Ups!</p>
+          <p className="text-sm text-gray-500 mb-4">{error}</p>
           <button onClick={fetchFeed} className="titi-btn-primary">Reintentar</button>
         </div>
       )}
@@ -153,7 +153,7 @@ export default function Feed() {
 
       {nextCursor && <div ref={sentinelRef} aria-hidden className="h-1" />}
       {loadingMore && (
-        <div className="py-6 text-center text-sm text-titi-muted font-semibold">Cargando más…</div>
+        <div className="py-6 text-center text-sm text-gray-500 font-semibold">Cargando más…</div>
       )}
     </div>
   );
@@ -163,18 +163,18 @@ function FeedSkeleton() {
   return (
     <div className="space-y-6">
       {[0, 1, 2].map((i) => (
-        <div key={i} className="bg-white rounded-2xl border border-titi-border p-5 animate-pulse shadow-titi">
+        <div key={i} className="bg-white rounded-2xl border border-gray-100 p-5 animate-pulse shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-11 h-11 rounded-full bg-titi-border" />
+            <div className="w-11 h-11 rounded-full bg-gray-100" />
             <div className="space-y-2">
-              <div className="h-3 w-24 bg-titi-border rounded" />
-              <div className="h-2 w-16 bg-titi-border rounded" />
+              <div className="h-3 w-24 bg-gray-100 rounded" />
+              <div className="h-2 w-16 bg-gray-100 rounded" />
             </div>
           </div>
           <div className="space-y-2">
-            <div className="h-3 w-full bg-titi-border rounded" />
-            <div className="h-3 w-4/5 bg-titi-border rounded" />
-            <div className="h-3 w-3/5 bg-titi-border rounded" />
+            <div className="h-3 w-full bg-gray-100 rounded" />
+            <div className="h-3 w-4/5 bg-gray-100 rounded" />
+            <div className="h-3 w-3/5 bg-gray-100 rounded" />
           </div>
         </div>
       ))}
@@ -193,7 +193,7 @@ function EmptyFeed() {
         />
       </div>
       <h2 className="text-2xl font-extrabold mb-2">Tu inicio está vacío</h2>
-      <p className="text-titi-muted mb-6 max-w-md mx-auto">
+      <p className="text-gray-500 mb-6 max-w-md mx-auto">
         Cuando sigas a otras personas, sus publicaciones aparecerán acá. Mientras tanto,
         descubrí qué se está compartiendo en Titi.
       </p>

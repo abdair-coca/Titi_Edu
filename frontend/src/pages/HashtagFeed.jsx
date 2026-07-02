@@ -54,13 +54,13 @@ export default function HashtagFeed() {
   return (
     <div>
       <header className="mb-6">
-        <Link to="/explore" className="text-sm text-neo-muted hover:text-white inline-flex items-center gap-1">
+        <Link to="/explore" className="text-sm text-gray-500 hover:text-white inline-flex items-center gap-1">
           ← Explorar
         </Link>
         <h1 className="text-3xl sm:text-4xl font-black mt-2 break-all">
-          <span className="text-neo-accent">#</span>{normalized}
+          <span className="text-titi-yellow-dark">#</span>{normalized}
         </h1>
-        <p className="text-sm text-neo-muted mt-1">
+        <p className="text-sm text-gray-500 mt-1">
           {loading
             ? 'Cargando…'
             : `${posts.length} ${posts.length === 1 ? 'post' : 'posts'}`}
@@ -68,24 +68,24 @@ export default function HashtagFeed() {
       </header>
 
       {loading && posts.length === 0 && (
-        <div className="neo-card p-8 text-center text-neo-muted">Cargando…</div>
+        <div className="titi-card p-8 text-center text-gray-500">Cargando…</div>
       )}
 
       {error && (
-        <div className="neo-card p-6 text-center border border-neo-accent/40">
-          <p className="text-neo-accent font-semibold mb-2">Error</p>
-          <p className="text-sm text-neo-muted mb-4">{error}</p>
-          <button onClick={fetchPosts} className="neo-btn-primary">Reintentar</button>
+        <div className="titi-card p-6 text-center border border-titi-yellow/40">
+          <p className="text-titi-yellow-dark font-semibold mb-2">Error</p>
+          <p className="text-sm text-gray-500 mb-4">{error}</p>
+          <button onClick={fetchPosts} className="titi-btn-primary">Reintentar</button>
         </div>
       )}
 
       {!loading && !error && posts.length === 0 && (
-        <div className="neo-card p-8 text-center">
+        <div className="titi-card p-8 text-center">
           <h2 className="text-xl font-bold mb-2">Sin posts con #{normalized}</h2>
-          <p className="text-neo-muted mb-6">
+          <p className="text-gray-500 mb-6">
             Nadie ha usado este hashtag todavía. ¡Sé el primero!
           </p>
-          <Link to="/feed" className="neo-btn-primary">Crear un post</Link>
+          <Link to="/feed" className="titi-btn-primary">Crear un post</Link>
         </div>
       )}
 

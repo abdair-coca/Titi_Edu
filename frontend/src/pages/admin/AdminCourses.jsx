@@ -142,7 +142,7 @@ export default function AdminCourses() {
                   type="button"
                   onClick={() => setConfirm(curso)}
                   disabled={busy === curso.id}
-                  className="text-titi-red font-semibold text-xs hover:underline disabled:opacity-50"
+                  className="text-red-500 font-semibold text-xs hover:underline disabled:opacity-50"
                 >
                   Eliminar
                 </button>

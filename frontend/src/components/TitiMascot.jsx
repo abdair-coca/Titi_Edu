@@ -64,7 +64,7 @@ export default function TitiMascot({ mood = 'happy', state, message, size = 'md'
         }}
       />
       {text && (
-        <p className="text-titi-text font-bold text-center text-sm sm:text-base max-w-xs leading-snug">
+        <p className="text-titi-dark font-bold text-center text-sm sm:text-base max-w-xs leading-snug">
           {emoji && <span aria-hidden="true" className="mr-1">{emoji}</span>}
           {text}
         </p>

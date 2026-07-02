@@ -37,7 +37,7 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-titi-bg flex items-center justify-center px-4 py-10">
+    <div className="min-h-screen bg-titi-cream flex items-center justify-center px-4 py-10">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 max-w-5xl w-full items-center">
         {/* Form */}
         <div className="titi-card p-8 sm:p-10 order-2 lg:order-1">
@@ -53,7 +53,7 @@ export default function Register() {
                 onError={(e) => (e.currentTarget.style.display = 'none')}
               />
             </h1>
-            <p className="text-titi-muted">Empezá a compartir lo que te apasiona.</p>
+            <p className="text-gray-500">Empezá a compartir lo que te apasiona.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
@@ -120,7 +120,7 @@ export default function Register() {
             {error && (
               <div
                 role="alert"
-                className="text-sm bg-titi-red/10 border-2 border-titi-red/40 text-titi-red rounded-xl px-4 py-2.5 font-semibold"
+                className="text-sm bg-red-500/10 border-2 border-red-500/40 text-red-500 rounded-xl px-4 py-2.5 font-semibold"
               >
                 {error}
               </div>
@@ -135,9 +135,9 @@ export default function Register() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-titi-muted mt-6">
+          <p className="text-center text-sm text-gray-500 mt-6">
             ¿Ya tenés cuenta?{' '}
-            <Link to="/login" className="text-titi-blue hover:underline font-bold">
+            <Link to="/login" className="text-blue-500 hover:underline font-bold">
               Entrá
             </Link>
           </p>

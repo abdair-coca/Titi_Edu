@@ -51,7 +51,7 @@ function ProtectedLayout() {
   const isLearn = /\/courses\/[^/]+\/learn$/.test(location.pathname);
 
   return (
-    <div className="min-h-screen bg-neo-bg">
+    <div className="min-h-screen bg-titi-cream">
       <Navbar />
       {/* Toasts/overlays globales de gamificación (fixed, no afectan el layout). */}
       <GotaToast />
@@ -115,14 +115,14 @@ function Home() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
       <h1 className="text-5xl sm:text-6xl font-extrabold mb-4">
-        Titi<span className="text-neo-accent"> Edu</span>
+        Titi<span className="text-titi-yellow-dark"> Edu</span>
       </h1>
-      <p className="text-neo-muted mb-8 max-w-md">
+      <p className="text-gray-500 mb-8 max-w-md">
         Red social basada en grafos · Neo4j + React
       </p>
       <div className="flex gap-3 justify-center">
-        <Link to="/login" className="neo-btn-primary">Iniciar sesión</Link>
-        <Link to="/register" className="neo-btn-ghost">Crear cuenta</Link>
+        <Link to="/login" className="titi-btn-primary">Iniciar sesión</Link>
+        <Link to="/register" className="titi-btn-ghost">Crear cuenta</Link>
       </div>
     </div>
   );
@@ -130,9 +130,9 @@ function Home() {
 
 function Placeholder({ title, description }) {
   return (
-    <div className="neo-card p-8 text-center">
+    <div className="titi-card p-8 text-center">
       <h2 className="text-2xl font-bold mb-2">{title}</h2>
-      <p className="text-neo-muted">
+      <p className="text-gray-500">
         {description || 'Pendiente de implementar.'}
       </p>
     </div>

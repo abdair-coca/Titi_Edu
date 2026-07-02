@@ -18,8 +18,8 @@ export default function Explore() {
   return (
     <div className="max-w-xl mx-auto">
       <header className="mb-6">
-        <h1 className="text-3xl sm:text-4xl font-black text-titi-text mb-1">Explorar</h1>
-        <p className="text-base text-titi-muted font-medium">
+        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Explorar</h1>
+        <p className="text-base text-gray-500 font-medium">
           Descubrí usuarios, posts y hashtags en Titi
         </p>
       </header>
@@ -45,7 +45,7 @@ function SearchBar({ value, onChange }) {
       <svg
         viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
         strokeLinecap="round" strokeLinejoin="round"
-        className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-titi-muted pointer-events-none"
+        className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none"
       >
         <circle cx="11" cy="11" r="7" />
         <line x1="21" y1="21" x2="16.5" y2="16.5" />
@@ -118,13 +118,13 @@ function ExploreFeed() {
   const listRef = useStaggerReveal([loading]);
 
   if (loading) {
-    return <div className="titi-card p-8 text-center text-titi-muted font-semibold">Cargando…</div>;
+    return <div className="titi-card p-8 text-center text-gray-500 font-semibold">Cargando…</div>;
   }
   if (error) {
     return (
-      <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
-        <p className="text-titi-red font-bold mb-2">Error</p>
-        <p className="text-sm text-titi-muted mb-4">{error}</p>
+      <div className="bg-white border-2 border-red-500/40 rounded-2xl p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+        <p className="text-red-500 font-bold mb-2">Error</p>
+        <p className="text-sm text-gray-500 mb-4">{error}</p>
         <button onClick={fetchFirst} className="titi-btn-primary">Reintentar</button>
       </div>
     );
@@ -150,7 +150,7 @@ function ExploreFeed() {
       </div>
       {nextCursor && <div ref={sentinelRef} aria-hidden className="h-1" />}
       {loadingMore && (
-        <div className="py-6 text-center text-sm text-titi-muted font-semibold">Cargando más…</div>
+        <div className="py-6 text-center text-sm text-gray-500 font-semibold">Cargando más…</div>
       )}
     </>
   );
@@ -186,12 +186,12 @@ function SearchResults({ q }) {
   }, [q]);
 
   if (loading) {
-    return <div className="titi-card p-6 text-center text-titi-muted font-semibold">Buscando "{q}"…</div>;
+    return <div className="titi-card p-6 text-center text-gray-500 font-semibold">Buscando "{q}"…</div>;
   }
   if (error) {
     return (
-      <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
-        <p className="text-sm text-titi-red font-bold">{error}</p>
+      <div className="bg-white border-2 border-red-500/40 rounded-2xl p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+        <p className="text-sm text-red-500 font-bold">{error}</p>
       </div>
     );
   }
@@ -203,8 +203,8 @@ function SearchResults({ q }) {
     return (
       <div className="titi-card p-10 text-center">
         <TitiMascot mood="sad" message="No encontré nada... intenta con otro término" size="lg" />
-        <p className="text-titi-muted text-sm mt-4">
-          Sin resultados para <span className="text-titi-text font-extrabold">"{q}"</span>
+        <p className="text-gray-500 text-sm mt-4">
+          Sin resultados para <span className="text-titi-dark font-extrabold">"{q}"</span>
         </p>
       </div>
     );
@@ -223,7 +223,7 @@ function SearchResults({ q }) {
                 title={`${h.postCount} post${h.postCount === 1 ? '' : 's'}`}
               >
                 #{h.name}
-                <span className="text-titi-muted text-xs">{h.postCount}</span>
+                <span className="text-gray-500 text-xs">{h.postCount}</span>
               </Link>
             ))}
           </div>
@@ -252,7 +252,7 @@ function SearchResults({ q }) {
 function Section({ title, children }) {
   return (
     <section className="titi-card p-5">
-      <h3 className="text-xs uppercase tracking-wide text-titi-muted font-extrabold mb-3">{title}</h3>
+      <h3 className="text-xs uppercase tracking-wide text-gray-500 font-extrabold mb-3">{title}</h3>
       {children}
     </section>
   );
@@ -263,18 +263,18 @@ function UserResult({ user }) {
     <li>
       <Link
         to={`/profile/${user.username}`}
-        className="flex items-center gap-3 p-2 rounded-xl hover:bg-titi-bg transition-colors"
+        className="flex items-center gap-3 p-2 rounded-xl hover:bg-titi-cream transition-colors"
       >
         {user.avatarUrl ? (
-          <img src={user.avatarUrl} alt={user.username} className="w-12 h-12 rounded-full bg-titi-bg border-2 border-titi-yellow" />
+          <img src={user.avatarUrl} alt={user.username} className="w-12 h-12 rounded-full bg-titi-cream border-2 border-titi-yellow" />
         ) : (
           <div className="w-12 h-12 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold border-2 border-titi-yellow">
             {user.username?.[0]?.toUpperCase() ?? '?'}
           </div>
         )}
         <div className="min-w-0">
-          <p className="font-extrabold text-titi-text">@{user.username}</p>
-          {user.bio && <p className="text-sm text-titi-muted truncate">{user.bio}</p>}
+          <p className="font-extrabold text-titi-dark">@{user.username}</p>
+          {user.bio && <p className="text-sm text-gray-500 truncate">{user.bio}</p>}
         </div>
       </Link>
     </li>
@@ -284,22 +284,22 @@ function UserResult({ user }) {
 function PostResult({ post }) {
   const imageUrl = resolveMediaUrl(post.imageUrl);
   return (
-    <li className="flex gap-3 p-2 rounded-xl hover:bg-titi-bg transition-colors">
+    <li className="flex gap-3 p-2 rounded-xl hover:bg-titi-cream transition-colors">
       {imageUrl ? (
-        <img src={imageUrl} alt="" className="w-16 h-16 rounded-lg object-cover bg-titi-bg border border-titi-border shrink-0" />
+        <img src={imageUrl} alt="" className="w-16 h-16 rounded-lg object-cover bg-titi-cream border border-gray-100 shrink-0" />
       ) : (
-        <div className="w-16 h-16 rounded-lg bg-titi-yellow/20 border border-titi-border shrink-0 grid place-items-center text-titi-muted text-xs font-bold">
+        <div className="w-16 h-16 rounded-lg bg-titi-yellow/20 border border-gray-100 shrink-0 grid place-items-center text-gray-500 text-xs font-bold">
           texto
         </div>
       )}
       <div className="min-w-0 flex-1">
         <div className="flex items-baseline gap-2">
-          <Link to={`/profile/${post.author}`} className="font-extrabold text-sm text-titi-text hover:text-titi-blue">
+          <Link to={`/profile/${post.author}`} className="font-extrabold text-sm text-titi-dark hover:text-blue-500">
             @{post.author}
           </Link>
-          <span className="text-xs text-titi-muted font-semibold">{relativeTime(post.createdAt)}</span>
+          <span className="text-xs text-gray-500 font-semibold">{relativeTime(post.createdAt)}</span>
         </div>
-        <p className="text-sm text-titi-text line-clamp-2 break-words">{post.content}</p>
+        <p className="text-sm text-titi-dark line-clamp-2 break-words">{post.content}</p>
       </div>
     </li>
   );

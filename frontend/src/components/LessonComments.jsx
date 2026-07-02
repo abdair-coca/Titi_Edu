@@ -93,7 +93,7 @@ export default function LessonComments({ lessonId, hideHeader = false, onCount }
               <img
                 src={user.avatarUrl}
                 alt=""
-                className="hidden sm:block w-10 h-10 rounded-full bg-titi-bg border-2 border-titi-yellow shrink-0"
+                className="hidden sm:block w-10 h-10 rounded-full bg-titi-cream border-2 border-titi-yellow shrink-0"
               />
             ) : (
               <div className="hidden sm:grid w-10 h-10 rounded-full bg-titi-yellow text-titi-dark place-items-center font-extrabold shrink-0">
@@ -152,7 +152,7 @@ export default function LessonComments({ lessonId, hideHeader = false, onCount }
           ))}
         </div>
       ) : comments.length === 0 ? (
-        <div className="flex flex-col items-center text-center py-10 px-6 bg-titi-cream rounded-2xl border border-titi-border">
+        <div className="flex flex-col items-center text-center py-10 px-6 bg-titi-cream rounded-2xl border border-gray-100">
           <img
             src="/Titi.png"
             alt="Titi"

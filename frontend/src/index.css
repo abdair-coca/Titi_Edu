@@ -10,7 +10,7 @@
   }
 
   body {
-    @apply bg-titi-bg text-titi-text antialiased;
+    @apply bg-titi-cream text-titi-dark antialiased;
     font-family: 'Nunito', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   }
 
@@ -24,9 +24,9 @@
 }
 
 @layer components {
-  /* ---- Componentes Titi (nueva paleta) ---- */
+  /* ---- Componentes Titi (defs canónicas — espejo de design.md §5) ---- */
   .titi-card {
-    @apply bg-titi-card border border-titi-border rounded-2xl shadow-titi;
+    @apply bg-white border border-gray-100 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)];
   }
 
   .titi-btn {
@@ -43,48 +43,21 @@
     transform: translateY(-4px) scale(1.03);
   }
 
+  /* Botón primario canónico (design.md §5.1): amarillo + sombra dura que se
+     aplana al press. */
   .titi-btn-primary {
-    @apply titi-btn bg-titi-yellow text-titi-dark hover:bg-titi-orange hover:-translate-y-0.5 shadow-titi;
+    @apply titi-btn rounded-xl bg-titi-yellow text-titi-dark shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .titi-btn-secondary {
-    @apply titi-btn bg-titi-blue text-white hover:opacity-90;
-  }
-
+  /* Botón secundario canónico (design.md §5.1 v2): blanco táctil, border-2 +
+     sombra dura gris. */
   .titi-btn-ghost {
-    @apply titi-btn bg-titi-card border border-titi-border text-titi-text hover:bg-titi-bg;
+    @apply titi-btn rounded-xl bg-white text-titi-dark text-sm border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
-  .titi-btn-danger {
-    @apply titi-btn bg-titi-red text-white hover:opacity-90;
-  }
-
+  /* Input canónico (design.md §9). */
   .titi-input {
-    @apply w-full bg-titi-card border-2 border-titi-border rounded-xl px-4 py-2.5 text-titi-text placeholder-titi-muted focus:outline-none focus:border-titi-yellow transition-colors font-medium;
-  }
-
-  .titi-chip {
-    @apply inline-block text-xs font-bold text-titi-dark bg-titi-yellow/30 px-3 py-1 rounded-full;
-  }
-
-  /* ---- Aliases legacy neo-* (mismos estilos, usados por componentes no rediseñados) ---- */
-  .neo-card {
-    @apply titi-card;
-  }
-  .neo-btn {
-    @apply titi-btn;
-  }
-  .neo-btn-primary {
-    @apply titi-btn-primary;
-  }
-  .neo-btn-ghost {
-    @apply titi-btn-ghost;
-  }
-  .neo-input {
-    @apply titi-input;
-  }
-  .neo-chip {
-    @apply titi-chip;
+    @apply w-full bg-titi-cream border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-titi-dark placeholder:text-gray-300 focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150;
   }
 }
 

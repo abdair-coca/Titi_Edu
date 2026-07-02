@@ -4,7 +4,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // ---- Paleta oficial Titi ----
+        // ---- Paleta oficial Titi (design.md §2 — sin aliases legacy) ----
         titi: {
           yellow: '#FFD93D',
           'yellow-hover': '#FFC107',
@@ -17,26 +17,6 @@ export default {
           streak: '#FF6B35',
           achievement: '#A855F7',
           certificate: '#F59E0B',
-          // legacy
-          green: '#6BCB77',
-          blue: '#4D96FF',
-          red: '#FF6B6B',
-          orange: '#FF9A3C',
-          bg: '#FFFBF0',
-          card: '#FFFFFF',
-          border: '#F0E6C8',
-          text: '#1A1A2E',
-          muted: '#6B7280',
-        },
-        // Aliases neo-* → mapeados a Titi para que cualquier referencia legacy
-        // (componentes que no se rediseñaron explícitamente) tome el nuevo tema.
-        neo: {
-          bg: '#FFFBF0',
-          card: '#FFFFFF',
-          accent: '#FFD93D',
-          accentHover: '#FF9A3C',
-          muted: '#6B7280',
-          border: '#F0E6C8',
         },
       },
       fontFamily: {
@@ -51,11 +31,6 @@ export default {
           'Arial',
           'sans-serif',
         ],
-      },
-      boxShadow: {
-        titi: '0 4px 14px rgba(26, 26, 46, 0.08)',
-        'titi-lg': '0 10px 30px rgba(26, 26, 46, 0.12)',
-        neo: '0 4px 14px rgba(26, 26, 46, 0.08)',
       },
       borderRadius: {
         '2xl': '1rem',

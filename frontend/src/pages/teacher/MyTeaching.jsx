@@ -217,7 +217,7 @@ function TeachingCard({ curso, busy, onEdit, onContent, onTogglePublish, onDelet
             type="button"
             onClick={onDelete}
             disabled={busy}
-            className="text-titi-red font-semibold hover:underline disabled:opacity-50"
+            className="text-red-500 font-semibold hover:underline disabled:opacity-50"
           >
             Eliminar
           </button>

@@ -449,7 +449,7 @@ function ModuleNode({ modulo, index, total, activeLessonId, onMoveUp, onMoveDown
             {modulo.titulo}
           </button>
         )}
-        <div className="flex items-center gap-0.5 text-titi-muted shrink-0">
+        <div className="flex items-center gap-0.5 text-gray-500 shrink-0">
           <button
             type="button"
             onClick={onMoveUp}
@@ -467,7 +467,7 @@ function ModuleNode({ modulo, index, total, activeLessonId, onMoveUp, onMoveDown
           <button
             type="button"
             onClick={onDelete}
-            className="w-6 h-6 grid place-items-center rounded text-titi-red hover:bg-red-50"
+            className="w-6 h-6 grid place-items-center rounded text-red-500 hover:bg-red-50"
             aria-label="Eliminar módulo"
           >✕</button>
         </div>
@@ -494,20 +494,20 @@ function ModuleNode({ modulo, index, total, activeLessonId, onMoveUp, onMoveDown
                 type="button"
                 onClick={() => onMoveLesson(idx, -1)}
                 disabled={idx === 0}
-                className="w-5 h-5 grid place-items-center text-xs text-titi-muted hover:bg-titi-yellow-light rounded disabled:opacity-30"
+                className="w-5 h-5 grid place-items-center text-xs text-gray-500 hover:bg-titi-yellow-light rounded disabled:opacity-30"
                 aria-label="Subir lección"
               >↑</button>
               <button
                 type="button"
                 onClick={() => onMoveLesson(idx, +1)}
                 disabled={idx === modulo.lecciones.length - 1}
-                className="w-5 h-5 grid place-items-center text-xs text-titi-muted hover:bg-titi-yellow-light rounded disabled:opacity-30"
+                className="w-5 h-5 grid place-items-center text-xs text-gray-500 hover:bg-titi-yellow-light rounded disabled:opacity-30"
                 aria-label="Bajar lección"
               >↓</button>
               <button
                 type="button"
                 onClick={() => onDeleteLesson(l)}
-                className="w-5 h-5 grid place-items-center text-xs text-titi-red hover:bg-red-50 rounded"
+                className="w-5 h-5 grid place-items-center text-xs text-red-500 hover:bg-red-50 rounded"
                 aria-label="Eliminar lección"
               >✕</button>
             </li>
@@ -517,7 +517,7 @@ function ModuleNode({ modulo, index, total, activeLessonId, onMoveUp, onMoveDown
           <button
             type="button"
             onClick={onAddLesson}
-            className="w-full text-xs font-bold text-titi-dark bg-white border border-dashed border-titi-border hover:border-titi-yellow rounded-lg px-2 py-1.5 mt-1"
+            className="w-full text-xs font-bold text-titi-dark bg-white border border-dashed border-gray-100 hover:border-titi-yellow rounded-lg px-2 py-1.5 mt-1"
           >
             + Lección
           </button>
@@ -612,7 +612,7 @@ function LessonEditor({ leccion, onSave, onUpload, onDeleteMaterial }) {
         )}
       </div>
 
-      <hr className="border-titi-border" />
+      <hr className="border-gray-100" />
 
       {/* Materiales */}
       <div>
@@ -643,7 +643,7 @@ function LessonEditor({ leccion, onSave, onUpload, onDeleteMaterial }) {
             {leccion.materiales.map((m) => (
               <li
                 key={m.id}
-                className="flex items-center gap-3 bg-titi-cream border border-titi-border rounded-xl px-3 py-2"
+                className="flex items-center gap-3 bg-titi-cream border border-gray-100 rounded-xl px-3 py-2"
               >
                 <span className="text-xl shrink-0">{TIPO_ICON[m.tipo] || '📎'}</span>
                 <a
@@ -658,7 +658,7 @@ function LessonEditor({ leccion, onSave, onUpload, onDeleteMaterial }) {
                 <button
                   type="button"
                   onClick={() => onDeleteMaterial(m)}
-                  className="text-titi-red text-sm font-bold hover:underline shrink-0"
+                  className="text-red-500 text-sm font-bold hover:underline shrink-0"
                 >
                   Eliminar
                 </button>

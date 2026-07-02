@@ -71,14 +71,14 @@ function ContentWithHashtags({ text }) {
     if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
     const tag = match[1];
     parts.push(
-      <Link key={`h-${key++}`} to={`/hashtag/${tag.toLowerCase()}`} className="text-titi-blue font-bold hover:underline">
+      <Link key={`h-${key++}`} to={`/hashtag/${tag.toLowerCase()}`} className="text-blue-500 font-bold hover:underline">
         #{tag}
       </Link>
     );
     lastIndex = match.index + match[0].length;
   }
   if (lastIndex < text.length) parts.push(text.slice(lastIndex));
-  return <p className="whitespace-pre-wrap leading-relaxed text-titi-text">{parts}</p>;
+  return <p className="whitespace-pre-wrap leading-relaxed text-titi-dark">{parts}</p>;
 }
 
 export default function PostCard({ post, onChange, onDelete, onEdit }) {
@@ -137,7 +137,7 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
   }
 
   return (
-    <article className="bg-white rounded-2xl shadow-titi border border-titi-border overflow-hidden mb-6 hover:shadow-titi-lg transition-shadow">
+    <article className="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-gray-100 overflow-hidden mb-6 hover:shadow-lg transition-shadow">
       {/* Header */}
       <header className="flex items-center gap-3 px-5 py-4">
         <Link to={`/profile/${post.author}`} className="shrink-0">
@@ -145,7 +145,7 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
             <img
               src={post.authorAvatar}
               alt={post.author}
-              className="w-11 h-11 rounded-full bg-titi-bg border-2 border-titi-yellow"
+              className="w-11 h-11 rounded-full bg-titi-cream border-2 border-titi-yellow"
             />
           ) : (
             <div className="w-11 h-11 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold border-2 border-titi-yellow">
@@ -154,17 +154,17 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
           )}
         </Link>
         <div className="min-w-0">
-          <Link to={`/profile/${post.author}`} className="font-extrabold text-titi-text hover:text-titi-blue transition-colors">
+          <Link to={`/profile/${post.author}`} className="font-extrabold text-titi-dark hover:text-blue-500 transition-colors">
             @{post.author}
           </Link>
-          <p className="text-xs text-titi-muted font-semibold">{relativeTime(post.createdAt)}</p>
+          <p className="text-xs text-gray-500 font-semibold">{relativeTime(post.createdAt)}</p>
         </div>
         <OptionsPosts user={user} post={post} onDelete={onDelete} onEdit={onEdit} />
       </header>
 
       {/* Imagen */}
       {imageUrl && (
-        <div className="bg-titi-bg">
+        <div className="bg-titi-cream">
           <img src={imageUrl} alt="" className="w-full max-h-[600px] object-cover" loading="lazy" />
         </div>
       )}
@@ -178,19 +178,19 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
 
       {/* Sonido + Ubicación */}
       {(post.sound || post.location) && (
-        <div className="px-5 pt-3 flex flex-wrap gap-3 text-xs text-titi-muted">
+        <div className="px-5 pt-3 flex flex-wrap gap-3 text-xs text-gray-500">
           {post.sound && (
             <span className="inline-flex items-center gap-1.5 max-w-full">
-              <MusicIcon className="w-3.5 h-3.5 text-titi-orange shrink-0" />
+              <MusicIcon className="w-3.5 h-3.5 text-titi-streak shrink-0" />
               <span className="truncate">
-                <span className="text-titi-text font-bold">{post.sound.name}</span>
+                <span className="text-titi-dark font-bold">{post.sound.name}</span>
                 {post.sound.artist && <span> — {post.sound.artist}</span>}
               </span>
             </span>
           )}
           {post.location && (
             <span className="inline-flex items-center gap-1.5">
-              <PinIcon className="w-3.5 h-3.5 text-titi-green shrink-0" />
+              <PinIcon className="w-3.5 h-3.5 text-green-600 shrink-0" />
               <span className="font-semibold">{post.location.city}, {post.location.country}</span>
             </span>
           )}
@@ -213,7 +213,7 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
       )}
 
       {/* Footer acciones */}
-      <footer className="px-5 py-4 mt-2 border-t border-titi-border flex items-center gap-2">
+      <footer className="px-5 py-4 mt-2 border-t border-gray-100 flex items-center gap-2">
         <button
           type="button"
           onClick={toggleLike}
@@ -222,8 +222,8 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
           aria-label={likedByMe ? 'Quitar like' : 'Dar like'}
           className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-bold transition-all ${
             likedByMe
-              ? 'text-titi-red bg-titi-red/10 scale-105'
-              : 'text-titi-muted hover:bg-titi-bg hover:text-titi-red'
+              ? 'text-red-500 bg-red-500/10 scale-105'
+              : 'text-gray-500 hover:bg-titi-cream hover:text-red-500'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <HeartIcon filled={likedByMe} className="w-5 h-5" />
@@ -234,7 +234,7 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
           type="button"
           onClick={() => setShowComments((v) => !v)}
           aria-expanded={showComments}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full font-bold text-titi-muted hover:bg-titi-bg hover:text-titi-blue transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full font-bold text-gray-500 hover:bg-titi-cream hover:text-blue-500 transition-colors"
         >
           <CommentIcon className="w-5 h-5" />
           <span className="text-sm tabular-nums">{commentCount}</span>
@@ -249,7 +249,7 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
           className={`ml-auto flex items-center gap-2 px-3 py-1.5 rounded-full font-bold transition-all ${
             savedByMe
               ? 'text-titi-yellow-dark bg-titi-yellow-light scale-105'
-              : 'text-titi-muted hover:bg-titi-bg hover:text-titi-yellow-dark'
+              : 'text-gray-500 hover:bg-titi-cream hover:text-titi-yellow-dark'
           } disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           <BookmarkIcon filled={savedByMe} className="w-5 h-5" />

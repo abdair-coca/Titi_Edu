@@ -55,7 +55,7 @@ function NotifBadge({ count }) {
   return (
     <span
       aria-label={`${count} notificaciones no leídas`}
-      className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-titi-red text-white text-xs font-extrabold leading-none tabular-nums shadow"
+      className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-red-500 text-white text-xs font-extrabold leading-none tabular-nums shadow"
     >
       {count > 99 ? '99+' : count}
     </span>
@@ -84,7 +84,7 @@ function TitiLogo({ size = 'md' }) {
 function sidebarItemClass({ isActive }) {
   const base = 'flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all';
   return isActive
-    ? `${base} bg-titi-yellow text-titi-dark shadow-titi`
+    ? `${base} bg-titi-yellow text-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)]`
     : `${base} text-white/85 hover:bg-white/10 hover:text-white`;
 }
 
@@ -222,7 +222,7 @@ function Sidebar({ user, onLogout, unread, streak }) {
         <button
           type="button"
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-white/85 hover:bg-titi-red/20 hover:text-titi-red transition-colors font-bold"
+          className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-white/85 hover:bg-red-500/20 hover:text-red-500 transition-colors font-bold"
         >
           <Icon.Logout className="w-5 h-5 shrink-0" />
           <span className={sidebarLabel}>Cerrar sesión</span>
@@ -235,7 +235,7 @@ function Sidebar({ user, onLogout, unread, streak }) {
 // ---- Top bar móvil ----
 function MobileTopBar({ user, onLogout, unread, streak, showStreak }) {
   return (
-    <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-titi-dark text-white border-b border-titi-dark shadow-titi">
+    <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-titi-dark text-white border-b border-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
       <div className="h-full px-4 flex items-center justify-between gap-2">
         <Link to="/feed">
           <TitiLogo size="md" />
@@ -283,7 +283,7 @@ function MobileTopBar({ user, onLogout, unread, streak, showStreak }) {
             type="button"
             onClick={onLogout}
             aria-label="Cerrar sesión"
-            className="-mr-2 p-2 rounded-full text-white/85 hover:text-titi-red hover:bg-white/10 transition-colors"
+            className="-mr-2 p-2 rounded-full text-white/85 hover:text-red-500 hover:bg-white/10 transition-colors"
           >
             <Icon.Logout className="w-5 h-5" />
           </button>
@@ -325,7 +325,7 @@ function MobileBottomNav({ user }) {
   return (
     <nav
       aria-label="Navegación principal"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-titi-dark text-white border-t border-titi-dark shadow-titi-lg"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-titi-dark text-white border-t border-titi-dark shadow-lg"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="grid grid-cols-5 h-full">

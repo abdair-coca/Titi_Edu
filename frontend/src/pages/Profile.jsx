@@ -193,9 +193,9 @@ export default function Profile() {
 
   if (error) {
     return (
-      <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-8 text-center shadow-titi">
-        <h2 className="text-xl font-extrabold mb-2 text-titi-red">¡Ups!</h2>
-        <p className="text-titi-muted mb-4">{error}</p>
+      <div className="bg-white border-2 border-red-500/40 rounded-2xl p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+        <h2 className="text-xl font-extrabold mb-2 text-red-500">¡Ups!</h2>
+        <p className="text-gray-500 mb-4">{error}</p>
         <button onClick={fetchProfile} className="titi-btn-primary">Reintentar</button>
       </div>
     );
@@ -243,17 +243,17 @@ export default function Profile() {
             <img
               src={user.avatarUrl}
               alt={user.username}
-              className="w-28 h-28 rounded-full bg-titi-bg border-4 border-titi-yellow shrink-0 shadow-titi"
+              className="w-28 h-28 rounded-full bg-titi-cream border-4 border-titi-yellow shrink-0 shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
             />
           ) : (
-            <div className="w-28 h-28 rounded-full bg-titi-yellow text-titi-dark grid place-items-center text-4xl font-extrabold shrink-0 border-4 border-titi-yellow shadow-titi">
+            <div className="w-28 h-28 rounded-full bg-titi-yellow text-titi-dark grid place-items-center text-4xl font-extrabold shrink-0 border-4 border-titi-yellow shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
               {user.username?.[0]?.toUpperCase() ?? '?'}
             </div>
           )}
 
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
-              <h1 className="text-2xl sm:text-3xl font-black text-titi-text">@{user.username}</h1>
+              <h1 className="text-2xl sm:text-3xl font-black text-titi-dark">@{user.username}</h1>
               {!isSelf && isAuthenticated && (
                 <button
                   type="button"
@@ -274,14 +274,14 @@ export default function Profile() {
             </div>
 
             {user.bio ? (
-              <p className="text-titi-text whitespace-pre-wrap mb-2 font-semibold">{user.bio}</p>
+              <p className="text-titi-dark whitespace-pre-wrap mb-2 font-semibold">{user.bio}</p>
             ) : (
-              <p className="text-titi-muted italic mb-2">Sin biografía.</p>
+              <p className="text-gray-500 italic mb-2">Sin biografía.</p>
             )}
 
             {location && (
-              <p className="text-sm text-titi-muted flex items-center gap-1.5 justify-center sm:justify-start mb-1 font-semibold">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-titi-green" aria-hidden="true">
+              <p className="text-sm text-gray-500 flex items-center gap-1.5 justify-center sm:justify-start mb-1 font-semibold">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-green-600" aria-hidden="true">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
@@ -290,7 +290,7 @@ export default function Profile() {
             )}
 
             {user.createdAt && (
-              <p className="text-xs text-titi-muted font-semibold">
+              <p className="text-xs text-gray-500 font-semibold">
                 Se unió el {formatDate(user.createdAt)}
               </p>
             )}
@@ -311,10 +311,10 @@ export default function Profile() {
 
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-titi-border">
+        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-gray-100">
           <Stat label="Posts" value={stats.postCount} color="text-titi-yellow" />
-          <Stat label="Seguidores" value={followerCount} color="text-titi-blue" />
-          <Stat label="Seguidos" value={stats.followingCount} color="text-titi-green" />
+          <Stat label="Seguidores" value={followerCount} color="text-blue-500" />
+          <Stat label="Seguidos" value={stats.followingCount} color="text-green-600" />
         </div>
       </div>
 
@@ -325,7 +325,7 @@ export default function Profile() {
       <div
         role="tablist"
         aria-label="Secciones del perfil"
-        className="flex gap-1 mb-5 border-b-2 border-titi-border px-1 overflow-x-auto scrollbar-none"
+        className="flex gap-1 mb-5 border-b-2 border-gray-100 px-1 overflow-x-auto scrollbar-none"
       >
         <TabButton
           active={tab === 'posts'}
@@ -415,13 +415,13 @@ function TabButton({ active, onClick, icon, label, count }) {
       onClick={onClick}
       className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2.5 -mb-0.5 font-bold text-sm rounded-t-xl transition-all flex-shrink-0 ${active
         ? 'text-titi-dark bg-titi-yellow-light border-b-2 border-titi-yellow'
-        : 'text-titi-muted hover:text-titi-dark hover:bg-titi-bg'
+        : 'text-gray-500 hover:text-titi-dark hover:bg-titi-cream'
         }`}
     >
       {icon}
       <span>{label}</span>
       {typeof count === 'number' && (
-        <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full font-extrabold ${active ? 'bg-titi-yellow text-titi-dark' : 'bg-titi-border text-titi-muted'
+        <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full font-extrabold ${active ? 'bg-titi-yellow text-titi-dark' : 'bg-gray-100 text-gray-500'
           }`}>
           {count}
         </span>
@@ -434,13 +434,13 @@ function PostsList({ loading, error, posts, onRetry, emptyTitle, emptyDescriptio
   const listRef = useStaggerReveal([posts.length]);
   if (loading) {
     return (
-      <div className="titi-card p-6 text-center text-titi-muted font-semibold">Cargando…</div>
+      <div className="titi-card p-6 text-center text-gray-500 font-semibold">Cargando…</div>
     );
   }
   if (error) {
     return (
-      <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
-        <p className="text-sm text-titi-red font-bold mb-3">{error}</p>
+      <div className="bg-white border-2 border-red-500/40 rounded-2xl p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+        <p className="text-sm text-red-500 font-bold mb-3">{error}</p>
         <button onClick={onRetry} className="titi-btn-primary">Reintentar</button>
       </div>
     );
@@ -455,7 +455,7 @@ function PostsList({ loading, error, posts, onRetry, emptyTitle, emptyDescriptio
           draggable={false}
         />
         <h3 className="text-xl font-bold text-titi-dark mb-2">{emptyTitle}</h3>
-        <p className="text-sm text-titi-muted max-w-xs">{emptyDescription}</p>
+        <p className="text-sm text-gray-500 max-w-xs">{emptyDescription}</p>
       </div>
     );
   }
@@ -522,11 +522,11 @@ const GridIcon = ({ className }) => (
   </svg>
 );
 
-function Stat({ label, value, color = 'text-titi-text' }) {
+function Stat({ label, value, color = 'text-titi-dark' }) {
   return (
     <div className="text-center">
       <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${color}`}>{value ?? 0}</p>
-      <p className="text-xs uppercase tracking-wide text-titi-muted font-extrabold">{label}</p>
+      <p className="text-xs uppercase tracking-wide text-gray-500 font-extrabold">{label}</p>
     </div>
   );
 }
@@ -535,18 +535,18 @@ function ProfileSkeleton() {
   return (
     <div className="titi-card p-6 animate-pulse">
       <div className="flex gap-6">
-        <div className="w-28 h-28 rounded-full bg-titi-border shrink-0" />
+        <div className="w-28 h-28 rounded-full bg-gray-100 shrink-0" />
         <div className="flex-1 space-y-3 pt-3">
-          <div className="h-5 w-40 bg-titi-border rounded" />
-          <div className="h-3 w-3/4 bg-titi-border rounded" />
-          <div className="h-3 w-1/2 bg-titi-border rounded" />
+          <div className="h-5 w-40 bg-gray-100 rounded" />
+          <div className="h-3 w-3/4 bg-gray-100 rounded" />
+          <div className="h-3 w-1/2 bg-gray-100 rounded" />
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-titi-border">
+      <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-gray-100">
         {[0, 1, 2].map((i) => (
           <div key={i} className="space-y-2 text-center">
-            <div className="h-6 w-12 bg-titi-border rounded mx-auto" />
-            <div className="h-2 w-16 bg-titi-border rounded mx-auto" />
+            <div className="h-6 w-12 bg-gray-100 rounded mx-auto" />
+            <div className="h-2 w-16 bg-gray-100 rounded mx-auto" />
           </div>
         ))}
       </div>

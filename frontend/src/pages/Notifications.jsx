@@ -46,8 +46,8 @@ export default function Notifications() {
     <div>
       <header className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl sm:text-4xl font-black text-titi-text">Notificaciones</h1>
-          <p className="text-base text-titi-muted font-medium">Lo que pasó mientras no estabas</p>
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">Notificaciones</h1>
+          <p className="text-base text-gray-500 font-medium">Lo que pasó mientras no estabas</p>
         </div>
         {hasUnread && (
           <button onClick={markAllRead} className="titi-btn-ghost text-sm">
@@ -57,12 +57,12 @@ export default function Notifications() {
       </header>
 
       {loading && (
-        <div className="titi-card p-8 text-center text-titi-muted font-semibold">Cargando…</div>
+        <div className="titi-card p-8 text-center text-gray-500 font-semibold">Cargando…</div>
       )}
 
       {error && (
-        <div className="bg-white border-2 border-titi-red/40 rounded-2xl p-6 text-center shadow-titi">
-          <p className="text-sm text-titi-red font-bold mb-3">{error}</p>
+        <div className="bg-white border-2 border-red-500/40 rounded-2xl p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
+          <p className="text-sm text-red-500 font-bold mb-3">{error}</p>
           <button onClick={fetchNotifs} className="titi-btn-primary">Reintentar</button>
         </div>
       )}
@@ -70,7 +70,7 @@ export default function Notifications() {
       {!loading && !error && items.length === 0 && (
         <div className="titi-card p-10 text-center">
           <TitiMascot mood="idle" message="Todo tranquilo por aquí" size="lg" />
-          <p className="text-titi-muted mt-4 max-w-md mx-auto">
+          <p className="text-gray-500 mt-4 max-w-md mx-auto">
             Cuando alguien te dé like, te siga o comente tus posts, lo vas a ver acá.
           </p>
         </div>
@@ -108,7 +108,7 @@ function NotificationItem({ notif, onClick }) {
         onClick={onClick}
         className={`flex items-start gap-3 p-4 rounded-2xl border-2 transition-all ${
           notif.read
-            ? 'bg-white border-titi-border hover:border-titi-yellow'
+            ? 'bg-white border-gray-100 hover:border-titi-yellow'
             : 'bg-titi-yellow/10 border-titi-yellow hover:bg-titi-yellow/20'
         }`}
       >
@@ -116,7 +116,7 @@ function NotificationItem({ notif, onClick }) {
           <img
             src={notif.actor.avatarUrl}
             alt=""
-            className="w-11 h-11 rounded-full bg-titi-bg border-2 border-titi-yellow shrink-0"
+            className="w-11 h-11 rounded-full bg-titi-cream border-2 border-titi-yellow shrink-0"
           />
         ) : (
           <div className="w-11 h-11 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold shrink-0">
@@ -124,19 +124,19 @@ function NotificationItem({ notif, onClick }) {
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-titi-text">
+          <p className="text-sm text-titi-dark">
             <span className="font-extrabold">@{notif.actor?.username ?? 'alguien'}</span>{' '}
-            <span className="font-semibold text-titi-muted">{verb}</span>
+            <span className="font-semibold text-gray-500">{verb}</span>
           </p>
           {notif.post?.content && (
-            <p className="text-xs text-titi-muted mt-1 line-clamp-2 break-words italic">
+            <p className="text-xs text-gray-500 mt-1 line-clamp-2 break-words italic">
               "{notif.post.content}"
             </p>
           )}
-          <p className="text-xs text-titi-muted font-semibold mt-1">{relativeTime(notif.createdAt)}</p>
+          <p className="text-xs text-gray-500 font-semibold mt-1">{relativeTime(notif.createdAt)}</p>
         </div>
         {!notif.read && (
-          <span aria-label="No leída" className="w-2.5 h-2.5 rounded-full bg-titi-red shrink-0 mt-2" />
+          <span aria-label="No leída" className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0 mt-2" />
         )}
       </Link>
     </li>

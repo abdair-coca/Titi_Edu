@@ -78,13 +78,13 @@ export default function CommentSection({ postId, onCountChange }) {
   return (
     <section
       aria-label="Comentarios"
-      className="px-5 py-4 border-t border-titi-border bg-titi-bg/60"
+      className="px-5 py-4 border-t border-gray-100 bg-titi-cream/60"
     >
       {/* Form */}
       {isAuthenticated ? (
         <form onSubmit={handleSubmit} className="mb-4">
           {replyTo && (
-            <div className="flex items-center gap-2 text-xs text-titi-muted mb-2">
+            <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
               <span>
                 Respondiendo a{' '}
                 <span className="text-titi-dark font-bold">@{replyTo.author}</span>
@@ -92,7 +92,7 @@ export default function CommentSection({ postId, onCountChange }) {
               <button
                 type="button"
                 onClick={() => setReplyTo(null)}
-                className="text-titi-muted hover:text-titi-dark transition-colors font-semibold"
+                className="text-gray-500 hover:text-titi-dark transition-colors font-semibold"
               >
                 cancelar
               </button>
@@ -103,7 +103,7 @@ export default function CommentSection({ postId, onCountChange }) {
               <img
                 src={user.avatarUrl}
                 alt=""
-                className="hidden sm:block w-8 h-8 rounded-full bg-titi-bg border border-titi-border shrink-0 mt-1"
+                className="hidden sm:block w-8 h-8 rounded-full bg-titi-cream border border-gray-100 shrink-0 mt-1"
               />
             )}
             <input
@@ -125,8 +125,8 @@ export default function CommentSection({ postId, onCountChange }) {
           </div>
         </form>
       ) : (
-        <p className="text-sm text-titi-muted mb-4 font-medium">
-          <Link to="/login" className="text-titi-dark font-bold hover:text-titi-orange transition-colors">
+        <p className="text-sm text-gray-500 mb-4 font-medium">
+          <Link to="/login" className="text-titi-dark font-bold hover:text-titi-yellow-dark transition-colors">
             Iniciá sesión
           </Link>{' '}
           para comentar.
@@ -134,7 +134,7 @@ export default function CommentSection({ postId, onCountChange }) {
       )}
 
       {error && (
-        <p className="text-sm text-titi-red font-semibold mb-3" role="alert">
+        <p className="text-sm text-red-500 font-semibold mb-3" role="alert">
           {error}
         </p>
       )}
@@ -143,16 +143,16 @@ export default function CommentSection({ postId, onCountChange }) {
         <div className="space-y-3" aria-busy="true">
           {[0, 1].map((i) => (
             <div key={i} className="flex gap-3 animate-pulse">
-              <div className="w-8 h-8 rounded-full bg-titi-border shrink-0" />
+              <div className="w-8 h-8 rounded-full bg-gray-100 shrink-0" />
               <div className="flex-1 space-y-2">
-                <div className="h-2 w-24 bg-titi-border rounded" />
-                <div className="h-2 w-full bg-titi-border rounded" />
+                <div className="h-2 w-24 bg-gray-100 rounded" />
+                <div className="h-2 w-full bg-gray-100 rounded" />
               </div>
             </div>
           ))}
         </div>
       ) : tree.roots.length === 0 ? (
-        <p className="text-sm text-titi-muted font-medium">Sé el primero en comentar.</p>
+        <p className="text-sm text-gray-500 font-medium">Sé el primero en comentar.</p>
       ) : (
         <ul className="space-y-3">
           {tree.roots.map((c) => (
@@ -175,8 +175,8 @@ function CommentItem({ comment: c, replies, onReply, canReply, depth = 0 }) {
   // visualmente la jerarquía, manteniendo la legibilidad sobre el card padre.
   const bubbleClass =
     depth > 0
-      ? 'bg-titi-bg border border-titi-border'
-      : 'bg-white border border-titi-border shadow-titi';
+      ? 'bg-titi-cream border border-gray-100'
+      : 'bg-white border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)]';
 
   return (
     <li className={depth > 0 ? 'ml-8 sm:ml-11' : ''}>
@@ -186,7 +186,7 @@ function CommentItem({ comment: c, replies, onReply, canReply, depth = 0 }) {
             <img
               src={c.authorAvatar}
               alt={c.author}
-              className="w-8 h-8 rounded-full bg-titi-bg border border-titi-border"
+              className="w-8 h-8 rounded-full bg-titi-cream border border-gray-100"
             />
           ) : (
             <div className="w-8 h-8 rounded-full bg-titi-yellow/30 text-titi-dark grid place-items-center text-sm font-extrabold">
@@ -198,11 +198,11 @@ function CommentItem({ comment: c, replies, onReply, canReply, depth = 0 }) {
           <div className="flex items-baseline gap-2 flex-wrap">
             <Link
               to={`/profile/${c.author}`}
-              className="font-bold text-sm text-titi-dark hover:text-titi-orange transition-colors"
+              className="font-bold text-sm text-titi-dark hover:text-titi-yellow-dark transition-colors"
             >
               @{c.author}
             </Link>
-            <span className="text-xs text-titi-muted font-semibold">
+            <span className="text-xs text-gray-500 font-semibold">
               {relativeTime(c.createdAt)}
             </span>
           </div>
@@ -213,7 +213,7 @@ function CommentItem({ comment: c, replies, onReply, canReply, depth = 0 }) {
             <button
               type="button"
               onClick={() => onReply({ id: c.id, author: c.author })}
-              className="text-xs font-bold text-titi-muted hover:text-titi-orange mt-1.5 transition-colors"
+              className="text-xs font-bold text-gray-500 hover:text-titi-yellow-dark mt-1.5 transition-colors"
             >
               Responder
             </button>
