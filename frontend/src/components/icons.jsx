@@ -373,6 +373,30 @@ export function TagIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+// Calendario — temporadas / fechas (header del Ranking).
+export function CalendarIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <rect x="3.5" y="5" width="17" height="16" rx="2" />
+      <line x1="3.5" y1="10" x2="20.5" y2="10" />
+      <line x1="8" y1="2.5" x2="8" y2="6.5" />
+      <line x1="16" y1="2.5" x2="16" y2="6.5" />
+      <circle cx="8.5" cy="14.5" r="1" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="14.5" r="1" fill="currentColor" stroke="none" />
+    </NavSvg>
+  );
+}
+
+// Reloj — cuentas regresivas.
+export function ClockIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15.5 14" />
+    </NavSvg>
+  );
+}
+
 // Grupo de personas — estudiantes inscritos.
 export function UsersIcon({ className = 'w-5 h-5' }) {
   return (
