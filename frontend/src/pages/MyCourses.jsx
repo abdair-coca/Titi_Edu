@@ -247,7 +247,7 @@ function LearningPathSection({ inscripciones, progressByCurso, onContinue, onOpe
 
   return (
     <section className="mb-6 sm:mb-8">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-5">
         <h2 className="text-lg sm:text-xl font-bold text-titi-dark">Tu ruta de aprendizaje</h2>
         {showToggle && (
           <button
