@@ -5,8 +5,11 @@ Es la fuente de verdad visual del proyecto. Todo lo que generes debe ser consist
 
 > **v2 — "vivo y premium"**: misma paleta y esencia de siempre, pero el color
 > ahora se usa **sólido y con confianza** (como Duolingo), las superficies
-> clickeables se sienten **táctiles** (borde grueso + sombra dura) y el motion
-> es **de primera clase** (ver §10 y [`motion.md`](./motion.md)).
+> clickeables se sienten **táctiles** (borde grueso + sombra dura), el motion
+> es **de primera clase** (§10 y [`motion.md`](./motion.md)), la tipografía es
+> **más grande y gruesa** (§3), el layout es **denso — aire sí, vacío no**
+> (§4) y las imágenes que comparta el usuario se interpretan como propuesta
+> de diseño con el protocolo de §13.
 
 ---
 
@@ -43,6 +46,29 @@ Titi no es Duolingo ni Udemy. Es **lo que pasa cuando ambos se juntan en Bolivia
    y ahora también en banners/headers clave, siempre animado (§7).
 9. **Consistencia sobre creatividad** — Claude Code debe reproducir exactamente
    estos patrones, no inventar variaciones.
+
+### El estándar de experiencia — "espectacular" en concreto
+
+La UX de Titi se mide con estas 8 reglas. Si una página falla una, no está
+terminada:
+
+1. **Respuesta percibida instantánea** — optimistic updates en toda mutación
+   (like, inscribirse, completar); feedback de press ≤150ms en todo clickeable.
+2. **Nada salta** — skeletons que replican la silueta exacta del contenido
+   real; alturas reservadas para imágenes y bloques async. Cero layout shift.
+3. **Máximo 2 clicks** hasta la acción principal de cada página ("Continuar
+   lección" desde Mis cursos = 1 click).
+4. **Los estados vacíos venden el siguiente paso** — Titi + CTA concreto,
+   nunca un callejón sin salida.
+5. **Todo error es recuperable inline** — mensaje claro + botón "Reintentar"
+   en el lugar, sin recargar la página.
+6. **Teclado y lectores de pantalla** — focus visible amarillo
+   (`focus-visible:ring-titi-yellow`), `aria-label` en toggles e íconos
+   accionables, `role="progressbar"` en barras.
+7. **Mobile con paridad total** — bottom nav por rol, nada que solo funcione
+   con hover.
+8. **Cada viewport muestra contenido útil** — densidad §4: el usuario nunca
+   scrollea a través de aire.
 
 ---
 
@@ -166,7 +192,7 @@ Cada rol tiene un **sólido** (acentos: círculos de ícono, badges, chips) y un
   CTAs. Los fondos grandes siempre en tinte o neutro — nunca un panel entero
   en color sólido saturado (excepción: botón primario y sidebar oscuro).
 - **Links de sección** ("Ver todo", "Ver más"): siempre `text-blue-500`
-  (`--color-info`), `text-xs font-bold uppercase tracking-wide`.
+  (`--color-info`), `text-sm font-bold uppercase tracking-wide`.
 
 ### Regla de uso de color
 
@@ -224,24 +250,34 @@ Cada rol tiene un **sólido** (acentos: círculos de ícono, badges, chips) y un
 }
 ```
 
-### Jerarquía tipográfica — cuándo usar qué
+### Jerarquía tipográfica — cuándo usar qué (v2: un paso más grande y más gruesa)
 
 | Elemento | Tamaño | Peso | Ejemplo |
 |---|---|---|---|
-| Título de página | `text-3xl` | `font-extrabold` | "Catálogo de Cursos" |
-| Título de sección | `text-2xl` | `font-bold` | "Cursos populares" |
-| Título de card | `text-xl` | `font-bold` | "Introducción a Python" |
-| Subtítulo / descripción | `text-sm` | `font-medium` | "12 lecciones · Principiante" |
-| Cuerpo de texto | `text-base` | `font-normal` | Descripción de lección |
-| Label / badge | `text-xs` | `font-semibold` | "NUEVO", "COMPLETADO" |
+| Título de página | `text-3xl sm:text-4xl` | `font-black` | "Catálogo de Cursos" |
+| Título de sección | `text-xl sm:text-2xl` | `font-extrabold` | "Cursos populares" |
+| Título de card | `text-lg` (destacadas `text-xl`) | `font-bold` | "Introducción a Python" |
+| Subtítulo / descripción | `text-base` | `font-medium` | "12 lecciones · Principiante" |
+| Cuerpo de texto | `text-base` | `font-medium` | Descripción de lección |
+| Label / badge | `text-xs` | `font-bold` | "NUEVO", "COMPLETADO" |
 | Número de racha / gotas | `text-4xl` | `font-black` | "🔥 14" |
-| Número de stat card | `text-2xl` | `font-extrabold` + `tabular-nums` | "63%" |
+| Número de stat card | `text-3xl` | `font-extrabold` + `tabular-nums` | "63%" |
 | Botón primario | `text-base` | `font-bold` | "Inscribirse" |
-| Botón secundario | `text-sm` | `font-semibold` | "Ver detalles" |
-| Link de sección | `text-xs` | `font-bold uppercase tracking-wide` | "VER TODO" |
+| Botón secundario | `text-sm` | `font-bold` | "Ver detalles" |
+| Link de sección | `text-sm` | `font-bold uppercase tracking-wide` | "VER TODO" |
 
 **Números que animan** (count-up, §10) siempre con `tabular-nums` para que no
 bailen de ancho mientras cuentan.
+
+### Mínimos de legibilidad (reglas duras v2)
+
+- **Nada más chico que `text-xs`** — prohibidos `text-[11px]`, `text-[10px]` y
+  similares. Si no entra, sobra contenido, no falta tamaño.
+- **Nada más flaco que `font-medium`** en UI — `font-normal` queda solo para
+  párrafos largos de contenido de lección.
+- **Texto que se lee usa `text-gray-500` o más oscuro** — `text-gray-400` solo
+  para metadata terciaria (timestamps); `text-gray-300` solo placeholders.
+- Todo texto interactivo (links, toggles) mínimo `font-bold`.
 
 ---
 
@@ -264,8 +300,8 @@ bailen de ancho mientras cuentan.
   /* === LAYOUT === */
   --sidebar-width:    240px;
   --content-max-width: 1200px;
-  --card-gap:          1.5rem;   /* Gap entre cards en grid */
-  --section-gap:       2.5rem;   /* Espacio entre secciones */
+  --card-gap:          1.25rem;  /* Gap entre cards en grid (v2: era 1.5rem) */
+  --section-gap:       1.5rem;   /* Espacio entre secciones (v2: era 2.5rem) */
 
   /* === BORDER RADIUS === */
   --radius-sm:   0.375rem;  /* 6px — badges, chips */
@@ -291,6 +327,29 @@ bailen de ancho mientras cuentan.
 - **Dura inferior (`0 Npx 0`)** = "esto se presiona". Botones y **cards
   clickeables** (tiles). Se aplana al `active`.
 - **Difusa** = "esto es una superficie". Cards informativas. Nunca se aplana.
+
+### Densidad — aire sí, vacío no (v2)
+
+El aire separa; el vacío aburre. Reglas:
+
+- **Entre secciones**: `mb-6` (`sm:mb-8` máximo en desktop). Nunca `mb-10`+.
+- **Gap de grids**: `gap-4 sm:gap-5`. `gap-6` solo en grids de tiles grandes.
+- **Padding de cards**: `p-4 sm:p-5` estándar; `p-5 sm:p-6` destacadas.
+  `p-8`+ solo en hero y empty states de página completa.
+- **Header de página**: compacto — título + subtítulo de una línea + acción,
+  `mb-5 sm:mb-6`. Sin párrafos introductorios.
+- **Filas de lista**: `py-2.5` – `py-3`. Densas, separadas por `border-b`
+  sutil, no por espacio.
+- **Sin columnas muertas**: en desktop toda fila del layout usa su ancho. Dos
+  secciones cortas se emparejan en `grid lg:grid-cols-2` (patrón Mis cursos:
+  Desafíos + Categorías | Actividad) en vez de apilarse full-width con flancos
+  vacíos.
+- **Imágenes al ras**: portadas pegadas al borde del card
+  (`overflow-hidden`, sin marco interior).
+- **Empty states**: `py-10` (no `py-16`) — presentes pero no un desierto.
+- **Nada de max-w chico centrado** dejando media pantalla vacía en desktop; si
+  el contenido es angosto, acompañarlo con una columna secundaria útil (stats,
+  actividad, sugerencias).
 
 ### Layout principal
 
@@ -773,7 +832,7 @@ cada pantalla: si el bloque no celebra, motiva o explica, no lleva mascota.
 
 ```jsx
 // Siempre incluir: Titi ANIMADO, título, descripción, CTA
-<div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+<div className="flex flex-col items-center justify-center py-10 px-8 text-center">
   <TitiMascot state="idle" size="md" className="mb-4" />
   <h3 className="text-xl font-bold text-titi-dark mb-2">{titulo}</h3>
   <p className="text-sm text-gray-400 mb-6 max-w-xs">{descripcion}</p>
@@ -962,3 +1021,51 @@ Claude Code debe verificar esto antes de dar un componente por terminado:
 - [ ] ¿Los bordes usan `rounded-xl` o `rounded-2xl`?
 - [ ] ¿Las transiciones de interacción son ≤ 300ms (entradas ≤ 400ms)?
 - [ ] ¿Es consistente con el layout sidebar + contenido principal?
+- [ ] ¿Cumple los mínimos de legibilidad (≥`text-xs`, ≥`font-medium`, gris legible)?
+- [ ] ¿Sin vacíos muertos: secciones a `mb-6`, cards `p-4/p-5`, columnas emparejadas (§4 Densidad)?
+- [ ] ¿Cumple las 8 reglas del estándar de experiencia (§1)?
+
+---
+
+## 13. Protocolo — interpretar imágenes como propuesta de diseño
+
+Cuando el usuario comparte una imagen (mockup, captura de otra app, boceto),
+se trata como **propuesta de diseño** y se procesa así. Este protocolo es
+parte del sistema: no se improvisa.
+
+### Qué se toma de la imagen y qué se traduce
+
+| La imagen muestra | Cómo se traduce a Titi |
+|---|---|
+| **Layout, jerarquía, densidad, orden de bloques** | Se respeta **fiel** — es el valor de la propuesta |
+| Paleta ajena (verde Duolingo, dark mode, etc.) | Rol equivalente de la paleta Titi (§2): primario ajeno → amarillo Titi; éxito → verde; links → azul info… La paleta **nunca** se importa |
+| Tipografía ajena | Nunito + jerarquía §3, sin excepción |
+| Gradientes, blur, glow | Se adapta a plano (§1) y se **avisa** de la adaptación |
+| Emoji como íconos de UI | SVG de `icons.jsx` (§5.6) |
+| Componentes que Titi ya tiene | Se reusa el componente existente, restileado — no se duplica |
+| Componentes que no existen | Se diseñan con los tokens de este documento (¿tile o informativa? ¿qué rol de color?) |
+| Copy / textos | Se conservan los de la app salvo pedido explícito ("no cambies el contenido") |
+| Mascota ajena (búho, etc.) | Titi (`<TitiMascot />`) en los momentos de §7, o nada |
+
+### Proceso
+
+1. **Inventario** — listar los bloques de la imagen de arriba hacia abajo
+   (header, stats, lista, side panel…) y su intención (navegar, informar,
+   celebrar).
+2. **Mapa** — por cada bloque: ¿existe componente en el repo? (`src/pages/`,
+   `src/components/`) → restilear; ¿no existe? → crear con los patrones §5.
+3. **Preguntar solo lo ambiguo** — si la imagen contradice una decisión ya
+   confirmada o una regla dura, plantear la duda antes de codear; lo demás se
+   resuelve con este documento.
+4. **Plan por etapas** — para una página completa, plan escrito en un `.md`
+   junto al código (patrón `MyCourses.md`) con etapas chicas, feedback entre
+   etapas y tabla de archivos tocados. Para un cambio puntual, directo.
+5. **Commits por etapa** — un commit por etapa/grupo lógico.
+6. **Checklist §12** sobre el resultado, siempre — la imagen inspira, el
+   sistema manda.
+
+### Regla de oro
+
+> La imagen define **QUÉ** se ve y **DÓNDE**. Este documento define **CÓMO**
+> se ve. Si chocan, gana el documento — y se le explica al usuario qué se
+> adaptó y por qué.
