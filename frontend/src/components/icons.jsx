@@ -173,6 +173,64 @@ export function MusicIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+// ---- Íconos de tipo de material / editor (trazo, mismo estilo que categorías) ----
+
+// Documento (pdf y afines).
+export function FileIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <path d="M14 2.5H7a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7.5l-5-5Z" />
+      <path d="M14 2.5v5h5" />
+      <line x1="9" y1="13" x2="15" y2="13" />
+      <line x1="9" y1="17" x2="13" y2="17" />
+    </LineSvg>
+  );
+}
+
+// Lápiz — escribir/editar (word, respuesta corta, editar evaluación).
+export function PencilIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <path d="M17 3.5a2.1 2.1 0 0 1 3 3L8.5 18l-4 1 1-4L17 3.5Z" />
+      <line x1="14.5" y1="6" x2="18" y2="9.5" />
+    </LineSvg>
+  );
+}
+
+// Imagen.
+export function ImageIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <rect x="3.5" y="4.5" width="17" height="15" rx="2" />
+      <circle cx="9" cy="10" r="1.6" />
+      <path d="M20.5 15.5 15.5 11l-8 8" />
+    </LineSvg>
+  );
+}
+
+// Clip — adjunto genérico.
+export function ClipIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <path d="m20 11.5-8.2 8.2a5 5 0 0 1-7-7L13 4.4a3.3 3.3 0 0 1 4.7 4.7l-8.1 8.1a1.7 1.7 0 0 1-2.4-2.4l7.6-7.5" />
+    </LineSvg>
+  );
+}
+
+// Lista con viñetas — opción múltiple.
+export function ListIcon({ className = 'w-5 h-5' }) {
+  return (
+    <LineSvg className={className}>
+      <line x1="9" y1="6" x2="20" y2="6" />
+      <line x1="9" y1="12" x2="20" y2="12" />
+      <line x1="9" y1="18" x2="20" y2="18" />
+      <circle cx="4.5" cy="6" r="1" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="12" r="1" fill="currentColor" stroke="none" />
+      <circle cx="4.5" cy="18" r="1" fill="currentColor" stroke="none" />
+    </LineSvg>
+  );
+}
+
 // Check — usado en "Completado" (ruta de aprendizaje y actividad reciente).
 export function CheckIcon({ className = 'w-4 h-4' }) {
   return (

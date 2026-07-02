@@ -9,6 +9,14 @@ import AchievementToast from '../components/AchievementToast.jsx';
 import EvaluationQuiz from '../components/EvaluationQuiz.jsx';
 import { resolveMediaUrl } from '../lib/format.js';
 import { usePopIn, useStaggerReveal } from '../lib/motion.js';
+import {
+  FileIcon,
+  PencilIcon,
+  ImageIcon,
+  CodeIcon,
+  ClipIcon,
+  AwardIcon,
+} from '../components/icons.jsx';
 
 export default function LearnCourse() {
   const { id: courseId } = useParams();
@@ -483,7 +491,7 @@ export default function LearnCourse() {
                             : 'text-titi-achievement',
                         ].join(' ')}
                       >
-                        <span className="text-base shrink-0" aria-hidden="true">📝</span>
+                        <AwardIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
                         <span className="line-clamp-2 flex-1">{modulo.evaluacion.titulo}</span>
                       </button>
                     </li>
@@ -587,15 +595,15 @@ export default function LearnCourse() {
 
 // ---- Vista de lección activa ----
 const TIPO_ICON = {
-  pdf: '📄',
-  word: '📝',
-  imagen: '🖼️',
-  codigo: '💻',
-  otro: '📎',
+  pdf: FileIcon,
+  word: PencilIcon,
+  imagen: ImageIcon,
+  codigo: CodeIcon,
+  otro: ClipIcon,
 };
 
 function MaterialChip({ material }) {
-  const icon = TIPO_ICON[material.tipo] || '📎';
+  const Icon = TIPO_ICON[material.tipo] || ClipIcon;
   const href = material.url?.startsWith('/uploads/')
     ? resolveMediaUrl(material.url)
     : material.url;
@@ -607,9 +615,7 @@ function MaterialChip({ material }) {
       download
       className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold text-titi-dark hover:border-titi-yellow hover:bg-titi-cream transition-all duration-150 max-w-full"
     >
-      <span className="text-base" aria-hidden="true">
-        {icon}
-      </span>
+      <Icon className="w-4 h-4 text-gray-500 shrink-0" aria-hidden="true" />
       <span className="truncate">{material.nombre}</span>
       <span className="text-xs text-gray-400 uppercase tracking-wide shrink-0">
         {material.tipo}

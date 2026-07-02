@@ -3,9 +3,21 @@ import { useNavigate, useParams } from 'react-router-dom';
 import client from '../../api/client.js';
 import ConfirmModal from '../../components/ConfirmModal.jsx';
 import { resolveMediaUrl } from '../../lib/format.js';
+import {
+  FileIcon,
+  PencilIcon,
+  ImageIcon,
+  CodeIcon,
+  ClipIcon,
+} from '../../components/icons.jsx';
 
 const TIPOS_MATERIAL = ['pdf', 'word', 'imagen', 'codigo', 'otro'];
-const TIPO_ICON = { pdf: '📄', word: '📝', imagen: '🖼️', codigo: '💻', otro: '📎' };
+const TIPO_ICON = { pdf: FileIcon, word: PencilIcon, imagen: ImageIcon, codigo: CodeIcon, otro: ClipIcon };
+
+function MaterialTipoIcon({ tipo, className }) {
+  const Icon = TIPO_ICON[tipo] || ClipIcon;
+  return <Icon className={className} aria-hidden="true" />;
+}
 
 export default function ModulesEditor() {
   const { id: courseId } = useParams();
@@ -526,9 +538,10 @@ function ModuleNode({ modulo, index, total, activeLessonId, onMoveUp, onMoveDown
           <button
             type="button"
             onClick={onEditEvaluation}
-            className="w-full text-xs font-bold text-titi-achievement bg-white border border-dashed border-titi-achievement/40 hover:border-titi-achievement hover:bg-purple-50 rounded-lg px-2 py-1.5 mt-1"
+            className="w-full inline-flex items-center justify-center gap-1.5 text-xs font-bold text-titi-achievement bg-white border border-dashed border-titi-achievement/40 hover:border-titi-achievement hover:bg-purple-50 rounded-lg px-2 py-1.5 mt-1"
           >
-            📝 {modulo.evaluacion ? 'Editar evaluación' : 'Crear evaluación'}
+            <PencilIcon className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            {modulo.evaluacion ? 'Editar evaluación' : 'Crear evaluación'}
           </button>
         </li>
       </ol>
@@ -621,7 +634,7 @@ function LessonEditor({ leccion, onSave, onUpload, onDeleteMaterial }) {
         <div className="flex items-center gap-2 mb-4 flex-wrap">
           <select value={tipo} onChange={(e) => setTipo(e.target.value)} className="titi-input w-auto">
             {TIPOS_MATERIAL.map((t) => (
-              <option key={t} value={t}>{TIPO_ICON[t]} {t}</option>
+              <option key={t} value={t}>{t}</option>
             ))}
           </select>
           <label className="inline-block bg-white text-titi-dark font-bold text-sm px-4 py-2 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 cursor-pointer">
@@ -645,7 +658,7 @@ function LessonEditor({ leccion, onSave, onUpload, onDeleteMaterial }) {
                 key={m.id}
                 className="flex items-center gap-3 bg-titi-cream border border-gray-100 rounded-xl px-3 py-2"
               >
-                <span className="text-xl shrink-0">{TIPO_ICON[m.tipo] || '📎'}</span>
+                <MaterialTipoIcon tipo={m.tipo} className="w-5 h-5 text-gray-500 shrink-0" />
                 <a
                   href={m.url?.startsWith('/uploads/') ? resolveMediaUrl(m.url) : m.url}
                   target="_blank"

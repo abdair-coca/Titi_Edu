@@ -182,11 +182,11 @@ module.exports = {
 
 ### Tokens canónicos vs legacy — qué usar en código nuevo
 
-`tailwind.config.js` e `index.css` arrastran aliases de rediseños anteriores.
-**Código nuevo usa SOLO la columna canónica**; al tocar un archivo con legacy,
-se migra en el mismo cambio (§17).
+Los aliases legacy fueron **eliminados del config y del código en la etapa 5**
+— ya no compilan. Esta tabla queda como mapa por si aparece uno en un diff
+viejo o en código externo:
 
-| Legacy (existe, NO usar) | Canónico v2 |
+| Legacy (eliminado) | Canónico v2 |
 |---|---|
 | `text-titi-text` | `text-titi-dark` |
 | `text-titi-muted` | `text-gray-500` (terciario: `text-gray-400`) |
@@ -421,18 +421,21 @@ El aire separa; el vacío aburre. Reglas:
 
 ### 5.0 Clases utilitarias de `index.css` — cuáles valen y cuáles no
 
-`index.css` define clases `@layer components`. Estado v2:
+`index.css` define clases `@layer components`. Desde la etapa 5 todas las que
+quedan son **canónicas** (redefinidas como espejo exacto de este documento):
 
-| Clase | Estado | Uso |
-|---|---|---|
-| `.titi-card-pop` | ✅ canónica | hover pop de tiles (lift + escala con rebote) — §10 patrón 7 |
-| `.titi-btn` | ✅ canónica | base de press universal (`active:scale-[0.96]`) para clickeables sin sombra dura |
-| `.titi-backdrop-in`, `.titi-*-toast-*`, `.titi-flame-flicker` | ✅ canónicas | animaciones de modales/toasts/racha — **no tocar** (motion.md) |
-| `.titi-card` | ⚠️ legacy | usa `border-titi-border` — preferir el snippet de card informativa (§5.2) |
-| `.titi-btn-primary` | ❌ legacy | rounded-full + hover naranja, **contradice** el botón primario §5.1 — no usar |
-| `.titi-btn-secondary` | ❌ legacy | fondo azul — contradice §5.1 — no usar |
-| `.titi-btn-ghost` / `.titi-btn-danger` / `.titi-chip` / `.titi-input` | ⚠️ legacy | usar los snippets de §5.1/§9 en código nuevo |
-| `.neo-*` | ❌ prohibidas | aliases viejos |
+| Clase | Equivale a |
+|---|---|
+| `.titi-card` | card informativa (§5.2) |
+| `.titi-btn` | base de press universal (`active:scale-[0.96]`) para clickeables sin sombra dura |
+| `.titi-btn-primary` | botón primario (§5.1) |
+| `.titi-btn-ghost` | botón secundario chunky (§5.1) |
+| `.titi-input` | input estándar (§9) |
+| `.titi-card-pop` | hover pop de tiles (§10 patrón 7) |
+| `.titi-backdrop-in`, `.titi-*-toast-*`, `.titi-flame-flicker` | animaciones de modales/toasts/racha — **no tocar** (motion.md) |
+
+Usá la clase o el snippet, da igual — son lo mismo. `.titi-btn-secondary`,
+`.titi-btn-danger`, `.titi-chip` y todos los `.neo-*` **ya no existen**.
 
 ### 5.1 Botones
 
@@ -1282,7 +1285,7 @@ esto te dice qué esperar del código existente:
 | 2 — Tipografía y densidad | ✅ | h1 `font-black`, subtítulos `text-base`, mínimo `text-xs` global; densidad aplicada en Mis cursos |
 | 3 — Tiles y sólidos | ✅ | `CourseCard`/`RecommendedCourseCard`/paneles admin a `border-2` + sombra dura; chips de stats/categorías/actividad en sólido pleno; botón secundario chunky en toda la app (12 sitios) |
 | 4 — Motion obligatorio | ✅ | `useCountUp` creado en `lib/motion.js` + aplicado a stats de Mis cursos; press hundido en links/chips/nodos/toggles; `TitiMascot state="saludo"` en el banner de cierre |
-| 5 — Limpieza legacy | ⬜ | migrar los ~180 usos de `titi-text`/`titi-muted`/`titi-border`/`neo-*` (§2) y matar `.titi-btn-*` legacy (§5.0); emojis restantes en editores teacher (`TIPO_ICON`, `TIPOS`) |
+| 5 — Limpieza legacy | ✅ | ~200 tokens legacy migrados y **eliminados** de `tailwind.config`; clases de `index.css` redefinidas al spec (§5.0); emojis de editores teacher/Learn → SVG (`FileIcon`/`PencilIcon`/`ImageIcon`/`ClipIcon`/`ListIcon` nuevos). Nota: `placeholder="💻"` de AdminCategories es data (campo `categoria.icono`), se queda |
 | 6 — Layouts densos | ⬜ | revisar columnas muertas en Feed/Explore (§4 Densidad) |
 
 **Regla boy scout**: cualquier archivo que toques por otro motivo queda

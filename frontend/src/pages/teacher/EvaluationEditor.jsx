@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import client from '../../api/client.js';
 import ConfirmModal from '../../components/ConfirmModal.jsx';
-import { CheckIcon } from '../../components/icons.jsx';
+import { CheckIcon, ListIcon, PencilIcon } from '../../components/icons.jsx';
 
 const TIPOS = [
-  { value: 'OPCION_MULTIPLE', label: 'Opción múltiple', icon: '🔘' },
-  { value: 'VERDADERO_FALSO', label: 'Verdadero / Falso', icon: '⚖️' },
-  { value: 'RESPUESTA_CORTA', label: 'Respuesta corta', icon: '✍️' },
+  { value: 'OPCION_MULTIPLE', label: 'Opción múltiple', Icon: ListIcon },
+  { value: 'VERDADERO_FALSO', label: 'Verdadero / Falso', Icon: CheckIcon },
+  { value: 'RESPUESTA_CORTA', label: 'Respuesta corta', Icon: PencilIcon },
 ];
 
 function emptyQuestion(tipo) {
@@ -293,9 +293,9 @@ export default function EvaluationEditor({ mode = 'module' }) {
               key={t.value}
               type="button"
               onClick={() => addQuestion(t.value)}
-              className="bg-titi-cream text-titi-dark font-bold text-sm px-3 py-2 rounded-xl border border-dashed border-titi-yellow hover:bg-titi-yellow-light transition-all"
+              className="inline-flex items-center gap-1.5 bg-titi-cream text-titi-dark font-bold text-sm px-3 py-2 rounded-xl border border-dashed border-titi-yellow hover:bg-titi-yellow-light active:scale-[0.96] transition-all duration-150"
             >
-              + {t.icon} {t.label}
+              + <t.Icon className="w-4 h-4 shrink-0" aria-hidden="true" /> {t.label}
             </button>
           ))}
         </div>
