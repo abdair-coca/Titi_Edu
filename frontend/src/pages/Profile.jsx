@@ -3,11 +3,13 @@ import { useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { formatDate, relativeTime, resolveMediaUrl } from '../lib/format.js';
-import { useStaggerReveal, usePopIn } from '../lib/motion.js';
+import { useStaggerReveal, usePopIn, useCountUp } from '../lib/motion.js';
 import OptionsPosts from '../components/OptionsPosts.jsx';
 import PostCard from '../components/PostCard.jsx';
 import StreakBadge from '../components/StreakBadge.jsx';
 import AchievementsSection from '../components/AchievementsSection.jsx';
+import TitiMascot from '../components/TitiMascot.jsx';
+import { HeartIcon, BookmarkIcon, GridIcon, MapPinIcon } from '../components/icons.jsx';
 import useStreak from '../hooks/useStreak.js';
 
 export default function Profile() {
@@ -237,7 +239,7 @@ export default function Profile() {
   return (
     <div>
       {/* Header del perfil */}
-      <div ref={headerRef} className="titi-card p-6 mb-6 border-t-4 border-t-titi-yellow">
+      <div ref={headerRef} className="titi-card p-5 sm:p-6 mb-5 border-t-4 border-t-titi-yellow">
         <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left">
           {user.avatarUrl ? (
             <img
@@ -281,10 +283,7 @@ export default function Profile() {
 
             {location && (
               <p className="text-sm text-gray-500 flex items-center gap-1.5 justify-center sm:justify-start mb-1 font-semibold">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-green-600" aria-hidden="true">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
+                <MapPinIcon className="w-4 h-4 text-green-600" aria-hidden="true" />
                 <span>{location.city}, {location.country}</span>
               </p>
             )}
@@ -297,9 +296,8 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* Racha — solo para mi propio perfil */}
-
-        <div className="mt-6">
+        {/* Racha */}
+        <div className="mt-5">
           <StreakBadge
             variant="hero"
             racha={isSelf ? streak.racha : profileStreak?.racha}
@@ -310,17 +308,22 @@ export default function Profile() {
         </div>
 
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-gray-100">
-          <Stat label="Posts" value={stats.postCount} color="text-titi-yellow" />
+        {/* Stats — números con count-up (§10 patrón 5) */}
+        <div className="grid grid-cols-3 gap-4 mt-5 pt-5 border-t-2 border-gray-100">
+          <Stat label="Posts" value={stats.postCount} color="text-titi-yellow-dark" />
           <Stat label="Seguidores" value={followerCount} color="text-blue-500" />
           <Stat label="Seguidos" value={stats.followingCount} color="text-green-600" />
         </div>
       </div>
 
-      {/* Logros */}
-      <AchievementsSection username={username} isSelf={isSelf} />
+      {/* Sin columnas muertas (§4): en lg los logros acompañan al contenido
+          como rail lateral sticky; en mobile van arriba de los tabs. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:items-start">
+      <aside className="lg:order-2 lg:sticky lg:top-8">
+        <AchievementsSection username={username} isSelf={isSelf} />
+      </aside>
 
+      <div className="lg:order-1 min-w-0">
       {/* Tabs */}
       <div
         role="tablist"
@@ -362,8 +365,8 @@ export default function Profile() {
             error={postsError}
             posts={posts}
             onRetry={fetchUserPosts}
-            emptyTitle={isSelf ? 'Todavía no publicaste nada' : `@${user.username} no ha publicado nada todavía`}
-            emptyDescription={isSelf ? '¡Comparte tu primer post para que aparezca aquí!' : 'Vuelve más tarde para ver novedades.'}
+            emptyTitle={isSelf ? 'Todavía no publicaste nada' : `@${user.username} no publicó nada todavía`}
+            emptyDescription={isSelf ? '¡Compartí tu primer post para que aparezca acá!' : 'Volvé más tarde para ver novedades.'}
             handleDelete={handleDeletePost}
             handleEdit={handleEditPost}
             onChange={handlePostChange}
@@ -378,8 +381,8 @@ export default function Profile() {
             error={savedError}
             posts={saved}
             onRetry={fetchSaved}
-            emptyTitle="No tienes posts guardados"
-            emptyDescription="Cuando guardes un post aparecerá aquí para que lo encuentres rápido."
+            emptyTitle="No tenés posts guardados"
+            emptyDescription="Cuando guardes un post va a aparecer acá para que lo encuentres rápido."
             handleDelete={handleDeletePost}
             handleEdit={handleEditPost}
             onChange={handlePostChange}
@@ -395,13 +398,15 @@ export default function Profile() {
             posts={liked}
             onRetry={fetchLiked}
             emptyTitle="Aún no diste like a ningún post"
-            emptyDescription="Los posts a los que des like aparecerán aquí, ordenados por fecha."
+            emptyDescription="Los posts a los que des like van a aparecer acá, ordenados por fecha."
             handleDelete={handleDeletePost}
             handleEdit={handleEditPost}
             onChange={handlePostChange}
           />
         </section>
       )}
+      </div>
+      </div>
     </div>
   );
 }
@@ -447,15 +452,10 @@ function PostsList({ loading, error, posts, onRetry, emptyTitle, emptyDescriptio
   }
   if (posts.length === 0) {
     return (
-      <div className="titi-card p-8 text-center flex flex-col items-center">
-        <img
-          src="/Titi.png"
-          alt="Titi"
-          className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
-          draggable={false}
-        />
+      <div className="titi-card p-6 sm:p-8 text-center flex flex-col items-center">
+        <TitiMascot state="idle" size="sm" message="" className="mb-3" />
         <h3 className="text-xl font-bold text-titi-dark mb-2">{emptyTitle}</h3>
-        <p className="text-sm text-gray-500 max-w-xs">{emptyDescription}</p>
+        <p className="text-base font-medium text-gray-500 max-w-xs">{emptyDescription}</p>
       </div>
     );
   }
@@ -474,58 +474,11 @@ function PostsList({ loading, error, posts, onRetry, emptyTitle, emptyDescriptio
   );
 }
 
-const HeartIcon = ({ filled, className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill={filled ? 'currentColor' : 'none'}
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-  </svg>
-);
-
-const BookmarkIcon = ({ filled, className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill={filled ? 'currentColor' : 'none'}
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-  </svg>
-);
-
-const GridIcon = ({ className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <rect x="3" y="3" width="7" height="7" />
-    <rect x="14" y="3" width="7" height="7" />
-    <rect x="3" y="14" width="7" height="7" />
-    <rect x="14" y="14" width="7" height="7" />
-  </svg>
-);
-
 function Stat({ label, value, color = 'text-titi-dark' }) {
+  const anim = useCountUp(value ?? 0);
   return (
     <div className="text-center">
-      <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${color}`}>{value ?? 0}</p>
+      <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${color}`}>{anim}</p>
       <p className="text-xs uppercase tracking-wide text-gray-500 font-extrabold">{label}</p>
     </div>
   );
