@@ -3,7 +3,6 @@ import {
   Outlet,
   Routes,
   Route,
-  Link,
   useLocation,
 } from 'react-router-dom';
 import { useAuth } from './context/AuthContext.jsx';
@@ -129,25 +128,12 @@ function AdminOnly() {
   return <Outlet />;
 }
 
-// ---- Páginas temporales (se irán reemplazando) ----
-
+// La landing real es el catálogo: "/" solo reparte según sesión (logueado →
+// feed, guest → catálogo de cursos con el header simple de GuestShell).
 function Home() {
-  const { isAuthenticated } = useAuth();
-  if (isAuthenticated) return <Navigate to="/feed" replace />;
-  return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 text-center">
-      <h1 className="text-5xl sm:text-6xl font-extrabold mb-4">
-        Titi<span className="text-titi-yellow-dark"> Edu</span>
-      </h1>
-      <p className="text-gray-500 mb-8 max-w-md">
-        Red social basada en grafos · Neo4j + React
-      </p>
-      <div className="flex gap-3 justify-center">
-        <Link to="/login" className="titi-btn-primary">Iniciar sesión</Link>
-        <Link to="/register" className="titi-btn-ghost">Crear cuenta</Link>
-      </div>
-    </div>
-  );
+  const { isAuthenticated, initializing } = useAuth();
+  if (initializing) return null;
+  return <Navigate to={isAuthenticated ? '/feed' : '/courses'} replace />;
 }
 
 function Placeholder({ title, description }) {
