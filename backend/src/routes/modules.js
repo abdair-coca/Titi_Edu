@@ -1,49 +1,15 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
+import { requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
 
 const router = Router();
 
-// --- Helpers (idénticos al patrón de routes/courses.js) ---
-
-// El JWT actual lleva el id de Neo4j. En Postgres ese id vive en `Usuario.neoId`.
-async function loadCurrentUser(req, res) {
-  if (req.dbUser) return req.dbUser;
-  const usuario = await prisma.usuario.findUnique({
-    where: { neoId: req.user.id },
-  });
-  if (!usuario) {
-    res.status(401).json({ success: false, message: 'Usuario no encontrado' });
-    return null;
-  }
-  req.dbUser = usuario;
-  return usuario;
-}
-
-function requireRole(...roles) {
-  return async (req, res, next) => {
-    try {
-      const usuario = await loadCurrentUser(req, res);
-      if (!usuario) return;
-      if (!roles.includes(usuario.rol)) {
-        return res.status(403).json({
-          success: false,
-          message: 'No tienes permiso para esta acción',
-        });
-      }
-      next();
-    } catch (err) {
-      console.error('requireRole error', err);
-      res.status(500).json({ success: false, message: 'Error verificando permisos' });
-    }
-  };
-}
-
-// ---- POST /api/courses/:courseId/modules  — crear módulo (solo autor PROFESOR) ----
+// ---- POST /api/courses/:courseId/modules  — crear módulo (autor del curso o ADMIN) ----
 router.post(
   '/courses/:courseId/modules',
   requireAuth,
-  requireRole('PROFESOR'),
+  requireRole('PROFESOR', 'ADMIN'),
   async (req, res) => {
     try {
       const { courseId } = req.params;
@@ -71,7 +37,7 @@ router.post(
       if (!curso) {
         return res.status(404).json({ success: false, message: 'Curso no encontrado' });
       }
-      if (curso.creadorId !== req.dbUser.id) {
+      if (!isOwnerOrAdmin(req.dbUser, curso.creadorId)) {
         return res.status(403).json({
           success: false,
           message: 'Solo el autor del curso puede agregar módulos',
@@ -116,8 +82,8 @@ router.get('/courses/:courseId/modules', async (req, res) => {
   }
 });
 
-// ---- PUT /api/modules/:id — editar módulo (autor del curso) ----
-router.put('/modules/:id', requireAuth, requireRole('PROFESOR'), async (req, res) => {
+// ---- PUT /api/modules/:id — editar módulo (autor del curso o ADMIN) ----
+router.put('/modules/:id', requireAuth, requireRole('PROFESOR', 'ADMIN'), async (req, res) => {
   try {
     const modulo = await prisma.modulo.findUnique({
       where: { id: req.params.id },
@@ -126,7 +92,7 @@ router.put('/modules/:id', requireAuth, requireRole('PROFESOR'), async (req, res
     if (!modulo) {
       return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
     }
-    if (modulo.curso.creadorId !== req.dbUser.id) {
+    if (!isOwnerOrAdmin(req.dbUser, modulo.curso.creadorId)) {
       return res.status(403).json({
         success: false,
         message: 'Solo el autor del curso puede editar el módulo',
@@ -158,8 +124,8 @@ router.put('/modules/:id', requireAuth, requireRole('PROFESOR'), async (req, res
   }
 });
 
-// ---- DELETE /api/modules/:id — borrar módulo + cascada (autor del curso) ----
-router.delete('/modules/:id', requireAuth, requireRole('PROFESOR'), async (req, res) => {
+// ---- DELETE /api/modules/:id — borrar módulo + cascada (autor del curso o ADMIN) ----
+router.delete('/modules/:id', requireAuth, requireRole('PROFESOR', 'ADMIN'), async (req, res) => {
   try {
     const modulo = await prisma.modulo.findUnique({
       where: { id: req.params.id },
@@ -171,7 +137,7 @@ router.delete('/modules/:id', requireAuth, requireRole('PROFESOR'), async (req, 
     if (!modulo) {
       return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
     }
-    if (modulo.curso.creadorId !== req.dbUser.id) {
+    if (!isOwnerOrAdmin(req.dbUser, modulo.curso.creadorId)) {
       return res.status(403).json({
         success: false,
         message: 'Solo el autor del curso puede borrar el módulo',

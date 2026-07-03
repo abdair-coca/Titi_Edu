@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
+import { loadCurrentUser, requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
 import { actualizarRacha, checkCursoCompletado } from '../services/progress.service.js';
 import { checkLogrosLeccion } from '../services/achievement.service.js';
 import { otorgarGotas } from '../services/gotas.service.js';
@@ -8,46 +9,11 @@ import { avanzarMisiones } from '../services/mision.service.js';
 
 const router = Router();
 
-// --- Helpers (mismo patrón que routes/courses.js y routes/modules.js) ---
-
-// El JWT actual lleva el id de Neo4j. En Postgres ese id vive en `Usuario.neoId`.
-async function loadCurrentUser(req, res) {
-  if (req.dbUser) return req.dbUser;
-  const usuario = await prisma.usuario.findUnique({
-    where: { neoId: req.user.id },
-  });
-  if (!usuario) {
-    res.status(401).json({ success: false, message: 'Usuario no encontrado' });
-    return null;
-  }
-  req.dbUser = usuario;
-  return usuario;
-}
-
-function requireRole(...roles) {
-  return async (req, res, next) => {
-    try {
-      const usuario = await loadCurrentUser(req, res);
-      if (!usuario) return;
-      if (!roles.includes(usuario.rol)) {
-        return res.status(403).json({
-          success: false,
-          message: 'No tienes permiso para esta acción',
-        });
-      }
-      next();
-    } catch (err) {
-      console.error('requireRole error', err);
-      res.status(500).json({ success: false, message: 'Error verificando permisos' });
-    }
-  };
-}
-
-// ---- POST /api/modules/:moduleId/lessons  — crear lección (PROFESOR) ----
+// ---- POST /api/modules/:moduleId/lessons  — crear lección (autor del curso o ADMIN) ----
 router.post(
   '/modules/:moduleId/lessons',
   requireAuth,
-  requireRole('PROFESOR'),
+  requireRole('PROFESOR', 'ADMIN'),
   async (req, res) => {
     try {
       const { moduleId } = req.params;
@@ -70,10 +36,16 @@ router.post(
 
       const modulo = await prisma.modulo.findUnique({
         where: { id: moduleId },
-        select: { id: true },
+        include: { curso: { select: { creadorId: true } } },
       });
       if (!modulo) {
         return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+      }
+      if (!isOwnerOrAdmin(req.dbUser, modulo.curso.creadorId)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Solo el autor del curso puede agregar lecciones',
+        });
       }
 
       const leccion = await prisma.leccion.create({
@@ -117,8 +89,8 @@ router.get('/lessons/:id', async (req, res) => {
   }
 });
 
-// ---- DELETE /api/lessons/:id  — borrar lección + cascada (autor del curso) ----
-router.delete('/lessons/:id', requireAuth, requireRole('PROFESOR'), async (req, res) => {
+// ---- DELETE /api/lessons/:id  — borrar lección + cascada (autor del curso o ADMIN) ----
+router.delete('/lessons/:id', requireAuth, requireRole('PROFESOR', 'ADMIN'), async (req, res) => {
   try {
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
@@ -127,7 +99,7 @@ router.delete('/lessons/:id', requireAuth, requireRole('PROFESOR'), async (req, 
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
-    if (leccion.modulo.curso.creadorId !== req.dbUser.id) {
+    if (!isOwnerOrAdmin(req.dbUser, leccion.modulo.curso.creadorId)) {
       return res.status(403).json({
         success: false,
         message: 'Solo el autor del curso puede borrar la lección',
@@ -148,9 +120,23 @@ router.delete('/lessons/:id', requireAuth, requireRole('PROFESOR'), async (req, 
   }
 });
 
-// ---- PUT /api/lessons/:id  — editar lección (PROFESOR) ----
-router.put('/lessons/:id', requireAuth, requireRole('PROFESOR'), async (req, res) => {
+// ---- PUT /api/lessons/:id  — editar lección (autor del curso o ADMIN) ----
+router.put('/lessons/:id', requireAuth, requireRole('PROFESOR', 'ADMIN'), async (req, res) => {
   try {
+    const existente = await prisma.leccion.findUnique({
+      where: { id: req.params.id },
+      include: { modulo: { include: { curso: { select: { creadorId: true } } } } },
+    });
+    if (!existente) {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+    if (!isOwnerOrAdmin(req.dbUser, existente.modulo.curso.creadorId)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Solo el autor del curso puede editar la lección',
+      });
+    }
+
     const { titulo, contenido, videoUrl, orden } = req.body || {};
 
     const data = {};
@@ -178,18 +164,11 @@ router.put('/lessons/:id', requireAuth, requireRole('PROFESOR'), async (req, res
       });
     }
 
-    try {
-      const leccion = await prisma.leccion.update({
-        where: { id: req.params.id },
-        data,
-      });
-      res.json({ success: true, data: { leccion } });
-    } catch (err) {
-      if (err.code === 'P2025') {
-        return res.status(404).json({ success: false, message: 'Lección no encontrada' });
-      }
-      throw err;
-    }
+    const leccion = await prisma.leccion.update({
+      where: { id: req.params.id },
+      data,
+    });
+    res.json({ success: true, data: { leccion } });
   } catch (err) {
     console.error('PUT /api/lessons/:id error', err);
     res.status(500).json({ success: false, message: 'Error editando lección' });

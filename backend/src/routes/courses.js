@@ -2,44 +2,10 @@ import { Router } from 'express';
 import prisma from '../prisma.js';
 import { runQuery, toNumber } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { loadCurrentUser, requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
 import { syncInscripcion } from '../services/neo4j-sync.service.js';
 
 const router = Router();
-
-// --- Helpers ---
-
-// El JWT actual lleva el id de Neo4j. En Postgres ese id vive en `Usuario.neoId`.
-async function loadCurrentUser(req, res) {
-  if (req.dbUser) return req.dbUser;
-  const usuario = await prisma.usuario.findUnique({
-    where: { neoId: req.user.id },
-  });
-  if (!usuario) {
-    res.status(401).json({ success: false, message: 'Usuario no encontrado' });
-    return null;
-  }
-  req.dbUser = usuario;
-  return usuario;
-}
-
-function requireRole(...roles) {
-  return async (req, res, next) => {
-    try {
-      const usuario = await loadCurrentUser(req, res);
-      if (!usuario) return;
-      if (!roles.includes(usuario.rol)) {
-        return res.status(403).json({
-          success: false,
-          message: 'No tienes permiso para esta acción',
-        });
-      }
-      next();
-    } catch (err) {
-      console.error('requireRole error', err);
-      res.status(500).json({ success: false, message: 'Error verificando permisos' });
-    }
-  };
-}
 
 // ---- GET /  — catálogo público ----
 router.get('/', async (req, res) => {
@@ -427,7 +393,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
     if (!curso) {
       return res.status(404).json({ success: false, message: 'Curso no encontrado' });
     }
-    if (curso.creadorId !== usuario.id && usuario.rol !== 'ADMIN') {
+    if (!isOwnerOrAdmin(usuario, curso.creadorId)) {
       return res.status(403).json({
         success: false,
         message: 'Solo el autor o un admin puede borrar el curso',
