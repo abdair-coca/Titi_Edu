@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { runQuery, toNumber } from '../db.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
 // ---- Lista de ubicaciones ----
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const records = await runQuery(
       `MATCH (loc:Ubicacion)

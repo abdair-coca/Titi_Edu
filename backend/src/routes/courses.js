@@ -1,8 +1,8 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
 import { runQuery, toNumber } from '../db.js';
-import { requireAuth } from '../middleware/auth.js';
-import { loadCurrentUser, requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
+import { requireAuth, optionalAuth } from '../middleware/auth.js';
+import { loadCurrentUser, loadOptionalUser, requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
 import { syncInscripcion } from '../services/neo4j-sync.service.js';
 
 const router = Router();
@@ -152,7 +152,8 @@ router.get('/recommended', requireAuth, async (req, res) => {
 });
 
 // ---- GET /:id  — detalle del curso con módulos y lecciones ----
-router.get('/:id', async (req, res) => {
+// Guest/no-inscripto: solo temario (sin videoUrl). Borrador: solo dueño/co-profesor/ADMIN.
+router.get('/:id', optionalAuth, async (req, res) => {
   try {
     const curso = await prisma.curso.findUnique({
       where: { id: req.params.id },
@@ -182,6 +183,27 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Curso no encontrado' });
     }
 
+    const usuario = await loadOptionalUser(req);
+    const isAdmin = usuario?.rol === 'ADMIN';
+    const isOwner = Boolean(
+      usuario &&
+        (curso.creadorId === usuario.id ||
+          curso.profesores.some((p) => p.profesorId === usuario.id)),
+    );
+
+    // Borrador: no filtrar existencia — 404 en vez de 403 para quien no es dueño/admin.
+    if (!curso.publicado && !isOwner && !isAdmin) {
+      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+    }
+
+    let enrolled = false;
+    if (usuario && !isOwner && !isAdmin) {
+      const inscripcion = await prisma.inscripcion.findUnique({
+        where: { usuarioId_cursoId: { usuarioId: usuario.id, cursoId: curso.id } },
+      });
+      enrolled = Boolean(inscripcion);
+    }
+
     // Evaluación final: Evaluacion.cursoId no tiene relación en el schema,
     // así que se resuelve con una query aparte.
     const evaluacionFinal = await prisma.evaluacion.findFirst({
@@ -189,7 +211,24 @@ router.get('/:id', async (req, res) => {
       select: { id: true, titulo: true, esFinal: true, notaMinima: true, intentosMax: true },
     });
 
-    res.json({ success: true, data: { curso: { ...curso, evaluacionFinal } } });
+    // Sin acceso al contenido: se oculta el video de cada lección (solo queda el temario).
+    const cursoOut = isOwner || isAdmin || enrolled
+      ? curso
+      : {
+          ...curso,
+          modulos: curso.modulos.map((m) => ({
+            ...m,
+            lecciones: m.lecciones.map(({ id, titulo, orden }) => ({ id, titulo, orden })),
+          })),
+        };
+
+    res.json({
+      success: true,
+      data: {
+        curso: { ...cursoOut, evaluacionFinal },
+        viewer: { enrolled, isOwner: isOwner || isAdmin },
+      },
+    });
   } catch (err) {
     console.error('GET /courses/:id error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo curso' });

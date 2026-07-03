@@ -20,7 +20,7 @@ function serializeComment(record) {
 
 // ---- Listar comentarios de un post ----
 // Devuelve flat con replyTo: id-del-padre (o null si es raíz).
-router.get('/:postId', async (req, res) => {
+router.get('/:postId', requireAuth, async (req, res) => {
   try {
     const { postId } = req.params;
     const postExists = await runQuery(

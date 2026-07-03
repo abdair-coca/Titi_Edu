@@ -8,6 +8,7 @@ vi.mock('../../src/prisma.js', () => ({
     curso: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
     usuario: { findUnique: vi.fn() },
     evaluacion: { findFirst: vi.fn() },
+    inscripcion: { findUnique: vi.fn() },
   },
 }));
 vi.mock('../../src/services/neo4j-sync.service.js', () => ({ syncInscripcion: vi.fn() }));
@@ -38,11 +39,46 @@ describe('GET /api/courses/:id', () => {
   });
 
   it('200 con el curso y su evaluación final', async () => {
-    prisma.curso.findUnique.mockResolvedValue({ id: 'c1', titulo: 'Curso', modulos: [] });
+    prisma.curso.findUnique.mockResolvedValue({
+      id: 'c1', titulo: 'Curso', publicado: true, creadorId: 'creador-1', profesores: [], modulos: [],
+    });
     prisma.evaluacion.findFirst.mockResolvedValue(null);
     const res = await request(app).get('/api/courses/c1');
     expect(res.status).toBe(200);
     expect(res.body.data.curso.id).toBe('c1');
+  });
+
+  it('404 en un borrador para un guest (no filtra existencia)', async () => {
+    prisma.curso.findUnique.mockResolvedValue({
+      id: 'c1', titulo: 'Curso', publicado: false, creadorId: 'creador-1', profesores: [], modulos: [],
+    });
+    const res = await request(app).get('/api/courses/c1');
+    expect(res.status).toBe(404);
+  });
+
+  it('200 pero sin videoUrl en el temario para un guest', async () => {
+    prisma.curso.findUnique.mockResolvedValue({
+      id: 'c1', titulo: 'Curso', publicado: true, creadorId: 'creador-1', profesores: [],
+      modulos: [{ id: 'm1', lecciones: [{ id: 'l1', titulo: 'L1', orden: 1, videoUrl: 'http://video' }] }],
+    });
+    prisma.evaluacion.findFirst.mockResolvedValue(null);
+    const res = await request(app).get('/api/courses/c1');
+    expect(res.status).toBe(200);
+    expect(res.body.data.curso.modulos[0].lecciones[0].videoUrl).toBeUndefined();
+    expect(res.body.data.viewer).toEqual({ enrolled: false, isOwner: false });
+  });
+
+  it('200 con videoUrl para el autor, incluso en borrador', async () => {
+    prisma.curso.findUnique.mockResolvedValue({
+      id: 'c1', titulo: 'Curso', publicado: false, creadorId: 'u1', profesores: [],
+      modulos: [{ id: 'm1', lecciones: [{ id: 'l1', titulo: 'L1', orden: 1, videoUrl: 'http://video' }] }],
+    });
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'PROFESOR' });
+    prisma.evaluacion.findFirst.mockResolvedValue(null);
+    const res = await request(app).get('/api/courses/c1').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.curso.modulos[0].lecciones[0].videoUrl).toBe('http://video');
+    expect(res.body.data.viewer).toEqual({ enrolled: false, isOwner: true });
   });
 });
 

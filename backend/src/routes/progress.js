@@ -161,8 +161,8 @@ router.get('/certificate/:courseId', requireAuth, async (req, res) => {
   }
 });
 
-// ---- GET /api/progress/:username/achievements — logros públicos de un usuario ----
-router.get('/:username/achievements', async (req, res) => {
+// ---- GET /api/progress/:username/achievements — logros de un usuario (requiere login) ----
+router.get('/:username/achievements', requireAuth, async (req, res) => {
   try {
     const usuario = await prisma.usuario.findUnique({
       where: { username: req.params.username },
@@ -179,8 +179,8 @@ router.get('/:username/achievements', async (req, res) => {
   }
 });
 
-// ---- GET /api/progress/:username/streak — racha pública de un usuario ----
-router.get('/:username/streak', async (req, res) => {
+// ---- GET /api/progress/:username/streak — racha de un usuario (requiere login) ----
+router.get('/:username/streak', requireAuth, async (req, res) => {
   try {
     const { username } = req.params;
 

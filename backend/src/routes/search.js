@@ -1,9 +1,10 @@
 import { Router } from 'express';
 import { runQuery, toNumber } from '../db.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const q = (req.query.q ?? '').toString().trim();
     if (!q) {

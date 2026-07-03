@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
 import { runQuery, toNumber } from '../db.js';
-import { requireAuth, optionalAuth } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
 import prisma from '../prisma.js';
 import { checkLogroSocial } from '../services/achievement.service.js';
 import { otorgarGotasPorNeoId } from '../services/gotas.service.js';
@@ -68,8 +68,8 @@ router.get('/me', requireAuth, async (req, res) => {
   }
 });
 
-// ---- Perfil público ----
-router.get('/:username', optionalAuth, async (req, res) => {
+// ---- Perfil público (requiere login) ----
+router.get('/:username', requireAuth, async (req, res) => {
   try {
     const { username } = req.params;
     const records = await runQuery(
@@ -200,7 +200,7 @@ router.post('/:username/unfollow', requireAuth, async (req, res) => {
 });
 
 // ---- Followers ----
-router.get('/:username/followers', async (req, res) => {
+router.get('/:username/followers', requireAuth, async (req, res) => {
   try {
     const { username } = req.params;
     const records = await runQuery(
@@ -216,7 +216,7 @@ router.get('/:username/followers', async (req, res) => {
 });
 
 // ---- Following ----
-router.get('/:username/following', async (req, res) => {
+router.get('/:username/following', requireAuth, async (req, res) => {
   try {
     const { username } = req.params;
     const records = await runQuery(

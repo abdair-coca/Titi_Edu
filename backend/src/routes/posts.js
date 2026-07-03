@@ -6,7 +6,7 @@ import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import { runQuery, toNumber } from '../db.js';
 import prisma from '../prisma.js';
-import { requireAuth, optionalAuth } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
 import { cloudinaryEnabled, uploadBuffer, destroyAsset } from '../services/upload.service.js';
 import { otorgarGotasPorNeoId } from '../services/gotas.service.js';
 import { avanzarMisionesPorNeoId } from '../services/mision.service.js';
@@ -195,7 +195,7 @@ router.get('/feed/academic', requireAuth, async (req, res) => {
 });
 
 // ---- Explore ----
-router.get('/explore', optionalAuth, async (req, res) => {
+router.get('/explore', requireAuth, async (req, res) => {
   try {
     const userId = req.user?.id ?? null;
     const { limit, cursor } = parsePageParams(req);
@@ -352,7 +352,7 @@ router.post('/', requireAuth, upload.single('image'), async (req, res) => {
 });
 
 // ---- Post individual ----
-router.get('/:id', optionalAuth, async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id ?? null;

@@ -29,11 +29,24 @@ describe('GET /api/posts/feed', () => {
 });
 
 describe('GET /api/posts/explore', () => {
-  it('200 anónimo (optionalAuth)', async () => {
-    runQuery.mockResolvedValue([]);
+  it('401 sin token', async () => {
     const res = await request(app).get('/api/posts/explore');
+    expect(res.status).toBe(401);
+  });
+
+  it('200 con token', async () => {
+    runQuery.mockResolvedValue([]);
+    const res = await request(app).get('/api/posts/explore')
+      .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveProperty('nextCursor');
+  });
+});
+
+describe('GET /api/posts/:id', () => {
+  it('401 sin token', async () => {
+    const res = await request(app).get('/api/posts/p1');
+    expect(res.status).toBe(401);
   });
 });
 

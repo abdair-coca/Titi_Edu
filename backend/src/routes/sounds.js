@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { runQuery, toNumber } from '../db.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
 // ---- Lista de sonidos disponibles ----
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     const records = await runQuery(
       `MATCH (s:Sonido)
@@ -29,7 +30,7 @@ router.get('/', async (req, res) => {
 });
 
 // ---- Detalle de un sonido + posts que lo usan ----
-router.get('/:id', async (req, res) => {
+router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const records = await runQuery(

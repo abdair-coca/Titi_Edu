@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
-import { requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
+import { requireRole, isOwnerOrAdmin, ensureCourseContentAccess } from '../middleware/permissions.js';
 
 const router = Router();
 
@@ -163,8 +163,8 @@ router.delete('/modules/:id', requireAuth, requireRole('PROFESOR', 'ADMIN'), asy
   }
 });
 
-// ---- GET /api/modules/:id/lessons  — público, módulo con lecciones ordenadas ----
-router.get('/modules/:id/lessons', async (req, res) => {
+// ---- GET /api/modules/:id/lessons  — módulo con lecciones ordenadas (login + inscripción) ----
+router.get('/modules/:id/lessons', requireAuth, async (req, res) => {
   try {
     const modulo = await prisma.modulo.findUnique({
       where: { id: req.params.id },
@@ -178,6 +178,9 @@ router.get('/modules/:id/lessons', async (req, res) => {
     if (!modulo) {
       return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
     }
+
+    const access = await ensureCourseContentAccess(req, res, modulo.cursoId);
+    if (!access) return;
 
     const { lecciones, ...moduloSinLecciones } = modulo;
 

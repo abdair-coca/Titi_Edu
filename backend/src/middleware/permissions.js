@@ -32,3 +32,47 @@ export function requireRole(...roles) {
 export function isOwnerOrAdmin(usuario, creadorId) {
   return usuario.rol === 'ADMIN' || usuario.id === creadorId;
 }
+
+// Variante para rutas con optionalAuth: usuario de Postgres o null, sin tocar la respuesta.
+export async function loadOptionalUser(req) {
+  if (!req.user) return null;
+  if (req.dbUser) return req.dbUser;
+  const usuario = await prisma.usuario.findUnique({ where: { neoId: req.user.id } });
+  req.dbUser = usuario || null;
+  return req.dbUser;
+}
+
+// Acceso a CONTENIDO de un curso (lección/evaluación/etc): ADMIN, dueño/co-profesor
+// o inscripto. Responde 401/403 por sí mismo; devuelve null si ya respondió.
+export async function ensureCourseContentAccess(req, res, cursoId) {
+  const usuario = await loadCurrentUser(req, res);
+  if (!usuario) return null;
+
+  if (usuario.rol === 'ADMIN') {
+    return { usuario, isOwner: false, isAdmin: true, enrolled: false };
+  }
+
+  const curso = await prisma.curso.findUnique({
+    where: { id: cursoId },
+    select: {
+      creadorId: true,
+      profesores: { where: { profesorId: usuario.id }, select: { profesorId: true } },
+    },
+  });
+  const isOwner = Boolean(curso) && (curso.creadorId === usuario.id || curso.profesores.length > 0);
+  if (isOwner) {
+    return { usuario, isOwner: true, isAdmin: false, enrolled: false };
+  }
+
+  const inscripcion = await prisma.inscripcion.findUnique({
+    where: { usuarioId_cursoId: { usuarioId: usuario.id, cursoId } },
+  });
+  if (!inscripcion) {
+    res.status(403).json({
+      success: false,
+      message: 'Necesitás inscribirte en el curso para ver este contenido',
+    });
+    return null;
+  }
+  return { usuario, isOwner: false, isAdmin: false, enrolled: true };
+}

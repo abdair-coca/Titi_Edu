@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
-import { loadCurrentUser, requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
+import { loadCurrentUser, requireRole, isOwnerOrAdmin, ensureCourseContentAccess } from '../middleware/permissions.js';
 import { actualizarRacha, checkCursoCompletado } from '../services/progress.service.js';
 import { checkLogrosLeccion } from '../services/achievement.service.js';
 import { otorgarGotas } from '../services/gotas.service.js';
@@ -69,8 +69,8 @@ router.post(
   },
 );
 
-// ---- GET /api/lessons/:id  — lección con materiales (público) ----
-router.get('/lessons/:id', async (req, res) => {
+// ---- GET /api/lessons/:id  — lección con materiales (login + inscripción) ----
+router.get('/lessons/:id', requireAuth, async (req, res) => {
   try {
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
@@ -82,6 +82,9 @@ router.get('/lessons/:id', async (req, res) => {
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    if (!access) return;
+
     res.json({ success: true, data: { leccion } });
   } catch (err) {
     console.error('GET /api/lessons/:id error', err);
@@ -188,6 +191,8 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    if (!access) return;
 
     // ¿Era la primera vez que la completa? Sólo en ese caso actualizamos la racha.
     const previo = await prisma.progreso.findUnique({
@@ -316,9 +321,19 @@ router.put('/lessons/:id/note', requireAuth, async (req, res) => {
   }
 });
 
-// ---- GET /api/lessons/:id/comments  — público ----
-router.get('/lessons/:id/comments', async (req, res) => {
+// ---- GET /api/lessons/:id/comments  — login + inscripción ----
+router.get('/lessons/:id/comments', requireAuth, async (req, res) => {
   try {
+    const leccion = await prisma.leccion.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, modulo: { select: { cursoId: true } } },
+    });
+    if (!leccion) {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    if (!access) return;
+
     const comentarios = await prisma.comentarioLeccion.findMany({
       where: { leccionId: req.params.id },
       orderBy: { createdAt: 'desc' },
@@ -363,11 +378,13 @@ router.post('/lessons/:id/comments', requireAuth, async (req, res) => {
 
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true },
+      select: { id: true, modulo: { select: { cursoId: true } } },
     });
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    if (!access) return;
 
     const comentario = await prisma.comentarioLeccion.create({
       data: {

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
-import { requireAuth, optionalAuth } from '../middleware/auth.js';
+import { requireAuth } from '../middleware/auth.js';
+import { loadCurrentUser, ensureCourseContentAccess } from '../middleware/permissions.js';
 import { actualizarRacha, checkCursoCompletado } from '../services/progress.service.js';
 import { checkLogrosEvaluacion } from '../services/achievement.service.js';
 import { otorgarGotas } from '../services/gotas.service.js';
@@ -10,22 +11,6 @@ import { consumirItem } from '../services/tienda.service.js';
 const router = Router();
 
 const TIPOS_VALIDOS = ['OPCION_MULTIPLE', 'VERDADERO_FALSO', 'RESPUESTA_CORTA'];
-
-// --- Helpers (mismo patrón que routes/courses.js) ---
-
-// El JWT actual lleva el id de Neo4j. En Postgres ese id vive en `Usuario.neoId`.
-async function loadCurrentUser(req, res) {
-  if (req.dbUser) return req.dbUser;
-  const usuario = await prisma.usuario.findUnique({
-    where: { neoId: req.user.id },
-  });
-  if (!usuario) {
-    res.status(401).json({ success: false, message: 'Usuario no encontrado' });
-    return null;
-  }
-  req.dbUser = usuario;
-  return usuario;
-}
 
 /** Normaliza texto para comparar respuestas cortas: trim, minúsculas, sin tildes, espacios colapsados. */
 const DIACRITICS_RE = new RegExp('[\\u0300-\\u036f]', 'g');
@@ -283,15 +268,12 @@ router.post('/courses/:id/final-evaluation', requireAuth, async (req, res) => {
   }
 });
 
-// ---- GET /api/modules/:id/evaluation — evaluación del módulo (completa si sos el autor) ----
-router.get('/modules/:id/evaluation', optionalAuth, async (req, res) => {
+// ---- GET /api/modules/:id/evaluation — evaluación del módulo (login + inscripción) ----
+router.get('/modules/:id/evaluation', requireAuth, async (req, res) => {
   try {
     const modulo = await prisma.modulo.findUnique({
       where: { id: req.params.id },
-      include: {
-        curso: { select: { creadorId: true } },
-        evaluacion: { include: EVAL_INCLUDE },
-      },
+      include: { evaluacion: { include: EVAL_INCLUDE } },
     });
     if (!modulo) {
       return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
@@ -300,15 +282,14 @@ router.get('/modules/:id/evaluation', optionalAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Este módulo no tiene evaluación' });
     }
 
-    let esAutor = false;
-    if (req.user) {
-      const usuario = await prisma.usuario.findUnique({ where: { neoId: req.user.id } });
-      esAutor = Boolean(usuario && usuario.id === modulo.curso.creadorId);
-    }
+    const access = await ensureCourseContentAccess(req, res, modulo.cursoId);
+    if (!access) return;
 
     res.json({
       success: true,
-      data: { evaluacion: esAutor ? modulo.evaluacion : publicEvaluacion(modulo.evaluacion) },
+      data: {
+        evaluacion: access.isOwner || access.isAdmin ? modulo.evaluacion : publicEvaluacion(modulo.evaluacion),
+      },
     });
   } catch (err) {
     console.error('GET /modules/:id/evaluation error', err);
@@ -316,12 +297,12 @@ router.get('/modules/:id/evaluation', optionalAuth, async (req, res) => {
   }
 });
 
-// ---- GET /api/courses/:id/final-evaluation — evaluación final del curso ----
-router.get('/courses/:id/final-evaluation', optionalAuth, async (req, res) => {
+// ---- GET /api/courses/:id/final-evaluation — evaluación final del curso (login + inscripción) ----
+router.get('/courses/:id/final-evaluation', requireAuth, async (req, res) => {
   try {
     const curso = await prisma.curso.findUnique({
       where: { id: req.params.id },
-      select: { id: true, creadorId: true },
+      select: { id: true },
     });
     if (!curso) {
       return res.status(404).json({ success: false, message: 'Curso no encontrado' });
@@ -335,15 +316,12 @@ router.get('/courses/:id/final-evaluation', optionalAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Este curso no tiene evaluación final' });
     }
 
-    let esAutor = false;
-    if (req.user) {
-      const usuario = await prisma.usuario.findUnique({ where: { neoId: req.user.id } });
-      esAutor = Boolean(usuario && usuario.id === curso.creadorId);
-    }
+    const access = await ensureCourseContentAccess(req, res, curso.id);
+    if (!access) return;
 
     res.json({
       success: true,
-      data: { evaluacion: esAutor ? evaluacion : publicEvaluacion(evaluacion) },
+      data: { evaluacion: access.isOwner || access.isAdmin ? evaluacion : publicEvaluacion(evaluacion) },
     });
   } catch (err) {
     console.error('GET /courses/:id/final-evaluation error', err);
@@ -351,19 +329,24 @@ router.get('/courses/:id/final-evaluation', optionalAuth, async (req, res) => {
   }
 });
 
-// ---- GET /api/evaluations/:id — detalle (sin respuestas correctas para estudiantes) ----
-router.get('/evaluations/:id', optionalAuth, async (req, res) => {
+// ---- GET /api/evaluations/:id — detalle (login + inscripción; sin respuestas correctas si no sos autor/admin) ----
+router.get('/evaluations/:id', requireAuth, async (req, res) => {
   try {
+    const usuario = await loadCurrentUser(req, res);
+    if (!usuario) return;
+
     const loaded = await loadEvaluacion(req.params.id);
     if (!loaded) {
       return res.status(404).json({ success: false, message: 'Evaluación no encontrada' });
     }
     const { ev, curso } = loaded;
 
-    let esAutor = false;
-    if (req.user && curso) {
-      const usuario = await prisma.usuario.findUnique({ where: { neoId: req.user.id } });
-      esAutor = Boolean(usuario && usuario.id === curso.creadorId);
+    // Evaluación huérfana (sin curso asociado): no hay contra qué chequear inscripción.
+    let esAutor = usuario.rol === 'ADMIN';
+    if (curso) {
+      const access = await ensureCourseContentAccess(req, res, curso.id);
+      if (!access) return;
+      esAutor = access.isOwner || access.isAdmin;
     }
 
     res.json({
