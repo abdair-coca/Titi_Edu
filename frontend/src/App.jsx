@@ -15,6 +15,7 @@ import Profile from './pages/Profile.jsx';
 import HashtagFeed from './pages/HashtagFeed.jsx';
 import Notifications from './pages/Notifications.jsx';
 import Navbar from './components/Navbar.jsx';
+import GuestShell from './components/GuestShell.jsx';
 import PageTransition from './components/PageTransition.jsx';
 import GotaToast from './components/GotaToast.jsx';
 import WeeklyPrizeCelebration from './components/WeeklyPrizeCelebration.jsx';
@@ -36,14 +37,10 @@ import AdminCategories from './pages/admin/AdminCategories.jsx'
 
 // ---- Layouts ----
 
-// Wrapper para rutas privadas: sidebar + contenido principal con padding-left
-function ProtectedLayout() {
-  const { isAuthenticated } = useAuth();
+// Shell de sesión iniciada: sidebar + contenido principal con padding-left.
+// Usado por ProtectedLayout y por CatalogLayout cuando hay sesión.
+function AppShell() {
   const location = useLocation();
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  }
 
   // La pantalla de aprendizaje es un "player" full-bleed: sin el max-w-7xl
   // centrado ni el padding grande del resto de páginas, para pegar las
@@ -75,11 +72,36 @@ function ProtectedLayout() {
   );
 }
 
-// Si ya hay sesión, /login y /register redirigen al feed
-function PublicOnlyLayout() {
-  const { isAuthenticated } = useAuth();
+// Wrapper para rutas privadas: exige sesión o redirige a /login guardando la
+// ruta de origen. `initializing`: mientras se valida un token guardado contra
+// el server, no renderiza nada (evita el flash de UI con sesión vencida).
+function ProtectedLayout() {
+  const { isAuthenticated, initializing } = useAuth();
   const location = useLocation();
-  if (isAuthenticated) return <Navigate to="/feed" replace />;
+
+  if (initializing) return null;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
+  return <AppShell />;
+}
+
+// Rutas públicas para guest Y logueado (catálogo): shell completo si hay
+// sesión, header simple con login/registro si no.
+function CatalogLayout() {
+  const { isAuthenticated, initializing } = useAuth();
+  if (initializing) return null;
+  return isAuthenticated ? <AppShell /> : <GuestShell />;
+}
+
+// Si ya hay sesión, /login y /register redirigen a la ruta de origen (o /feed)
+function PublicOnlyLayout() {
+  const { isAuthenticated, initializing } = useAuth();
+  const location = useLocation();
+  if (initializing) return null;
+  if (isAuthenticated) {
+    return <Navigate to={location.state?.from || '/feed'} replace />;
+  }
   return (
     <PageTransition key={location.pathname}>
       <Outlet />
@@ -156,6 +178,12 @@ export default function App() {
         <Route path="/register" element={<Register />} />
       </Route>
 
+      {/* Catálogo: público para guest (header simple), shell completo si hay sesión */}
+      <Route element={<CatalogLayout />}>
+        <Route path="/courses" element={<Courses />} />
+        <Route path="/courses/:id" element={<CourseDetail />} />
+      </Route>
+
       {/* Rutas protegidas con sidebar */}
       <Route element={<ProtectedLayout />}>
         <Route path="/feed" element={<Feed />} />
@@ -164,8 +192,6 @@ export default function App() {
         <Route path="/profile/:username" element={<Profile />} />
         <Route path="/hashtag/:tag" element={<HashtagFeed />} />
         <Route path="/notifications" element={<Notifications />} />
-        <Route path="/courses" element={<Courses />} />
-        <Route path="/courses/:id" element={<CourseDetail />} />
         <Route path="/my-courses" element={<MyCourses />} />
         <Route path="/courses/:id/learn" element={<LearnCourse />} />
         <Route path="/certificates" element={<Certificates />} />

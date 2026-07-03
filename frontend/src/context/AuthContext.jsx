@@ -14,6 +14,9 @@ export function AuthProvider({ children }) {
   });
   const [token, setToken] = useState(() => localStorage.getItem('token'));
   const [loading, setLoading] = useState(false);
+  // Solo arranca en true si había token guardado: valida la sesión contra el
+  // server antes del primer render protegido. Guests: false desde el inicio.
+  const [initializing, setInitializing] = useState(() => Boolean(localStorage.getItem('token')));
 
   // Sincroniza storage cuando cambian user/token
   useEffect(() => {
@@ -80,10 +83,31 @@ export function AuthProvider({ children }) {
     return null;
   }, [token, logout]);
 
+  // Sesión invalidada por el server (401 con token presente, ver client.js):
+  // solo limpia estado, el redirect lo hacen los guards del router al re-renderizar.
+  useEffect(() => {
+    function handleUnauthorized() {
+      logout();
+    }
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, [logout]);
+
+  // Valida el token guardado contra el server antes del primer render
+  // protegido: evita un flash de UI logueada con un token ya vencido.
+  useEffect(() => {
+    if (!localStorage.getItem('token')) {
+      setInitializing(false);
+      return;
+    }
+    refreshMe().finally(() => setInitializing(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const value = {
     user,
     token,
     loading,
+    initializing,
     isAuthenticated: Boolean(token && user),
     login,
     register,

@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useGamification } from '../context/GamificationContext.jsx';
+import TitiMascot from '../components/TitiMascot.jsx';
 import LessonComments from '../components/LessonComments.jsx';
 import StreakToast from '../components/StreakToast.jsx';
 import AchievementToast from '../components/AchievementToast.jsx';
@@ -37,6 +38,8 @@ export default function LearnCourse() {
   const [curso, setCurso] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // 403 al pedir contenido real (no inscripto, curso visto solo por el temario trimeado)
+  const [accessDenied, setAccessDenied] = useState(false);
 
   // IDs de lecciones completadas
   const [completed, setCompleted] = useState(() => new Set());
@@ -156,8 +159,11 @@ export default function LearnCourse() {
           }));
         }
       })
-      .catch(() => {
-        // Silencioso — fallback a la versión sin contenido.
+      .catch((err) => {
+        if (cancelled) return;
+        // 403 = no inscripto: no hay contenido real que mostrar, cortamos con
+        // una pantalla dedicada en vez de dejar "Cargando contenido…" colgado.
+        if (err.response?.status === 403) setAccessDenied(true);
       });
     return () => {
       cancelled = true;
@@ -371,6 +377,30 @@ export default function LearnCourse() {
   }
 
   if (!curso) return null;
+
+  // --- Render: no inscripto (el temario cargó, pero el contenido no) ---
+  if (accessDenied) {
+    return (
+      <div className="flex min-h-screen bg-titi-cream items-center justify-center p-8">
+        <div className="max-w-md w-full flex flex-col items-center text-center">
+          <TitiMascot state="triste" size="lg" message="" className="mb-4" />
+          <h2 className="text-xl font-bold text-titi-dark mb-2">
+            Necesitás inscribirte para ver este curso
+          </h2>
+          <p className="text-sm text-gray-400 mb-6">
+            Andá al detalle del curso e inscribite gratis para acceder a las lecciones.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate(`/courses/${courseId}`)}
+            className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
+          >
+            Ir al detalle del curso
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen md:min-h-0 md:h-[calc(100vh-1.5rem)] md:overflow-hidden bg-titi-cream md:gap-3">

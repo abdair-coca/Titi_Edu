@@ -33,16 +33,15 @@ export default function CourseDetail() {
   const contentRef = useStaggerReveal([curso?.id]);
   const modulesRef = useStaggerReveal([curso?.modulos?.length]);
 
-  // Enrollment state
+  // Enrollment state — `enrolled` viene embebido en data.viewer de /api/courses/:id
   const [enrolled, setEnrolled] = useState(false);
-  const [enrollChecked, setEnrollChecked] = useState(false);
   const [enrolling, setEnrolling] = useState(false);
   const [enrollError, setEnrollError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
 
   const isStudent = isAuthenticated && user?.rol === 'ESTUDIANTE';
 
-  // --- Fetch detalle del curso ---
+  // --- Fetch detalle del curso (incluye viewer.enrolled) ---
   useEffect(() => {
     if (!courseId) return;
     let cancelled = false;
@@ -53,8 +52,12 @@ export default function CourseDetail() {
       .get(`/api/courses/${courseId}`)
       .then(({ data }) => {
         if (cancelled) return;
-        if (data?.success) setCurso(data.data?.curso || null);
-        else setError(data?.message || 'No se pudo cargar el curso');
+        if (data?.success) {
+          setCurso(data.data?.curso || null);
+          setEnrolled(Boolean(data.data?.viewer?.enrolled));
+        } else {
+          setError(data?.message || 'No se pudo cargar el curso');
+        }
       })
       .catch((err) => {
         if (cancelled) return;
@@ -74,36 +77,6 @@ export default function CourseDetail() {
       cancelled = true;
     };
   }, [courseId]);
-
-  // --- Check enrollment ---
-  useEffect(() => {
-    if (!courseId || !isStudent) {
-      setEnrollChecked(true);
-      return;
-    }
-    let cancelled = false;
-    setEnrollChecked(false);
-
-    client
-      .get('/api/courses/my/enrolled')
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.success) {
-          const list = data.data?.inscripciones || [];
-          setEnrolled(list.some((i) => i.cursoId === courseId));
-        }
-      })
-      .catch(() => {
-        // Silencioso: si falla, asumimos no inscrito.
-      })
-      .finally(() => {
-        if (!cancelled) setEnrollChecked(true);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [courseId, isStudent]);
 
   const handleEnroll = async () => {
     setEnrolling(true);
@@ -389,15 +362,7 @@ export default function CourseDetail() {
                 Inicia sesión para inscribirte
               </button>
             ) : isStudent ? (
-              !enrollChecked ? (
-                <button
-                  type="button"
-                  disabled
-                  className="bg-titi-yellow text-titi-dark font-bold text-base w-full px-6 py-3 rounded-xl opacity-50 cursor-not-allowed"
-                >
-                  Verificando inscripción…
-                </button>
-              ) : enrolled ? (
+              enrolled ? (
                 <button
                   type="button"
                   onClick={() => navigate(`/courses/${courseId}/learn`)}

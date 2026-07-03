@@ -15,10 +15,15 @@ client.interceptors.request.use((config) => {
 client.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token inválido o expirado — limpiamos sesión
+    // Solo si había token: evita disparar esto ante un login/registro con
+    // credenciales incorrectas (esos 401 no significan sesión invalidada).
+    if (error.response?.status === 401 && localStorage.getItem('token')) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      // AuthContext escucha esto para limpiar su estado; los guards del
+      // router hacen el redirect al re-renderizar (sin loops: /login y
+      // /register no hacen requests autenticados).
+      window.dispatchEvent(new Event('auth:unauthorized'));
     }
     return Promise.reject(error);
   }

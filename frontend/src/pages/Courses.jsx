@@ -671,7 +671,7 @@ export default function Courses() {
             <div className="absolute -bottom-4 -left-4 bg-titi-cream rounded-xl px-4 py-3 shadow-lg flex items-center gap-2.5">
               <GotaIcon className="w-5 h-5 text-sky-400" />
               <div className="leading-tight">
-                <p className="text-base font-extrabold text-titi-dark">+1 gota</p>
+                <p className="text-base font-extrabold text-titi-dark">+10 gotas</p>
                 <p className="text-xs font-bold text-gray-400">por lección</p>
               </div>
             </div>
@@ -753,10 +753,14 @@ export default function Courses() {
             </p>
             <button
               type="button"
-              onClick={() => navigate('/certificates')}
+              onClick={() =>
+                isAuthenticated
+                  ? navigate('/certificates')
+                  : navigate('/login', { state: { from: '/courses' } })
+              }
               className="bg-white text-titi-dark font-bold text-sm px-5 py-2.5 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150"
             >
-              Ver mis logros
+              {isAuthenticated ? 'Ver mis logros' : 'Iniciá sesión'}
             </button>
           </div>
           <div ref={badgesRef} className="grid grid-cols-3 gap-3 sm:gap-4">
@@ -986,12 +990,12 @@ function FeaturedCategoryCard({ categoria, count, onClick }) {
       {/* Thumb — ilustración de la categoría (cuadrada, sin recortar; fallback
           al emoji si falta). Contenedor cuadrado + object-contain = la imagen
           llena exacto y el crema del thumb matchea el fondo del dibujo. */}
-      <div className="aspect-square bg-titi-cream flex items-center justify-center overflow-hidden">
+      <div className="h-[200px] aspect-square bg-titi-cream flex items-center justify-center overflow-hidden">
         {imgOk ? (
           <img
             src={categoriaImg(categoria.nombre)}
             alt={categoria.nombre}
-            className="w-full h-full object-contain select-none"
+            className="w-full h-64 object-contain select-none"
             draggable={false}
             loading="lazy"
             onError={() => setImgOk(false)}
@@ -1197,6 +1201,7 @@ function SkeletonGrid() {
 // ---- Empty state (sección 8 del DESIGN.md) ----
 function EmptyState({ hasFilters, onClear }) {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   if (hasFilters) {
     return (
@@ -1231,10 +1236,14 @@ function EmptyState({ hasFilters, onClear }) {
       </p>
       <button
         type="button"
-        onClick={() => navigate('/feed')}
+        onClick={() =>
+          isAuthenticated
+            ? navigate('/feed')
+            : navigate('/login', { state: { from: '/courses' } })
+        }
         className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        Volver al feed
+        {isAuthenticated ? 'Volver al feed' : 'Iniciá sesión'}
       </button>
     </div>
   );

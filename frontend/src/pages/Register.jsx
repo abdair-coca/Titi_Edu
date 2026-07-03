@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
 
@@ -8,6 +8,8 @@ const USERNAME_RE = /^[a-zA-Z0-9_]{3,20}$/;
 export default function Register() {
   const { register, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = location.state?.from || '/feed';
 
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -30,7 +32,7 @@ export default function Register() {
     if (v) { setError(v); return; }
     try {
       await register(username.trim(), email.trim(), password);
-      navigate('/feed', { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Error al crear cuenta');
     }
