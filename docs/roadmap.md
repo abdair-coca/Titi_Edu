@@ -242,3 +242,9 @@ Como en la Etapa 6: cada subfase cierra con un **MINOR**; el cierre corta el **M
 - **Rediseño LearnCourse (3 columnas):** parcial. Backend de notas implementado
   (`NotaLeccion` + `GET/PUT /api/lessons/:id/note`). El layout de 3 columnas y la
   card "Profundiza" (stub de Claude API) viven como spec en `frontend/agent.md`.
+- **Catálogo guest + gate de acceso (sin tag, en curso):** guests navegan
+  `/` → catálogo público (`GuestShell.jsx`) y `CourseDetail` sin login; contenido
+  real de curso (módulos/lecciones/evaluaciones) y endpoints sociales exigen
+  login + inscripción vía `middleware/permissions.js`. Interceptor axios maneja
+  401 global; login/registro devuelven al usuario a la página de origen.
+  Commits: `5d3270b`, `ca4afdd`, `4ff7e76`, `cbd74f2`.
