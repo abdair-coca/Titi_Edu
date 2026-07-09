@@ -511,7 +511,10 @@ export default function Courses() {
                 key={c.id}
                 categoria={c}
                 count={coursesByCat[c.id]?.length || 0}
-                onClick={() => setCategoria(c.id)}
+                onClick={() => {
+                  setCategoria(c.id);
+                  goToTrending();
+                }}
               />
             ))}
           </div>
@@ -559,7 +562,10 @@ export default function Courses() {
         >
           <CategoryPill
             active={categoria === 'all'}
-            onClick={() => setCategoria('all')}
+            onClick={() => {
+              setCategoria('all');
+              goToTrending();
+            }}
           >
             Todas
           </CategoryPill>
@@ -567,7 +573,10 @@ export default function Courses() {
             <CategoryPill
               key={c.id}
               active={categoria === c.id}
-              onClick={() => setCategoria(c.id)}
+              onClick={() => {
+                setCategoria(c.id);
+                goToTrending();
+              }}
             >
               {c.icono} {c.nombre}
             </CategoryPill>
@@ -852,7 +861,10 @@ export default function Courses() {
               <div key={c.id}>
                 <button
                   type="button"
-                  onClick={() => setCategoria(c.id)}
+                  onClick={() => {
+                    setCategoria(c.id);
+                    goToTrending();
+                  }}
                   className="text-base font-bold text-titi-streak uppercase tracking-wide mb-3 hover:text-titi-yellow-dark transition-colors"
                 >
                   {c.nombre}

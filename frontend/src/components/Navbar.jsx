@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useGamification } from '../context/GamificationContext.jsx';
 import client from '../api/client.js';
 import StreakBadge, { FlameIcon } from './StreakBadge.jsx';
 import useStreak from '../hooks/useStreak.js';
@@ -89,6 +90,7 @@ function sidebarItemClass({ isActive }) {
 const sidebarLabel = 'whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200';
 
 function Sidebar({ user, onLogout, unread, streak }) {
+  const { gotas } = useGamification();
   return (
     <aside className="hidden md:flex group fixed left-0 top-0 h-screen w-20 hover:w-64 bg-titi-dark border-r border-white/10 flex-col z-50 text-white overflow-hidden transition-[width] duration-200 ease-out">
       <Link to="/feed" className="flex items-center gap-2 h-16 px-5 border-b border-white/10 shrink-0">
@@ -150,10 +152,20 @@ function Sidebar({ user, onLogout, unread, streak }) {
         <Link
           to="/leaderboard"
           aria-label="Mis gotas"
-          className="mx-3 mb-1 flex items-center gap-1.5 px-2 py-2 rounded-xl hover:bg-white/10 transition-colors shrink-0"
+          className="relative mx-3 mb-1 px-2 py-2 rounded-xl hover:bg-white/10 transition-colors shrink-0"
         >
-          <GotasCounter iconClass="w-7 h-7" className="text-xl" hidden={`${sidebarLabel}`} />
-          <span className={`text-sm font-bold text-white/70 ${sidebarLabel}`}>gotas</span>
+          {/* Crossfade gotas: colapsado = solo número; expandido = gota + número
+              + "gotas". Mismo patrón que la racha (ver más abajo): el número
+              coincide en tamaño/posición entre ambos estados. */}
+          <div className="flex items-center gap-1.5 opacity-100 group-hover:opacity-0 transition-opacity duration-200 ease-out pointer-events-none">
+            <span className="font-black text-xl leading-none tabular-nums text-titi-yellow">
+              {gotas.saldo}
+            </span>
+          </div>
+          <div className="absolute inset-x-0 top-0 flex items-center gap-1.5 px-2 py-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ease-out">
+            <GotasCounter iconClass="w-7 h-7" className="text-xl" />
+            <span className="text-sm font-bold text-white/70">gotas</span>
+          </div>
         </Link>
       )}
       {user && (
