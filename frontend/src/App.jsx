@@ -16,6 +16,7 @@ import Notifications from './pages/Notifications.jsx';
 import Navbar from './components/Navbar.jsx';
 import GuestShell from './components/GuestShell.jsx';
 import PageTransition from './components/PageTransition.jsx';
+import ScrollToTop from './components/ScrollToTop.jsx';
 import GotaToast from './components/GotaToast.jsx';
 import WeeklyPrizeCelebration from './components/WeeklyPrizeCelebration.jsx';
 import Leaderboard from './pages/Leaderboard.jsx'
@@ -151,56 +152,59 @@ function Placeholder({ title, description }) {
 
 export default function App() {
   return (
-    <Routes>
-      {/* Landing pública */}
-      <Route path="/" element={<Home />} />
+    <>
+      <ScrollToTop />
+      <Routes>
+        {/* Landing pública */}
+        <Route path="/" element={<Home />} />
 
-      {/* Verificación pública de certificados (sin login) */}
-      <Route path="/verify/:codigo" element={<VerifyCertificate />} />
+        {/* Verificación pública de certificados (sin login) */}
+        <Route path="/verify/:codigo" element={<VerifyCertificate />} />
 
-      {/* Rutas solo para no autenticados */}
-      <Route element={<PublicOnlyLayout />}>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Route>
-
-      {/* Catálogo: público para guest (header simple), shell completo si hay sesión */}
-      <Route element={<CatalogLayout />}>
-        <Route path="/courses" element={<Courses />} />
-        <Route path="/courses/:id" element={<CourseDetail />} />
-      </Route>
-
-      {/* Rutas protegidas con sidebar */}
-      <Route element={<ProtectedLayout />}>
-        <Route path="/feed" element={<Feed />} />
-        <Route path="/explore" element={<Explore />} />
-        <Route path="/search" element={<Navigate to="/explore" replace />} />
-        <Route path="/profile/:username" element={<Profile />} />
-        <Route path="/hashtag/:tag" element={<HashtagFeed />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/my-courses" element={<MyCourses />} />
-        <Route path="/courses/:id/learn" element={<LearnCourse />} />
-        <Route path="/certificates" element={<Certificates />} />
-        <Route path="/leaderboard" element={<Leaderboard />} />
-        <Route path="/shop" element={<Shop />} />
-        <Route path="/teacher" element={<MyTeaching />} />
-        <Route element={<TeacherOnly />}>
-          <Route path="/teacher/courses/new" element={<CourseEditor />} />
-          <Route path="/teacher/courses/:id/edit" element={<CourseEditor />} />
-          <Route path="/teacher/courses/:id/modules" element={<ModulesEditor />} />
-          <Route path="/teacher/modules/:moduleId/evaluation" element={<EvaluationEditor mode="module" />} />
-          <Route path="/teacher/courses/:id/final-evaluation" element={<EvaluationEditor mode="final" />} />
+        {/* Rutas solo para no autenticados */}
+        <Route element={<PublicOnlyLayout />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
         </Route>
-        <Route element={<AdminOnly />}>
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/courses" element={<AdminCourses />} />
-          <Route path="/admin/categories" element={<AdminCategories />} />
-        </Route>
-      </Route>
 
-      {/* 404 */}
-      <Route path="*" element={<Placeholder title="404 — Ruta no encontrada" />} />
-    </Routes>
+        {/* Catálogo: público para guest (header simple), shell completo si hay sesión */}
+        <Route element={<CatalogLayout />}>
+          <Route path="/courses" element={<Courses />} />
+          <Route path="/courses/:id" element={<CourseDetail />} />
+        </Route>
+
+        {/* Rutas protegidas con sidebar */}
+        <Route element={<ProtectedLayout />}>
+          <Route path="/feed" element={<Feed />} />
+          <Route path="/explore" element={<Explore />} />
+          <Route path="/search" element={<Navigate to="/explore" replace />} />
+          <Route path="/profile/:username" element={<Profile />} />
+          <Route path="/hashtag/:tag" element={<HashtagFeed />} />
+          <Route path="/notifications" element={<Notifications />} />
+          <Route path="/my-courses" element={<MyCourses />} />
+          <Route path="/courses/:id/learn" element={<LearnCourse />} />
+          <Route path="/certificates" element={<Certificates />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/shop" element={<Shop />} />
+          <Route path="/teacher" element={<MyTeaching />} />
+          <Route element={<TeacherOnly />}>
+            <Route path="/teacher/courses/new" element={<CourseEditor />} />
+            <Route path="/teacher/courses/:id/edit" element={<CourseEditor />} />
+            <Route path="/teacher/courses/:id/modules" element={<ModulesEditor />} />
+            <Route path="/teacher/modules/:moduleId/evaluation" element={<EvaluationEditor mode="module" />} />
+            <Route path="/teacher/courses/:id/final-evaluation" element={<EvaluationEditor mode="final" />} />
+          </Route>
+          <Route element={<AdminOnly />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/courses" element={<AdminCourses />} />
+            <Route path="/admin/categories" element={<AdminCategories />} />
+          </Route>
+        </Route>
+
+        {/* 404 */}
+        <Route path="*" element={<Placeholder title="404 — Ruta no encontrada" />} />
+      </Routes>
+    </>
   );
 }
