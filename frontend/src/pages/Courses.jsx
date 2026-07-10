@@ -550,10 +550,13 @@ export default function Courses() {
         {/* Sentinel para detectar cuándo las tabs quedan pegadas arriba */}
         <div ref={tabsSentinelRef} aria-hidden="true" className="h-px" />
 
-        {/* Tabs de categoría — sticky con look flotante al pegarse */}
+        {/* Tabs de categoría — sticky con look flotante al pegarse. En mobile
+            es una tira horizontal con scroll (flex-wrap ahí apila 4-5 filas y
+            tapa media pantalla); desde sm hay lugar de sobra para envolver. */}
         <div
           className={[
-            'sticky top-14 md:top-2 z-20 -mt-3 mb-3 py-3 flex flex-wrap gap-2',
+            'sticky top-14 md:top-2 z-20 -mt-3 mb-3 py-3 flex flex-nowrap sm:flex-wrap gap-2',
+            'overflow-x-auto sm:overflow-visible [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
             'rounded-2xl border border-transparent transition-all duration-200',
             tabsStuck
               ? 'bg-white px-3 border-gray-100 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.22)]'
@@ -1054,7 +1057,7 @@ function CategoryPill({ active, onClick, children }) {
       onClick={onClick}
       aria-pressed={active}
       className={[
-        'h-9 px-4 rounded-full text-sm font-bold cursor-pointer select-none',
+        'h-9 px-4 rounded-full text-sm font-bold cursor-pointer select-none shrink-0 whitespace-nowrap',
         'transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow',
         active
           ? 'bg-titi-yellow text-titi-dark shadow-[0_3px_0_#E6B800] -translate-y-0.5'
