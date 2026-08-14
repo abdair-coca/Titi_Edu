@@ -106,8 +106,8 @@ Listo. Abrí `http://localhost:5173` y entrá con una cuenta demo:
        │ Vercel                           └──────┼───────────┼──────┘
        │                                         ▼           ▼
        │                                  ┌───────────┐ ┌──────────┐
-       │                                  │ PostgreSQL│ │  Neo4j   │
-       │                                  │ (Railway) │ │ (Aura)   │
+        │                                  │ PostgreSQL│ │  Neo4j   │
+        │                                  │  (Neon)   │ │ (Aura)   │
        │                                  └───────────┘ └──────────┘
        │                                         │
        │                                  ┌──────▼──────┐
@@ -179,7 +179,8 @@ y build del frontend. Un check rojo bloquea el merge.
 
 | Capa | Plataforma | Notas |
 |---|---|---|
-| Backend | **Railway** | Postgres administrado + `prisma migrate deploy` en el release (`railway.json`) |
+| Backend | **Render** | Blueprint `render.yaml`; migraciones en el start (`prisma migrate deploy && npm start`); free duerme a los 15 min → ping de UptimeRobot |
+| PostgreSQL | **Neon** | Serverless gratis, `pgvector` disponible (chat bot futuro) |
 | Frontend | **Vercel** | `vercel.json` con rewrite SPA; setear `VITE_API_URL` al backend |
 | Neo4j | **Aura** | `NEO4J_URI/USER/PASSWORD` |
 | Imágenes | **Cloudinary** | `CLOUDINARY_CLOUD_NAME/API_KEY/API_SECRET` |

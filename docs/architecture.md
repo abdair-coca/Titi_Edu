@@ -11,9 +11,9 @@ para patrones de código y convenciones ver [conventions.md](conventions.md).
 Frontend   React 18 + Vite 5 + Tailwind 3 + React Router v6 + Axios
 Backend    Node 20 + Express 5 + JWT + bcrypt + multer
 Neo4j      Red social (Neo4j Aura) — usuarios, posts, follows, likes, hashtags…
-PostgreSQL Capa educativa + gamificación (Prisma) — cursos, progreso, gotas…
+PostgreSQL Capa educativa + gamificación (Prisma, Neon) — cursos, progreso, gotas…
 Storage    Cloudinary (fallback a disco local en dev sin credenciales)
-Deploy     Railway (backend) + Vercel (frontend)
+Deploy     Render (backend) + Vercel (frontend)
 Motion     GSAP (UI) + animaciones WebP de la mascota (subfase 6.4)
 ```
 

@@ -15,7 +15,7 @@ toman tus amigos, las recomendaciones salen de tu red.
 Frontend   React 18 + Vite 5 + Tailwind 3 + React Router v6 + Axios + GSAP
 Backend    Node 20 + Express 5 + JWT + bcrypt + multer
 Neo4j      Red social (Aura)        PostgreSQL  Educativo + gamificación (Prisma)
-Storage    Cloudinary               Deploy      Railway (back) + Vercel (front)
+Storage    Cloudinary               Deploy      Render (back) + Vercel (front)
 ```
 
 **Dual-DB en una línea:** cada usuario vive en ambas bases, ligadas por
@@ -56,7 +56,7 @@ diarias, ranking de amigos semanal y mascota WebP animada, todo en la app.
 login/inscripción en contenido de cursos y endpoints sociales. Detalle en
 [docs/roadmap.md](docs/roadmap.md) → "Trabajo fuera del plan de etapa".
 
-App live: frontend `https://titiedu.vercel.app` · backend `https://titiedu-production.up.railway.app`.
+App live: frontend `https://titiedu.vercel.app` · backend `https://titi-backend.onrender.com`.
 
 ---
 
