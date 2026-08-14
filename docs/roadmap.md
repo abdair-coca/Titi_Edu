@@ -20,7 +20,7 @@ falta". Modelos y reglas de la gamificación en [architecture.md](architecture.m
 | 4 Integración Social + Admin | `v0.4.0` | Propagación a Neo4j (`CursoRef`, `INSCRITO_EN`/`COMPLETO_CURSO`), feed académico, recomendaciones por amigos, panel admin (10 endpoints), eliminado `become-teacher` |
 | 5 Pulido y Deploy | `v1.0.0` | Cloudinary, paginación cursor-based, índices, suite hermética Vitest+supertest (41 tests, 30.7%), CI/CD, deploy público |
 
-**Live:** frontend `https://titiedu.vercel.app` · backend `https://titiedu-production.up.railway.app`.
+**Live:** frontend `https://titiedu.vercel.app` · backend `https://titi-backend.onrender.com`.
 
 Decisiones de arrastre relevantes: cascadas manuales con transacción Prisma; borrar
 curso con inscripciones → 409 (ADMIN puede forzar); certificados preservados con
