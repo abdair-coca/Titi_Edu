@@ -58,13 +58,13 @@ export function validateHttpsUrl(value, { allowNull = true, rejectSvg = false } 
   try {
     parsed = new URL(String(value).trim());
   } catch {
-    return { ok: false, message: 'La URL no es vÃ¡lida' };
+    return { ok: false, message: 'La URL no es vÃƒÂ¡lida' };
   }
   if (parsed.protocol !== 'https:' || parsed.username || parsed.password) {
     return { ok: false, message: 'La URL debe usar HTTPS sin credenciales embebidas' };
   }
   if (rejectSvg && parsed.pathname.toLowerCase().endsWith('.svg')) {
-    return { ok: false, message: 'No se permiten imÃ¡genes SVG remotas' };
+    return { ok: false, message: 'No se permiten imÃƒÂ¡genes SVG remotas' };
   }
   return { ok: true, value: parsed.toString() };
 }
@@ -74,7 +74,7 @@ export function validateVideoUrl(value) {
   if (checked === null || !checked.ok) return checked;
   const parsed = new URL(checked.value);
   if (!configuredVideoHosts().has(parsed.hostname.toLowerCase())) {
-    return { ok: false, message: 'El host del video no estÃ¡ permitido' };
+    return { ok: false, message: 'El host del video no estÃƒÂ¡ permitido' };
   }
   return checked;
 }
@@ -252,7 +252,7 @@ export function inspectAuthoringFile(file) {
   const extension = path.extname(file?.originalname || '').toLowerCase();
   const binary = BINARY_TYPES.find((entry) => entry.extensions.includes(extension));
   if (binary) {
-    if (!binary.match(file.buffer)) return { ok: false, message: 'La firma del archivo no coincide con su extensiÃ³n' };
+    if (!binary.match(file.buffer)) return { ok: false, message: 'La firma del archivo no coincide con su extensiÃƒÂ³n' };
     return { ok: true, extension, tipo: binary.type, resourceType: binary.resourceType, sha256: sha256(file.buffer) };
   }
   if (!['.txt', '.md', '.py'].includes(extension)) {
@@ -262,26 +262,45 @@ export function inspectAuthoringFile(file) {
   try {
     new TextDecoder('utf-8', { fatal: true }).decode(file.buffer);
   } catch {
-    return { ok: false, message: 'El archivo de texto debe usar UTF-8 válido' };
+    return { ok: false, message: 'El archivo de texto debe usar UTF-8 vÃ¡lido' };
   }
   return { ok: true, extension, tipo: extension === '.py' ? 'codigo' : 'otro', resourceType: 'raw', sha256: sha256(file.buffer) };
 }
 
 const HTML_LESSON_CSP = "default-src 'none'; base-uri 'none'; connect-src 'none'; form-action 'none'; frame-src 'none'; img-src data:; media-src data:; font-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'";
 const HTML_RESOURCE_ATTRIBUTES = /\b(?:src|poster)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
-const HTML_LINK_ATTRIBUTES = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+const HTML_HREF_ATTRIBUTE = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+const HTML_TAG = /<([a-z][a-z0-9:-]*)\b[^>]*>/gi;
 
-function hasOnlyDataResources(html) {
-  for (const match of html.matchAll(HTML_RESOURCE_ATTRIBUTES)) {
-    const value = (match[1] ?? match[2] ?? match[3] ?? '').trim();
-    if (!value.toLowerCase().startsWith('data:')) return false;
+function attributeValue(match) {
+  return (match[1] ?? match[2] ?? match[3] ?? '').trim();
+}
+
+function isSafeAnchorHref(value) {
+  if (!value || value.startsWith('#')) return true;
+  if (!/^https?:\/\//i.test(value)) return false;
+  try {
+    const parsed = new URL(value);
+    return (parsed.protocol === 'http:' || parsed.protocol === 'https:') && !parsed.username && !parsed.password;
+  } catch {
+    return false;
   }
-  for (const match of html.matchAll(HTML_LINK_ATTRIBUTES)) {
-    const value = (match[1] ?? match[2] ?? match[3] ?? '').trim();
-    if (value && !value.startsWith('#')) return false;
+}
+
+function hasOnlySafeHtmlReferences(html) {
+  for (const match of html.matchAll(HTML_RESOURCE_ATTRIBUTES)) {
+    if (!attributeValue(match).toLowerCase().startsWith('data:')) return false;
+  }
+  for (const tag of html.matchAll(HTML_TAG)) {
+    const tagName = tag[1].toLowerCase();
+    for (const href of tag[0].matchAll(HTML_HREF_ATTRIBUTE)) {
+      const value = attributeValue(href);
+      if (tagName === 'a' ? !isSafeAnchorHref(value) : value && !value.startsWith('#')) return false;
+    }
   }
   for (const match of html.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi)) {
-    if (!match[2].trim().toLowerCase().startsWith('data:')) return false;
+    const value = match[2].trim();
+    if (!value.toLowerCase().startsWith('data:') && !value.startsWith('#')) return false;
   }
   return true;
 }
@@ -303,8 +322,8 @@ export function validateHtmlLessonResource({ html, evaluable = false, intentosMa
   if (/<meta\b[^>]*http-equiv\s*=/i.test(html) || /\bsrcset\s*=/i.test(html)) {
     return { ok: false, message: 'El HTML no permite metadatos activos ni srcset' };
   }
-  if (/\b(?:javascript|vbscript)\s*:/i.test(html) || /@import\b/i.test(html) || !hasOnlyDataResources(html)) {
-    return { ok: false, message: 'El HTML solo permite recursos inline, data: y enlaces internos' };
+  if (/\b(?:javascript|vbscript)\s*:/i.test(html) || /@import\b/i.test(html) || !hasOnlySafeHtmlReferences(html)) {
+    return { ok: false, message: 'El HTML solo permite recursos inline, data:, fragmentos internos y enlaces HTTP(S) seguros' };
   }
   const parsedAttempts = intentosMax === null || intentosMax === undefined || intentosMax === ''
     ? null

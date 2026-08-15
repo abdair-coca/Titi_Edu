@@ -127,10 +127,30 @@ describe('HTML lesson resource validation', () => {
     expect(validateHtmlLessonResource({ html, evaluable: false, intentosMax: 1 })).toMatchObject({ ok: false });
   });
 
-  it('rejects every external or active resource escape', () => {
-    expect(validateHtmlLessonResource({ html: '<html><body><img src="https://example.com/x.png"></body></html>' })).toMatchObject({ ok: false });
-    expect(validateHtmlLessonResource({ html: '<html><head><meta http-equiv="refresh" content="0;url=https://example.com"></head></html>' })).toMatchObject({ ok: false });
-    expect(validateHtmlLessonResource({ html: '<html><body><a href="https://example.com">go</a></body></html>' })).toMatchObject({ ok: false });
-    expect(validateHtmlLessonResource({ html: '<html><body><style>body{background:url(https://example.com/x)}</style></body></html>' })).toMatchObject({ ok: false });
+  it('allows internal SVG references and credential-free HTTP(S) anchor navigation', () => {
+    const resource = validateHtmlLessonResource({
+      html: '<html><body><a href="https://app.diagrams.net/?embed=1">Diagrama</a><svg><defs><marker id="arrow" /></defs><path style="marker-end:url(#arrow)" /></svg></body></html>',
+    });
+    expect(resource).toMatchObject({ ok: true });
+  });
+
+  it('rejects external resources and unsafe anchor protocols', () => {
+    for (const html of [
+      '<html><body><img src="https://example.com/x.png"></body></html>',
+      '<html><body><video poster="https://example.com/x.png"></video></body></html>',
+      '<html><head><link rel="stylesheet" href="https://example.com/site.css"></head><body></body></html>',
+      '<html><body><iframe src="https://example.com"></iframe></body></html>',
+      '<html><body><object data="https://example.com/file"></object></body></html>',
+      '<html><body><embed src="https://example.com/file"></body></html>',
+      '<html><body><style>@import url(https://example.com/site.css)</style></body></html>',
+      '<html><body><style>body{background:url(https://example.com/x)}</style></body></html>',
+      '<html><body><a href="javascript:alert(1)">go</a></body></html>',
+      '<html><body><a href="vbscript:msgbox(1)">go</a></body></html>',
+      '<html><body><a href="https://user:pass@example.com">go</a></body></html>',
+      '<html><body><a href="//example.com">go</a></body></html>',
+      '<html><body><use href="https://example.com/icon.svg#shape"></use></body></html>',
+    ]) {
+      expect(validateHtmlLessonResource({ html })).toMatchObject({ ok: false });
+    }
   });
 });
