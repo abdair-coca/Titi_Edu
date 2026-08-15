@@ -98,13 +98,16 @@ export default function MyTeaching() {
             Creá, editá y publicá tus cursos para la comunidad Titi.
           </p>
         </div>
+        <div className="flex gap-2 w-full sm:w-auto">
         <button
           type="button"
           onClick={() => navigate('/teacher/courses/new')}
-          className="bg-titi-yellow text-titi-dark font-bold text-base px-5 py-2.5 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 whitespace-nowrap w-full sm:w-auto"
+          className="bg-titi-yellow text-titi-dark font-bold text-base px-5 py-2.5 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 whitespace-nowrap flex-1"
         >
           + Crear curso
         </button>
+        <button type="button" onClick={() => navigate('/teacher/integrations')} className="titi-btn-ghost whitespace-nowrap">Integraciones</button>
+        </div>
       </header>
 
       {loading ? (
@@ -146,7 +149,7 @@ export default function MyTeaching() {
 function TeachingCard({ curso, busy, onEdit, onContent, onTogglePublish, onDelete }) {
   return (
     <article className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col overflow-hidden">
-      <div className="relative h-32 bg-gradient-to-br from-titi-yellow-light via-titi-yellow-light to-titi-yellow/40">
+      <div className="relative h-32 bg-titi-yellow-light">
         {curso.portadaUrl ? (
           <img
             src={curso.portadaUrl}

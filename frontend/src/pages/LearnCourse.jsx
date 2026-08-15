@@ -8,6 +8,7 @@ import LessonComments from '../components/LessonComments.jsx';
 import StreakToast from '../components/StreakToast.jsx';
 import AchievementToast from '../components/AchievementToast.jsx';
 import EvaluationQuiz from '../components/EvaluationQuiz.jsx';
+import MarkdownContent from '../components/MarkdownContent.jsx';
 import { resolveMediaUrl } from '../lib/format.js';
 import { usePopIn, useStaggerReveal } from '../lib/motion.js';
 import {
@@ -717,13 +718,13 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
             }`}
           >
             <div className="overflow-hidden">
-              <div
-                className={`text-sm sm:text-base text-gray-600 leading-relaxed whitespace-pre-line mt-3 transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+              <MarkdownContent
+                content={leccion.contenido}
+                format={leccion.formatoContenido}
+                className={`mt-3 transition-opacity duration-300 ease-out motion-reduce:transition-none ${
                   showDesc ? 'opacity-100' : 'opacity-0'
                 }`}
-              >
-                {leccion.contenido}
-              </div>
+              />
             </div>
           </div>
         </div>

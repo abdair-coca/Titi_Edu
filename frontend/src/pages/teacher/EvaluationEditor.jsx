@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import client from '../../api/client.js';
 import ConfirmModal from '../../components/ConfirmModal.jsx';
 import { CheckIcon, ListIcon, PencilIcon } from '../../components/icons.jsx';
+import { authoringError, authoringMutation } from '../../lib/authoring.js';
 
 const TIPOS = [
   { value: 'OPCION_MULTIPLE', label: 'Opción múltiple', Icon: ListIcon },
@@ -34,6 +35,16 @@ function emptyQuestion(tipo) {
   };
 }
 
+function AnalyticsPanel({ analytics, error }) {
+  if (error) return <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-5"><p className="text-sm font-semibold text-red-700">{error}</p></div>;
+  if (!analytics) return <div className="bg-white border border-gray-100 rounded-2xl p-4 mb-5 animate-pulse"><div className="h-4 w-40 bg-gray-100 rounded" /></div>;
+  if (analytics.suprimida) return <section className="bg-titi-cream border border-titi-yellow/40 rounded-2xl p-4 mb-5"><h2 className="text-base font-bold text-titi-dark">Analítica de la evaluación</h2><p className="text-sm text-gray-600 mt-1">Disponible desde 3 estudiantes. Nunca mostramos identidades.</p></section>;
+  const max = Math.max(...(analytics.scoreDistribution || []).map((bucket) => bucket.count), 1);
+  return <section className="bg-white border border-gray-100 rounded-2xl p-4 mb-5"><h2 className="text-base font-bold text-titi-dark">Analítica agregada</h2><div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3"><Metric label="Intentos" value={analytics.totalAttempts} /><Metric label="Estudiantes" value={analytics.uniqueStudents} /><Metric label="Promedio" value={`${Math.round(analytics.averageScore)}%`} /><Metric label="Aprobación" value={`${Math.round(analytics.attemptPassRate * 100)}%`} /></div><div className="mt-4"><p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Distribución de notas</p><div className="flex items-end gap-2 h-28">{analytics.scoreDistribution.map((bucket) => <div key={bucket.range} className="flex-1 min-w-0 flex flex-col items-center gap-1"><span className="text-xs font-bold text-titi-dark">{bucket.count}</span><div className="w-full rounded-t-lg bg-titi-yellow" style={{ height: `${Math.max(8, (bucket.count / max) * 72)}px` }} /><span className="text-[10px] text-gray-500">{bucket.range}</span></div>)}</div></div></section>;
+}
+
+function Metric({ label, value }) { return <div className="bg-titi-cream rounded-xl p-3"><p className="text-xs font-semibold text-gray-500">{label}</p><p className="text-lg font-extrabold text-titi-dark">{value}</p></div>; }
+
 /**
  * EvaluationEditor — crea/edita la evaluación de un módulo o la final del curso.
  * mode="module" → /teacher/modules/:moduleId/evaluation
@@ -61,6 +72,9 @@ export default function EvaluationEditor({ mode = 'module' }) {
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsError, setAnalyticsError] = useState(null);
+  const [moduleReadOnly, setModuleReadOnly] = useState(false);
 
   // Cargar evaluación existente (404 = modo crear)
   const fetchExisting = useCallback(async () => {
@@ -101,6 +115,24 @@ export default function EvaluationEditor({ mode = 'module' }) {
   useEffect(() => {
     fetchExisting();
   }, [fetchExisting]);
+
+  useEffect(() => {
+    if (isFinal || !moduleId) { setModuleReadOnly(false); return; }
+    let cancelled = false;
+    client.get(`/api/authoring/modules/${moduleId}`)
+      .then(({ data }) => { if (!cancelled && data?.success) setModuleReadOnly(data.data.module?.estado === 'PUBLICADO'); })
+      .catch(() => !cancelled && setModuleReadOnly(false));
+    return () => { cancelled = true; };
+  }, [isFinal, moduleId]);
+
+  useEffect(() => {
+    if (!evalId) { setAnalytics(null); return; }
+    let cancelled = false;
+    client.get(`/api/authoring/evaluations/${evalId}/analytics`)
+      .then(({ data }) => { if (!cancelled && data?.success) setAnalytics(data.data.analytics); })
+      .catch((err) => !cancelled && setAnalyticsError(authoringError(err, 'No se pudo cargar la analítica')));
+    return () => { cancelled = true; };
+  }, [evalId]);
 
   // --- Mutadores de preguntas ---
   function addQuestion(tipo) {
@@ -163,9 +195,29 @@ export default function EvaluationEditor({ mode = 'module' }) {
         })),
       };
 
-      const { data } = evalId
-        ? await client.put(`/api/evaluations/${evalId}`, payload)
-        : await client.post(getUrl, payload);
+      let data;
+      if (!isFinal) {
+        const snapshot = await client.get(`/api/authoring/modules/${moduleId}`);
+        if (!snapshot.data?.success) throw new Error(snapshot.data?.message || 'No se pudo validar el módulo');
+        const response = await authoringMutation('put', `/modules/${moduleId}/quiz`, {
+          titulo: payload.titulo,
+          intentosMax: payload.intentosMax,
+          notaMinima: payload.notaMinima,
+          questions: payload.preguntas.map((question, index) => ({
+            texto: question.texto,
+            tipo: question.tipo,
+            orden: index + 1,
+            options: question.opciones,
+          })),
+          expectedFingerprint: snapshot.data.fingerprint,
+        });
+        data = response.data;
+      } else {
+        const response = evalId
+          ? await client.put(`/api/evaluations/${evalId}`, payload)
+          : await client.post(getUrl, payload);
+        data = response.data;
+      }
 
       if (data?.success) {
         setEvalId(data.data.evaluacion.id);
@@ -227,6 +279,11 @@ export default function EvaluationEditor({ mode = 'module' }) {
           ? 'Editá las preguntas. Al guardar se reemplazan por esta versión.'
           : 'Creá las preguntas. Podés combinar los 3 tipos.'}
       </p>
+
+      {moduleReadOnly && <div className="bg-titi-cream border border-titi-yellow/40 rounded-xl p-3 mb-5"><p className="text-sm font-semibold text-titi-dark">Módulo publicado: evaluación en solo lectura. Despublicalo para editar.</p></div>}
+
+      <fieldset disabled={moduleReadOnly} className="border-0 p-0 m-0">
+      {evalId && <AnalyticsPanel analytics={analytics} error={analyticsError} />}
 
       <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col gap-5">
         <label className="flex flex-col gap-1.5">
@@ -345,6 +402,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
         onConfirm={handleDelete}
         onCancel={() => setConfirmDelete(false)}
       />
+      </fieldset>
     </div>
   );
 }

@@ -29,6 +29,7 @@ import MyTeaching from './pages/teacher/MyTeaching.jsx'
 import CourseEditor from './pages/teacher/CourseEditor.jsx'
 import ModulesEditor from './pages/teacher/ModulesEditor.jsx'
 import EvaluationEditor from './pages/teacher/EvaluationEditor.jsx'
+import Integrations from './pages/teacher/Integrations.jsx'
 import Certificates, { VerifyCertificate } from './pages/Certificates.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminUsers from './pages/admin/AdminUsers.jsx'
@@ -188,6 +189,7 @@ export default function App() {
           <Route path="/shop" element={<Shop />} />
           <Route path="/teacher" element={<MyTeaching />} />
           <Route element={<TeacherOnly />}>
+            <Route path="/teacher/integrations" element={<Integrations />} />
             <Route path="/teacher/courses/new" element={<CourseEditor />} />
             <Route path="/teacher/courses/:id/edit" element={<CourseEditor />} />
             <Route path="/teacher/courses/:id/modules" element={<ModulesEditor />} />

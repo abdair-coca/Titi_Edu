@@ -1,256 +1,104 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import client from '../../api/client.js';
 import { CheckIcon } from '../../components/icons.jsx';
+import { authoringError, authoringMutation } from '../../lib/authoring.js';
+import client from '../../api/client.js';
 
 const NIVELES = ['principiante', 'intermedio', 'avanzado'];
+const EMPTY_FORM = { titulo: '', descripcion: '', nivel: 'principiante', categoriaId: '', portadaUrl: '', emiteCertificado: true };
 
 export default function CourseEditor() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
-
-  const [form, setForm] = useState({
-    titulo: '',
-    descripcion: '',
-    nivel: 'principiante',
-    categoriaId: '',
-    portadaUrl: '',
-  });
+  const [form, setForm] = useState(EMPTY_FORM);
   const [categorias, setCategorias] = useState([]);
+  const [fingerprint, setFingerprint] = useState(null);
+  const [published, setPublished] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
-  // Cargar categorías
   useEffect(() => {
     let cancelled = false;
-    client
-      .get('/api/categories')
+    client.get('/api/authoring/categories')
       .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.success) {
-          const list = data.data?.categorias || [];
+        if (!cancelled && data?.success) {
+          const list = data.data?.categories || [];
           setCategorias(list);
-          setForm((f) => ({ ...f, categoriaId: f.categoriaId || list[0]?.id || '' }));
+          setForm((current) => ({ ...current, categoriaId: current.categoriaId || list[0]?.id || '' }));
         }
       })
-      .catch(() => {});
+      .catch((err) => !cancelled && setError(authoringError(err, 'No se pudieron cargar las categorías')));
     return () => { cancelled = true; };
   }, []);
 
-  // Cargar curso en modo edit
-  useEffect(() => {
-    if (!isEdit) return;
-    let cancelled = false;
-    setLoading(true);
-    client
-      .get(`/api/courses/${id}`)
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.success) {
-          const c = data.data?.curso;
-          setForm({
-            titulo: c.titulo || '',
-            descripcion: c.descripcion || '',
-            nivel: c.nivel || 'principiante',
-            categoriaId: c.categoriaId || c.categoria?.id || '',
-            portadaUrl: c.portadaUrl || '',
-          });
-        } else {
-          setError(data?.message || 'Curso no encontrado');
-        }
-      })
-      .catch((err) => setError(err.response?.data?.message || err.message))
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
-  }, [id, isEdit]);
-
-  const onChange = useCallback((field) => (e) => {
-    setForm((f) => ({ ...f, [field]: e.target.value }));
-  }, []);
-
-  async function handleSubmit(e, opts = {}) {
-    e?.preventDefault?.();
-    setSaving(true);
-    setError(null);
-    setSuccess(null);
+  const loadCourse = useCallback(async () => {
+    if (!id) return;
+    setLoading(true); setError(null);
     try {
-      const payload = {
-        titulo: form.titulo.trim(),
-        descripcion: form.descripcion.trim(),
-        nivel: form.nivel,
-        categoriaId: form.categoriaId,
-        portadaUrl: form.portadaUrl.trim() || null,
-      };
-      if (!payload.titulo || !payload.descripcion || !payload.categoriaId) {
-        setError('Título, descripción y categoría son obligatorios');
-        setSaving(false);
-        return;
-      }
+      const { data } = await client.get(`/api/authoring/courses/${id}`);
+      if (!data?.success) throw new Error(data?.message || 'Curso no encontrado');
+      const course = data.data.course;
+      setForm({
+        titulo: course.titulo || '', descripcion: course.descripcion || '', nivel: course.nivel || 'principiante',
+        categoriaId: course.categoriaId || '', portadaUrl: course.portadaUrl || '', emiteCertificado: Boolean(course.emiteCertificado),
+      });
+      setFingerprint(data.data.fingerprint);
+      setPublished(Boolean(course.publicado));
+    } catch (err) { setError(authoringError(err, 'No se pudo cargar el curso')); }
+    finally { setLoading(false); }
+  }, [id]);
 
-      let cursoId = id;
+  useEffect(() => { loadCourse(); }, [loadCourse]);
+  const onChange = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }));
+
+  async function handleSubmit(event, { gotoContent = false } = {}) {
+    event?.preventDefault?.();
+    const payload = { ...form, titulo: form.titulo.trim(), descripcion: form.descripcion.trim(), portadaUrl: form.portadaUrl.trim() || null };
+    if (!payload.titulo || !payload.descripcion || !payload.categoriaId) { setError('Título, descripción y categoría son obligatorios'); return; }
+    setSaving(true); setError(null); setSuccess(null);
+    try {
+      const response = isEdit
+        ? await authoringMutation('put', `/courses/${id}`, { ...payload, expectedFingerprint: fingerprint })
+        : await authoringMutation('post', '/courses', payload);
+      const data = response.data;
+      if (!data?.success) throw new Error(data?.message || 'No se pudo guardar');
+      const course = data.data.course;
       if (isEdit) {
-        const { data } = await client.put(`/api/courses/${id}`, payload);
-        if (!data?.success) {
-          setError(data?.message || 'No se pudo actualizar');
-          return;
-        }
-      } else {
-        const { data } = await client.post('/api/courses', payload);
-        if (!data?.success) {
-          setError(data?.message || 'No se pudo crear');
-          return;
-        }
-        cursoId = data.data.curso.id;
+        await loadCourse();
       }
-
-      if (opts.gotoContent) {
-        navigate(`/teacher/courses/${cursoId}/modules`);
-      } else {
-        setSuccess('Cambios guardados');
-        if (!isEdit) navigate(`/teacher/courses/${cursoId}/edit`, { replace: true });
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Error guardando');
-    } finally {
-      setSaving(false);
-    }
+      const courseId = course.id;
+      if (gotoContent) navigate(`/teacher/courses/${courseId}/modules`);
+      else if (!isEdit) navigate(`/teacher/courses/${courseId}/edit`, { replace: true });
+      else setSuccess('Cambios guardados');
+    } catch (err) { setError(authoringError(err, 'No se pudo guardar')); }
+    finally { setSaving(false); }
   }
 
-  if (loading) {
-    return (
-      <div className="bg-white border border-gray-100 rounded-2xl p-8 animate-pulse max-w-2xl">
-        <div className="h-5 w-1/3 bg-gray-100 rounded mb-6" />
-        <div className="space-y-4">
-          <div className="h-10 bg-gray-100 rounded-xl" />
-          <div className="h-32 bg-gray-100 rounded-xl" />
-          <div className="h-10 bg-gray-100 rounded-xl" />
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <div className="bg-white border border-gray-100 rounded-2xl p-8 animate-pulse max-w-2xl"><div className="h-5 w-1/3 bg-gray-100 rounded mb-6" /><div className="space-y-4"><div className="h-10 bg-gray-100 rounded-xl" /><div className="h-32 bg-gray-100 rounded-xl" /></div></div>;
 
   return (
     <div className="max-w-2xl">
-      <button
-        type="button"
-        onClick={() => navigate('/teacher')}
-        className="text-sm font-semibold text-gray-500 hover:text-titi-dark mb-4 inline-flex items-center gap-1"
-      >
-        ← Mis cursos como profesor
-      </button>
-
-      <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">
-        {isEdit ? 'Editar curso' : 'Crear nuevo curso'}
-      </h1>
-      <p className="text-sm font-medium text-gray-500 mb-6">
-        Primero los datos básicos. Después agregás módulos y lecciones.
-      </p>
-
+      <button type="button" onClick={() => navigate('/teacher')} className="text-sm font-semibold text-gray-500 hover:text-titi-dark mb-4 inline-flex items-center gap-1">← Mis cursos como profesor</button>
+      <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">{isEdit ? 'Editar curso' : 'Crear nuevo curso'}</h1>
+      <p className="text-sm font-medium text-gray-500 mb-6">{published ? 'Curso publicado: sus datos quedan solo lectura.' : 'Guardá el borrador antes de publicar.'}</p>
       <form onSubmit={handleSubmit} className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col gap-5">
-        <Field label="Título del curso" required>
-          <input
-            type="text"
-            value={form.titulo}
-            onChange={onChange('titulo')}
-            placeholder="Ej. Introducción a Python"
-            maxLength={120}
-            className="titi-input"
-            required
-          />
-        </Field>
-
-        <Field label="Descripción" required>
-          <textarea
-            value={form.descripcion}
-            onChange={onChange('descripcion')}
-            placeholder="¿De qué trata el curso? ¿A quién está dirigido?"
-            rows={5}
-            maxLength={1000}
-            className="titi-input resize-none"
-            required
-          />
-          <p className="text-xs text-gray-400 mt-1 tabular-nums">{form.descripcion.length} / 1000</p>
-        </Field>
-
+        <Field label="Título del curso" required><input value={form.titulo} onChange={onChange('titulo')} disabled={published} maxLength={120} className="titi-input disabled:opacity-60" required /></Field>
+        <Field label="Descripción" required><textarea value={form.descripcion} onChange={onChange('descripcion')} disabled={published} rows={5} maxLength={1000} className="titi-input resize-none disabled:opacity-60" required /><p className="text-xs text-gray-400 mt-1 tabular-nums">{form.descripcion.length} / 1000</p></Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Nivel" required>
-            <select value={form.nivel} onChange={onChange('nivel')} className="titi-input capitalize">
-              {NIVELES.map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Categoría" required>
-            <select value={form.categoriaId} onChange={onChange('categoriaId')} className="titi-input" required>
-              <option value="" disabled>Elegí una categoría</option>
-              {categorias.map((c) => (
-                <option key={c.id} value={c.id}>{c.icono} {c.nombre}</option>
-              ))}
-            </select>
-          </Field>
+          <Field label="Nivel" required><select value={form.nivel} onChange={onChange('nivel')} disabled={published} className="titi-input capitalize disabled:opacity-60">{NIVELES.map((nivel) => <option key={nivel} value={nivel}>{nivel}</option>)}</select></Field>
+          <Field label="Categoría" required><select value={form.categoriaId} onChange={onChange('categoriaId')} disabled={published} className="titi-input disabled:opacity-60" required><option value="" disabled>Elegí una categoría</option>{categorias.map((category) => <option key={category.id} value={category.id}>{category.icono} {category.nombre}</option>)}</select></Field>
         </div>
-
-        <Field label="URL de portada (opcional)">
-          <input
-            type="url"
-            value={form.portadaUrl}
-            onChange={onChange('portadaUrl')}
-            placeholder="https://…"
-            className="titi-input"
-          />
-          <p className="text-xs text-gray-400 mt-1">
-            Pegá la URL pública de una imagen (por ejemplo de Unsplash o tu Drive).
-          </p>
-        </Field>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-            <p className="text-sm font-semibold text-red-700">{error}</p>
-          </div>
-        )}
-        {success && !error && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
-            <span className="w-6 h-6 rounded-full bg-green-500 grid place-items-center shrink-0" aria-hidden="true">
-              <CheckIcon className="w-3.5 h-3.5 text-white" />
-            </span>
-            <p className="text-sm font-semibold text-green-700">{success}</p>
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <button
-            type="submit"
-            disabled={saving}
-            className="bg-white text-titi-dark font-bold text-sm px-5 py-2.5 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 disabled:opacity-50"
-          >
-            {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Guardar borrador'}
-          </button>
-          <button
-            type="button"
-            onClick={(e) => handleSubmit(e, { gotoContent: true })}
-            disabled={saving}
-            className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50"
-          >
-            Guardar y editar contenido →
-          </button>
-        </div>
+        <Field label="URL de portada (opcional)"><input type="url" value={form.portadaUrl} onChange={onChange('portadaUrl')} disabled={published} placeholder="https://…" className="titi-input disabled:opacity-60" /></Field>
+        <label className="flex items-start gap-3 rounded-xl bg-titi-cream border border-gray-100 p-4 cursor-pointer"><input type="checkbox" checked={form.emiteCertificado} onChange={(event) => setForm((current) => ({ ...current, emiteCertificado: event.target.checked }))} disabled={published} className="mt-1 h-4 w-4 accent-titi-yellow" /><span><span className="block text-sm font-bold text-titi-dark">Emitir certificado al completar</span><span className="block text-xs text-gray-500 mt-1">El curso otorgará certificado cuando el estudiante cumpla requisitos.</span></span></label>
+        {error && <div className="bg-red-50 border border-red-200 rounded-xl p-3"><p className="text-sm font-semibold text-red-700">{error}</p></div>}
+        {success && <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2"><CheckIcon className="w-4 h-4 text-green-700" /><p className="text-sm font-semibold text-green-700">{success}</p></div>}
+        {!published && <div className="flex flex-col sm:flex-row gap-3 pt-2"><button type="submit" disabled={saving} className="titi-btn-ghost">{saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Guardar borrador'}</button><button type="button" onClick={(event) => handleSubmit(event, { gotoContent: true })} disabled={saving} className="titi-btn-primary">Guardar y editar contenido →</button></div>}
       </form>
     </div>
   );
 }
 
-function Field({ label, required, children }) {
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-semibold text-titi-dark">
-        {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
-      </span>
-      {children}
-    </label>
-  );
-}
+function Field({ label, required, children }) { return <label className="flex flex-col gap-1.5"><span className="text-sm font-semibold text-titi-dark">{label}{required && <span className="text-red-500 ml-1">*</span>}</span>{children}</label>; }
