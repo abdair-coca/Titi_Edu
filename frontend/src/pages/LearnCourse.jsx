@@ -9,6 +9,7 @@ import StreakToast from '../components/StreakToast.jsx';
 import AchievementToast from '../components/AchievementToast.jsx';
 import EvaluationQuiz from '../components/EvaluationQuiz.jsx';
 import MarkdownContent from '../components/MarkdownContent.jsx';
+import HtmlLessonPlayer from '../components/HtmlLessonPlayer.jsx';
 import { resolveMediaUrl } from '../lib/format.js';
 import { sanitizeMarkdownUrl } from '../lib/markdown.js';
 import { usePopIn, useStaggerReveal } from '../lib/motion.js';
@@ -665,6 +666,7 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
   const [showDesc, setShowDesc] = useState(false);
   // Pop al cambiar de lección (también remonta por key en el padre). Ver motion.md §5.
   const articleRef = usePopIn([leccion.id]);
+  const isHtml = leccion.formatoContenido === 'HTML';
 
   return (
     <article ref={articleRef}>
@@ -723,7 +725,7 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
             <div className="overflow-hidden">
               <MarkdownContent
                 content={leccion.contenido}
-                format={leccion.formatoContenido}
+                format="MARKDOWN"
                 className={`mt-3 transition-opacity duration-300 ease-out motion-reduce:transition-none ${
                   showDesc ? 'opacity-100' : 'opacity-0'
                 }`}
@@ -736,6 +738,7 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
       )}
 
       {/* Profundiza en este tema (chips de IA — stub por ahora) */}
+      {isHtml && <HtmlLessonPlayer lessonId={leccion.id} onScoreRecorded={onComplete} />}
       <DeepenCard />
 
       {completeError && (

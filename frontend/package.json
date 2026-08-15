@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test:markdown-url": "node scripts/check-markdown-url.mjs",
-    "test:authoring-contract": "node scripts/check-authoring-contract.mjs"
+    "test:authoring-contract": "node scripts/check-authoring-contract.mjs",
+    "test:html-lesson": "node scripts/check-html-lesson-player.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
