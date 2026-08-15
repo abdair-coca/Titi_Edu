@@ -1,0 +1,46 @@
+[mcp_servers.titi_authoring]
+command = "node"
+args = ["tools/titi-authoring-mcp/src/index.js"]
+cwd = "."
+env_vars = ["TITI_SERVICE_TOKEN"]
+required = true
+startup_timeout_sec = 15
+tool_timeout_sec = 60
+enabled = true
+enabled_tools = [
+  "list_categories",
+  "list_courses",
+  "get_course",
+  "create_course_draft",
+  "update_course_draft",
+  "create_module_draft",
+  "update_module_draft",
+  "create_lesson_draft",
+  "update_lesson_draft",
+  "upsert_quiz_draft",
+  "attach_material",
+  "delete_draft_resource",
+  "preview_course_publication",
+  "publish_course",
+  "preview_module_publication",
+  "publish_module",
+  "preview_module_unpublish",
+  "unpublish_module",
+  "get_quiz_analytics",
+]
+default_tools_approval_mode = "writes"
+
+[mcp_servers.titi_authoring.env]
+TITI_API_URL = "https://titi-backend.onrender.com"
+
+[mcp_servers.titi_authoring.tools.delete_draft_resource]
+approval_mode = "prompt"
+
+[mcp_servers.titi_authoring.tools.publish_course]
+approval_mode = "prompt"
+
+[mcp_servers.titi_authoring.tools.publish_module]
+approval_mode = "prompt"
+
+[mcp_servers.titi_authoring.tools.unpublish_module]
+approval_mode = "prompt"
