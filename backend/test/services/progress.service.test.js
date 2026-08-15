@@ -8,19 +8,21 @@ vi.mock('../../src/prisma.js', () => ({
     // consumirItem (tienda.service) corre con este mismo mock al evaluar el freeze.
     itemTienda: { findUnique: vi.fn() },
     inventarioItem: { findUnique: vi.fn(), update: vi.fn() },
-    inscripcion: { findUnique: vi.fn(), update: vi.fn() },
+    inscripcion: { findUnique: vi.fn(), updateMany: vi.fn() },
     curso: { findUnique: vi.fn() },
     modulo: { findMany: vi.fn() },
     progreso: { count: vi.fn() },
     evaluacion: { findMany: vi.fn() },
     intento: { groupBy: vi.fn() },
-    certificado: { findFirst: vi.fn(), create: vi.fn() },
+    certificado: { findUnique: vi.fn(), upsert: vi.fn() },
   },
 }));
 vi.mock('../../src/services/achievement.service.js', () => ({ otorgarLogro: vi.fn() }));
 vi.mock('../../src/services/neo4j-sync.service.js', () => ({ syncCursoCompletado: vi.fn() }));
 
 import prisma from '../../src/prisma.js';
+import { otorgarLogro } from '../../src/services/achievement.service.js';
+import { syncCursoCompletado } from '../../src/services/neo4j-sync.service.js';
 import { actualizarRacha, checkCursoCompletado } from '../../src/services/progress.service.js';
 
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
@@ -30,6 +32,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   // update devuelve lo que le pasaron en data (con createdAt simulada)
   prisma.usuario.update.mockImplementation(({ data }) => Promise.resolve({ ...data }));
+  prisma.$transaction = vi.fn(async (callback) => callback(prisma));
 });
 
 describe('actualizarRacha', () => {
@@ -99,7 +102,7 @@ describe('checkCursoCompletado', () => {
     ]);
     prisma.progreso.count.mockResolvedValue(1);
     prisma.evaluacion.findMany.mockResolvedValue([]);
-    prisma.inscripcion.update.mockResolvedValue({ id: 'i1', completado: true });
+    prisma.inscripcion.updateMany.mockResolvedValue({ count: 1 });
 
     const result = await checkCursoCompletado('u1', 'c1');
 
@@ -107,6 +110,31 @@ describe('checkCursoCompletado', () => {
       where: { cursoId: 'c1', estado: 'PUBLICADO' },
     }));
     expect(result).toMatchObject({ completado: true, nuevo: true, certificado: null });
-    expect(prisma.certificado.create).not.toHaveBeenCalled();
+    expect(prisma.certificado.upsert).not.toHaveBeenCalled();
+  });
+
+  it('solo el ganador del CAS emite certificado y efectos post-completion', async () => {
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1', completado: false });
+    prisma.curso.findUnique.mockResolvedValue({ titulo: 'Curso', emiteCertificado: true });
+    prisma.modulo.findMany.mockResolvedValue([{ lecciones: [{ id: 'l1' }], evaluacion: null }]);
+    prisma.progreso.count.mockResolvedValue(1);
+    prisma.evaluacion.findMany.mockResolvedValue([]);
+    prisma.inscripcion.updateMany
+      .mockResolvedValueOnce({ count: 1 })
+      .mockResolvedValueOnce({ count: 0 });
+    const certificado = { id: 'cert-1', usuarioId: 'u1', cursoId: 'c1' };
+    prisma.certificado.upsert.mockResolvedValue(certificado);
+    prisma.certificado.findUnique.mockResolvedValue(certificado);
+    otorgarLogro.mockResolvedValue({ id: 'achievement-1' });
+
+    const [first, second] = await Promise.all([
+      checkCursoCompletado('u1', 'c1'),
+      checkCursoCompletado('u1', 'c1'),
+    ]);
+
+    expect([first.nuevo, second.nuevo].sort()).toEqual([false, true]);
+    expect(prisma.certificado.upsert).toHaveBeenCalledTimes(1);
+    expect(otorgarLogro).toHaveBeenCalledTimes(1);
+    expect(syncCursoCompletado).toHaveBeenCalledTimes(1);
   });
 });

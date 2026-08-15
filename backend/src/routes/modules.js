@@ -5,6 +5,15 @@ import { requireRole, isOwnerOrAdmin, ensureCourseContentAccess } from '../middl
 
 const router = Router();
 
+const authoringMoved = (req, res) => res.status(410).json({
+  success: false,
+  message: 'Esta operaciÃ³n docente requiere /api/authoring con control de concurrencia e idempotencia',
+});
+
+router.post('/courses/:courseId/modules', requireAuth, authoringMoved);
+router.put('/modules/:id', requireAuth, authoringMoved);
+router.delete('/modules/:id', requireAuth, authoringMoved);
+
 // ---- POST /api/courses/:courseId/modules  — crear módulo (autor del curso o ADMIN) ----
 router.post(
   '/courses/:courseId/modules',
@@ -68,7 +77,7 @@ router.post(
 router.get('/courses/:courseId/modules', async (req, res) => {
   try {
     const modulos = await prisma.modulo.findMany({
-      where: { cursoId: req.params.courseId, estado: 'PUBLICADO' },
+      where: { cursoId: req.params.courseId, estado: 'PUBLICADO', curso: { publicado: true } },
       orderBy: { orden: 'asc' },
       include: {
         _count: { select: { lecciones: true } },
@@ -186,6 +195,8 @@ router.get('/modules/:id/lessons', requireAuth, async (req, res) => {
     if (modulo.estado !== 'PUBLICADO') {
       return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
     }
+    const visibleCourse = await prisma.curso.findFirst({ where: { id: modulo.cursoId, publicado: true }, select: { id: true } });
+    if (!visibleCourse) return res.status(404).json({ success: false, message: 'MÃ³dulo no encontrado' });
 
     const access = await ensureCourseContentAccess(req, res, modulo.cursoId);
     if (!access) return;

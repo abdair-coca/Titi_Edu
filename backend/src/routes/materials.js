@@ -10,6 +10,14 @@ import { cloudinaryEnabled, uploadBuffer, destroyAsset } from '../services/uploa
 
 const router = Router();
 
+const authoringMoved = (req, res) => res.status(410).json({
+  success: false,
+  message: 'Esta operaciÃ³n docente requiere /api/authoring con control de concurrencia e idempotencia',
+});
+
+router.post('/lessons/:lessonId/materials', requireAuth, authoringMoved);
+router.delete('/materials/:id', requireAuth, authoringMoved);
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const materialsDir = path.join(__dirname, '..', 'uploads', 'materials');
 if (!fs.existsSync(materialsDir)) fs.mkdirSync(materialsDir, { recursive: true });

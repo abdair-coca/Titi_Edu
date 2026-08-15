@@ -4,6 +4,7 @@
  * nombres de muestra en el tooltip.
  */
 import { nivelTextClass } from '../lib/nivel.js';
+import { sanitizeMarkdownUrl } from '../lib/markdown.js';
 import { BookIcon, UsersIcon } from './icons.jsx';
 
 export default function RecommendedCourseCard({ curso, friendCount, sampleFriends = [], onOpen }) {
@@ -31,7 +32,7 @@ export default function RecommendedCourseCard({ curso, friendCount, sampleFriend
       <div className="relative h-32 bg-titi-yellow-light overflow-hidden">
         {curso.portadaUrl ? (
           <img
-            src={curso.portadaUrl}
+            src={sanitizeMarkdownUrl(curso.portadaUrl)}
             alt={curso.titulo}
             className="w-full h-full object-cover"
             loading="lazy"

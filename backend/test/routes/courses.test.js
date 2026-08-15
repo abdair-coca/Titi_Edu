@@ -6,6 +6,7 @@ vi.mock('../../src/db.js', () => ({ runQuery: vi.fn(), toNumber: (v) => Number(v
 vi.mock('../../src/prisma.js', () => ({
   default: {
     curso: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
+    modulo: { findMany: vi.fn() },
     usuario: { findUnique: vi.fn() },
     evaluacion: { findFirst: vi.fn() },
     inscripcion: { findUnique: vi.fn() },
@@ -28,6 +29,7 @@ describe('GET /api/courses', () => {
     expect(res.body.data.cursos).toHaveLength(1);
     // El filtro de búsqueda arma un OR sobre titulo/descripcion
     expect(prisma.curso.findMany.mock.calls[0][0].where.OR).toBeTruthy();
+    expect(prisma.curso.findMany.mock.calls[0][0].include._count.select.modulos.where).toEqual({ estado: 'PUBLICADO' });
   });
 });
 
@@ -83,43 +85,27 @@ describe('GET /api/courses/:id', () => {
   });
 });
 
-describe('POST /api/courses (guard de rol)', () => {
-  it('401 sin token', async () => {
-    const res = await request(app).post('/api/courses').send({});
-    expect(res.status).toBe(401);
+describe('GET /api/courses/:id/modules', () => {
+  it('filters by published course and published modules', async () => {
+    prisma.modulo.findMany.mockResolvedValue([]);
+    const res = await request(app).get('/api/courses/c1/modules');
+    expect(res.status).toBe(200);
+    expect(prisma.modulo.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { cursoId: 'c1', estado: 'PUBLICADO', curso: { publicado: true } },
+    }));
   });
+});
 
-  it('403 si no es PROFESOR', async () => {
-    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE', verificado: false });
-    const res = await request(app).post('/api/courses')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ titulo: 'x', descripcion: 'y', nivel: 'basico', categoriaId: 'c' });
-    expect(res.status).toBe(403);
-  });
-
-  it('403 si es PROFESOR no verificado', async () => {
-    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'PROFESOR', verificado: false });
-    const res = await request(app).post('/api/courses')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ titulo: 'x', descripcion: 'y', nivel: 'basico', categoriaId: 'c' });
-    expect(res.status).toBe(403);
-  });
-
-  it('400 si faltan campos (PROFESOR verificado)', async () => {
+describe('legacy course authoring mutations', () => {
+  it('requires auth and directs authenticated callers to /api/authoring', async () => {
+    expect((await request(app).post('/api/courses').send({})).status).toBe(401);
     prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'PROFESOR', verificado: true });
-    const res = await request(app).post('/api/courses')
-      .set('Authorization', `Bearer ${token}`)
-      .send({ titulo: 'solo titulo' });
-    expect(res.status).toBe(400);
-  });
-
-  it('201 al crear con datos válidos', async () => {
-    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'PROFESOR', verificado: true });
-    prisma.curso.create.mockResolvedValue({ id: 'c1', titulo: 'Nuevo' });
     const res = await request(app).post('/api/courses')
       .set('Authorization', `Bearer ${token}`)
       .send({ titulo: 'Nuevo', descripcion: 'desc', nivel: 'basico', categoriaId: 'cat1' });
-    expect(res.status).toBe(201);
-    expect(res.body.data.curso.id).toBe('c1');
+    expect(res.status).toBe(410);
+    expect(res.body).toMatchObject({ success: false });
+    expect(res.body.message).toContain('/api/authoring');
+    expect(prisma.curso.create).not.toHaveBeenCalled();
   });
 });

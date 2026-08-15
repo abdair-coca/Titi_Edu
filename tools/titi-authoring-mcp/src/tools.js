@@ -92,9 +92,11 @@ function assertPublicationPreview(data) {
   if (
     typeof data?.phrase !== 'string' || !data.phrase ||
     typeof data?.confirmationToken !== 'string' || !data.confirmationToken ||
-    !/^[a-f0-9]{64}$/i.test(data?.fingerprint || '')
+    !/^[a-f0-9]{64}$/i.test(data?.fingerprint || '') ||
+    !data?.summary || typeof data.summary !== 'object' ||
+    typeof data?.expiresAt !== 'string' || !Number.isFinite(Date.parse(data.expiresAt))
   ) {
-    throw new TitiApiError('Publication preview did not return phrase, confirmationToken, and fingerprint', {
+    throw new TitiApiError('Publication preview did not return summary, phrase, expiry, confirmationToken, and fingerprint', {
       code: 'INVALID_API_RESPONSE',
     });
   }
@@ -155,6 +157,7 @@ export function createToolDefinitions(client = createHttpClient()) {
         const form = new FormData();
         form.append('file', new Blob([file.bytes], { type: file.mimeType }), file.filename);
         if (args.nombre) form.append('nombre', args.nombre);
+        form.append('expectedFingerprint', args.expectedFingerprint);
         return { method: 'POST', path: `/api/authoring/lessons/${encoded(args.lessonId)}/materials`, form };
       })),
     tool('delete_draft_resource', 'Delete one eligible draft course, module, lesson, or material using its latest fingerprint.', deleteResourceSchema, DESTRUCTIVE_WRITE_ANNOTATIONS,
@@ -181,12 +184,12 @@ export function createToolDefinitions(client = createHttpClient()) {
         method: 'POST', path: `/api/authoring/modules/${encoded(args.resourceId)}/publish`,
         body: without(args, ['resourceId', 'idempotencyKey']),
       }))),
-    tool('preview_module_unpublish', 'Read the module snapshot and current fingerprint needed for a separate unpublish action. Does not mutate.', moduleIdSchema, READ_ANNOTATIONS,
-      ({ moduleId }) => read(client, { method: 'GET', path: `/api/authoring/modules/${encoded(moduleId)}` })),
-    tool('unpublish_module', 'Move a published module back to draft using the fingerprint from a separate preview.', unpublishSchema, DESTRUCTIVE_WRITE_ANNOTATIONS,
+    tool('preview_module_unpublish', 'Preview module unpublish. Returns a signed phrase, token, summary, expiry, and fingerprint. Does not mutate.', moduleIdSchema, READ_ANNOTATIONS,
+      ({ moduleId }) => read(client, { method: 'POST', path: `/api/authoring/modules/${encoded(moduleId)}/preview-unpublish`, body: {} }, assertPublicationPreview)),
+    tool('unpublish_module', 'Move a published module back to draft only with phrase, confirmation token, and fingerprint from a recent separate preview.', unpublishSchema, DESTRUCTIVE_WRITE_ANNOTATIONS,
       (args) => write(client, args, async () => ({
         method: 'POST', path: `/api/authoring/modules/${encoded(args.moduleId)}/unpublish`,
-        body: { expectedFingerprint: args.expectedFingerprint },
+        body: without(args, ['moduleId', 'idempotencyKey']),
       }))),
     tool('get_quiz_analytics', 'Get privacy-preserving aggregate analytics for a quiz.', evaluationIdSchema, READ_ANNOTATIONS,
       ({ evaluationId }) => read(client, { method: 'GET', path: `/api/authoring/evaluations/${encoded(evaluationId)}/analytics` })),

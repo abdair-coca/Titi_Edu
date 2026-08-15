@@ -7,6 +7,17 @@ import { syncInscripcion } from '../services/neo4j-sync.service.js';
 
 const router = Router();
 
+const authoringMoved = (req, res) => res.status(410).json({
+  success: false,
+  message: 'Esta operaciÃ³n docente requiere /api/authoring con control de concurrencia e idempotencia',
+});
+
+router.post('/', requireAuth, authoringMoved);
+router.put('/:id', requireAuth, authoringMoved);
+router.post('/:id/publish', requireAuth, authoringMoved);
+router.post('/:id/unpublish', requireAuth, authoringMoved);
+router.delete('/:id', requireAuth, authoringMoved);
+
 // ---- GET /  — catálogo público ----
 router.get('/', async (req, res) => {
   try {
@@ -131,7 +142,7 @@ router.get('/recommended', requireAuth, async (req, res) => {
       include: {
         categoria: true,
         creador: { select: { id: true, username: true } },
-        _count: { select: { inscripciones: true, modulos: true } },
+        _count: { select: { inscripciones: true, modulos: { where: { estado: 'PUBLICADO' } } } },
       },
     });
     const byId = new Map(cursos.map((c) => [c.id, c]));

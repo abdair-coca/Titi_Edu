@@ -9,6 +9,15 @@ import { avanzarMisiones } from '../services/mision.service.js';
 
 const router = Router();
 
+const authoringMoved = (req, res) => res.status(410).json({
+  success: false,
+  message: 'Esta operaciÃ³n docente requiere /api/authoring con control de concurrencia e idempotencia',
+});
+
+router.post('/modules/:moduleId/lessons', requireAuth, authoringMoved);
+router.put('/lessons/:id', requireAuth, authoringMoved);
+router.delete('/lessons/:id', requireAuth, authoringMoved);
+
 // ---- POST /api/modules/:moduleId/lessons  — crear lección (autor del curso o ADMIN) ----
 router.post(
   '/modules/:moduleId/lessons',

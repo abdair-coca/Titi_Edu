@@ -1,4 +1,4 @@
-const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:']);
+const SAFE_PROTOCOLS = new Set(['https:']);
 
 export function sanitizeMarkdownUrl(value) {
   const url = String(value || '').trim();
@@ -8,7 +8,9 @@ export function sanitizeMarkdownUrl(value) {
 
   try {
     const parsed = new URL(url);
-    return SAFE_PROTOCOLS.has(parsed.protocol.toLowerCase()) ? url : '';
+    if (!SAFE_PROTOCOLS.has(parsed.protocol.toLowerCase())) return '';
+    if (parsed.pathname.toLowerCase().endsWith('.svg')) return '';
+    return parsed.toString();
   } catch {
     return '';
   }
@@ -16,7 +18,7 @@ export function sanitizeMarkdownUrl(value) {
 
 export function isExternalMarkdownUrl(value) {
   try {
-    return ['http:', 'https:'].includes(new URL(value).protocol);
+    return new URL(value).protocol === 'https:';
   } catch {
     return false;
   }

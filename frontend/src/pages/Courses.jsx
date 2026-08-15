@@ -4,6 +4,7 @@ import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useStaggerReveal, usePopIn } from '../lib/motion.js';
 import { nivelTextClass } from '../lib/nivel.js';
+import { sanitizeMarkdownUrl } from '../lib/markdown.js';
 import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
 import { GotaIcon, BookIcon, BoltIcon, AwardIcon } from '../components/icons.jsx';
@@ -1137,7 +1138,7 @@ function CourseCard({ curso, onOpen }) {
       <div className="relative h-40 bg-titi-yellow-light flex items-center justify-center overflow-hidden">
         {curso.portadaUrl ? (
           <img
-            src={curso.portadaUrl}
+            src={sanitizeMarkdownUrl(curso.portadaUrl)}
             alt={curso.titulo}
             className="w-full h-full object-cover"
             loading="lazy"

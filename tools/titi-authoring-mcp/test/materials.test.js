@@ -44,7 +44,7 @@ test('attach_material sends native multipart with file and display name', async 
   const client = createHttpClient({ baseUrl: api.baseUrl, tokenProvider: () => 'test-token' });
   const definition = createToolDefinitions(client).find((entry) => entry.name === 'attach_material');
   const result = await definition.run({
-    lessonId: 'lesson-1', filePath, nombre: 'Lecture notes',
+    lessonId: 'lesson-1', filePath, nombre: 'Lecture notes', expectedFingerprint: 'a'.repeat(64),
     idempotencyKey: 'c0a8012e-0000-4000-8000-000000000002',
   });
   assert.equal(result.isError, undefined);
@@ -52,4 +52,5 @@ test('attach_material sends native multipart with file and display name', async 
   assert.match(rawBody.toString('utf8'), /name="file"; filename="notes.md"/);
   assert.match(rawBody.toString('utf8'), /# Safe material/);
   assert.match(rawBody.toString('utf8'), /Lecture notes/);
+  assert.match(rawBody.toString('utf8'), /name="expectedFingerprint"/);
 });

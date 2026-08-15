@@ -117,13 +117,17 @@ export default function EvaluationEditor({ mode = 'module' }) {
   }, [fetchExisting]);
 
   useEffect(() => {
-    if (isFinal || !moduleId) { setModuleReadOnly(false); return; }
+    if ((!isFinal && !moduleId) || (isFinal && !courseId)) { setModuleReadOnly(false); return; }
     let cancelled = false;
-    client.get(`/api/authoring/modules/${moduleId}`)
-      .then(({ data }) => { if (!cancelled && data?.success) setModuleReadOnly(data.data.module?.estado === 'PUBLICADO'); })
+    client.get(isFinal ? `/api/authoring/courses/${courseId}` : `/api/authoring/modules/${moduleId}`)
+      .then(({ data }) => {
+        if (!cancelled && data?.success) {
+          setModuleReadOnly(isFinal ? Boolean(data.data.course?.publicado) : data.data.module?.estado === 'PUBLICADO');
+        }
+      })
       .catch(() => !cancelled && setModuleReadOnly(false));
     return () => { cancelled = true; };
-  }, [isFinal, moduleId]);
+  }, [courseId, isFinal, moduleId]);
 
   useEffect(() => {
     if (!evalId) { setAnalytics(null); return; }
@@ -209,13 +213,24 @@ export default function EvaluationEditor({ mode = 'module' }) {
             orden: index + 1,
             options: question.opciones,
           })),
-          expectedFingerprint: snapshot.data.fingerprint,
+          expectedFingerprint: snapshot.data.data.fingerprint,
         });
         data = response.data;
       } else {
-        const response = evalId
-          ? await client.put(`/api/evaluations/${evalId}`, payload)
-          : await client.post(getUrl, payload);
+        const snapshot = await client.get(`/api/authoring/courses/${courseId}`);
+        if (!snapshot.data?.success) throw new Error(snapshot.data?.message || 'No se pudo validar el curso');
+        const response = await authoringMutation('put', `/courses/${courseId}/final-quiz`, {
+          titulo: payload.titulo,
+          intentosMax: payload.intentosMax,
+          notaMinima: payload.notaMinima,
+          questions: payload.preguntas.map((question, index) => ({
+            texto: question.texto,
+            tipo: question.tipo,
+            orden: index + 1,
+            options: question.opciones,
+          })),
+          expectedFingerprint: snapshot.data.data.fingerprint,
+        });
         data = response.data;
       }
 
@@ -235,7 +250,13 @@ export default function EvaluationEditor({ mode = 'module' }) {
   async function handleDelete() {
     if (!evalId) return;
     try {
-      const { data } = await client.delete(`/api/evaluations/${evalId}`);
+      const snapshot = await client.get(isFinal
+        ? `/api/authoring/courses/${courseId}`
+        : `/api/authoring/modules/${moduleId}`);
+      if (!snapshot.data?.success) throw new Error(snapshot.data?.message || 'No se pudo validar la evaluaciÃ³n');
+      const { data } = await authoringMutation('delete', `/evaluations/${evalId}`, {
+        expectedFingerprint: snapshot.data.data.fingerprint,
+      });
       if (data?.success) {
         navigate(-1);
       } else {

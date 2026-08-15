@@ -10,6 +10,7 @@ import AchievementToast from '../components/AchievementToast.jsx';
 import EvaluationQuiz from '../components/EvaluationQuiz.jsx';
 import MarkdownContent from '../components/MarkdownContent.jsx';
 import { resolveMediaUrl } from '../lib/format.js';
+import { sanitizeMarkdownUrl } from '../lib/markdown.js';
 import { usePopIn, useStaggerReveal } from '../lib/motion.js';
 import {
   FileIcon,
@@ -31,7 +32,7 @@ export default function LearnCourse() {
 
   // Toast de logros desbloqueados + banner de curso completado
   const [achievements, setAchievements] = useState([]);
-  const [certBanner, setCertBanner] = useState(null); // { codigoVerif }
+  const [certBanner, setCertBanner] = useState(null); // { certificado }
 
   // Evaluación activa (mutuamente excluyente con la lección activa)
   const [activeEvalId, setActiveEvalId] = useState(null);
@@ -311,7 +312,7 @@ export default function LearnCourse() {
       setAchievements(d.logros);
     }
     if (d?.cursoCompletado?.nuevo) {
-      setCertBanner({ codigoVerif: d.cursoCompletado.certificado?.codigoVerif });
+      setCertBanner({ certificado: d.cursoCompletado.certificado || null });
     }
   };
 
@@ -574,7 +575,7 @@ export default function LearnCourse() {
             </button>
 
             {certBanner && (
-              <CertificateBanner onClose={() => setCertBanner(null)} />
+              <CertificateBanner certificado={certBanner.certificado} onClose={() => setCertBanner(null)} />
             )}
 
             {activeEvalId ? (
@@ -637,7 +638,7 @@ function MaterialChip({ material }) {
   const Icon = TIPO_ICON[material.tipo] || ClipIcon;
   const href = material.url?.startsWith('/uploads/')
     ? resolveMediaUrl(material.url)
-    : material.url;
+    : sanitizeMarkdownUrl(material.url);
   return (
     <a
       href={href}
@@ -675,6 +676,8 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
             title={leccion.titulo}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
+            sandbox="allow-scripts allow-same-origin allow-presentation"
+            referrerPolicy="strict-origin-when-cross-origin"
             className="w-full h-full border-0"
           />
         </div>
@@ -1073,7 +1076,7 @@ function BookmarkIcon({ className }) {
 }
 
 // ---- Banner de curso completado con certificado ----
-function CertificateBanner({ onClose }) {
+function CertificateBanner({ certificado, onClose }) {
   return (
     <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 sm:p-5 pr-10 mb-6 bg-titi-yellow-light border-2 border-titi-yellow rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
       <img
@@ -1087,14 +1090,18 @@ function CertificateBanner({ onClose }) {
           ¡Curso completado! 🎓
         </p>
         <p className="text-sm font-semibold text-gray-600 mt-0.5">
-          Tu certificado está listo y tiene código de verificación único.
+          {certificado
+            ? 'Tu certificado esta listo y tiene codigo de verificacion unico.'
+            : 'Completaste todos los requisitos. Este curso no emite certificado.'}
         </p>
-        <Link
-          to="/certificates"
-          className="inline-block mt-2 bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
-        >
-          Ver mi certificado
-        </Link>
+        {certificado && (
+          <Link
+            to="/certificates"
+            className="inline-block mt-2 bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
+          >
+            Ver mi certificado
+          </Link>
+        )}
       </div>
       <button
         type="button"
@@ -1150,6 +1157,7 @@ function normalizeVideoUrl(url) {
   if (!url) return null;
   try {
     const u = new URL(url);
+    if (u.protocol !== 'https:' || u.username || u.password) return null;
     if (
       (u.hostname === 'www.youtube.com' || u.hostname === 'youtube.com') &&
       u.pathname === '/watch'
@@ -1161,8 +1169,15 @@ function normalizeVideoUrl(url) {
       const v = u.pathname.slice(1);
       if (v) return `https://www.youtube.com/embed/${v}`;
     }
-    return url;
+    if ((u.hostname === 'vimeo.com' || u.hostname === 'www.vimeo.com') && /^\/\d+$/.test(u.pathname)) {
+      return `https://player.vimeo.com/video/${u.pathname.slice(1)}`;
+    }
+    if (u.hostname === 'player.vimeo.com' && /^\/video\/\d+$/.test(u.pathname)) return u.toString();
+    if (u.hostname === 'www.youtube.com' || u.hostname === 'youtube.com') {
+      return u.pathname.startsWith('/embed/') ? u.toString() : null;
+    }
+    return null;
   } catch {
-    return url;
+    return null;
   }
 }

@@ -10,6 +10,16 @@ import { consumirItem } from '../services/tienda.service.js';
 
 const router = Router();
 
+const authoringMoved = (req, res) => res.status(410).json({
+  success: false,
+  message: 'Esta operaciÃ³n docente requiere /api/authoring con control de concurrencia e idempotencia',
+});
+
+router.post('/modules/:id/evaluation', requireAuth, authoringMoved);
+router.post('/courses/:id/final-evaluation', requireAuth, authoringMoved);
+router.put('/evaluations/:id', requireAuth, authoringMoved);
+router.delete('/evaluations/:id', requireAuth, authoringMoved);
+
 const TIPOS_VALIDOS = ['OPCION_MULTIPLE', 'VERDADERO_FALSO', 'RESPUESTA_CORTA'];
 
 /** Normaliza texto para comparar respuestas cortas: trim, minúsculas, sin tildes, espacios colapsados. */

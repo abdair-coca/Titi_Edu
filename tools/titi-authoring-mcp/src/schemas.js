@@ -7,7 +7,10 @@ const title = z.string().trim().min(1).max(300);
 const description = z.string().trim().min(1).max(50_000);
 const nullableDescription = z.string().trim().max(50_000).nullable();
 const order = z.number().int();
-const url = z.string().url().max(2_000).nullable();
+const httpsUrl = z.string().url().max(2_000).refine((value) => new URL(value).protocol === 'https:', 'URL must use HTTPS');
+const mediaUrl = httpsUrl.refine((value) => !new URL(value).pathname.toLowerCase().endsWith('.svg'), 'SVG URLs are not allowed').nullable();
+const videoHosts = new Set(['youtube.com', 'www.youtube.com', 'youtu.be', 'vimeo.com', 'www.vimeo.com', 'player.vimeo.com']);
+const videoUrl = httpsUrl.refine((value) => videoHosts.has(new URL(value).hostname.toLowerCase()), 'Video host is not allowed').nullable();
 
 export const emptySchema = z.object({}).strict();
 export const courseIdSchema = z.object({ courseId: id }).strict();
@@ -19,7 +22,7 @@ export const createCourseSchema = z.object({
   descripcion: description,
   nivel: z.string().trim().min(1).max(100),
   categoriaId: id,
-  portadaUrl: url.optional(),
+  portadaUrl: mediaUrl.optional(),
   emiteCertificado: z.boolean().optional(),
   idempotencyKey,
 }).strict();
@@ -31,7 +34,7 @@ export const updateCourseSchema = z.object({
   descripcion: description.optional(),
   nivel: z.string().trim().min(1).max(100).optional(),
   categoriaId: id.optional(),
-  portadaUrl: url.optional(),
+  portadaUrl: mediaUrl.optional(),
   emiteCertificado: z.boolean().optional(),
   idempotencyKey,
 }).strict().refine(
@@ -41,6 +44,7 @@ export const updateCourseSchema = z.object({
 
 export const createModuleSchema = z.object({
   courseId: id,
+  expectedFingerprint: fingerprint,
   titulo: title,
   descripcion: nullableDescription.optional(),
   orden: order,
@@ -61,9 +65,10 @@ export const updateModuleSchema = z.object({
 
 export const createLessonSchema = z.object({
   moduleId: id,
+  expectedFingerprint: fingerprint,
   titulo: title,
   contenido: z.string().max(500_000),
-  videoUrl: url.optional(),
+  videoUrl: videoUrl.optional(),
   orden: order,
   idempotencyKey,
 }).strict();
@@ -73,7 +78,7 @@ export const updateLessonSchema = z.object({
   expectedFingerprint: fingerprint,
   titulo: title.optional(),
   contenido: z.string().max(500_000).optional(),
-  videoUrl: url.optional(),
+  videoUrl: videoUrl.optional(),
   orden: order.optional(),
   idempotencyKey,
 }).strict().refine(
@@ -107,6 +112,7 @@ export const upsertQuizSchema = z.object({
 
 export const attachMaterialSchema = z.object({
   lessonId: id,
+  expectedFingerprint: fingerprint,
   filePath: z.string().trim().min(1).max(4_096).describe('Explicit local file path. Directories are never scanned.'),
   nombre: z.string().trim().min(1).max(200).optional(),
   idempotencyKey,
@@ -130,6 +136,8 @@ export const publishSchema = z.object({
 export const unpublishSchema = z.object({
   moduleId: id,
   expectedFingerprint: fingerprint,
+  confirmationToken: z.string().min(20).max(4_096),
+  phrase: z.string().min(1).max(500),
   idempotencyKey,
 }).strict();
 

@@ -190,6 +190,7 @@ model Curso {
   nivel            String
   publicado        Boolean  @default(false)
   emiteCertificado Boolean  @default(true)
+  version          Int      @default(0)
   createdAt        DateTime @default(now())
 
   categoriaId String
@@ -222,6 +223,7 @@ model Modulo {
   descripcion String?
   orden       Int
   estado      EstadoModulo @default(BORRADOR)
+  version     Int          @default(0)
   cursoId     String
   curso       Curso        @relation(fields: [cursoId], references: [id])
   lecciones   Leccion[]
@@ -423,4 +425,6 @@ model Certificado {
   fechaEmision DateTime @default(now())
   usuario      Usuario  @relation(fields: [usuarioId], references: [id])
   curso        Curso?   @relation(fields: [cursoId], references: [id], onDelete: SetNull)
+
+  @@unique([usuarioId, cursoId])
 }

@@ -4,6 +4,8 @@ import client from '../../api/client.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useStaggerReveal } from '../../lib/motion.js';
 import ConfirmModal from '../../components/ConfirmModal.jsx';
+import { authoringError, authoringMutation } from '../../lib/authoring.js';
+import { sanitizeMarkdownUrl } from '../../lib/markdown.js';
 
 export default function MyTeaching() {
   const navigate = useNavigate();
@@ -14,6 +16,7 @@ export default function MyTeaching() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null); // id del curso ocupado
   const [confirm, setConfirm] = useState(null); // { type: 'delete', curso }
+  const [publishConfirm, setPublishConfirm] = useState(null);
 
   const gridRef = useStaggerReveal([cursos.length]);
 
@@ -40,28 +43,42 @@ export default function MyTeaching() {
   async function togglePublish(curso) {
     setBusy(curso.id);
     try {
-      const url = curso.publicado
-        ? `/api/courses/${curso.id}/unpublish`
-        : `/api/courses/${curso.id}/publish`;
-      const { data } = await client.post(url);
-      if (data?.success) {
-        setCursos((prev) =>
-          prev.map((c) => (c.id === curso.id ? { ...c, publicado: !curso.publicado } : c)),
-        );
-      } else {
-        alert(data?.message || 'No se pudo actualizar el estado');
-      }
+      const action = curso.publicado ? 'unpublish' : 'publication';
+      const { data } = await authoringMutation('post', `/courses/${curso.id}/preview-${action}`, {});
+      if (!data?.success) throw new Error(data?.message || 'No se pudo preparar el cambio');
+      setPublishConfirm({ curso, action: curso.publicado ? 'unpublish' : 'publish', ...data.data });
     } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Error');
+      setError(authoringError(err, 'No se pudo preparar el cambio'));
     } finally {
       setBusy(null);
     }
   }
 
+  async function finishPublish(phrase) {
+    if (!publishConfirm) return;
+    const { curso, action, confirmationToken, fingerprint } = publishConfirm;
+    setBusy(curso.id);
+    try {
+      const { data } = await authoringMutation('post', `/courses/${curso.id}/${action}`, {
+        expectedFingerprint: fingerprint,
+        confirmationToken,
+        phrase,
+      });
+      if (!data?.success) throw new Error(data?.message || 'No se pudo actualizar el estado');
+      setCursos((current) => current.map((item) => (item.id === curso.id ? { ...item, publicado: action === 'publish' } : item)));
+      setPublishConfirm(null);
+    } catch (err) { setError(authoringError(err, 'No se pudo actualizar el estado')); }
+    finally { setBusy(null); }
+  }
+
   async function handleDelete(curso) {
     setBusy(curso.id);
     try {
-      const { data } = await client.delete(`/api/courses/${curso.id}`);
+      const snapshot = await client.get(`/api/authoring/courses/${curso.id}`);
+      if (!snapshot.data?.success) throw new Error(snapshot.data?.message || 'No se pudo validar el curso');
+      const { data } = await authoringMutation('delete', `/courses/${curso.id}`, {
+        expectedFingerprint: snapshot.data.data.fingerprint,
+      });
       if (data?.success) {
         setCursos((prev) => prev.filter((c) => c.id !== curso.id));
       } else {
@@ -142,6 +159,12 @@ export default function MyTeaching() {
         onConfirm={() => confirm && handleDelete(confirm.curso)}
         onCancel={() => setConfirm(null)}
       />
+      <SignedConfirmation
+        value={publishConfirm}
+        busy={Boolean(busy)}
+        onCancel={() => setPublishConfirm(null)}
+        onConfirm={finishPublish}
+      />
     </div>
   );
 }
@@ -150,9 +173,9 @@ function TeachingCard({ curso, busy, onEdit, onContent, onTogglePublish, onDelet
   return (
     <article className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col overflow-hidden">
       <div className="relative h-32 bg-titi-yellow-light">
-        {curso.portadaUrl ? (
+        {sanitizeMarkdownUrl(curso.portadaUrl) ? (
           <img
-            src={curso.portadaUrl}
+            src={sanitizeMarkdownUrl(curso.portadaUrl)}
             alt=""
             className="w-full h-full object-cover"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}
@@ -227,6 +250,26 @@ function TeachingCard({ curso, busy, onEdit, onContent, onTogglePublish, onDelet
         </div>
       </div>
     </article>
+  );
+}
+
+function SignedConfirmation({ value, busy, onCancel, onConfirm }) {
+  const [phrase, setPhrase] = useState('');
+  useEffect(() => setPhrase(''), [value]);
+  if (!value) return null;
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6">
+        <h2 className="text-xl font-bold text-titi-dark">Confirmar {value.action === 'publish' ? 'publicaciÃ³n' : 'despublicaciÃ³n'}</h2>
+        <p className="mt-2 text-sm text-gray-600">EscribÃ­ la frase exacta de la vista previa firmada:</p>
+        <code className="mt-3 block break-all rounded-xl bg-titi-cream p-3 text-sm">{value.phrase}</code>
+        <input value={phrase} onChange={(event) => setPhrase(event.target.value)} className="titi-input mt-3" autoFocus />
+        <div className="mt-5 flex justify-end gap-3">
+          <button type="button" onClick={onCancel} className="titi-btn-ghost">Cancelar</button>
+          <button type="button" onClick={() => onConfirm(phrase)} disabled={busy || phrase !== value.phrase} className="titi-btn-primary">Confirmar</button>
+        </div>
+      </div>
+    </div>
   );
 }
 

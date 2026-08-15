@@ -21,6 +21,12 @@ function SafeLink({ href, children, ...props }) {
   );
 }
 
+function SafeImage({ src, alt = '' }) {
+  const safeSrc = sanitizeMarkdownUrl(src);
+  if (!safeSrc) return null;
+  return <img src={safeSrc} alt={alt} loading="lazy" referrerPolicy="no-referrer" className="max-w-full rounded-xl" />;
+}
+
 export default function MarkdownContent({ content, format = 'TEXTO', className = '' }) {
   if (format !== 'MARKDOWN') {
     return <div className={`whitespace-pre-line ${className}`}>{content}</div>;
@@ -35,6 +41,7 @@ export default function MarkdownContent({ content, format = 'TEXTO', className =
         urlTransform={sanitizeMarkdownUrl}
         components={{
           a: SafeLink,
+          img: SafeImage,
           h1: ({ children }) => <h1 className="text-2xl font-extrabold text-titi-dark mt-6 mb-3">{children}</h1>,
           h2: ({ children }) => <h2 className="text-xl font-bold text-titi-dark mt-5 mb-2">{children}</h2>,
           h3: ({ children }) => <h3 className="text-lg font-bold text-titi-dark mt-4 mb-2">{children}</h3>,

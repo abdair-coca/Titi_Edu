@@ -94,77 +94,85 @@ export async function actualizarRacha(usuarioId) {
  */
 export async function checkCursoCompletado(usuarioId, cursoId) {
   try {
-    const inscripcion = await prisma.inscripcion.findUnique({
-      where: { usuarioId_cursoId: { usuarioId, cursoId } },
-    });
-    if (!inscripcion) return { completado: false };
-
-    const curso = await prisma.curso.findUnique({
-      where: { id: cursoId },
-      select: { titulo: true, emiteCertificado: true },
-    });
-    if (!curso) return { completado: false };
-
-    if (inscripcion.completado) {
-      const certificado = curso.emiteCertificado
-        ? await prisma.certificado.findFirst({ where: { usuarioId, cursoId } })
-        : null;
-      return { completado: true, nuevo: false, certificado, logros: [] };
-    }
-
-    const modulos = await prisma.modulo.findMany({
-      where: { cursoId, estado: 'PUBLICADO' },
-      select: {
-        lecciones: { select: { id: true } },
-        evaluacion: { select: { id: true } },
-      },
-    });
-    const leccionIds = modulos.flatMap((m) => m.lecciones.map((l) => l.id));
-    // Un curso sin lecciones no se puede "completar"
-    if (leccionIds.length === 0) return { completado: false };
-
-    const completadas = await prisma.progreso.count({
-      where: { usuarioId, leccionId: { in: leccionIds }, completada: true },
-    });
-    if (completadas < leccionIds.length) return { completado: false };
-
-    const evalIds = modulos.map((m) => m.evaluacion?.id).filter(Boolean);
-    const finales = await prisma.evaluacion.findMany({
-      where: { cursoId, esFinal: true },
-      select: { id: true },
-    });
-    evalIds.push(...finales.map((e) => e.id));
-
-    if (evalIds.length > 0) {
-      const aprobadas = await prisma.intento.groupBy({
-        by: ['evaluacionId'],
-        where: { usuarioId, evaluacionId: { in: evalIds }, aprobado: true },
+    const completion = await prisma.$transaction(async (tx) => {
+      const inscripcion = await tx.inscripcion.findUnique({
+        where: { usuarioId_cursoId: { usuarioId, cursoId } },
       });
-      if (aprobadas.length < evalIds.length) return { completado: false };
-    }
+      if (!inscripcion) return { completado: false };
 
-    // Recién completado: marcar inscripción + emitir certificado + logro
-    await prisma.inscripcion.update({
-      where: { id: inscripcion.id },
-      data: { completado: true, fechaCompletado: new Date() },
+      const curso = await tx.curso.findUnique({
+        where: { id: cursoId },
+        select: { titulo: true, emiteCertificado: true },
+      });
+      if (!curso) return { completado: false };
+
+      if (inscripcion.completado) {
+        const certificado = curso.emiteCertificado
+          ? await tx.certificado.findUnique({ where: { usuarioId_cursoId: { usuarioId, cursoId } } })
+          : null;
+        return { completado: true, nuevo: false, certificado };
+      }
+
+      const modulos = await tx.modulo.findMany({
+        where: { cursoId, estado: 'PUBLICADO' },
+        select: { lecciones: { select: { id: true } }, evaluacion: { select: { id: true } } },
+      });
+      const leccionIds = modulos.flatMap((module) => module.lecciones.map((lesson) => lesson.id));
+      if (leccionIds.length === 0) return { completado: false };
+
+      const completadas = await tx.progreso.count({
+        where: { usuarioId, leccionId: { in: leccionIds }, completada: true },
+      });
+      if (completadas < leccionIds.length) return { completado: false };
+
+      const evalIds = modulos.map((module) => module.evaluacion?.id).filter(Boolean);
+      const finales = await tx.evaluacion.findMany({ where: { cursoId, esFinal: true }, select: { id: true } });
+      evalIds.push(...finales.map((evaluation) => evaluation.id));
+      if (evalIds.length > 0) {
+        const aprobadas = await tx.intento.groupBy({
+          by: ['evaluacionId'],
+          where: { usuarioId, evaluacionId: { in: evalIds }, aprobado: true },
+        });
+        if (aprobadas.length < evalIds.length) return { completado: false };
+      }
+
+      const won = await tx.inscripcion.updateMany({
+        where: { id: inscripcion.id, completado: false },
+        data: { completado: true, fechaCompletado: new Date() },
+      });
+      if (won.count !== 1) {
+        const certificado = curso.emiteCertificado
+          ? await tx.certificado.findUnique({ where: { usuarioId_cursoId: { usuarioId, cursoId } } })
+          : null;
+        return { completado: true, nuevo: false, certificado };
+      }
+
+      const certificado = curso.emiteCertificado
+        ? await tx.certificado.upsert({
+            where: { usuarioId_cursoId: { usuarioId, cursoId } },
+            update: {},
+            create: { usuarioId, cursoId, cursoTitulo: curso.titulo },
+          })
+        : null;
+      return { completado: true, nuevo: true, certificado };
     });
 
-    let certificado = null;
-    if (curso.emiteCertificado) {
-      certificado = await prisma.certificado.findFirst({ where: { usuarioId, cursoId } });
-      if (!certificado) {
-        certificado = await prisma.certificado.create({
-          data: { usuarioId, cursoId, cursoTitulo: curso.titulo },
-        });
-      }
+    if (!completion.completado || !completion.nuevo) {
+      return { ...completion, logros: [] };
     }
 
-    const logro = await otorgarLogro(usuarioId, 'Primer curso');
-
-    // Propagar a Neo4j para recomendaciones / feed académico (no bloquea)
-    await syncCursoCompletado(usuarioId, cursoId);
-
-    return { completado: true, nuevo: true, certificado, logros: logro ? [logro] : [] };
+    let logro = null;
+    try {
+      logro = await otorgarLogro(usuarioId, 'Primer curso');
+    } catch (err) {
+      console.error('checkCursoCompletado logro post-completion error', err);
+    }
+    try {
+      await syncCursoCompletado(usuarioId, cursoId);
+    } catch (err) {
+      console.error('checkCursoCompletado sync post-completion error', err);
+    }
+    return { ...completion, logros: logro ? [logro] : [] };
   } catch (err) {
     console.error('checkCursoCompletado error', err);
     return { completado: false };

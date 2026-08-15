@@ -8,11 +8,11 @@ const mocks = vi.hoisted(() => {
   const client = {
     usuario: { findUnique: vi.fn() },
     categoria: { findMany: vi.fn() },
-    curso: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-    modulo: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
+    curso: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), delete: vi.fn() },
+    modulo: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
     leccion: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
     material: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
-    evaluacion: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
+    evaluacion: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
     pregunta: { findMany: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
     opcion: { deleteMany: vi.fn() },
     intento: { findMany: vi.fn(), count: vi.fn() },
@@ -57,6 +57,9 @@ beforeEach(() => {
   process.env.AUTHORING_CONFIRMATION_SECRET = 'authoring-test-secret';
   mocks.client.usuario.findUnique.mockResolvedValue(author);
   mocks.client.categoria.findMany.mockResolvedValue([]);
+  mocks.client.evaluacion.findFirst.mockResolvedValue(null);
+  mocks.client.curso.updateMany.mockResolvedValue({ count: 1 });
+  mocks.client.modulo.updateMany.mockResolvedValue({ count: 1 });
 });
 
 describe('authoring JWT and idempotency', () => {
@@ -85,6 +88,33 @@ describe('authoring JWT and idempotency', () => {
     const response = await request(app).post('/api/authoring/courses').set(auth).send({});
     expect(response.status).toBe(400);
     expect(mocks.client.curso.create).not.toHaveBeenCalled();
+  });
+});
+
+describe('legacy authoring security boundary', () => {
+  it.each([
+    ['post', '/api/courses', {}],
+    ['put', '/api/courses/c1', {}],
+    ['post', '/api/courses/c1/publish', {}],
+    ['post', '/api/courses/c1/unpublish', {}],
+    ['delete', '/api/courses/c1', {}],
+    ['post', '/api/courses/c1/modules', {}],
+    ['put', '/api/modules/m1', {}],
+    ['delete', '/api/modules/m1', {}],
+    ['post', '/api/modules/m1/lessons', {}],
+    ['put', '/api/lessons/l1', {}],
+    ['delete', '/api/lessons/l1', {}],
+    ['post', '/api/modules/m1/evaluation', {}],
+    ['post', '/api/courses/c1/final-evaluation', {}],
+    ['put', '/api/evaluations/e1', {}],
+    ['delete', '/api/evaluations/e1', {}],
+    ['post', '/api/lessons/l1/materials', {}],
+    ['delete', '/api/materials/mat1', {}],
+  ])('%s %s queda bloqueado fuera de /api/authoring', async (method, path, body) => {
+    const response = await request(app)[method](path).set(auth).send(body);
+    expect(response.status).toBe(410);
+    expect(response.body).toMatchObject({ success: false });
+    expect(response.body.message).toContain('/api/authoring');
   });
 });
 
@@ -158,7 +188,8 @@ describe('publication freshness', () => {
   it('devuelve 412 cuando el snapshot cambia luego del preview', async () => {
     const snapshot = {
       id: 'm1', titulo: 'Draft', descripcion: null, orden: 1, estado: 'BORRADOR',
-      curso: { id: 'c1', creadorId: author.id, publicado: false },
+      curso: { id: 'c1', creadorId: author.id, publicado: false, version: 0 },
+      version: 0,
       lecciones: [], evaluacion: null,
     };
     mocks.client.modulo.findUnique.mockResolvedValueOnce(snapshot);
@@ -179,7 +210,7 @@ describe('publication freshness', () => {
   it('rechaza publicar un curso sin módulos publicados', async () => {
     const course = {
       id: 'c1', titulo: 'Course', descripcion: 'Description', nivel: 'basic', categoriaId: 'cat1',
-      portadaUrl: null, emiteCertificado: true, publicado: false, creadorId: author.id,
+      portadaUrl: null, emiteCertificado: true, publicado: false, creadorId: author.id, version: 0,
       modulos: [],
     };
     mocks.client.curso.findUnique.mockResolvedValue(course);
@@ -192,5 +223,54 @@ describe('publication freshness', () => {
       });
     expect(publish.status).toBe(422);
     expect(mocks.client.curso.update).not.toHaveBeenCalled();
+  });
+
+  it('devuelve 412 si una mutacion descendiente gana el CAS durante publicacion', async () => {
+    const snapshot = {
+      id: 'm-race', titulo: 'Draft', descripcion: null, orden: 1, estado: 'BORRADOR', version: 2,
+      curso: { id: 'c-race', creadorId: author.id, publicado: false, version: 5 },
+      lecciones: [], evaluacion: null,
+    };
+    mocks.client.modulo.findUnique.mockResolvedValue(snapshot);
+    const preview = await request(app).post('/api/authoring/modules/m-race/preview-publication').set(auth).send({});
+    mocks.client.curso.updateMany.mockResolvedValue({ count: 1 });
+    mocks.client.modulo.updateMany.mockResolvedValue({ count: 0 });
+
+    const publish = await request(app).post('/api/authoring/modules/m-race/publish')
+      .set(auth).set('Idempotency-Key', 'publish-race').send({
+        expectedFingerprint: preview.body.data.fingerprint,
+        confirmationToken: preview.body.data.confirmationToken,
+        phrase: preview.body.data.phrase,
+      });
+
+    expect(publish.status).toBe(412);
+    expect(mocks.client.modulo.update).not.toHaveBeenCalled();
+  });
+
+  it('exige preview firmado completo para despublicar', async () => {
+    const snapshot = {
+      id: 'm-live', titulo: 'Live', descripcion: null, orden: 1, estado: 'PUBLICADO', version: 3,
+      curso: { id: 'c-live', creadorId: author.id, publicado: true, version: 8 },
+      lecciones: [], evaluacion: null,
+    };
+    mocks.client.modulo.findUnique.mockResolvedValue(snapshot);
+    const preview = await request(app).post('/api/authoring/modules/m-live/preview-unpublish').set(auth).send({});
+    expect(preview.status).toBe(200);
+    expect(preview.body.data.summary.id).toBe('m-live');
+    expect(preview.body.data.phrase).toBe('DESPUBLICAR MODULO m-live');
+
+    const missing = await request(app).post('/api/authoring/modules/m-live/unpublish')
+      .set(auth).set('Idempotency-Key', 'unpublish-missing').send({ expectedFingerprint: preview.body.data.fingerprint });
+    expect(missing.status).toBe(422);
+
+    mocks.client.modulo.update.mockResolvedValue({ ...snapshot, estado: 'BORRADOR', version: 4 });
+    const valid = await request(app).post('/api/authoring/modules/m-live/unpublish')
+      .set(auth).set('Idempotency-Key', 'unpublish-valid').send({
+        expectedFingerprint: preview.body.data.fingerprint,
+        confirmationToken: preview.body.data.confirmationToken,
+        phrase: preview.body.data.phrase,
+      });
+    expect(valid.status).toBe(200);
+    expect(valid.body.data.module.estado).toBe('BORRADOR');
   });
 });

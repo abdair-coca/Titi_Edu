@@ -16,6 +16,16 @@ test('publish schemas require preview phrase, token, and fingerprint', () => {
   }
 });
 
+test('unpublish schema requires signed preview phrase, token, and fingerprint', () => {
+  const definition = createToolDefinitions({ request: async () => ({ data: {} }) })
+    .find((entry) => entry.name === 'unpublish_module');
+  assert.equal(definition.inputSchema.safeParse({ moduleId: 'm1', expectedFingerprint: fingerprint }).success, false);
+  assert.equal(definition.inputSchema.safeParse({
+    moduleId: 'm1', expectedFingerprint: fingerprint,
+    confirmationToken: 'signed-preview-token-value', phrase: 'DESPUBLICAR MODULO m1',
+  }).success, true);
+});
+
 test('publication preview fails closed when backend omits confirmation fields', async () => {
   const definitions = createToolDefinitions({ request: async () => ({ data: { fingerprint } }) });
   const preview = definitions.find((entry) => entry.name === 'preview_module_publication');
@@ -30,4 +40,18 @@ test('preview and publish remain separate HTTP tool operations', () => {
     definitions.find((entry) => entry.name === 'preview_course_publication').run,
     definitions.find((entry) => entry.name === 'publish_course').run,
   );
+});
+
+test('active URL schemas require HTTPS, safe media, and allowlisted video hosts', () => {
+  const definitions = createToolDefinitions({ request: async () => ({ data: {} }) });
+  const course = definitions.find((entry) => entry.name === 'create_course_draft').inputSchema;
+  const baseCourse = { titulo: 'Course', descripcion: 'Description', nivel: 'basic', categoriaId: 'cat' };
+  assert.equal(course.safeParse({ ...baseCourse, portadaUrl: 'http://example.com/cover.png' }).success, false);
+  assert.equal(course.safeParse({ ...baseCourse, portadaUrl: 'https://example.com/cover.svg' }).success, false);
+  assert.equal(course.safeParse({ ...baseCourse, portadaUrl: 'https://example.com/cover.png' }).success, true);
+
+  const lesson = definitions.find((entry) => entry.name === 'create_lesson_draft').inputSchema;
+  const baseLesson = { moduleId: 'm1', expectedFingerprint: fingerprint, titulo: 'Lesson', contenido: 'Body', orden: 1 };
+  assert.equal(lesson.safeParse({ ...baseLesson, videoUrl: 'https://evil.example/embed/1' }).success, false);
+  assert.equal(lesson.safeParse({ ...baseLesson, videoUrl: 'https://www.youtube.com/watch?v=abc' }).success, true);
 });

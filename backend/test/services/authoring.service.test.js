@@ -9,6 +9,8 @@ import {
   privateAnalytics,
   sha256,
   verifyPublicationConfirmation,
+  validateHttpsUrl,
+  validateVideoUrl,
 } from '../../src/services/authoring.service.js';
 
 describe('authoring service tokens', () => {
@@ -42,6 +44,26 @@ describe('publication confirmation', () => {
       expectedFingerprint: fingerprint({ id: 'm1', title: 'Changed' }),
     }).ok).toBe(false);
   });
+
+  it('firma despublicacion con accion, frase y expiracion ligadas', () => {
+    process.env.AUTHORING_CONFIRMATION_SECRET = 'test-authoring-secret';
+    const expectedFingerprint = fingerprint({ id: 'm1', version: 4 });
+    const confirmation = createPublicationConfirmation({
+      resourceType: 'module', resourceId: 'm1', expectedFingerprint, action: 'unpublish',
+    });
+    expect(confirmation.phrase).toBe('DESPUBLICAR MODULO m1');
+    expect(new Date(confirmation.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    expect(verifyPublicationConfirmation({
+      confirmationToken: confirmation.confirmationToken,
+      phrase: confirmation.phrase,
+      resourceType: 'module', resourceId: 'm1', expectedFingerprint, action: 'unpublish',
+    })).toEqual({ ok: true });
+    expect(verifyPublicationConfirmation({
+      confirmationToken: confirmation.confirmationToken,
+      phrase: confirmation.phrase,
+      resourceType: 'module', resourceId: 'm1', expectedFingerprint, action: 'publish',
+    }).ok).toBe(false);
+  });
 });
 
 describe('analytics privacy', () => {
@@ -50,7 +72,7 @@ describe('analytics privacy', () => {
       { usuarioId: 'u1', nota: 80, aprobado: true },
       { usuarioId: 'u2', nota: 40, aprobado: false },
     ]);
-    expect(result).toMatchObject({ totalAttempts: 2, uniqueStudents: 2, passedStudents: 1, suprimida: true });
+    expect(result).toMatchObject({ totalAttempts: null, uniqueStudents: null, passedStudents: null, suppressed: true, suprimida: true });
     expect(result.averageScore).toBeNull();
     expect(result.attemptPassRate).toBeNull();
     expect(result.studentPassRate).toBeNull();
@@ -79,5 +101,16 @@ describe('upload inspection', () => {
     expect(inspectAuthoringFile({ originalname: 'lesson.md', buffer: Buffer.from('# Hola') }).ok).toBe(true);
     expect(inspectAuthoringFile({ originalname: 'script.py', buffer: Buffer.from([112, 0, 121]) })).toMatchObject({ ok: false });
     expect(inspectAuthoringFile({ originalname: 'run.exe', buffer: Buffer.from('MZ') })).toMatchObject({ ok: false });
+  });
+});
+
+describe('active URL validation', () => {
+  it('requires HTTPS, rejects SVG covers, and allowlists video hosts', () => {
+    expect(validateHttpsUrl('http://example.com/cover.png', { rejectSvg: true }).ok).toBe(false);
+    expect(validateHttpsUrl('https://example.com/cover.svg', { rejectSvg: true }).ok).toBe(false);
+    expect(validateHttpsUrl('https://example.com/cover.png', { rejectSvg: true }).ok).toBe(true);
+    expect(validateVideoUrl('https://evil.example/embed/1').ok).toBe(false);
+    expect(validateVideoUrl('https://www.youtube.com/watch?v=abc').ok).toBe(true);
+    expect(validateVideoUrl('javascript:alert(1)').ok).toBe(false);
   });
 });

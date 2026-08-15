@@ -5,7 +5,7 @@ const DEFAULT_TIMEOUT_MS = 20_000;
 function normalizeBaseUrl(value) {
   let url;
   try {
-    url = new URL(value || 'http://localhost:3000');
+    url = new URL(value || 'http://localhost:3001');
   } catch {
     throw new TitiApiError('TITI_API_URL must be a valid HTTP(S) URL', { code: 'INVALID_CONFIGURATION' });
   }

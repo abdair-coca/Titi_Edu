@@ -33,6 +33,52 @@ export function fingerprint(value) {
   return sha256(canonicalJson(value));
 }
 
+const DEFAULT_VIDEO_HOSTS = Object.freeze([
+  'youtube.com',
+  'www.youtube.com',
+  'youtu.be',
+  'vimeo.com',
+  'www.vimeo.com',
+  'player.vimeo.com',
+]);
+
+function configuredVideoHosts() {
+  const configured = String(process.env.AUTHORING_VIDEO_HOSTS || '')
+    .split(',')
+    .map((host) => host.trim().toLowerCase())
+    .filter(Boolean);
+  return new Set(configured.length ? configured : DEFAULT_VIDEO_HOSTS);
+}
+
+export function validateHttpsUrl(value, { allowNull = true, rejectSvg = false } = {}) {
+  if (value === null || value === undefined || value === '') {
+    return allowNull ? null : { ok: false, message: 'La URL es requerida' };
+  }
+  let parsed;
+  try {
+    parsed = new URL(String(value).trim());
+  } catch {
+    return { ok: false, message: 'La URL no es vÃ¡lida' };
+  }
+  if (parsed.protocol !== 'https:' || parsed.username || parsed.password) {
+    return { ok: false, message: 'La URL debe usar HTTPS sin credenciales embebidas' };
+  }
+  if (rejectSvg && parsed.pathname.toLowerCase().endsWith('.svg')) {
+    return { ok: false, message: 'No se permiten imÃ¡genes SVG remotas' };
+  }
+  return { ok: true, value: parsed.toString() };
+}
+
+export function validateVideoUrl(value) {
+  const checked = validateHttpsUrl(value);
+  if (checked === null || !checked.ok) return checked;
+  const parsed = new URL(checked.value);
+  if (!configuredVideoHosts().has(parsed.hostname.toLowerCase())) {
+    return { ok: false, message: 'El host del video no estÃ¡ permitido' };
+  }
+  return checked;
+}
+
 export function requestFingerprint(req, extra = {}) {
   return fingerprint({
     method: req.method,
@@ -70,12 +116,13 @@ function confirmationSecret() {
   return 'authoring-development-only-secret';
 }
 
-export function createPublicationConfirmation({ resourceType, resourceId, expectedFingerprint }) {
+export function createPublicationConfirmation({ resourceType, resourceId, expectedFingerprint, action = 'publish' }) {
   const secret = confirmationSecret();
   if (!secret) return null;
   const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
-  const phrase = `PUBLICAR ${resourceType === 'course' ? 'CURSO' : 'MODULO'} ${resourceId}`;
-  const payload = Buffer.from(canonicalJson({ resourceType, resourceId, expectedFingerprint, phrase, expiresAt }))
+  const verb = action === 'unpublish' ? 'DESPUBLICAR' : 'PUBLICAR';
+  const phrase = `${verb} ${resourceType === 'course' ? 'CURSO' : 'MODULO'} ${resourceId}`;
+  const payload = Buffer.from(canonicalJson({ action, resourceType, resourceId, expectedFingerprint, phrase, expiresAt }))
     .toString('base64url');
   const signature = createHmac('sha256', secret).update(payload).digest('base64url');
   return { confirmationToken: `${payload}.${signature}`, phrase, expiresAt };
@@ -87,6 +134,7 @@ export function verifyPublicationConfirmation({
   resourceType,
   resourceId,
   expectedFingerprint,
+  action = 'publish',
 }) {
   const secret = confirmationSecret();
   if (!secret) return { ok: false, reason: 'secret_missing' };
@@ -109,6 +157,7 @@ export function verifyPublicationConfirmation({
     return { ok: false, reason: 'invalid' };
   }
   if (
+    decoded.action !== action ||
     decoded.resourceType !== resourceType ||
     decoded.resourceId !== resourceId ||
     decoded.expectedFingerprint !== expectedFingerprint ||
@@ -128,8 +177,32 @@ export function coursePublicationSummary(course) {
     nivel: course.nivel,
     categoriaId: course.categoriaId,
     emiteCertificado: course.emiteCertificado,
+    version: course.version,
     modules: (course.modulos || []).map(modulePublicationSummary),
+    finalEvaluation: evaluationPublicationSummary(course.evaluacionFinal),
   };
+}
+
+function evaluationPublicationSummary(evaluation) {
+  return evaluation
+    ? {
+        id: evaluation.id,
+        titulo: evaluation.titulo,
+        intentosMax: evaluation.intentosMax,
+        notaMinima: evaluation.notaMinima,
+        questions: (evaluation.preguntas || []).map((question) => ({
+          id: question.id,
+          texto: question.texto,
+          tipo: question.tipo,
+          orden: question.orden,
+          options: (question.opciones || []).map((option) => ({
+            id: option.id,
+            texto: option.texto,
+            esCorrecta: option.esCorrecta,
+          })),
+        })),
+      }
+    : null;
 }
 
 export function modulePublicationSummary(module) {
@@ -139,6 +212,7 @@ export function modulePublicationSummary(module) {
     descripcion: module.descripcion,
     orden: module.orden,
     estado: module.estado,
+    version: module.version,
     lessons: (module.lecciones || []).map((lesson) => ({
       id: lesson.id,
       titulo: lesson.titulo,
@@ -153,25 +227,7 @@ export function modulePublicationSummary(module) {
         sha256: material.sha256,
       })),
     })),
-    evaluation: module.evaluacion
-      ? {
-          id: module.evaluacion.id,
-          titulo: module.evaluacion.titulo,
-          intentosMax: module.evaluacion.intentosMax,
-          notaMinima: module.evaluacion.notaMinima,
-          questions: (module.evaluacion.preguntas || []).map((question) => ({
-            id: question.id,
-            texto: question.texto,
-            tipo: question.tipo,
-            orden: question.orden,
-            options: (question.opciones || []).map((option) => ({
-              id: option.id,
-              texto: option.texto,
-              esCorrecta: option.esCorrecta,
-            })),
-          })),
-        }
-      : null,
+    evaluation: evaluationPublicationSummary(module.evaluacion),
   };
 }
 
@@ -222,7 +278,21 @@ export function privateAnalytics(intents) {
   const suppressed = uniqueStudents < 3;
   const bucketCounts = [0, 0, 0, 0, 0];
   for (const attempt of intents) bucketCounts[Math.min(4, Math.floor(Math.max(0, attempt.nota) / 20))] += 1;
+  if (suppressed) {
+    return {
+      suppressed: true,
+      suprimida: true,
+      totalAttempts: null,
+      uniqueStudents: null,
+      passedStudents: null,
+      averageScore: null,
+      attemptPassRate: null,
+      studentPassRate: null,
+      scoreDistribution: null,
+    };
+  }
   return {
+    suppressed: false,
     totalAttempts,
     uniqueStudents,
     passedStudents,
@@ -236,6 +306,6 @@ export function privateAnalytics(intents) {
       { range: '60-79', count: bucketCounts[3] },
       { range: '80-100', count: bucketCounts[4] },
     ],
-    suprimida: suppressed,
+    suprimida: false,
   };
 }
