@@ -213,6 +213,7 @@ export function modulePublicationSummary(module) {
     orden: module.orden,
     estado: module.estado,
     version: module.version,
+    courseVersion: module.curso?.version ?? null,
     lessons: (module.lecciones || []).map((lesson) => ({
       id: lesson.id,
       titulo: lesson.titulo,

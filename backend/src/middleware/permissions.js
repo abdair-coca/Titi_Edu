@@ -42,26 +42,37 @@ export async function loadOptionalUser(req) {
   return req.dbUser;
 }
 
-// Acceso a CONTENIDO de un curso (lección/evaluación/etc): ADMIN, dueño/co-profesor
-// o inscripto. Responde 401/403 por sí mismo; devuelve null si ya respondió.
-export async function ensureCourseContentAccess(req, res, cursoId) {
+// Acceso centralizado a contenido educativo. ADMIN y docentes del curso pueden
+// previsualizar borradores; estudiantes requieren curso/módulo publicados e inscripción.
+export async function ensureCourseContentAccess(req, res, cursoId, { moduleState = null } = {}) {
   const usuario = await loadCurrentUser(req, res);
   if (!usuario) return null;
-
-  if (usuario.rol === 'ADMIN') {
-    return { usuario, isOwner: false, isAdmin: true, enrolled: false };
-  }
 
   const curso = await prisma.curso.findUnique({
     where: { id: cursoId },
     select: {
       creadorId: true,
+      publicado: true,
       profesores: { where: { profesorId: usuario.id }, select: { profesorId: true } },
     },
   });
+  if (!curso) {
+    res.status(404).json({ success: false, message: 'Curso no encontrado' });
+    return null;
+  }
+
+  if (usuario.rol === 'ADMIN') {
+    return { usuario, isOwner: false, isAdmin: true, enrolled: false, course: curso };
+  }
+
   const isOwner = Boolean(curso) && (curso.creadorId === usuario.id || curso.profesores.length > 0);
   if (isOwner) {
-    return { usuario, isOwner: true, isAdmin: false, enrolled: false };
+    return { usuario, isOwner: true, isAdmin: false, enrolled: false, course: curso };
+  }
+
+  if (!curso.publicado || (moduleState !== null && moduleState !== 'PUBLICADO')) {
+    res.status(404).json({ success: false, message: 'Contenido no encontrado' });
+    return null;
   }
 
   const inscripcion = await prisma.inscripcion.findUnique({
@@ -74,5 +85,5 @@ export async function ensureCourseContentAccess(req, res, cursoId) {
     });
     return null;
   }
-  return { usuario, isOwner: false, isAdmin: false, enrolled: true };
+  return { usuario, isOwner: false, isAdmin: false, enrolled: true, course: curso };
 }

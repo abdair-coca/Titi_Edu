@@ -6,10 +6,11 @@ vi.mock('../../src/db.js', () => ({ runQuery: vi.fn(), toNumber: (v) => Number(v
 vi.mock('../../src/prisma.js', () => ({
   default: {
     curso: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
-    modulo: { findMany: vi.fn() },
+    modulo: { findMany: vi.fn(), findUnique: vi.fn() },
     usuario: { findUnique: vi.fn() },
     evaluacion: { findFirst: vi.fn() },
     inscripcion: { findUnique: vi.fn() },
+    progreso: { findMany: vi.fn() },
   },
 }));
 vi.mock('../../src/services/neo4j-sync.service.js', () => ({ syncInscripcion: vi.fn() }));
@@ -93,6 +94,77 @@ describe('GET /api/courses/:id/modules', () => {
     expect(prisma.modulo.findMany).toHaveBeenCalledWith(expect.objectContaining({
       where: { cursoId: 'c1', estado: 'PUBLICADO', curso: { publicado: true } },
     }));
+  });
+});
+
+describe('GET /api/modules/:id/lessons visibility', () => {
+  it('exige curso y modulo publicados al estudiante', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
+    prisma.modulo.findUnique.mockResolvedValue({
+      id: 'm1', cursoId: 'c1', estado: 'BORRADOR', lecciones: [{ id: 'l1' }],
+    });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', publicado: true, profesores: [] });
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
+
+    const draftModule = await request(app).get('/api/modules/m1/lessons')
+      .set('Authorization', `Bearer ${token}`);
+    expect(draftModule.status).toBe(404);
+
+    prisma.modulo.findUnique.mockResolvedValue({
+      id: 'm1', cursoId: 'c1', estado: 'PUBLICADO', lecciones: [{ id: 'l1' }],
+    });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', publicado: false, profesores: [] });
+    const draftCourse = await request(app).get('/api/modules/m1/lessons')
+      .set('Authorization', `Bearer ${token}`);
+    expect(draftCourse.status).toBe(404);
+  });
+
+  it('permite al dueño previsualizar un modulo borrador', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'PROFESOR' });
+    prisma.modulo.findUnique.mockResolvedValue({
+      id: 'm1', cursoId: 'c1', estado: 'BORRADOR', lecciones: [{ id: 'l1' }],
+    });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'u1', publicado: false, profesores: [] });
+
+    const response = await request(app).get('/api/modules/m1/lessons')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+  });
+});
+
+describe('GET /api/courses/:id/progress visibility', () => {
+  const course = {
+    id: 'c1', creadorId: 'otro', publicado: true, profesores: [],
+    modulos: [{ id: 'm1', titulo: 'M1', orden: 1, lecciones: [{ id: 'l1', titulo: 'L1', orden: 1 }] }],
+  };
+
+  it('404 para estudiante inscrito si el curso no esta publicado', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
+    prisma.curso.findUnique.mockResolvedValue({ ...course, publicado: false });
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
+
+    const response = await request(app).get('/api/courses/c1/progress')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(404);
+    expect(prisma.progreso.findMany).not.toHaveBeenCalled();
+  });
+
+  it('200 para estudiante inscrito en curso publicado y dueño en borrador', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
+    prisma.curso.findUnique.mockResolvedValue(course);
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
+    prisma.progreso.findMany.mockResolvedValue([]);
+    const student = await request(app).get('/api/courses/c1/progress')
+      .set('Authorization', `Bearer ${token}`);
+    expect(student.status).toBe(200);
+
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'PROFESOR' });
+    prisma.curso.findUnique.mockResolvedValue({ ...course, creadorId: 'u1', publicado: false });
+    const owner = await request(app).get('/api/courses/c1/progress')
+      .set('Authorization', `Bearer ${token}`);
+    expect(owner.status).toBe(200);
   });
 });
 

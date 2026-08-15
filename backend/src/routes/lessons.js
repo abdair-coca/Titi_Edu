@@ -91,10 +91,9 @@ router.get('/lessons/:id', requireAuth, async (req, res) => {
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
-    if (leccion.modulo.estado !== 'PUBLICADO') {
-      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
-    }
-    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
+      moduleState: leccion.modulo.estado,
+    });
     if (!access) return;
 
     res.json({ success: true, data: { leccion } });
@@ -203,10 +202,9 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
-    if (leccion.modulo.estado !== 'PUBLICADO') {
-      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
-    }
-    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
+      moduleState: leccion.modulo.estado,
+    });
     if (!access) return;
 
     // ¿Era la primera vez que la completa? Sólo en ese caso actualizamos la racha.
@@ -290,10 +288,12 @@ router.get('/lessons/:id/note', requireAuth, async (req, res) => {
       where: { id: req.params.id },
       select: { id: true, modulo: { select: { cursoId: true, estado: true } } },
     });
-    if (!leccion || leccion.modulo.estado !== 'PUBLICADO') {
+    if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
-    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
+      moduleState: leccion.modulo.estado,
+    });
     if (!access) return;
 
     const nota = await prisma.notaLeccion.findUnique({
@@ -330,10 +330,9 @@ router.put('/lessons/:id/note', requireAuth, async (req, res) => {
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
-    if (leccion.modulo.estado !== 'PUBLICADO') {
-      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
-    }
-    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
+      moduleState: leccion.modulo.estado,
+    });
     if (!access) return;
 
     const nota = await prisma.notaLeccion.upsert({
@@ -361,10 +360,9 @@ router.get('/lessons/:id/comments', requireAuth, async (req, res) => {
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
-    if (leccion.modulo.estado !== 'PUBLICADO') {
-      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
-    }
-    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
+      moduleState: leccion.modulo.estado,
+    });
     if (!access) return;
 
     const comentarios = await prisma.comentarioLeccion.findMany({
@@ -416,10 +414,9 @@ router.post('/lessons/:id/comments', requireAuth, async (req, res) => {
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
-    if (leccion.modulo.estado !== 'PUBLICADO') {
-      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
-    }
-    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
+      moduleState: leccion.modulo.estado,
+    });
     if (!access) return;
 
     const comentario = await prisma.comentarioLeccion.create({

@@ -192,13 +192,9 @@ router.get('/modules/:id/lessons', requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
     }
 
-    if (modulo.estado !== 'PUBLICADO') {
-      return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
-    }
-    const visibleCourse = await prisma.curso.findFirst({ where: { id: modulo.cursoId, publicado: true }, select: { id: true } });
-    if (!visibleCourse) return res.status(404).json({ success: false, message: 'MÃ³dulo no encontrado' });
-
-    const access = await ensureCourseContentAccess(req, res, modulo.cursoId);
+    const access = await ensureCourseContentAccess(req, res, modulo.cursoId, {
+      moduleState: modulo.estado,
+    });
     if (!access) return;
 
     const { lecciones, ...moduloSinLecciones } = modulo;

@@ -291,15 +291,14 @@ router.get('/modules/:id/evaluation', requireAuth, async (req, res) => {
     if (!modulo) {
       return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
     }
-    if (modulo.estado !== 'PUBLICADO') {
-      return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
-    }
+    const access = await ensureCourseContentAccess(req, res, modulo.cursoId, {
+      moduleState: modulo.estado,
+    });
+    if (!access) return;
+
     if (!modulo.evaluacion) {
       return res.status(404).json({ success: false, message: 'Este módulo no tiene evaluación' });
     }
-
-    const access = await ensureCourseContentAccess(req, res, modulo.cursoId);
-    if (!access) return;
 
     res.json({
       success: true,
@@ -324,6 +323,9 @@ router.get('/courses/:id/final-evaluation', requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Curso no encontrado' });
     }
 
+    const access = await ensureCourseContentAccess(req, res, curso.id);
+    if (!access) return;
+
     const evaluacion = await prisma.evaluacion.findFirst({
       where: { cursoId: curso.id, esFinal: true },
       include: EVAL_INCLUDE,
@@ -331,9 +333,6 @@ router.get('/courses/:id/final-evaluation', requireAuth, async (req, res) => {
     if (!evaluacion) {
       return res.status(404).json({ success: false, message: 'Este curso no tiene evaluación final' });
     }
-
-    const access = await ensureCourseContentAccess(req, res, curso.id);
-    if (!access) return;
 
     res.json({
       success: true,
@@ -356,14 +355,12 @@ router.get('/evaluations/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Evaluación no encontrada' });
     }
     const { ev, curso } = loaded;
-    if (ev.modulo && ev.modulo.estado !== 'PUBLICADO') {
-      return res.status(404).json({ success: false, message: 'Evaluación no encontrada' });
-    }
-
     // Evaluación huérfana (sin curso asociado): no hay contra qué chequear inscripción.
     let esAutor = usuario.rol === 'ADMIN';
     if (curso) {
-      const access = await ensureCourseContentAccess(req, res, curso.id);
+      const access = await ensureCourseContentAccess(req, res, curso.id, {
+        moduleState: ev.modulo?.estado ?? null,
+      });
       if (!access) return;
       esAutor = access.isOwner || access.isAdmin;
     }
@@ -479,9 +476,10 @@ router.post('/evaluations/:id/attempt', requireAuth, async (req, res) => {
     if (!curso) {
       return res.status(404).json({ success: false, message: 'Curso de la evaluación no encontrado' });
     }
-    if (ev.modulo && ev.modulo.estado !== 'PUBLICADO') {
-      return res.status(404).json({ success: false, message: 'Evaluación no encontrada' });
-    }
+    const access = await ensureCourseContentAccess(req, res, curso.id, {
+      moduleState: ev.modulo?.estado ?? null,
+    });
+    if (!access) return;
 
     const inscripcion = await prisma.inscripcion.findUnique({
       where: { usuarioId_cursoId: { usuarioId: usuario.id, cursoId: curso.id } },
@@ -629,11 +627,10 @@ router.get('/evaluations/:id/my-attempts', requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Evaluación no encontrada' });
     }
     const { ev, curso } = loaded;
-    if (ev.modulo && ev.modulo.estado !== 'PUBLICADO') {
-      return res.status(404).json({ success: false, message: 'Evaluación no encontrada' });
-    }
     if (curso) {
-      const access = await ensureCourseContentAccess(req, res, curso.id);
+      const access = await ensureCourseContentAccess(req, res, curso.id, {
+        moduleState: ev.modulo?.estado ?? null,
+      });
       if (!access) return;
     }
 

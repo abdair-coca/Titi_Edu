@@ -3,7 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom';
 import client from '../../api/client.js';
 import ConfirmModal from '../../components/ConfirmModal.jsx';
 import { CheckIcon, ListIcon, PencilIcon } from '../../components/icons.jsx';
-import { authoringError, authoringMutation } from '../../lib/authoring.js';
+import {
+  authoringError,
+  authoringMutation,
+} from '../../lib/authoring.js';
+import { readAuthoringEvaluation, readMutationEvaluation } from '../../lib/authoring-contract.js';
 
 const TIPOS = [
   { value: 'OPCION_MULTIPLE', label: 'Opción múltiple', Icon: ListIcon },
@@ -57,10 +61,6 @@ export default function EvaluationEditor({ mode = 'module' }) {
   const courseId = params.id;
 
   const isFinal = mode === 'final';
-  const getUrl = isFinal
-    ? `/api/courses/${courseId}/final-evaluation`
-    : `/api/modules/${moduleId}/evaluation`;
-
   const [evalId, setEvalId] = useState(null); // null → crear
   const [titulo, setTitulo] = useState('');
   const [intentosMax, setIntentosMax] = useState(3);
@@ -76,14 +76,24 @@ export default function EvaluationEditor({ mode = 'module' }) {
   const [analyticsError, setAnalyticsError] = useState(null);
   const [moduleReadOnly, setModuleReadOnly] = useState(false);
 
-  // Cargar evaluación existente (404 = modo crear)
+  // Cargar el borrador docente desde el dominio de autoría.
   const fetchExisting = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await client.get(getUrl);
+      const { data } = await client.get(isFinal
+        ? `/api/authoring/courses/${courseId}`
+        : `/api/authoring/modules/${moduleId}`);
       if (data?.success) {
-        const ev = data.data.evaluacion;
+        const ev = readAuthoringEvaluation(data, { isFinal });
+        if (!ev) {
+          setEvalId(null);
+          setTitulo('');
+          setIntentosMax(3);
+          setNotaMinima(70);
+          setPreguntas([emptyQuestion('OPCION_MULTIPLE')]);
+          return;
+        }
         setEvalId(ev.id);
         setTitulo(ev.titulo || '');
         setIntentosMax(ev.intentosMax ?? 3);
@@ -110,7 +120,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
     } finally {
       setLoading(false);
     }
-  }, [getUrl]);
+  }, [courseId, isFinal, moduleId]);
 
   useEffect(() => {
     fetchExisting();
@@ -234,11 +244,12 @@ export default function EvaluationEditor({ mode = 'module' }) {
         data = response.data;
       }
 
-      if (data?.success) {
-        setEvalId(data.data.evaluacion.id);
+      const evaluation = readMutationEvaluation(data);
+      if (data?.success && evaluation?.id) {
+        setEvalId(evaluation.id);
         setSuccess('Evaluación guardada');
       } else {
-        setError(data?.message || 'No se pudo guardar');
+        setError(data?.message || 'La respuesta de autoría no incluyó la evaluación guardada');
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Error guardando');

@@ -185,6 +185,20 @@ describe('service token lifecycle', () => {
 });
 
 describe('publication freshness', () => {
+  it('incluye la versión del curso padre en el snapshot de módulo', async () => {
+    mocks.client.modulo.findUnique.mockResolvedValue({
+      id: 'm-query', titulo: 'Draft', descripcion: null, orden: 1, estado: 'BORRADOR', version: 2,
+      curso: { id: 'c-query', creadorId: author.id, publicado: false, version: 7 },
+      lecciones: [], evaluacion: null,
+    });
+
+    const response = await request(app).get('/api/authoring/modules/m-query').set(auth);
+
+    expect(response.status).toBe(200);
+    expect(mocks.client.modulo.findUnique.mock.calls[0][0].include.curso.select.version).toBe(true);
+    expect(response.body.data.module.curso.version).toBe(7);
+  });
+
   it('devuelve 412 cuando el snapshot cambia luego del preview', async () => {
     const snapshot = {
       id: 'm1', titulo: 'Draft', descripcion: null, orden: 1, estado: 'BORRADOR',
@@ -205,6 +219,28 @@ describe('publication freshness', () => {
       });
     expect(publish.status).toBe(412);
     expect(mocks.client.modulo.update).not.toHaveBeenCalled();
+  });
+
+  it('devuelve 412 si cambia la versión CAS del curso padre luego del preview', async () => {
+    const snapshot = {
+      id: 'm-parent', titulo: 'Draft', descripcion: null, orden: 1, estado: 'BORRADOR', version: 2,
+      curso: { id: 'c-parent', creadorId: author.id, publicado: false, version: 5 },
+      lecciones: [], evaluacion: null,
+    };
+    mocks.client.modulo.findUnique
+      .mockResolvedValueOnce(snapshot)
+      .mockResolvedValueOnce({ ...snapshot, curso: { ...snapshot.curso, version: 6 } });
+    const preview = await request(app).post('/api/authoring/modules/m-parent/preview-publication').set(auth).send({});
+
+    const publish = await request(app).post('/api/authoring/modules/m-parent/publish')
+      .set(auth).set('Idempotency-Key', 'publish-parent-version').send({
+        expectedFingerprint: preview.body.data.fingerprint,
+        confirmationToken: preview.body.data.confirmationToken,
+        phrase: preview.body.data.phrase,
+      });
+
+    expect(publish.status).toBe(412);
+    expect(mocks.client.curso.updateMany).not.toHaveBeenCalled();
   });
 
   it('rechaza publicar un curso sin módulos publicados', async () => {
@@ -244,6 +280,14 @@ describe('publication freshness', () => {
       });
 
     expect(publish.status).toBe(412);
+    expect(mocks.client.curso.updateMany).toHaveBeenCalledWith({
+      where: { id: 'c-race', version: 5 },
+      data: { version: { increment: 1 } },
+    });
+    expect(mocks.client.modulo.updateMany).toHaveBeenCalledWith({
+      where: { id: 'm-race', version: 2, estado: 'BORRADOR' },
+      data: { version: { increment: 1 } },
+    });
     expect(mocks.client.modulo.update).not.toHaveBeenCalled();
   });
 
@@ -272,5 +316,55 @@ describe('publication freshness', () => {
       });
     expect(valid.status).toBe(200);
     expect(valid.body.data.module.estado).toBe('BORRADOR');
+  });
+});
+
+describe('evaluation authoring response contract', () => {
+  const quiz = {
+    titulo: 'Quiz',
+    intentosMax: 3,
+    notaMinima: 70,
+    questions: [{
+      texto: 'Pregunta', tipo: 'OPCION_MULTIPLE', orden: 1,
+      options: [{ texto: 'Correcta', esCorrecta: true }, { texto: 'Incorrecta', esCorrecta: false }],
+    }],
+  };
+
+  it('guarda quiz modular bajo data.evaluation', async () => {
+    const module = {
+      id: 'm-contract', titulo: 'Draft', descripcion: null, orden: 1, estado: 'BORRADOR', version: 2,
+      curso: { id: 'c-contract', creadorId: author.id, publicado: false, version: 4 },
+      lecciones: [], evaluacion: null,
+    };
+    mocks.client.modulo.findUnique.mockResolvedValue(module);
+    mocks.client.evaluacion.create.mockResolvedValue({ id: 'ev-module', titulo: quiz.titulo });
+    const snapshot = await request(app).get('/api/authoring/modules/m-contract').set(auth);
+
+    const response = await request(app).put('/api/authoring/modules/m-contract/quiz')
+      .set(auth).set('Idempotency-Key', 'quiz-module-contract')
+      .send({ ...quiz, expectedFingerprint: snapshot.body.data.fingerprint });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.evaluation).toMatchObject({ id: 'ev-module' });
+    expect(response.body.data).not.toHaveProperty('evaluacion');
+  });
+
+  it('guarda evaluacion final bajo data.evaluation', async () => {
+    const course = {
+      id: 'c-final-contract', titulo: 'Course', descripcion: 'Description', nivel: 'basic', categoriaId: 'cat1',
+      portadaUrl: null, emiteCertificado: true, publicado: false, creadorId: author.id, version: 3,
+      modulos: [],
+    };
+    mocks.client.curso.findUnique.mockResolvedValue(course);
+    mocks.client.evaluacion.create.mockResolvedValue({ id: 'ev-final', titulo: quiz.titulo, esFinal: true });
+    const snapshot = await request(app).get('/api/authoring/courses/c-final-contract').set(auth);
+
+    const response = await request(app).put('/api/authoring/courses/c-final-contract/final-quiz')
+      .set(auth).set('Idempotency-Key', 'quiz-final-contract')
+      .send({ ...quiz, expectedFingerprint: snapshot.body.data.fingerprint });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.evaluation).toMatchObject({ id: 'ev-final', esFinal: true });
+    expect(response.body.data).not.toHaveProperty('evaluacion');
   });
 });

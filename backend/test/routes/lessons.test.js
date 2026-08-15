@@ -54,7 +54,7 @@ describe('GET /api/lessons/:id (login + inscripción)', () => {
     prisma.leccion.findUnique.mockResolvedValue({
       id: 'l1', materiales: [], modulo: { id: 'm1', titulo: 'M1', cursoId: 'c1', estado: 'PUBLICADO' },
     });
-    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', profesores: [] });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', publicado: true, profesores: [] });
     prisma.inscripcion.findUnique.mockResolvedValue(null);
     const res = await request(app).get('/api/lessons/l1').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(403);
@@ -65,7 +65,7 @@ describe('GET /api/lessons/:id (login + inscripción)', () => {
     prisma.leccion.findUnique.mockResolvedValue({
       id: 'l1', materiales: [], modulo: { id: 'm1', titulo: 'M1', cursoId: 'c1', estado: 'PUBLICADO' },
     });
-    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', profesores: [] });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', publicado: true, profesores: [] });
     prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
     const res = await request(app).get('/api/lessons/l1').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
@@ -77,7 +77,7 @@ describe('GET /api/lessons/:id (login + inscripción)', () => {
     prisma.leccion.findUnique.mockResolvedValue({
       id: 'l1', materiales: [], modulo: { id: 'm1', titulo: 'M1', cursoId: 'c1', estado: 'PUBLICADO' },
     });
-    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'prof-1', profesores: [] });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'prof-1', publicado: false, profesores: [] });
     const res = await request(app).get('/api/lessons/l1').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
   });
@@ -87,8 +87,38 @@ describe('GET /api/lessons/:id (login + inscripción)', () => {
     prisma.leccion.findUnique.mockResolvedValue({
       id: 'l1', materiales: [], modulo: { id: 'm1', titulo: 'M1', cursoId: 'c1', estado: 'PUBLICADO' },
     });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', publicado: false, profesores: [] });
     const res = await request(app).get('/api/lessons/l1').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
+  });
+
+  it('404 para estudiante inscrito si el curso está en borrador', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
+    prisma.leccion.findUnique.mockResolvedValue({
+      id: 'l1', materiales: [], modulo: { id: 'm1', titulo: 'M1', cursoId: 'c1', estado: 'PUBLICADO' },
+    });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', publicado: false, profesores: [] });
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
+
+    const res = await request(app).get('/api/lessons/l1').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(404);
+  });
+
+  it('404 para estudiante inscrito si el módulo está en borrador, pero permite al dueño', async () => {
+    const lesson = {
+      id: 'l1', materiales: [], modulo: { id: 'm1', titulo: 'M1', cursoId: 'c1', estado: 'BORRADOR' },
+    };
+    prisma.leccion.findUnique.mockResolvedValue(lesson);
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', publicado: true, profesores: [] });
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
+    const student = await request(app).get('/api/lessons/l1').set('Authorization', `Bearer ${token}`);
+    expect(student.status).toBe(404);
+
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'prof-1', rol: 'PROFESOR' });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'prof-1', publicado: false, profesores: [] });
+    const owner = await request(app).get('/api/lessons/l1').set('Authorization', `Bearer ${token}`);
+    expect(owner.status).toBe(200);
   });
 });
 
@@ -96,7 +126,7 @@ describe('POST /api/lessons/:id/complete (inscripción)', () => {
   it('403 si no está inscripto ni es dueño', async () => {
     prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
     prisma.leccion.findUnique.mockResolvedValue({ id: 'l1', modulo: { cursoId: 'c1', estado: 'PUBLICADO' } });
-    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', profesores: [] });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', publicado: true, profesores: [] });
     prisma.inscripcion.findUnique.mockResolvedValue(null);
     const res = await request(app)
       .post('/api/lessons/l1/complete')

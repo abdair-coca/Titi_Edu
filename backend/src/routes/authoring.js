@@ -47,7 +47,7 @@ const handle = (handler) => async (req, res) => {
 };
 
 const MODULE_SNAPSHOT_INCLUDE = {
-  curso: { select: { id: true, creadorId: true, publicado: true } },
+  curso: { select: { id: true, creadorId: true, publicado: true, version: true } },
   lecciones: {
     orderBy: { orden: 'asc' },
     include: { materiales: { orderBy: { nombre: 'asc' } } },

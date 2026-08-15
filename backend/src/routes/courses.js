@@ -2,7 +2,7 @@ import { Router } from 'express';
 import prisma from '../prisma.js';
 import { runQuery, toNumber } from '../db.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
-import { loadCurrentUser, loadOptionalUser, requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
+import { ensureCourseContentAccess, loadCurrentUser, loadOptionalUser, requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
 import { syncInscripcion } from '../services/neo4j-sync.service.js';
 
 const router = Router();
@@ -545,6 +545,9 @@ router.get('/:id/progress', requireAuth, async (req, res) => {
     if (!curso) {
       return res.status(404).json({ success: false, message: 'Curso no encontrado' });
     }
+
+    const access = await ensureCourseContentAccess(req, res, curso.id);
+    if (!access) return;
 
     const leccionIds = curso.modulos.flatMap((m) => m.lecciones.map((l) => l.id));
 
