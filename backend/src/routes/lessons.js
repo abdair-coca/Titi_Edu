@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomBytes } from 'crypto';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { loadCurrentUser, requireRole, isOwnerOrAdmin, ensureCourseContentAccess } from '../middleware/permissions.js';
@@ -8,6 +9,41 @@ import { otorgarGotas } from '../services/gotas.service.js';
 import { avanzarMisiones } from '../services/mision.service.js';
 
 const router = Router();
+
+class HtmlLessonError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
+async function runSerializable(mutation) {
+  let lastError;
+  for (let retry = 0; retry < 3; retry += 1) {
+    try {
+      return await prisma.$transaction(mutation, { isolationLevel: 'Serializable' });
+    } catch (error) {
+      lastError = error;
+      if (!['P2002', 'P2034'].includes(error?.code)) throw error;
+    }
+  }
+  throw lastError;
+}
+
+async function loadHtmlLesson(req, res) {
+  const leccion = await prisma.leccion.findUnique({
+    where: { id: req.params.id },
+    include: { recursoHtml: true, modulo: { select: { cursoId: true, estado: true } } },
+  });
+  if (!leccion || leccion.formatoContenido !== 'HTML' || !leccion.recursoHtml) {
+    res.status(404).json({ success: false, message: 'Contenido HTML no encontrado' });
+    return null;
+  }
+  const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
+    moduleState: leccion.modulo.estado,
+  });
+  return access ? { leccion, access } : null;
+}
 
 const authoringMoved = (req, res) => res.status(410).json({
   success: false,
@@ -104,6 +140,82 @@ router.get('/lessons/:id', requireAuth, async (req, res) => {
 });
 
 // ---- DELETE /api/lessons/:id  — borrar lección + cascada (autor del curso o ADMIN) ----
+// ---- GET /api/lessons/:id/html — HTML autenticado para iframe srcDoc, nunca URL pública ----
+router.get('/lessons/:id/html', requireAuth, async (req, res) => {
+  try {
+    const loaded = await loadHtmlLesson(req, res);
+    if (!loaded) return;
+    const { recursoHtml } = loaded.leccion;
+    res.json({ success: true, data: { html: recursoHtml.html, evaluable: recursoHtml.evaluable, intentosMax: recursoHtml.intentosMax } });
+  } catch (err) {
+    console.error('GET /api/lessons/:id/html error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo contenido HTML' });
+  }
+});
+
+// ---- POST /api/lessons/:id/html-attempts — reserva atómica de intento ----
+router.post('/lessons/:id/html-attempts', requireAuth, async (req, res) => {
+  try {
+    const loaded = await loadHtmlLesson(req, res);
+    if (!loaded) return;
+    const { recursoHtml: resource } = loaded.leccion;
+    if (!resource.evaluable) return res.status(409).json({ success: false, message: 'Este contenido HTML no es evaluable' });
+    const attempt = await runSerializable(async (tx) => {
+      const used = await tx.intentoHtmlLeccion.count({ where: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id } });
+      if (used >= resource.intentosMax) throw new HtmlLessonError(409, 'Ya alcanzaste el máximo de intentos para este contenido HTML');
+      return tx.intentoHtmlLeccion.create({
+        data: { token: randomBytes(24).toString('base64url'), numero: used + 1, usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id },
+      });
+    });
+    res.status(201).json({ success: true, data: { attemptToken: attempt.token, numero: attempt.numero, remaining: resource.intentosMax - attempt.numero } });
+  } catch (err) {
+    if (err instanceof HtmlLessonError) return res.status(err.status).json({ success: false, message: err.message });
+    console.error('POST /api/lessons/:id/html-attempts error', err);
+    res.status(500).json({ success: false, message: 'Error iniciando intento HTML' });
+  }
+});
+
+// ---- POST /api/lessons/:id/html-results — puntaje práctico/autodeclarado e idempotente ----
+router.post('/lessons/:id/html-results', requireAuth, async (req, res) => {
+  try {
+    const score = Number(req.body?.score);
+    const attemptToken = String(req.body?.attemptToken || '');
+    if (!Number.isFinite(score) || score < 0 || score > 100 || !attemptToken || attemptToken.length > 200) {
+      return res.status(400).json({ success: false, message: 'score debe estar entre 0 y 100 y attemptToken es requerido' });
+    }
+    const loaded = await loadHtmlLesson(req, res);
+    if (!loaded) return;
+    const { recursoHtml: resource } = loaded.leccion;
+    if (!resource.evaluable) return res.status(409).json({ success: false, message: 'Este contenido HTML no es evaluable' });
+    const result = await runSerializable(async (tx) => {
+      const attempt = await tx.intentoHtmlLeccion.findUnique({ where: { token: attemptToken } });
+      if (!attempt || attempt.usuarioId !== loaded.access.usuario.id || attempt.recursoHtmlId !== resource.id) {
+        throw new HtmlLessonError(404, 'Intento HTML no encontrado');
+      }
+      const current = await tx.resultadoHtmlLeccion.findUnique({
+        where: { usuarioId_recursoHtmlId: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id } },
+      });
+      if (attempt.puntaje !== null && attempt.puntaje !== undefined) {
+        return { attempt, bestScore: current?.mejorPuntaje ?? attempt.puntaje, replayed: true };
+      }
+      const completedAttempt = await tx.intentoHtmlLeccion.update({ where: { id: attempt.id }, data: { puntaje: score, resultadoAt: new Date() } });
+      const best = !current || score > current.mejorPuntaje
+        ? await tx.resultadoHtmlLeccion.upsert({
+            where: { usuarioId_recursoHtmlId: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id } },
+            update: { mejorPuntaje: score, intentoId: attempt.id },
+            create: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id, mejorPuntaje: score, intentoId: attempt.id },
+          })
+        : current;
+      return { attempt: completedAttempt, bestScore: best.mejorPuntaje, replayed: false };
+    });
+    res.json({ success: true, data: { score: result.attempt.puntaje, bestScore: result.bestScore, replayed: result.replayed, practice: true } });
+  } catch (err) {
+    if (err instanceof HtmlLessonError) return res.status(err.status).json({ success: false, message: err.message });
+    console.error('POST /api/lessons/:id/html-results error', err);
+    res.status(500).json({ success: false, message: 'Error guardando resultado HTML' });
+  }
+});
+
 router.delete('/lessons/:id', requireAuth, requireRole('PROFESOR', 'ADMIN'), async (req, res) => {
   try {
     const leccion = await prisma.leccion.findUnique({

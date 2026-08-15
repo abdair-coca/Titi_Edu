@@ -221,6 +221,13 @@ export function modulePublicationSummary(module) {
       formatoContenido: lesson.formatoContenido,
       videoUrl: lesson.videoUrl,
       orden: lesson.orden,
+      htmlResource: lesson.recursoHtml
+        ? {
+            sha256: sha256(lesson.recursoHtml.html),
+            evaluable: lesson.recursoHtml.evaluable,
+            intentosMax: lesson.recursoHtml.intentosMax,
+          }
+        : null,
       materials: (lesson.materiales || []).map((material) => ({
         id: material.id,
         nombre: material.nombre,

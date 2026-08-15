@@ -15,6 +15,7 @@ import {
   modulePublicationSummary,
   privateAnalytics,
   sanitizeFilename,
+  validateHtmlLessonResource,
   validateHttpsUrl,
   validateVideoUrl,
   verifyPublicationConfirmation,
@@ -50,7 +51,7 @@ const MODULE_SNAPSHOT_INCLUDE = {
   curso: { select: { id: true, creadorId: true, publicado: true, version: true } },
   lecciones: {
     orderBy: { orden: 'asc' },
-    include: { materiales: { orderBy: { nombre: 'asc' } } },
+    include: { materiales: { orderBy: { nombre: 'asc' } }, recursoHtml: true },
   },
   evaluacion: {
     include: {
@@ -67,7 +68,7 @@ const COURSE_SNAPSHOT_INCLUDE = {
     include: {
       lecciones: {
         orderBy: { orden: 'asc' },
-        include: { materiales: { orderBy: { nombre: 'asc' } } },
+        include: { materiales: { orderBy: { nombre: 'asc' } }, recursoHtml: true },
       },
       evaluacion: {
         include: {
@@ -116,7 +117,7 @@ function moduleResourceFingerprints(module) {
     module: resourceFingerprint(module, ['titulo', 'descripcion', 'orden', 'estado', 'version']),
     lessons: Object.fromEntries((module.lecciones || []).map((lesson) => [
       lesson.id,
-      fingerprint({ moduleVersion: module.version, lesson: Object.fromEntries(['titulo', 'contenido', 'formatoContenido', 'videoUrl', 'orden'].map((field) => [field, lesson[field]])) }),
+      lessonFingerprint(lesson, module.version),
     ])),
     materials: Object.fromEntries((module.lecciones || []).flatMap((lesson) =>
       (lesson.materiales || []).map((material) => [
@@ -124,6 +125,20 @@ function moduleResourceFingerprints(module) {
         fingerprint({ moduleVersion: module.version, material: Object.fromEntries(['nombre', 'tipo', 'url', 'publicId', 'sha256'].map((field) => [field, material[field]])) }),
       ]))),
   };
+}
+
+function lessonFingerprint(lesson, moduleVersion = lesson.modulo?.version) {
+  return fingerprint({
+    moduleVersion,
+    lesson: Object.fromEntries(['titulo', 'contenido', 'formatoContenido', 'videoUrl', 'orden'].map((field) => [field, lesson[field]])),
+    htmlResource: lesson.recursoHtml
+      ? {
+          sha256: fingerprint(lesson.recursoHtml.html),
+          evaluable: lesson.recursoHtml.evaluable,
+          intentosMax: lesson.recursoHtml.intentosMax,
+        }
+      : null,
+  });
 }
 
 function courseResourceFingerprint(course) {
@@ -331,16 +346,19 @@ router.put('/lessons/:id', requireAuthoringPrincipal('content:write'), handle(as
   await executeIdempotent(req, res, { accion: 'lesson.update' }, async (tx) => {
     const lesson = await tx.leccion.findUnique({
       where: { id: req.params.id },
-      include: { modulo: { include: { curso: true } } },
+      include: { recursoHtml: true, modulo: { include: { curso: true } } },
     });
     if (!lesson) throw new AuthoringError(404, 'Lección no encontrada');
     assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
     assertDraftModule(lesson.modulo);
-    assertExpected(req, fingerprint({ moduleVersion: lesson.modulo.version, lesson: Object.fromEntries(['titulo', 'contenido', 'formatoContenido', 'videoUrl', 'orden'].map((field) => [field, lesson[field]])) }));
-    const data = { formatoContenido: 'MARKDOWN' };
+    assertExpected(req, lessonFingerprint(lesson));
+    const data = lesson.formatoContenido === 'HTML' ? {} : { formatoContenido: 'MARKDOWN' };
     if (req.body?.titulo !== undefined) data.titulo = String(req.body.titulo).trim();
     if (req.body?.contenido !== undefined) data.contenido = String(req.body.contenido);
     if (req.body?.videoUrl !== undefined) {
+      if (lesson.formatoContenido === 'HTML' && req.body.videoUrl) {
+        throw new AuthoringError(400, 'Una lección HTML no puede incluir videoUrl');
+      }
       const video = validateVideoUrl(req.body.videoUrl);
       if (video && !video.ok) throw new AuthoringError(400, video.message);
       data.videoUrl = video?.value || null;
@@ -827,6 +845,32 @@ router.post('/service-tokens/:id/revoke', requireAuthoringPrincipal(), requireAu
       ? tokenService
       : await tx.tokenServicio.update({ where: { id: tokenService.id }, data: { revokedAt: new Date() } });
     return { data: { tokenService: { id: revoked.id, revokedAt: revoked.revokedAt } } };
+  });
+}));
+
+router.post('/lessons/:id/html', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  await executeIdempotent(req, res, { accion: 'lesson.html.upsert' }, async (tx) => {
+    const lesson = await tx.leccion.findUnique({
+      where: { id: req.params.id },
+      include: { recursoHtml: true, modulo: { include: { curso: true } } },
+    });
+    if (!lesson) throw new AuthoringError(404, 'Lección no encontrada');
+    assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
+    assertDraftModule(lesson.modulo);
+    assertExpected(req, lessonFingerprint(lesson));
+    const validated = validateHtmlLessonResource(req.body);
+    if (!validated.ok) throw new AuthoringError(400, validated.message);
+    await claimModuleMutation(tx, lesson.modulo);
+    const resource = await tx.recursoHtmlLeccion.upsert({
+      where: { leccionId: lesson.id },
+      update: validated.data,
+      create: { ...validated.data, leccionId: lesson.id },
+    });
+    const updated = await tx.leccion.update({
+      where: { id: lesson.id },
+      data: { formatoContenido: 'HTML', videoUrl: null },
+    });
+    return { data: { lesson: updated, htmlResource: resource } };
   });
 }));
 

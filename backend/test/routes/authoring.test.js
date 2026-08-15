@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
-import { sha256 } from '../../src/services/authoring.service.js';
+import { fingerprint, sha256 } from '../../src/services/authoring.service.js';
 
 const mocks = vi.hoisted(() => {
   const operations = new Map();
@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => {
     curso: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), delete: vi.fn() },
     modulo: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
     leccion: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
+    recursoHtmlLeccion: { upsert: vi.fn() },
     material: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
     evaluacion: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
     pregunta: { findMany: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
@@ -429,5 +430,43 @@ describe('evaluation authoring response contract', () => {
     expect(response.status).toBe(200);
     expect(response.body.data.evaluation).toMatchObject({ id: 'ev-final', esFinal: true });
     expect(response.body.data).not.toHaveProperty('evaluacion');
+  });
+});
+
+describe('HTML lesson authoring', () => {
+  it('uses lesson CAS, idempotency and draft-only mutation', async () => {
+    const lesson = {
+      id: 'l-html', titulo: 'Actividad', contenido: 'Instrucciones', formatoContenido: 'MARKDOWN', videoUrl: null, orden: 1,
+      recursoHtml: null,
+      modulo: { id: 'm-html', estado: 'BORRADOR', version: 2, curso: { id: 'c-html', creadorId: author.id, version: 3, publicado: false } },
+    };
+    const expectedFingerprint = fingerprint({
+      moduleVersion: 2,
+      lesson: { titulo: 'Actividad', contenido: 'Instrucciones', formatoContenido: 'MARKDOWN', videoUrl: null, orden: 1 },
+      htmlResource: null,
+    });
+    mocks.client.leccion.findUnique.mockResolvedValue(lesson);
+    mocks.client.recursoHtmlLeccion.upsert.mockResolvedValue({ id: 'html-1', leccionId: lesson.id, evaluable: true, intentosMax: 2, html: '<html><body></body></html>' });
+    mocks.client.leccion.update.mockResolvedValue({ ...lesson, formatoContenido: 'HTML', videoUrl: null });
+
+    const body = { html: '<html><body><script>window.parent.postMessage({ source: "titi-html" }, "*")</script></body></html>', evaluable: true, intentosMax: 2, expectedFingerprint };
+    const response = await request(app).post('/api/authoring/lessons/l-html/html')
+      .set(auth).set('Idempotency-Key', 'html-upsert-1').send(body);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.lesson.formatoContenido).toBe('HTML');
+    expect(mocks.client.recursoHtmlLeccion.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { leccionId: 'l-html' },
+      update: expect.objectContaining({ evaluable: true, intentosMax: 2 }),
+    }));
+    expect(mocks.client.modulo.updateMany).toHaveBeenCalledWith({
+      where: { id: 'm-html', version: 2, estado: 'BORRADOR' }, data: { version: { increment: 1 } },
+    });
+
+    const replay = await request(app).post('/api/authoring/lessons/l-html/html')
+      .set(auth).set('Idempotency-Key', 'html-upsert-1').send(body);
+    expect(replay.status).toBe(200);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    expect(mocks.client.recursoHtmlLeccion.upsert).toHaveBeenCalledTimes(1);
   });
 });

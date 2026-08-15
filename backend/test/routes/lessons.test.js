@@ -3,15 +3,75 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 
 vi.mock('../../src/db.js', () => ({ runQuery: vi.fn(), toNumber: (v) => Number(v ?? 0), default: {} }));
-vi.mock('../../src/prisma.js', () => ({
-  default: {
+vi.mock('../../src/prisma.js', () => {
+  const client = {
     usuario: { findUnique: vi.fn() },
     leccion: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn() },
     modulo: { findUnique: vi.fn() },
     curso: { findUnique: vi.fn() },
     inscripcion: { findUnique: vi.fn() },
-  },
-}));
+    intentoHtmlLeccion: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    resultadoHtmlLeccion: { findUnique: vi.fn(), upsert: vi.fn() },
+  };
+  client.$transaction = vi.fn(async (callback) => callback(client));
+  return { default: client };
+});
+
+describe('HTML lesson access and attempts', () => {
+  const htmlLesson = {
+    id: 'l-html', formatoContenido: 'HTML', recursoHtml: { id: 'rh-1', html: '<html><head></head><body>ok</body></html>', evaluable: true, intentosMax: 2 },
+    modulo: { cursoId: 'c1', estado: 'PUBLICADO' },
+  };
+
+  function allowStudent() {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'other', publicado: true, profesores: [] });
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
+    prisma.leccion.findUnique.mockResolvedValue(htmlLesson);
+  }
+
+  it('returns authenticated HTML source without a public URL', async () => {
+    allowStudent();
+    const response = await request(app).get('/api/lessons/l-html/html').set('Authorization', `Bearer ${token}`);
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual({ html: htmlLesson.recursoHtml.html, evaluable: true, intentosMax: 2 });
+    expect(JSON.stringify(response.body)).not.toContain('url');
+  });
+
+  it('reserves an attempt transactionally and rejects exhausted limits', async () => {
+    allowStudent();
+    prisma.intentoHtmlLeccion.count.mockResolvedValue(1);
+    prisma.intentoHtmlLeccion.create.mockImplementation(({ data }) => Promise.resolve({ ...data, id: 'a2' }));
+    const started = await request(app).post('/api/lessons/l-html/html-attempts').set('Authorization', `Bearer ${token}`);
+    expect(started.status).toBe(201);
+    expect(started.body.data).toMatchObject({ numero: 2, remaining: 0 });
+    expect(started.body.data.attemptToken).toMatch(/^[A-Za-z0-9_-]{32}$/);
+
+    prisma.intentoHtmlLeccion.count.mockResolvedValue(2);
+    const exhausted = await request(app).post('/api/lessons/l-html/html-attempts').set('Authorization', `Bearer ${token}`);
+    expect(exhausted.status).toBe(409);
+  });
+
+  it('stores best practice score and returns an idempotent result', async () => {
+    allowStudent();
+    prisma.intentoHtmlLeccion.findUnique.mockResolvedValue({ id: 'a1', token: 'attempt-1', usuarioId: 'u1', recursoHtmlId: 'rh-1', puntaje: null });
+    prisma.resultadoHtmlLeccion.findUnique.mockResolvedValue(null);
+    prisma.intentoHtmlLeccion.update.mockResolvedValue({ id: 'a1', puntaje: 84 });
+    prisma.resultadoHtmlLeccion.upsert.mockResolvedValue({ mejorPuntaje: 84 });
+    const first = await request(app).post('/api/lessons/l-html/html-results')
+      .set('Authorization', `Bearer ${token}`).send({ attemptToken: 'attempt-1', score: 84 });
+    expect(first.status).toBe(200);
+    expect(first.body.data).toEqual({ score: 84, bestScore: 84, replayed: false, practice: true });
+
+    prisma.intentoHtmlLeccion.findUnique.mockResolvedValue({ id: 'a1', token: 'attempt-1', usuarioId: 'u1', recursoHtmlId: 'rh-1', puntaje: 84 });
+    prisma.resultadoHtmlLeccion.findUnique.mockResolvedValue({ mejorPuntaje: 84 });
+    const replay = await request(app).post('/api/lessons/l-html/html-results')
+      .set('Authorization', `Bearer ${token}`).send({ attemptToken: 'attempt-1', score: 12 });
+    expect(replay.status).toBe(200);
+    expect(replay.body.data).toEqual({ score: 84, bestScore: 84, replayed: true, practice: true });
+    expect(prisma.intentoHtmlLeccion.update).toHaveBeenCalledTimes(1);
+  });
+});
 
 import app from '../../src/app.js';
 import prisma from '../../src/prisma.js';
