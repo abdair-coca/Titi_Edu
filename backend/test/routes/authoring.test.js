@@ -21,7 +21,7 @@ const mocks = vi.hoisted(() => {
     comentarioLeccion: { count: vi.fn() },
     cursoProfesor: { deleteMany: vi.fn() },
     inscripcion: { findUnique: vi.fn() },
-    tokenServicio: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn() },
+    tokenServicio: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
     operacionAutoria: {
       findUnique: vi.fn(({ where }) => Promise.resolve(operations.get(`${where.actorKey_idempotencyKey.actorKey}:${where.actorKey_idempotencyKey.idempotencyKey}`) || null)),
       create: vi.fn(({ data }) => {
@@ -35,6 +35,7 @@ const mocks = vi.hoisted(() => {
         operations.set(entry[0], updated);
         return Promise.resolve(updated);
       }),
+      deleteMany: vi.fn(),
     },
   };
   client.$transaction = vi.fn(async (callback) => callback(client));
@@ -181,6 +182,68 @@ describe('service token lifecycle', () => {
       .set(auth).set('Idempotency-Key', 'token-create-1').send(body);
     expect(replay.headers['idempotency-replayed']).toBe('true');
     expect(replay.body.data.token).toBeNull();
+  });
+
+  it('no permite eliminar tokens ajenos ni activos', async () => {
+    const withoutKey = await request(app).delete('/api/authoring/service-tokens/svc-revoked').set(auth).send({});
+    expect(withoutKey.status).toBe(400);
+    expect(mocks.client.tokenServicio.findUnique).not.toHaveBeenCalled();
+
+    mocks.client.tokenServicio.findUnique.mockResolvedValue({ id: 'svc-other', usuarioId: 'u-other', revokedAt: new Date() });
+    const other = await request(app).delete('/api/authoring/service-tokens/svc-other')
+      .set(auth).set('Idempotency-Key', 'token-delete-other').send({});
+    expect(other.status).toBe(404);
+    expect(mocks.client.tokenServicio.delete).not.toHaveBeenCalled();
+
+    mocks.client.tokenServicio.findUnique.mockResolvedValue({ id: 'svc-active', usuarioId: author.id, revokedAt: null });
+    const active = await request(app).delete('/api/authoring/service-tokens/svc-active')
+      .set(auth).set('Idempotency-Key', 'token-delete-active').send({});
+    expect(active.status).toBe(409);
+    expect(active.body.message).toContain('revocados');
+    expect(mocks.client.tokenServicio.delete).not.toHaveBeenCalled();
+  });
+
+  it('rechaza borrar con token de servicio aunque esté habilitado', async () => {
+    process.env.AUTHORING_API_ENABLED = 'true';
+    const plain = `titi_svc_deadbeef_${Buffer.alloc(32, 7).toString('base64url')}`;
+    mocks.client.tokenServicio.findUnique.mockResolvedValue({
+      id: 'svc-auth',
+      prefijo: 'titi_svc_deadbeef',
+      tokenHash: sha256(plain),
+      scopes: ['content:write'],
+      expiresAt: new Date(Date.now() + 60_000),
+      revokedAt: null,
+      usuario: author,
+    });
+
+    const response = await request(app).delete('/api/authoring/service-tokens/svc-revoked')
+      .set('Authorization', `Bearer ${plain}`).set('Idempotency-Key', 'token-delete-service').send({});
+    expect(response.status).toBe(403);
+    expect(mocks.client.tokenServicio.delete).not.toHaveBeenCalled();
+  });
+
+  it('elimina token revocado, conserva auditoría y repite su resultado', async () => {
+    const revoked = { id: 'svc-revoked', usuarioId: author.id, revokedAt: new Date() };
+    mocks.client.tokenServicio.findUnique.mockResolvedValue(revoked);
+    mocks.client.tokenServicio.delete.mockResolvedValue(revoked);
+
+    const first = await request(app).delete('/api/authoring/service-tokens/svc-revoked')
+      .set(auth).set('Idempotency-Key', 'token-delete-revoked').send({});
+
+    expect(first.status).toBe(200);
+    expect(first.body).toEqual({ success: true, data: { tokenService: { id: revoked.id, deleted: true } } });
+    expect(mocks.client.tokenServicio.delete).toHaveBeenCalledWith({ where: { id: revoked.id } });
+    expect(mocks.client.operacionAutoria.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ accion: 'service-token.delete', tokenServicioId: null }),
+    }));
+    expect(mocks.client.operacionAutoria.deleteMany).not.toHaveBeenCalled();
+
+    const replay = await request(app).delete('/api/authoring/service-tokens/svc-revoked')
+      .set(auth).set('Idempotency-Key', 'token-delete-revoked').send({});
+    expect(replay.status).toBe(200);
+    expect(replay.headers['idempotency-replayed']).toBe('true');
+    expect(replay.body).toEqual(first.body);
+    expect(mocks.client.tokenServicio.delete).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   readAuthoringEvaluation,
   readMutationEvaluation,
@@ -25,5 +26,10 @@ assert.equal(readMutationEvaluation({
 
 assert.equal(readAuthoringEvaluation({ success: true, data: { module: { evaluacion: null } } }), null);
 assert.equal(readMutationEvaluation({ success: true, data: {} }), null);
+
+const integrations = await readFile(new URL('../src/pages/teacher/Integrations.jsx', import.meta.url), 'utf8');
+assert.match(integrations, /<ConfirmModal/);
+assert.match(integrations, /authoringMutation\('delete', `\/service-tokens\/\$\{tokenToDelete\.id\}`, \{\}\)/);
+assert.match(integrations, /token\.revokedAt && <button[\s\S]*?Eliminar<\/button>/);
 
 console.log('Authoring evaluation contracts OK');

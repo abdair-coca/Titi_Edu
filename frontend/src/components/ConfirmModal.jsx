@@ -9,6 +9,7 @@ export default function ConfirmModal({
   onConfirm,
   onCancel,
   danger = false,
+  busy = false,
 }) {
   const panelRef = usePopIn([open]);
 
@@ -28,6 +29,7 @@ export default function ConfirmModal({
         <div className="flex justify-end gap-3">
           <button
             onClick={onCancel}
+            disabled={busy}
             className="titi-btn-ghost"
           >
             {cancelText}
@@ -35,6 +37,8 @@ export default function ConfirmModal({
 
           <button
             onClick={onConfirm}
+            disabled={busy}
+            aria-busy={busy}
             className={
               danger
                 ? "px-4 py-2 rounded bg-red-600 hover:bg-red-700"

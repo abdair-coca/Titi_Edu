@@ -830,6 +830,17 @@ router.post('/service-tokens/:id/revoke', requireAuthoringPrincipal(), requireAu
   });
 }));
 
+router.delete('/service-tokens/:id', requireAuthoringPrincipal(), requireAuthoringJwt, handle(async (req, res) => {
+  await executeIdempotent(req, res, { accion: 'service-token.delete' }, async (tx) => {
+    const tokenService = await tx.tokenServicio.findUnique({ where: { id: req.params.id } });
+    if (!tokenService || tokenService.usuarioId !== req.dbUser.id) throw new AuthoringError(404, 'Token de servicio no encontrado');
+    if (!tokenService.revokedAt) throw new AuthoringError(409, 'Solo se pueden eliminar tokens de servicio revocados');
+
+    await tx.tokenServicio.delete({ where: { id: tokenService.id } });
+    return { data: { tokenService: { id: tokenService.id, deleted: true } } };
+  });
+}));
+
 router.use((err, req, res, next) => {
   if (!(err instanceof multer.MulterError)) return next(err);
   if (err.code === 'LIMIT_FILE_SIZE') {

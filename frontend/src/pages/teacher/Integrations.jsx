@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import ConfirmModal from '../../components/ConfirmModal.jsx';
 import TitiMascot from '../../components/TitiMascot.jsx';
 import { authoringError, authoringMutation } from '../../lib/authoring.js';
 import client from '../../api/client.js';
@@ -18,6 +19,7 @@ export default function Integrations() {
   const [name, setName] = useState('');
   const [expiresInHours, setExpiresInHours] = useState(720);
   const [scopes, setScopes] = useState(['course:read']);
+  const [tokenToDelete, setTokenToDelete] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,6 +81,22 @@ export default function Integrations() {
       await load();
     } catch (err) {
       setError(authoringError(err, 'No se pudo revocar'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteRevokedToken() {
+    if (!tokenToDelete) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const { data } = await authoringMutation('delete', `/service-tokens/${tokenToDelete.id}`, {});
+      if (!data?.success) throw new Error(data?.message || 'No se pudo eliminar');
+      setTokenToDelete(null);
+      await load();
+    } catch (err) {
+      setError(authoringError(err, 'No se pudo eliminar el token'));
     } finally {
       setBusy(false);
     }
@@ -176,7 +194,10 @@ export default function Integrations() {
                   <p className="text-xs text-gray-500 mt-1">Expira: {new Date(token.expiresAt).toLocaleString()} · {token.scopes.join(', ')}</p>
                   <p className="text-xs font-semibold mt-1 text-gray-500">{token.revokedAt ? 'Revocado' : token.lastUsedAt ? `Último uso: ${new Date(token.lastUsedAt).toLocaleString()}` : 'Sin uso todavía'}</p>
                 </div>
-                {!token.revokedAt && <button type="button" onClick={() => revoke(token)} disabled={busy} className="text-red-500 font-bold text-sm">Revocar</button>}
+                <div className="flex items-center gap-3">
+                  {!token.revokedAt && <button type="button" onClick={() => revoke(token)} disabled={busy} className="text-red-500 font-bold text-sm">Revocar</button>}
+                  {token.revokedAt && <button type="button" onClick={() => setTokenToDelete(token)} disabled={busy} className="text-red-500 font-bold text-sm">Eliminar</button>}
+                </div>
               </article>
             ))}
           </div>
@@ -184,6 +205,17 @@ export default function Integrations() {
           <div className="bg-white border border-gray-100 rounded-2xl p-6"><TitiMascot mood="idle" size="sm" message="Todavía no creaste tokens." /></div>
         )}
       </section>
+
+      <ConfirmModal
+        open={Boolean(tokenToDelete)}
+        title="¿Eliminar token revocado?"
+        message="Esta acción elimina permanentemente el token revocado. No se puede deshacer."
+        confirmText={busy ? 'Eliminando…' : 'Eliminar'}
+        danger
+        busy={busy}
+        onConfirm={deleteRevokedToken}
+        onCancel={() => setTokenToDelete(null)}
+      />
     </div>
   );
 }
