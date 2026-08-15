@@ -125,3 +125,43 @@ GET /users Â· PUT /users/:id/verify Â· PUT /users/:id/role
 GET /courses (incl. borradores) Â· PUT /courses/:id/approve Â· DELETE /courses/:id (cascada forzada)
 GET /stats Â· POST /categories
 ```
+
+## Lecciones HTML — `/api/authoring/lessons/:id/html`
+
+```http
+POST /api/authoring/lessons/:id/html
+Idempotency-Key: <key>
+
+{
+  "expectedFingerprint": "<fingerprint de la lección>",
+  "html": "<!doctype html><html>...</html>",
+  "evaluable": true,
+  "intentosMax": 2
+}
+```
+
+Solo `content:write`, creador/ADMIN y módulo en `BORRADOR`. Una lección tiene un
+solo recurso HTML; este endpoint lo crea o reemplaza y conserva CAS + idempotencia.
+`intentosMax` es obligatorio entre `1` y `10` solo si `evaluable` es `true`.
+
+`GET /api/lessons/:id/html` devuelve el HTML únicamente a usuarios autorizados; no
+existe URL pública. El servidor exige documento autocontenido, recursos inline o
+`data:`, sin red externa, formularios, frames, `srcset` ni `meta http-equiv`, e
+inyecta CSP restrictiva. El frontend usa `iframe srcDoc sandbox="allow-scripts"`.
+
+Para HTML evaluable, `POST /api/lessons/:id/html-attempts` reserva un intento y
+devuelve `{ attemptToken, numero, remaining }`. La actividad envía:
+
+```js
+window.parent.postMessage({
+  source: 'titi-html',
+  type: 'TITI_SCORE',
+  score: 0, // 0..100
+  attemptToken: window.__TITI_ATTEMPT_TOKEN,
+}, '*');
+```
+
+El player valida `event.source === iframe.contentWindow`, tipo, rango y token; no
+confía en `event.origin`. Luego envía `{ score, attemptToken }` a
+`POST /api/lessons/:id/html-results`. El puntaje es práctica/autodeclarado, no nota
+oficial ni credencial.
