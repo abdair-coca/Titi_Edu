@@ -40,7 +40,7 @@ Postgres por `neoId`. Social → Neo4j; educativo + gotas → Postgres. Detalle 
 
 **Skills locales** (`Skill` tool, más barato que leer docs enteros):
 `titi-orientation` (mapa), `titi-backend-patterns`, `titi-frontend-patterns`,
-`titi-dual-db`, `titi-html-authoring` (HTML autocontenido, juegos y scores).
+`titi-dual-db`.
 
 ---
 
