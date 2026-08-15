@@ -199,6 +199,16 @@ router.post('/lessons/:id/html-results', requireAuth, async (req, res) => {
         return { attempt, bestScore: current?.mejorPuntaje ?? attempt.puntaje, replayed: true };
       }
       const completedAttempt = await tx.intentoHtmlLeccion.update({ where: { id: attempt.id }, data: { puntaje: score, resultadoAt: new Date() } });
+      const progreso = await tx.progreso.upsert({
+        where: { usuarioId_leccionId: { usuarioId: loaded.access.usuario.id, leccionId: loaded.leccion.id } },
+        update: { completada: true, fechaCompletado: new Date() },
+        create: {
+          usuarioId: loaded.access.usuario.id,
+          leccionId: loaded.leccion.id,
+          completada: true,
+          fechaCompletado: new Date(),
+        },
+      });
       const best = !current || score > current.mejorPuntaje
         ? await tx.resultadoHtmlLeccion.upsert({
             where: { usuarioId_recursoHtmlId: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id } },
@@ -206,9 +216,9 @@ router.post('/lessons/:id/html-results', requireAuth, async (req, res) => {
             create: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id, mejorPuntaje: score, intentoId: attempt.id },
           })
         : current;
-      return { attempt: completedAttempt, bestScore: best.mejorPuntaje, replayed: false };
+      return { attempt: completedAttempt, progreso, bestScore: best.mejorPuntaje, replayed: false };
     });
-    res.json({ success: true, data: { score: result.attempt.puntaje, bestScore: result.bestScore, replayed: result.replayed, practice: true } });
+    res.json({ success: true, data: { score: result.attempt.puntaje, bestScore: result.bestScore, replayed: result.replayed, practice: true, progreso: result.progreso || null } });
   } catch (err) {
     if (err instanceof HtmlLessonError) return res.status(err.status).json({ success: false, message: err.message });
     console.error('POST /api/lessons/:id/html-results error', err);

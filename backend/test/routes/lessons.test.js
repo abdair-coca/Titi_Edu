@@ -12,6 +12,7 @@ vi.mock('../../src/prisma.js', () => {
     inscripcion: { findUnique: vi.fn() },
     intentoHtmlLeccion: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     resultadoHtmlLeccion: { findUnique: vi.fn(), upsert: vi.fn() },
+    progreso: { upsert: vi.fn() },
   };
   client.$transaction = vi.fn(async (callback) => callback(client));
   return { default: client };
@@ -57,19 +58,28 @@ describe('HTML lesson access and attempts', () => {
     prisma.intentoHtmlLeccion.findUnique.mockResolvedValue({ id: 'a1', token: 'attempt-1', usuarioId: 'u1', recursoHtmlId: 'rh-1', puntaje: null });
     prisma.resultadoHtmlLeccion.findUnique.mockResolvedValue(null);
     prisma.intentoHtmlLeccion.update.mockResolvedValue({ id: 'a1', puntaje: 84 });
+    prisma.progreso.upsert.mockResolvedValue({ id: 'p1', usuarioId: 'u1', leccionId: 'l-html', completada: true });
     prisma.resultadoHtmlLeccion.upsert.mockResolvedValue({ mejorPuntaje: 84 });
     const first = await request(app).post('/api/lessons/l-html/html-results')
       .set('Authorization', `Bearer ${token}`).send({ attemptToken: 'attempt-1', score: 84 });
     expect(first.status).toBe(200);
-    expect(first.body.data).toEqual({ score: 84, bestScore: 84, replayed: false, practice: true });
+    expect(first.body.data).toEqual({
+      score: 84, bestScore: 84, replayed: false, practice: true,
+      progreso: { id: 'p1', usuarioId: 'u1', leccionId: 'l-html', completada: true },
+    });
+    expect(prisma.progreso.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { usuarioId_leccionId: { usuarioId: 'u1', leccionId: 'l-html' } },
+      create: expect.objectContaining({ completada: true }),
+    }));
 
     prisma.intentoHtmlLeccion.findUnique.mockResolvedValue({ id: 'a1', token: 'attempt-1', usuarioId: 'u1', recursoHtmlId: 'rh-1', puntaje: 84 });
     prisma.resultadoHtmlLeccion.findUnique.mockResolvedValue({ mejorPuntaje: 84 });
     const replay = await request(app).post('/api/lessons/l-html/html-results')
       .set('Authorization', `Bearer ${token}`).send({ attemptToken: 'attempt-1', score: 12 });
     expect(replay.status).toBe(200);
-    expect(replay.body.data).toEqual({ score: 84, bestScore: 84, replayed: true, practice: true });
+    expect(replay.body.data).toEqual({ score: 84, bestScore: 84, replayed: true, practice: true, progreso: null });
     expect(prisma.intentoHtmlLeccion.update).toHaveBeenCalledTimes(1);
+    expect(prisma.progreso.upsert).toHaveBeenCalledTimes(1);
   });
 });
 
