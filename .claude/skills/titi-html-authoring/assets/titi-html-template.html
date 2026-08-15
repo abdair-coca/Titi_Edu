@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Actividad Titi</title>
+    <style>
+      :root { color-scheme: light; font-family: Nunito, system-ui, sans-serif; }
+      body { margin: 0; padding: 2rem; background: #FFFBF0; color: #1A1A2E; }
+      button { padding: .75rem 1rem; border: 0; border-radius: .75rem; background: #FFD93D; color: #1A1A2E; font-weight: 700; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Actividad Titi</h1>
+      <p>Reemplazá este contenido con tu documentación, juego o evaluación.</p>
+      <button type="button" id="score-button">Enviar score de prueba</button>
+      <p id="status" role="status"></p>
+    </main>
+    <script>
+      const status = document.querySelector('#status');
+      document.querySelector('#score-button').addEventListener('click', () => {
+        const score = 80;
+        window.parent.postMessage({
+          source: 'titi-html',
+          type: 'TITI_SCORE',
+          score,
+          attemptToken: window.__TITI_ATTEMPT_TOKEN,
+        }, '*');
+        status.textContent = `Score enviado: ${score}/100`;
+      });
+    </script>
+  </body>
+</html>

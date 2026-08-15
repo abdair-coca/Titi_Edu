@@ -40,7 +40,7 @@ Postgres por `neoId`. Social → Neo4j; educativo + gotas → Postgres. Detalle 
 
 **Skills locales** (`Skill` tool, más barato que leer docs enteros):
 `titi-orientation` (mapa), `titi-backend-patterns`, `titi-frontend-patterns`,
-`titi-dual-db`.
+`titi-dual-db`, `titi-html-authoring` (HTML autocontenido, juegos y scores).
 
 ---
 
@@ -110,3 +110,6 @@ frontend/src/
 4. **UI plana:** sin `bg-gradient-*` ni `blur-*`. Mascota siempre `<TitiMascot>`, nunca 🐒.
 5. **Commits:** conventional en español, identidad `abdair-coca <cocaabdair@gmail.com>`,
    sin `Co-Authored-By`. Tag por subfase (ver [docs/conventions.md](docs/conventions.md)).
+6. **Subagentes:** antes de cada lanzamiento o reanudación (`spawn_agent`,
+   `followup_task` o delegación equivalente), leer y aplicar
+   `C:\Users\abdai\.codex\skills\orchestrate-subagents\SKILL.md`.
