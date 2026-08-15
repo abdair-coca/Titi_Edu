@@ -10,6 +10,7 @@ import {
   sha256,
   verifyPublicationConfirmation,
   validateHttpsUrl,
+  validateHtmlLessonResource,
   validateVideoUrl,
 } from '../../src/services/authoring.service.js';
 
@@ -112,5 +113,24 @@ describe('active URL validation', () => {
     expect(validateVideoUrl('https://evil.example/embed/1').ok).toBe(false);
     expect(validateVideoUrl('https://www.youtube.com/watch?v=abc').ok).toBe(true);
     expect(validateVideoUrl('javascript:alert(1)').ok).toBe(false);
+  });
+});
+
+describe('HTML lesson resource validation', () => {
+  const html = '<!doctype html><html><body><img src="data:image/png;base64,AA=="><script>window.parent.postMessage({ source: "titi-html" }, "*")</script></body></html>';
+
+  it('injects restrictive CSP and requires attempts only for evaluable lessons', () => {
+    const valid = validateHtmlLessonResource({ html, evaluable: true, intentosMax: 2 });
+    expect(valid).toMatchObject({ ok: true, data: { evaluable: true, intentosMax: 2 } });
+    expect(valid.data.html).toContain("default-src 'none'");
+    expect(validateHtmlLessonResource({ html, evaluable: true, intentosMax: 0 })).toMatchObject({ ok: false });
+    expect(validateHtmlLessonResource({ html, evaluable: false, intentosMax: 1 })).toMatchObject({ ok: false });
+  });
+
+  it('rejects every external or active resource escape', () => {
+    expect(validateHtmlLessonResource({ html: '<html><body><img src="https://example.com/x.png"></body></html>' })).toMatchObject({ ok: false });
+    expect(validateHtmlLessonResource({ html: '<html><head><meta http-equiv="refresh" content="0;url=https://example.com"></head></html>' })).toMatchObject({ ok: false });
+    expect(validateHtmlLessonResource({ html: '<html><body><a href="https://example.com">go</a></body></html>' })).toMatchObject({ ok: false });
+    expect(validateHtmlLessonResource({ html: '<html><body><style>body{background:url(https://example.com/x)}</style></body></html>' })).toMatchObject({ ok: false });
   });
 });

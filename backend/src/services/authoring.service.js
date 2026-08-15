@@ -260,6 +260,64 @@ export function inspectAuthoringFile(file) {
   return { ok: true, extension, tipo: extension === '.py' ? 'codigo' : 'otro', resourceType: 'raw', sha256: sha256(file.buffer) };
 }
 
+const HTML_LESSON_CSP = "default-src 'none'; base-uri 'none'; connect-src 'none'; form-action 'none'; frame-src 'none'; img-src data:; media-src data:; font-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'";
+const HTML_RESOURCE_ATTRIBUTES = /\b(?:src|poster)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+const HTML_LINK_ATTRIBUTES = /\bhref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+
+function hasOnlyDataResources(html) {
+  for (const match of html.matchAll(HTML_RESOURCE_ATTRIBUTES)) {
+    const value = (match[1] ?? match[2] ?? match[3] ?? '').trim();
+    if (!value.toLowerCase().startsWith('data:')) return false;
+  }
+  for (const match of html.matchAll(HTML_LINK_ATTRIBUTES)) {
+    const value = (match[1] ?? match[2] ?? match[3] ?? '').trim();
+    if (value && !value.startsWith('#')) return false;
+  }
+  for (const match of html.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi)) {
+    if (!match[2].trim().toLowerCase().startsWith('data:')) return false;
+  }
+  return true;
+}
+
+function enforceHtmlLessonCsp(html) {
+  const cspMeta = `<meta http-equiv="Content-Security-Policy" content="${HTML_LESSON_CSP}">`;
+  if (/<head\b[^>]*>/i.test(html)) return html.replace(/<head\b[^>]*>/i, (head) => `${head}${cspMeta}`);
+  return html.replace(/<html\b[^>]*>/i, (tag) => `${tag}<head>${cspMeta}</head>`);
+}
+
+export function validateHtmlLessonResource({ html, evaluable = false, intentosMax = null } = {}) {
+  if (typeof html !== 'string' || !html.trim()) return { ok: false, message: 'html es requerido' };
+  if (Buffer.byteLength(html, 'utf8') > 1_000_000) return { ok: false, message: 'El HTML no puede superar 1 MB' };
+  if (typeof evaluable !== 'boolean') return { ok: false, message: 'evaluable debe ser booleano' };
+  if (!/<html\b[^>]*>/i.test(html)) return { ok: false, message: 'El recurso debe contener un documento HTML autocontenido' };
+  if (/<(?:iframe|frame|object|embed|base|link|form)\b/i.test(html)) {
+    return { ok: false, message: 'El HTML no permite recursos embebidos ni formularios externos' };
+  }
+  if (/<meta\b[^>]*http-equiv\s*=/i.test(html) || /\bsrcset\s*=/i.test(html)) {
+    return { ok: false, message: 'El HTML no permite metadatos activos ni srcset' };
+  }
+  if (/\b(?:javascript|vbscript)\s*:/i.test(html) || /@import\b/i.test(html) || !hasOnlyDataResources(html)) {
+    return { ok: false, message: 'El HTML solo permite recursos inline, data: y enlaces internos' };
+  }
+  const parsedAttempts = intentosMax === null || intentosMax === undefined || intentosMax === ''
+    ? null
+    : Number(intentosMax);
+  if (evaluable && (!Number.isInteger(parsedAttempts) || parsedAttempts < 1 || parsedAttempts > 10)) {
+    return { ok: false, message: 'intentosMax debe ser un entero entre 1 y 10 para HTML evaluable' };
+  }
+  if (!evaluable && parsedAttempts !== null) {
+    return { ok: false, message: 'intentosMax solo se permite para HTML evaluable' };
+  }
+  return {
+    ok: true,
+    data: {
+      html: enforceHtmlLessonCsp(html.trim()),
+      evaluable,
+      intentosMax: evaluable ? parsedAttempts : null,
+    },
+  };
+}
+
 export function sanitizeFilename(filename) {
   const base = path.basename(String(filename || 'material'));
   const extension = path.extname(base).toLowerCase();

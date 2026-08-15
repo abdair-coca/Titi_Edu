@@ -32,6 +32,7 @@ enum EstadoModulo {
 enum FormatoContenido {
   TEXTO
   MARKDOWN
+  HTML
 }
 
 enum EstadoOperacionAutoria {
@@ -69,6 +70,8 @@ model Usuario {
   logros             LogroUsuario[]
   certificados       Certificado[]
   notas              NotaLeccion[]
+  intentosHtml       IntentoHtmlLeccion[]
+  resultadosHtml     ResultadoHtmlLeccion[]
   movimientosGota    MovimientoGota[]
   misionesUsuario    MisionUsuario[]
   insignias          InsigniaSemanal[]
@@ -243,6 +246,7 @@ model Leccion {
   progresos        Progreso[]
   comentarios      ComentarioLeccion[]
   notas            NotaLeccion[]
+  recursoHtml      RecursoHtmlLeccion?
 }
 
 model Material {
@@ -256,6 +260,59 @@ model Material {
   leccion   Leccion @relation(fields: [leccionId], references: [id])
 
   @@index([leccionId])
+}
+
+// Recurso HTML autocontenido por lección. El contenido se entrega exclusivamente
+// como srcDoc dentro de un iframe sandboxed; nunca como URL pública.
+model RecursoHtmlLeccion {
+  id          String                 @id @default(uuid())
+  leccionId   String                 @unique
+  html        String
+  evaluable   Boolean                @default(false)
+  intentosMax Int?
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  leccion     Leccion                @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+  intentos    IntentoHtmlLeccion[]
+  resultados  ResultadoHtmlLeccion[]
+
+  @@index([leccionId])
+}
+
+// Cada inicio consume un intento. El token opaco vincula el postMessage al
+// estudiante y hace idempotente la entrega del puntaje.
+model IntentoHtmlLeccion {
+  id            String                @id @default(uuid())
+  token         String                @unique
+  numero        Int
+  puntaje       Float?
+  resultadoAt   DateTime?
+  createdAt     DateTime              @default(now())
+  usuarioId     String
+  recursoHtmlId String
+  usuario       Usuario               @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  recursoHtml   RecursoHtmlLeccion    @relation(fields: [recursoHtmlId], references: [id], onDelete: Cascade)
+  resultado     ResultadoHtmlLeccion?
+
+  @@unique([usuarioId, recursoHtmlId, numero])
+  @@index([usuarioId, recursoHtmlId])
+}
+
+// Mejor puntaje autodeclarado por estudiante y recurso HTML.
+model ResultadoHtmlLeccion {
+  id            String             @id @default(uuid())
+  usuarioId     String
+  recursoHtmlId String
+  mejorPuntaje  Float
+  intentoId     String
+  updatedAt     DateTime           @updatedAt
+  usuario       Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  recursoHtml   RecursoHtmlLeccion @relation(fields: [recursoHtmlId], references: [id], onDelete: Cascade)
+  intento       IntentoHtmlLeccion @relation(fields: [intentoId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, recursoHtmlId])
+  @@unique([intentoId])
+  @@index([recursoHtmlId])
 }
 
 model TokenServicio {
