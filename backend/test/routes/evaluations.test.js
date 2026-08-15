@@ -31,7 +31,7 @@ const evalConUnaPregunta = {
   id: 'ev1',
   intentosMax: 3,
   notaMinima: 70,
-  modulo: { id: 'm1', cursoId: 'c1' },
+  modulo: { id: 'm1', cursoId: 'c1', estado: 'PUBLICADO' },
   cursoId: null,
   preguntas: [
     { id: 'q1', tipo: 'OPCION_MULTIPLE', opciones: [
@@ -113,7 +113,7 @@ describe('GET /api/modules/:id/evaluation', () => {
   });
 
   it('403 si no está inscripto ni es el autor', async () => {
-    prisma.modulo.findUnique.mockResolvedValue({ id: 'm1', cursoId: 'c1', evaluacion: evaluacionConOpciones });
+    prisma.modulo.findUnique.mockResolvedValue({ id: 'm1', cursoId: 'c1', estado: 'PUBLICADO', evaluacion: evaluacionConOpciones });
     prisma.curso.findUnique.mockResolvedValue({ id: 'c1', creadorId: 'otro', profesores: [] });
     prisma.inscripcion.findUnique.mockResolvedValue(null);
     const res = await request(app).get('/api/modules/m1/evaluation')
@@ -123,7 +123,7 @@ describe('GET /api/modules/:id/evaluation', () => {
 
   it('200 con versión completa para el autor del curso', async () => {
     prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'PROFESOR' });
-    prisma.modulo.findUnique.mockResolvedValue({ id: 'm1', cursoId: 'c1', evaluacion: evaluacionConOpciones });
+    prisma.modulo.findUnique.mockResolvedValue({ id: 'm1', cursoId: 'c1', estado: 'PUBLICADO', evaluacion: evaluacionConOpciones });
     prisma.curso.findUnique.mockResolvedValue({ id: 'c1', creadorId: 'u1', profesores: [] });
     const res = await request(app).get('/api/modules/m1/evaluation')
       .set('Authorization', `Bearer ${token}`);
@@ -132,7 +132,7 @@ describe('GET /api/modules/:id/evaluation', () => {
   });
 
   it('200 con versión pública (sin esCorrecta) para un inscripto', async () => {
-    prisma.modulo.findUnique.mockResolvedValue({ id: 'm1', cursoId: 'c1', evaluacion: evaluacionConOpciones });
+    prisma.modulo.findUnique.mockResolvedValue({ id: 'm1', cursoId: 'c1', estado: 'PUBLICADO', evaluacion: evaluacionConOpciones });
     prisma.curso.findUnique.mockResolvedValue({ id: 'c1', creadorId: 'otro', profesores: [] });
     prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
     const res = await request(app).get('/api/modules/m1/evaluation')

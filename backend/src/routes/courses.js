@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
       include: {
         categoria: true,
         creador: { select: { id: true, username: true } },
-        _count: { select: { inscripciones: true, modulos: true } },
+        _count: { select: { inscripciones: true, modulos: { where: { estado: 'PUBLICADO' } } } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -54,7 +54,7 @@ router.get('/my/enrolled', requireAuth, async (req, res) => {
           include: {
             categoria: true,
             creador: { select: { id: true, username: true } },
-            _count: { select: { modulos: true } },
+            _count: { select: { modulos: { where: { estado: 'PUBLICADO' } } } },
           },
         },
       },
@@ -89,7 +89,7 @@ router.get('/my/teaching', requireAuth, async (req, res) => {
       },
       include: {
         categoria: true,
-        _count: { select: { inscripciones: true, modulos: true } },
+        _count: { select: { inscripciones: true, modulos: { where: { estado: 'PUBLICADO' } } } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -164,6 +164,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
           include: { profesor: { select: { id: true, username: true } } },
         },
         modulos: {
+          where: { estado: 'PUBLICADO' },
           orderBy: { orden: 'asc' },
           include: {
             lecciones: {
@@ -519,6 +520,7 @@ router.get('/:id/progress', requireAuth, async (req, res) => {
       where: { id: req.params.id },
       include: {
         modulos: {
+          where: { estado: 'PUBLICADO' },
           orderBy: { orden: 'asc' },
           include: {
             lecciones: {

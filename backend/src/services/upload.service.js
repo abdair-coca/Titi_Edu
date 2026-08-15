@@ -34,10 +34,10 @@ if (cloudinaryEnabled) {
  * @param {'auto'|'image'|'raw'|'video'} resourceType - tipo de recurso
  * @returns {Promise<{ url: string, publicId: string }>}
  */
-export function uploadBuffer(buffer, folder, resourceType = 'auto') {
+export function uploadBuffer(buffer, folder, resourceType = 'auto', options = {}) {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder, resource_type: resourceType },
+      { folder, resource_type: resourceType, ...options },
       (err, result) => {
         if (err) return reject(err);
         resolve({ url: result.secure_url, publicId: result.public_id });

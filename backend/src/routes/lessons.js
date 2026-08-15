@@ -76,10 +76,13 @@ router.get('/lessons/:id', requireAuth, async (req, res) => {
       where: { id: req.params.id },
       include: {
         materiales: { orderBy: { nombre: 'asc' } },
-        modulo: { select: { id: true, titulo: true, cursoId: true } },
+        modulo: { select: { id: true, titulo: true, cursoId: true, estado: true } },
       },
     });
     if (!leccion) {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+    if (leccion.modulo.estado !== 'PUBLICADO') {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
     const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
@@ -186,9 +189,12 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
 
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true, modulo: { select: { cursoId: true } } },
+      select: { id: true, modulo: { select: { cursoId: true, estado: true } } },
     });
     if (!leccion) {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+    if (leccion.modulo.estado !== 'PUBLICADO') {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
     const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
@@ -271,6 +277,16 @@ router.get('/lessons/:id/note', requireAuth, async (req, res) => {
     const usuario = await loadCurrentUser(req, res);
     if (!usuario) return;
 
+    const leccion = await prisma.leccion.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, modulo: { select: { cursoId: true, estado: true } } },
+    });
+    if (!leccion || leccion.modulo.estado !== 'PUBLICADO') {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    if (!access) return;
+
     const nota = await prisma.notaLeccion.findUnique({
       where: {
         usuarioId_leccionId: { usuarioId: usuario.id, leccionId: req.params.id },
@@ -300,11 +316,16 @@ router.put('/lessons/:id/note', requireAuth, async (req, res) => {
 
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true },
+      select: { id: true, modulo: { select: { cursoId: true, estado: true } } },
     });
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
+    if (leccion.modulo.estado !== 'PUBLICADO') {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+    const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
+    if (!access) return;
 
     const nota = await prisma.notaLeccion.upsert({
       where: {
@@ -326,9 +347,12 @@ router.get('/lessons/:id/comments', requireAuth, async (req, res) => {
   try {
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true, modulo: { select: { cursoId: true } } },
+      select: { id: true, modulo: { select: { cursoId: true, estado: true } } },
     });
     if (!leccion) {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+    if (leccion.modulo.estado !== 'PUBLICADO') {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
     const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);
@@ -378,9 +402,12 @@ router.post('/lessons/:id/comments', requireAuth, async (req, res) => {
 
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true, modulo: { select: { cursoId: true } } },
+      select: { id: true, modulo: { select: { cursoId: true, estado: true } } },
     });
     if (!leccion) {
+      return res.status(404).json({ success: false, message: 'Lección no encontrada' });
+    }
+    if (leccion.modulo.estado !== 'PUBLICADO') {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
     const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId);

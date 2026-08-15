@@ -24,6 +24,7 @@ import gotasRoutes from './routes/gotas.js'
 import missionsRoutes from './routes/missions.js'
 import rankingRoutes from './routes/ranking.js'
 import shopRoutes from './routes/shop.js'
+import authoringRoutes from './routes/authoring.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -88,6 +89,7 @@ app.use('/api/gotas', gotasRoutes)
 app.use('/api/missions', missionsRoutes)
 app.use('/api/ranking', rankingRoutes)
 app.use('/api/shop', shopRoutes)
+app.use('/api/authoring', authoringRoutes)
 
 app.use((req, res) => {
   res.status(404).json({ success: false, message: 'Ruta no encontrada' });

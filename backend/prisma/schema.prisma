@@ -24,6 +24,22 @@ enum TipoPregunta {
   RESPUESTA_CORTA
 }
 
+enum EstadoModulo {
+  BORRADOR
+  PUBLICADO
+}
+
+enum FormatoContenido {
+  TEXTO
+  MARKDOWN
+}
+
+enum EstadoOperacionAutoria {
+  PENDIENTE
+  COMPLETADA
+  FALLIDA
+}
+
 model Usuario {
   id       String @id @default(uuid())
   neoId    String @unique
@@ -47,17 +63,19 @@ model Usuario {
   cursosCreados      Curso[]         @relation("CursosCreados")
   cursosComoProfesor CursoProfesor[]
 
-  inscripciones   Inscripcion[]
-  progresos       Progreso[]
-  intentos        Intento[]
-  logros          LogroUsuario[]
-  certificados    Certificado[]
-  notas           NotaLeccion[]
-  movimientosGota MovimientoGota[]
-  misionesUsuario MisionUsuario[]
-  insignias       InsigniaSemanal[]
-  comprasItem     CompraItem[]
-  inventario      InventarioItem[]
+  inscripciones      Inscripcion[]
+  progresos          Progreso[]
+  intentos           Intento[]
+  logros             LogroUsuario[]
+  certificados       Certificado[]
+  notas              NotaLeccion[]
+  movimientosGota    MovimientoGota[]
+  misionesUsuario    MisionUsuario[]
+  insignias          InsigniaSemanal[]
+  comprasItem        CompraItem[]
+  inventario         InventarioItem[]
+  tokensServicio     TokenServicio[]
+  operacionesAutoria OperacionAutoria[]
 }
 
 // Etapa 6 — catálogo de misiones diarias. Se siembran en seed.js (idempotente por codigo).
@@ -165,13 +183,14 @@ model Categoria {
 }
 
 model Curso {
-  id          String   @id @default(uuid())
-  titulo      String
-  descripcion String
-  portadaUrl  String?
-  nivel       String
-  publicado   Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id               String   @id @default(uuid())
+  titulo           String
+  descripcion      String
+  portadaUrl       String?
+  nivel            String
+  publicado        Boolean  @default(false)
+  emiteCertificado Boolean  @default(true)
+  createdAt        DateTime @default(now())
 
   categoriaId String
   categoria   Categoria @relation(fields: [categoriaId], references: [id])
@@ -179,10 +198,11 @@ model Curso {
   creadorId String
   creador   Usuario @relation("CursosCreados", fields: [creadorId], references: [id])
 
-  profesores    CursoProfesor[]
-  modulos       Modulo[]
-  inscripciones Inscripcion[]
-  certificados  Certificado[]
+  profesores         CursoProfesor[]
+  modulos            Modulo[]
+  inscripciones      Inscripcion[]
+  certificados       Certificado[]
+  operacionesAutoria OperacionAutoria[]
 
   @@index([publicado, categoriaId])
 }
@@ -197,28 +217,30 @@ model CursoProfesor {
 }
 
 model Modulo {
-  id          String      @id @default(uuid())
+  id          String       @id @default(uuid())
   titulo      String
   descripcion String?
   orden       Int
+  estado      EstadoModulo @default(BORRADOR)
   cursoId     String
-  curso       Curso       @relation(fields: [cursoId], references: [id])
+  curso       Curso        @relation(fields: [cursoId], references: [id])
   lecciones   Leccion[]
   evaluacion  Evaluacion?
 }
 
 model Leccion {
-  id          String              @id @default(uuid())
-  titulo      String
-  contenido   String // texto/descripción
-  videoUrl    String? // YouTube embed URL
-  orden       Int
-  moduloId    String
-  modulo      Modulo              @relation(fields: [moduloId], references: [id])
-  materiales  Material[]
-  progresos   Progreso[]
-  comentarios ComentarioLeccion[]
-  notas       NotaLeccion[]
+  id               String              @id @default(uuid())
+  titulo           String
+  contenido        String // texto/descripción
+  formatoContenido FormatoContenido    @default(TEXTO)
+  videoUrl         String? // YouTube embed URL
+  orden            Int
+  moduloId         String
+  modulo           Modulo              @relation(fields: [moduloId], references: [id])
+  materiales       Material[]
+  progresos        Progreso[]
+  comentarios      ComentarioLeccion[]
+  notas            NotaLeccion[]
 }
 
 model Material {
@@ -226,11 +248,55 @@ model Material {
   nombre    String
   url       String
   publicId  String? // public_id de Cloudinary (null para archivos legacy en disco)
+  sha256    String?
   tipo      String // 'pdf' | 'word' | 'imagen' | 'codigo' | 'otro'
   leccionId String
   leccion   Leccion @relation(fields: [leccionId], references: [id])
 
   @@index([leccionId])
+}
+
+model TokenServicio {
+  id         String    @id @default(uuid())
+  nombre     String
+  prefijo    String    @unique
+  tokenHash  String    @unique
+  scopes     String[]
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  usuarioId   String
+  usuario     Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  operaciones OperacionAutoria[]
+
+  @@index([usuarioId, revokedAt])
+}
+
+model OperacionAutoria {
+  id                 String                 @id @default(uuid())
+  actorKey           String
+  idempotencyKey     String
+  accion             String
+  requestFingerprint String
+  estado             EstadoOperacionAutoria @default(PENDIENTE)
+  httpStatus         Int?
+  response           Json?
+  contexto           Json?
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  usuarioId       String?
+  usuario         Usuario?       @relation(fields: [usuarioId], references: [id], onDelete: SetNull)
+  cursoId         String?
+  curso           Curso?         @relation(fields: [cursoId], references: [id], onDelete: SetNull)
+  tokenServicioId String?
+  tokenServicio   TokenServicio? @relation(fields: [tokenServicioId], references: [id], onDelete: SetNull)
+
+  @@unique([actorKey, idempotencyKey])
+  @@index([cursoId, createdAt])
+  @@index([tokenServicioId, createdAt])
 }
 
 model Evaluacion {

@@ -108,7 +108,7 @@ async function loadEvaluacion(id) {
     where: { id },
     include: {
       ...EVAL_INCLUDE,
-      modulo: { select: { id: true, titulo: true, cursoId: true } },
+      modulo: { select: { id: true, titulo: true, cursoId: true, estado: true } },
     },
   });
   if (!ev) return null;
@@ -161,6 +161,9 @@ router.post('/modules/:id/evaluation', requireAuth, async (req, res) => {
     });
     if (!modulo) {
       return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+    }
+    if (modulo.estado === 'PUBLICADO') {
+      return res.status(409).json({ success: false, message: 'Despublica el módulo antes de editar su evaluación' });
     }
     if (modulo.curso.creadorId !== usuario.id) {
       return res.status(403).json({
@@ -278,6 +281,9 @@ router.get('/modules/:id/evaluation', requireAuth, async (req, res) => {
     if (!modulo) {
       return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
     }
+    if (modulo.estado !== 'PUBLICADO') {
+      return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+    }
     if (!modulo.evaluacion) {
       return res.status(404).json({ success: false, message: 'Este módulo no tiene evaluación' });
     }
@@ -340,6 +346,9 @@ router.get('/evaluations/:id', requireAuth, async (req, res) => {
       return res.status(404).json({ success: false, message: 'Evaluación no encontrada' });
     }
     const { ev, curso } = loaded;
+    if (ev.modulo && ev.modulo.estado !== 'PUBLICADO') {
+      return res.status(404).json({ success: false, message: 'Evaluación no encontrada' });
+    }
 
     // Evaluación huérfana (sin curso asociado): no hay contra qué chequear inscripción.
     let esAutor = usuario.rol === 'ADMIN';
@@ -459,6 +468,9 @@ router.post('/evaluations/:id/attempt', requireAuth, async (req, res) => {
     const { ev, curso } = loaded;
     if (!curso) {
       return res.status(404).json({ success: false, message: 'Curso de la evaluación no encontrado' });
+    }
+    if (ev.modulo && ev.modulo.estado !== 'PUBLICADO') {
+      return res.status(404).json({ success: false, message: 'Evaluación no encontrada' });
     }
 
     const inscripcion = await prisma.inscripcion.findUnique({
@@ -602,12 +614,17 @@ router.get('/evaluations/:id/my-attempts', requireAuth, async (req, res) => {
     const usuario = await loadCurrentUser(req, res);
     if (!usuario) return;
 
-    const ev = await prisma.evaluacion.findUnique({
-      where: { id: req.params.id },
-      select: { id: true, intentosMax: true, notaMinima: true },
-    });
-    if (!ev) {
+    const loaded = await loadEvaluacion(req.params.id);
+    if (!loaded) {
       return res.status(404).json({ success: false, message: 'Evaluación no encontrada' });
+    }
+    const { ev, curso } = loaded;
+    if (ev.modulo && ev.modulo.estado !== 'PUBLICADO') {
+      return res.status(404).json({ success: false, message: 'Evaluación no encontrada' });
+    }
+    if (curso) {
+      const access = await ensureCourseContentAccess(req, res, curso.id);
+      if (!access) return;
     }
 
     const intentos = await prisma.intento.findMany({

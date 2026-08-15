@@ -1,0 +1,241 @@
+import {
+  createHash,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from 'crypto';
+import path from 'path';
+
+export const AUTHORING_SCOPES = Object.freeze([
+  'course:read',
+  'course:create',
+  'content:write',
+  'material:write',
+  'publish',
+  'analytics:read',
+]);
+
+export function canonicalJson(value) {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(',')}]`;
+  return `{${Object.keys(value)
+    .sort()
+    .filter((key) => value[key] !== undefined)
+    .map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`)
+    .join(',')}}`;
+}
+
+export function sha256(value) {
+  return createHash('sha256').update(value).digest('hex');
+}
+
+export function fingerprint(value) {
+  return sha256(canonicalJson(value));
+}
+
+export function requestFingerprint(req, extra = {}) {
+  return fingerprint({
+    method: req.method,
+    path: req.baseUrl + req.path,
+    params: req.params,
+    query: req.query,
+    body: req.body || {},
+    ...extra,
+  });
+}
+
+export function generateServiceToken() {
+  const prefijo = `titi_svc_${randomBytes(4).toString('hex')}`;
+  const secret = randomBytes(32).toString('base64url');
+  const token = `${prefijo}_${secret}`;
+  return { token, prefijo, tokenHash: sha256(token) };
+}
+
+export function matchesTokenHash(token, expectedHex) {
+  if (!/^[a-f0-9]{64}$/i.test(expectedHex || '')) return false;
+  const actual = Buffer.from(sha256(token), 'hex');
+  const expected = Buffer.from(expectedHex, 'hex');
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+
+export function parseServiceToken(token) {
+  const match = /^(titi_svc_[a-f0-9]{8})_([A-Za-z0-9_-]{43})$/.exec(token || '');
+  return match ? { prefijo: match[1] } : null;
+}
+
+function confirmationSecret() {
+  const secret = process.env.AUTHORING_CONFIRMATION_SECRET;
+  if (secret) return secret;
+  if (process.env.NODE_ENV === 'production') return null;
+  return 'authoring-development-only-secret';
+}
+
+export function createPublicationConfirmation({ resourceType, resourceId, expectedFingerprint }) {
+  const secret = confirmationSecret();
+  if (!secret) return null;
+  const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
+  const phrase = `PUBLICAR ${resourceType === 'course' ? 'CURSO' : 'MODULO'} ${resourceId}`;
+  const payload = Buffer.from(canonicalJson({ resourceType, resourceId, expectedFingerprint, phrase, expiresAt }))
+    .toString('base64url');
+  const signature = createHmac('sha256', secret).update(payload).digest('base64url');
+  return { confirmationToken: `${payload}.${signature}`, phrase, expiresAt };
+}
+
+export function verifyPublicationConfirmation({
+  confirmationToken,
+  phrase,
+  resourceType,
+  resourceId,
+  expectedFingerprint,
+}) {
+  const secret = confirmationSecret();
+  if (!secret) return { ok: false, reason: 'secret_missing' };
+  const [payload, signature, extra] = String(confirmationToken || '').split('.');
+  if (!payload || !signature || extra) return { ok: false, reason: 'invalid' };
+  const expectedSignature = createHmac('sha256', secret).update(payload).digest();
+  let providedSignature;
+  try {
+    providedSignature = Buffer.from(signature, 'base64url');
+  } catch {
+    return { ok: false, reason: 'invalid' };
+  }
+  if (providedSignature.length !== expectedSignature.length || !timingSafeEqual(providedSignature, expectedSignature)) {
+    return { ok: false, reason: 'invalid' };
+  }
+  let decoded;
+  try {
+    decoded = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
+  } catch {
+    return { ok: false, reason: 'invalid' };
+  }
+  if (
+    decoded.resourceType !== resourceType ||
+    decoded.resourceId !== resourceId ||
+    decoded.expectedFingerprint !== expectedFingerprint ||
+    decoded.phrase !== phrase
+  ) return { ok: false, reason: 'invalid' };
+  if (!decoded.expiresAt || new Date(decoded.expiresAt).getTime() <= Date.now()) {
+    return { ok: false, reason: 'expired' };
+  }
+  return { ok: true };
+}
+
+export function coursePublicationSummary(course) {
+  return {
+    id: course.id,
+    titulo: course.titulo,
+    descripcion: course.descripcion,
+    nivel: course.nivel,
+    categoriaId: course.categoriaId,
+    emiteCertificado: course.emiteCertificado,
+    modules: (course.modulos || []).map(modulePublicationSummary),
+  };
+}
+
+export function modulePublicationSummary(module) {
+  return {
+    id: module.id,
+    titulo: module.titulo,
+    descripcion: module.descripcion,
+    orden: module.orden,
+    estado: module.estado,
+    lessons: (module.lecciones || []).map((lesson) => ({
+      id: lesson.id,
+      titulo: lesson.titulo,
+      contenido: lesson.contenido,
+      formatoContenido: lesson.formatoContenido,
+      videoUrl: lesson.videoUrl,
+      orden: lesson.orden,
+      materials: (lesson.materiales || []).map((material) => ({
+        id: material.id,
+        nombre: material.nombre,
+        tipo: material.tipo,
+        sha256: material.sha256,
+      })),
+    })),
+    evaluation: module.evaluacion
+      ? {
+          id: module.evaluacion.id,
+          titulo: module.evaluacion.titulo,
+          intentosMax: module.evaluacion.intentosMax,
+          notaMinima: module.evaluacion.notaMinima,
+          questions: (module.evaluacion.preguntas || []).map((question) => ({
+            id: question.id,
+            texto: question.texto,
+            tipo: question.tipo,
+            orden: question.orden,
+            options: (question.opciones || []).map((option) => ({
+              id: option.id,
+              texto: option.texto,
+              esCorrecta: option.esCorrecta,
+            })),
+          })),
+        }
+      : null,
+  };
+}
+
+const BINARY_TYPES = [
+  { extensions: ['.pdf'], type: 'pdf', resourceType: 'raw', match: (b) => b.subarray(0, 5).toString() === '%PDF-' },
+  { extensions: ['.png'], type: 'imagen', resourceType: 'image', match: (b) => b.length >= 8 && b.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) },
+  { extensions: ['.jpg', '.jpeg'], type: 'imagen', resourceType: 'image', match: (b) => b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  { extensions: ['.webp'], type: 'imagen', resourceType: 'image', match: (b) => b.length >= 12 && b.subarray(0, 4).toString() === 'RIFF' && b.subarray(8, 12).toString() === 'WEBP' },
+  { extensions: ['.doc'], type: 'word', resourceType: 'raw', match: (b) => b.length >= 8 && b.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])) },
+  { extensions: ['.docx'], type: 'word', resourceType: 'raw', match: (b) => b.length >= 4 && b[0] === 0x50 && b[1] === 0x4b && [0x03, 0x05, 0x07].includes(b[2]) && [0x04, 0x06, 0x08].includes(b[3]) },
+];
+
+export function inspectAuthoringFile(file) {
+  const extension = path.extname(file?.originalname || '').toLowerCase();
+  const binary = BINARY_TYPES.find((entry) => entry.extensions.includes(extension));
+  if (binary) {
+    if (!binary.match(file.buffer)) return { ok: false, message: 'La firma del archivo no coincide con su extensiÃ³n' };
+    return { ok: true, extension, tipo: binary.type, resourceType: binary.resourceType, sha256: sha256(file.buffer) };
+  }
+  if (!['.txt', '.md', '.py'].includes(extension)) {
+    return { ok: false, message: 'Tipo de archivo no permitido' };
+  }
+  if (file.buffer.includes(0)) return { ok: false, message: 'El archivo de texto contiene bytes NUL' };
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(file.buffer);
+  } catch {
+    return { ok: false, message: 'El archivo de texto debe usar UTF-8 válido' };
+  }
+  return { ok: true, extension, tipo: extension === '.py' ? 'codigo' : 'otro', resourceType: 'raw', sha256: sha256(file.buffer) };
+}
+
+export function sanitizeFilename(filename) {
+  const base = path.basename(String(filename || 'material'));
+  const extension = path.extname(base).toLowerCase();
+  const stem = path.basename(base, extension)
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9._-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 100) || 'material';
+  return `${stem}${extension}`;
+}
+
+export function privateAnalytics(intents) {
+  const totalAttempts = intents.length;
+  const uniqueStudents = new Set(intents.map((attempt) => attempt.usuarioId)).size;
+  const passedStudents = new Set(intents.filter((attempt) => attempt.aprobado).map((attempt) => attempt.usuarioId)).size;
+  const suppressed = uniqueStudents < 3;
+  const bucketCounts = [0, 0, 0, 0, 0];
+  for (const attempt of intents) bucketCounts[Math.min(4, Math.floor(Math.max(0, attempt.nota) / 20))] += 1;
+  return {
+    totalAttempts,
+    uniqueStudents,
+    passedStudents,
+    averageScore: suppressed || totalAttempts === 0 ? null : intents.reduce((sum, attempt) => sum + attempt.nota, 0) / totalAttempts,
+    attemptPassRate: suppressed || totalAttempts === 0 ? null : intents.filter((attempt) => attempt.aprobado).length / totalAttempts,
+    studentPassRate: suppressed || uniqueStudents === 0 ? null : passedStudents / uniqueStudents,
+    scoreDistribution: suppressed ? null : [
+      { range: '0-19', count: bucketCounts[0] },
+      { range: '20-39', count: bucketCounts[1] },
+      { range: '40-59', count: bucketCounts[2] },
+      { range: '60-79', count: bucketCounts[3] },
+      { range: '80-100', count: bucketCounts[4] },
+    ],
+    suprimida: suppressed,
+  };
+}

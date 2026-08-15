@@ -68,7 +68,7 @@ router.post(
 router.get('/courses/:courseId/modules', async (req, res) => {
   try {
     const modulos = await prisma.modulo.findMany({
-      where: { cursoId: req.params.courseId },
+      where: { cursoId: req.params.courseId, estado: 'PUBLICADO' },
       orderBy: { orden: 'asc' },
       include: {
         _count: { select: { lecciones: true } },
@@ -91,6 +91,10 @@ router.put('/modules/:id', requireAuth, requireRole('PROFESOR', 'ADMIN'), async 
     });
     if (!modulo) {
       return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+    }
+
+    if (modulo.estado === 'PUBLICADO') {
+      return res.status(409).json({ success: false, message: 'Despublica el módulo antes de editarlo' });
     }
     if (!isOwnerOrAdmin(req.dbUser, modulo.curso.creadorId)) {
       return res.status(403).json({
@@ -176,6 +180,10 @@ router.get('/modules/:id/lessons', requireAuth, async (req, res) => {
     });
 
     if (!modulo) {
+      return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
+    }
+
+    if (modulo.estado !== 'PUBLICADO') {
       return res.status(404).json({ success: false, message: 'Módulo no encontrado' });
     }
 

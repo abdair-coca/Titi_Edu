@@ -99,15 +99,21 @@ export async function checkCursoCompletado(usuarioId, cursoId) {
     });
     if (!inscripcion) return { completado: false };
 
+    const curso = await prisma.curso.findUnique({
+      where: { id: cursoId },
+      select: { titulo: true, emiteCertificado: true },
+    });
+    if (!curso) return { completado: false };
+
     if (inscripcion.completado) {
-      const certificado = await prisma.certificado.findFirst({
-        where: { usuarioId, cursoId },
-      });
+      const certificado = curso.emiteCertificado
+        ? await prisma.certificado.findFirst({ where: { usuarioId, cursoId } })
+        : null;
       return { completado: true, nuevo: false, certificado, logros: [] };
     }
 
     const modulos = await prisma.modulo.findMany({
-      where: { cursoId },
+      where: { cursoId, estado: 'PUBLICADO' },
       select: {
         lecciones: { select: { id: true } },
         evaluacion: { select: { id: true } },
@@ -143,18 +149,14 @@ export async function checkCursoCompletado(usuarioId, cursoId) {
       data: { completado: true, fechaCompletado: new Date() },
     });
 
-    let certificado = await prisma.certificado.findFirst({
-      where: { usuarioId, cursoId },
-    });
-    if (!certificado) {
-      // Snapshot del título: si el curso se borra luego, el certificado lo conserva.
-      const curso = await prisma.curso.findUnique({
-        where: { id: cursoId },
-        select: { titulo: true },
-      });
-      certificado = await prisma.certificado.create({
-        data: { usuarioId, cursoId, cursoTitulo: curso?.titulo ?? '' },
-      });
+    let certificado = null;
+    if (curso.emiteCertificado) {
+      certificado = await prisma.certificado.findFirst({ where: { usuarioId, cursoId } });
+      if (!certificado) {
+        certificado = await prisma.certificado.create({
+          data: { usuarioId, cursoId, cursoTitulo: curso.titulo },
+        });
+      }
     }
 
     const logro = await otorgarLogro(usuarioId, 'Primer curso');
