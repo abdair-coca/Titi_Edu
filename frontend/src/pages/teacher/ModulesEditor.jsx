@@ -57,9 +57,16 @@ export default function ModulesEditor() {
     const lesson = data?.module?.lecciones?.[0];
     if (lesson) setActiveLessonId(lesson.id);
   }
-  async function addLesson(module) {
+  async function addContent(module, formatoContenido) {
     const order = (module.lecciones?.at(-1)?.orden ?? 0) + 1;
-    const data = await mutate('post', `/modules/${module.id}/lessons`, { titulo: `Nueva lección ${order}`, contenido: '', orden: order, expectedFingerprint: moduleFingerprint(module.id) }, 'No se pudo crear la lección');
+    const isPresentation = formatoContenido === 'HTML';
+    const data = await mutate('post', `/modules/${module.id}/lessons`, {
+      titulo: `${isPresentation ? 'Nueva presentaci\u00f3n' : 'Nueva lecci\u00f3n'} ${order}`,
+      contenido: '',
+      orden: order,
+      formatoContenido,
+      expectedFingerprint: moduleFingerprint(module.id),
+    }, isPresentation ? 'No se pudo crear la presentaci\u00f3n' : 'No se pudo crear la lecci\u00f3n');
     if (data?.lesson?.id) setActiveLessonId(data.lesson.id);
   }
   async function saveModule(module, fields) { await mutate('put', `/modules/${module.id}`, { ...fields, expectedFingerprint: moduleFingerprint(module.id) }, 'No se pudo guardar el módulo'); }
@@ -124,7 +131,7 @@ export default function ModulesEditor() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
         <aside className="bg-white border border-gray-100 rounded-2xl p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto">
           {!course.publicado && <button type="button" onClick={addModule} disabled={busy} className="w-full bg-titi-cream text-titi-dark font-bold text-sm px-3 py-2 rounded-xl border border-dashed border-titi-yellow hover:bg-titi-yellow-light disabled:opacity-50">+ Agregar módulo</button>}
-          {modules.length === 0 ? <p className="text-sm text-gray-400 text-center py-6">Todavía no hay módulos.</p> : modules.map((module) => <ModuleNode key={module.id} module={module} activeLessonId={activeLessonId} busy={busy} onSelect={setActiveLessonId} onSave={(fields) => saveModule(module, fields)} onAddLesson={() => addLesson(module)} onDelete={() => deleteModule(module)} onDeleteLesson={(lesson) => deleteLesson(module, lesson)} onEditEvaluation={() => navigate(`/teacher/modules/${module.id}/evaluation`)} onPublish={() => startPublish('module', module)} onUnpublish={() => startUnpublish(module)} />)}
+          {modules.length === 0 ? <p className="text-sm text-gray-400 text-center py-6">Todavía no hay módulos.</p> : modules.map((module) => <ModuleNode key={module.id} module={module} activeLessonId={activeLessonId} busy={busy} onSelect={setActiveLessonId} onSave={(fields) => saveModule(module, fields)} onAddLesson={() => addContent(module, 'MARKDOWN')} onAddPresentation={() => addContent(module, 'HTML')} onDelete={() => deleteModule(module)} onDeleteLesson={(lesson) => deleteLesson(module, lesson)} onEditEvaluation={() => navigate(`/teacher/modules/${module.id}/evaluation`)} onPublish={() => startPublish('module', module)} onUnpublish={() => startUnpublish(module)} />)}
         </aside>
         <section className="lg:col-span-2 bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 min-h-[60vh]">
           {!activeLesson ? <EmptyState /> : <LessonEditor key={activeLesson.id} lesson={activeLesson} readOnly={activeModule.estado === 'PUBLICADO'} busy={busy} onSave={(fields) => saveLesson(activeModule, activeLesson, fields)} onUpload={(file, name) => uploadMaterial(activeModule, activeLesson, file, name)} onUploadHtml={(file, evaluable, intentosMax) => uploadHtml(activeModule, activeLesson, file, evaluable, intentosMax)} onDeleteMaterial={(material) => deleteMaterial(activeModule, material)} />}
@@ -135,11 +142,11 @@ export default function ModulesEditor() {
   );
 }
 
-function ModuleNode({ module, activeLessonId, busy, onSelect, onSave, onAddLesson, onDelete, onDeleteLesson, onEditEvaluation, onPublish, onUnpublish }) {
+function ModuleNode({ module, activeLessonId, busy, onSelect, onSave, onAddLesson, onAddPresentation, onDelete, onDeleteLesson, onEditEvaluation, onPublish, onUnpublish }) {
   const [title, setTitle] = useState(module.titulo); const locked = module.estado === 'PUBLICADO';
   useEffect(() => setTitle(module.titulo), [module.titulo]);
   const saveTitle = () => { if (!locked && title.trim() && title.trim() !== module.titulo) onSave({ titulo: title.trim() }); };
-  return <div className="border border-gray-100 rounded-xl bg-titi-cream/40 p-3"><div className="flex gap-2 items-center"><input value={title} disabled={locked} onChange={(event) => setTitle(event.target.value)} onBlur={saveTitle} className="min-w-0 flex-1 bg-transparent text-sm font-bold text-titi-dark disabled:opacity-80" /><span className={`text-[11px] font-bold px-2 py-1 rounded-full ${locked ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>{module.estado}</span></div><ol className="mt-2 space-y-1">{(module.lecciones || []).map((lesson, index) => <li key={lesson.id} className="flex items-center gap-1"><button type="button" onClick={() => onSelect(lesson.id)} className={`flex-1 min-w-0 text-left text-sm px-2 py-1.5 rounded-lg truncate ${activeLessonId === lesson.id ? 'bg-titi-yellow text-titi-dark font-bold' : 'text-titi-dark hover:bg-titi-yellow-light'}`}>{index + 1}. {lesson.titulo}</button>{!locked && <button type="button" onClick={() => onDeleteLesson(lesson)} disabled={busy} className="text-red-500 text-xs font-bold px-1" aria-label="Eliminar lección">×</button>}</li>)}</ol><div className="mt-3 flex flex-wrap gap-2">{!locked && <><button type="button" onClick={onAddLesson} disabled={busy} className="text-xs font-bold text-titi-dark bg-white border border-dashed border-titi-yellow rounded-lg px-2 py-1.5">+ Lección</button><button type="button" onClick={onEditEvaluation} className="text-xs font-bold text-titi-dark bg-white border border-gray-200 rounded-lg px-2 py-1.5">Evaluación</button><button type="button" onClick={onPublish} disabled={busy} className="text-xs font-bold text-green-700 bg-green-50 border border-green-200 rounded-lg px-2 py-1.5">Publicar</button><button type="button" onClick={onDelete} disabled={busy} className="text-xs font-bold text-red-500 px-1">Eliminar</button></>}{locked && <><button type="button" onClick={onUnpublish} disabled={busy} className="text-xs font-bold text-titi-dark bg-white border border-gray-200 rounded-lg px-2 py-1.5">Despublicar</button><button type="button" onClick={onEditEvaluation} className="text-xs font-bold text-titi-dark bg-white border border-gray-200 rounded-lg px-2 py-1.5">Ver evaluación</button></>}</div></div>;
+  return <div className="border border-gray-100 rounded-xl bg-titi-cream/40 p-3"><div className="flex gap-2 items-center"><input value={title} disabled={locked} onChange={(event) => setTitle(event.target.value)} onBlur={saveTitle} className="min-w-0 flex-1 bg-transparent text-sm font-bold text-titi-dark disabled:opacity-80" /><span className={`text-[11px] font-bold px-2 py-1 rounded-full ${locked ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>{module.estado}</span></div><ol className="mt-2 space-y-1">{(module.lecciones || []).map((lesson, index) => <li key={lesson.id} className="flex items-center gap-1"><button type="button" onClick={() => onSelect(lesson.id)} className={`flex-1 min-w-0 text-left text-sm px-2 py-1.5 rounded-lg truncate ${activeLessonId === lesson.id ? 'bg-titi-yellow text-titi-dark font-bold' : 'text-titi-dark hover:bg-titi-yellow-light'}`}>{index + 1}. {lesson.titulo}</button>{!locked && <button type="button" onClick={() => onDeleteLesson(lesson)} disabled={busy} className="text-red-500 text-xs font-bold px-1" aria-label="Eliminar lección">×</button>}</li>)}</ol><div className="mt-3 flex flex-wrap gap-2">{!locked && <><button type="button" onClick={onAddLesson} disabled={busy} className="text-xs font-bold text-titi-dark bg-white border border-dashed border-titi-yellow rounded-lg px-2 py-1.5">+ Lecci\u00f3n</button><button type="button" onClick={onAddPresentation} disabled={busy} className="text-xs font-bold text-titi-dark bg-white border border-dashed border-titi-yellow rounded-lg px-2 py-1.5">+ Presentaci\u00f3n</button><button type="button" onClick={onEditEvaluation} className="text-xs font-bold text-titi-dark bg-white border border-gray-200 rounded-lg px-2 py-1.5">Evaluación</button><button type="button" onClick={onPublish} disabled={busy} className="text-xs font-bold text-green-700 bg-green-50 border border-green-200 rounded-lg px-2 py-1.5">Publicar</button><button type="button" onClick={onDelete} disabled={busy} className="text-xs font-bold text-red-500 px-1">Eliminar</button></>}{locked && <><button type="button" onClick={onUnpublish} disabled={busy} className="text-xs font-bold text-titi-dark bg-white border border-gray-200 rounded-lg px-2 py-1.5">Despublicar</button><button type="button" onClick={onEditEvaluation} className="text-xs font-bold text-titi-dark bg-white border border-gray-200 rounded-lg px-2 py-1.5">Ver evaluación</button></>}</div></div>;
 }
 
 function LessonEditor({ lesson, readOnly, busy, onSave, onUpload, onUploadHtml, onDeleteMaterial }) {
@@ -179,7 +186,7 @@ function LessonEditor({ lesson, readOnly, busy, onSave, onUpload, onUploadHtml, 
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-titi-dark">{isHtml ? 'Lección HTML' : 'Lección'}</h2>
+          <h2 className="text-lg font-bold text-titi-dark">{isHtml ? 'Presentaci\u00f3n' : 'Lecci\u00f3n'}</h2>
           <p className="text-xs text-gray-500">{readOnly ? 'Módulo publicado: solo lectura.' : isHtml ? 'Archivo autocontenido, ejecutado en un iframe aislado.' : 'Markdown seguro: HTML crudo no se interpreta.'}</p>
         </div>
         {!readOnly && !isHtml && <button type="button" onClick={() => setPreview((current) => !current)} className="titi-btn-ghost">{preview ? 'Editar' : 'Vista previa'}</button>}
@@ -192,10 +199,10 @@ function LessonEditor({ lesson, readOnly, busy, onSave, onUpload, onUploadHtml, 
         {!readOnly && !isHtml && <button type="button" onClick={insertPython} className="self-start text-sm font-bold text-titi-dark bg-titi-cream border border-titi-yellow rounded-xl px-3 py-2">Insertar bloque Python</button>}
       </>}
 
-      {!readOnly && <div className="flex items-center gap-3"><button type="button" onClick={save} disabled={busy || !title.trim()} className="titi-btn-primary">{busy ? 'Guardando…' : 'Guardar lección'}</button>{status && <span className="text-xs font-bold text-green-700">{status}</span>}</div>}
+      {!readOnly && <div className="flex items-center gap-3"><button type="button" onClick={save} disabled={busy || !title.trim()} className="titi-btn-primary">{busy ? 'Guardando...' : isHtml ? 'Guardar presentaci\u00f3n' : 'Guardar lecci\u00f3n'}</button>{status && <span className="text-xs font-bold text-green-700">{status}</span>}</div>}
 
-      <section className="border border-gray-100 rounded-xl p-4 bg-titi-cream/40">
-        <h3 className="text-sm font-bold text-titi-dark">Actividad HTML</h3>
+      {isHtml && <section className="border border-gray-100 rounded-xl p-4 bg-titi-cream/40">
+        <h3 className="text-sm font-bold text-titi-dark">Presentaci\u00f3n HTML</h3>
         <p className="text-xs text-gray-500 mt-1">Un único archivo <code>.html</code>, sin URLs públicas. JavaScript queda aislado en el iframe del estudiante.</p>
         {lesson.recursoHtml && <p className="text-xs font-semibold text-green-700 mt-2">HTML configurado{lesson.recursoHtml.evaluable ? ` · evaluable · ${lesson.recursoHtml.intentosMax} intentos` : ' · práctica libre'}.</p>}
         {!readOnly && <div className="mt-3 flex flex-col gap-3">
@@ -205,15 +212,15 @@ function LessonEditor({ lesson, readOnly, busy, onSave, onUpload, onUploadHtml, 
           {evaluable && <label className="flex items-center gap-2 text-sm font-semibold text-titi-dark">Máximo de intentos<input type="number" min="1" max="10" value={maxAttempts} onChange={(event) => setMaxAttempts(event.target.value)} className="titi-input w-24 py-1.5" /></label>}
           <button type="button" onClick={uploadHtml} disabled={busy || !htmlFile || (evaluable && (!Number.isInteger(Number(maxAttempts)) || Number(maxAttempts) < 1))} className="self-start titi-btn-primary">{busy ? 'Subiendo…' : lesson.recursoHtml ? 'Reemplazar HTML' : 'Subir HTML'}</button>
         </div>}
-      </section>
+      </section>}
 
-      <hr className="border-gray-100" />
+      {!isHtml && <><hr className="border-gray-100" />
       <div>
         <h3 className="text-sm font-bold text-titi-dark uppercase tracking-wide mb-3">Materiales</h3>
         {!readOnly && <div className="flex gap-2 flex-wrap mb-3"><label className="titi-btn-ghost cursor-pointer">Subir archivo<input type="file" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; if (file) onUpload(file, file.name); event.target.value = ''; }} /></label></div>}
         <ul className="space-y-2">{(lesson.materiales || []).map((material) => <li key={material.id} className="flex items-center gap-2 bg-titi-cream border border-gray-100 rounded-xl p-3"><a href={material.url?.startsWith('/uploads/') ? resolveMediaUrl(material.url) : sanitizeMarkdownUrl(material.url)} target="_blank" rel="noopener noreferrer" className="flex-1 min-w-0 truncate text-sm font-semibold text-titi-dark hover:text-titi-yellow-dark">{material.nombre}</a><span className="text-xs text-gray-500 uppercase">{material.tipo}</span>{!readOnly && <button type="button" onClick={() => onDeleteMaterial(material)} className="text-red-500 text-xs font-bold">Eliminar</button>}</li>)}</ul>
         {!(lesson.materiales || []).length && <p className="text-sm text-gray-400">Sin materiales.</p>}
-      </div>
+      </div></>}
     </div>
   );
 }
