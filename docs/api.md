@@ -126,31 +126,31 @@ GET /courses (incl. borradores) Â· PUT /courses/:id/approve Â· DELETE /courses/:
 GET /stats Â· POST /categories
 ```
 
-## Lecciones HTML — `/api/authoring/lessons/:id/html`
+## Lecciones HTML ï¿½ `/api/authoring/lessons/:id/html`
 
 ```http
 POST /api/authoring/lessons/:id/html
 Idempotency-Key: <key>
 
 {
-  "expectedFingerprint": "<fingerprint de la lección>",
+  "expectedFingerprint": "<fingerprint de la lecciï¿½n>",
   "html": "<!doctype html><html>...</html>",
   "evaluable": true,
   "intentosMax": 2
 }
 ```
 
-Solo `content:write`, creador/ADMIN y módulo en `BORRADOR`. Una lección tiene un
+Solo `content:write`, creador/ADMIN y mï¿½dulo en `BORRADOR`. Una lecciï¿½n tiene un
 solo recurso HTML; este endpoint lo crea o reemplaza y conserva CAS + idempotencia.
 `intentosMax` es obligatorio entre `1` y `10` solo si `evaluable` es `true`.
 
-`GET /api/lessons/:id/html` devuelve el HTML únicamente a usuarios autorizados; no
-existe URL pública. El servidor exige documento autocontenido, recursos inline o
+`GET /api/lessons/:id/html` devuelve el HTML ï¿½nicamente a usuarios autorizados; no
+existe URL pï¿½blica. El servidor exige documento autocontenido, recursos inline o
 `data:`, sin red externa, formularios, frames, `srcset` ni `meta http-equiv`, e
 inyecta CSP restrictiva. El frontend usa `iframe srcDoc sandbox="allow-scripts"`.
 
 Para HTML evaluable, `POST /api/lessons/:id/html-attempts` reserva un intento y
-devuelve `{ attemptToken, numero, remaining }`. La actividad envía:
+devuelve `{ attemptToken, numero, remaining }`. La actividad envï¿½a:
 
 ```js
 window.parent.postMessage({
@@ -162,6 +162,11 @@ window.parent.postMessage({
 ```
 
 El player valida `event.source === iframe.contentWindow`, tipo, rango y token; no
-confía en `event.origin`. Luego envía `{ score, attemptToken }` a
-`POST /api/lessons/:id/html-results`. El puntaje es práctica/autodeclarado, no nota
+confï¿½a en `event.origin`. Luego envï¿½a `{ score, attemptToken }` a
+`POST /api/lessons/:id/html-results`. El puntaje es prï¿½ctica/autodeclarado, no nota
 oficial ni credencial.
+
+
+## Cursos vivos
+
+Las lecciones usan estados `BORRADOR`, `PUBLICADA` y `ARCHIVADA`. La autor?a vive en `/api/authoring`: `POST /lessons/:id/publish`, `POST /lessons/:id/archive`, `POST /lessons/:id/restore`, `GET /lessons/:id/revisions` y `POST /lessons/:id/revisions/:revisionId/restore`. Todas las mutaciones requieren `Idempotency-Key` y `expectedFingerprint`. Publicar una primera lecci?n activa su m?dulo. Estudiantes solo reciben lecciones publicadas; `GET /api/courses/:id/progress` conserva `total/completadas/porcentaje` como progreso base e informa `nuevasPendientes`. Certificados ya emitidos no se recalculan.
