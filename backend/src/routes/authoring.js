@@ -113,6 +113,13 @@ function resourceFingerprint(resource, fields) {
   return fingerprint(Object.fromEntries(fields.map((field) => [field, resource[field]])));
 }
 
+function materialFingerprint(material, moduleVersion = material.leccion?.modulo?.version) {
+  return fingerprint({
+    moduleVersion,
+    material: Object.fromEntries(['nombre', 'tipo', 'url', 'publicId', 'sha256'].map((field) => [field, material[field]])),
+  });
+}
+
 function moduleResourceFingerprints(module) {
   return {
     module: resourceFingerprint(module, ['titulo', 'descripcion', 'orden', 'estado', 'version']),
@@ -123,7 +130,7 @@ function moduleResourceFingerprints(module) {
     materials: Object.fromEntries((module.lecciones || []).flatMap((lesson) =>
       (lesson.materiales || []).map((material) => [
         material.id,
-        fingerprint({ moduleVersion: module.version, material: Object.fromEntries(['nombre', 'tipo', 'url', 'publicId', 'sha256'].map((field) => [field, material[field]])) }),
+        materialFingerprint(material, module.version),
       ]))),
   };
 }
@@ -732,16 +739,13 @@ router.post('/lessons/:lessonId/materials', requireAuthoringPrincipal('material:
     }, async (tx) => {
       const lesson = await tx.leccion.findUnique({
         where: { id: req.params.lessonId },
-        include: { modulo: { include: { curso: true } } },
+        include: { recursoHtml: true, modulo: { include: { curso: true } } },
       });
       if (!lesson) throw new AuthoringError(404, 'Lección no encontrada');
       assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
-      assertDraftModule(lesson.modulo);
-      assertExpected(req, fingerprint({
-        moduleVersion: lesson.modulo.version,
-        lesson: Object.fromEntries(['titulo', 'contenido', 'formatoContenido', 'videoUrl', 'orden'].map((field) => [field, lesson[field]])),
-      }));
-      await claimModuleMutation(tx, lesson.modulo);
+      if (lesson.estado === 'ARCHIVADA') throw new AuthoringError(409, 'Restaura la lección antes de modificar sus materiales');
+      assertExpected(req, lessonFingerprint(lesson));
+      await claimLessonMutation(tx, lesson);
       if (productionUpload) {
         stored = await uploadBuffer(req.file.buffer, 'titi/materials', inspection.resourceType, { public_id: publicId, overwrite: true });
       } else {
@@ -856,12 +860,13 @@ async function deleteResource(req, res, kind) {
       await tx.leccion.delete({ where: { id: lesson.id } });
       return { data: { deleted: lesson.id } };
     }
-    const material = await tx.material.findUnique({ where: { id: req.params.id }, include: { leccion: { include: { modulo: { include: { curso: true } } } } } });
+    const material = await tx.material.findUnique({ where: { id: req.params.id }, include: { leccion: { include: { recursoHtml: true, modulo: { include: { curso: true } } } } } });
     if (!material) throw new AuthoringError(404, 'Material no encontrado');
     assertCourseAccess(req.authoringPrincipal, material.leccion.modulo.curso);
-    assertDraftModule(material.leccion.modulo);
-    assertExpected(req, fingerprint({ moduleVersion: material.leccion.modulo.version, material: Object.fromEntries(['nombre', 'tipo', 'url', 'publicId', 'sha256'].map((field) => [field, material[field]])) }));
-    await claimModuleMutation(tx, material.leccion.modulo);
+    if (material.leccion.estado === 'ARCHIVADA') throw new AuthoringError(409, 'Restaura la lección antes de modificar sus materiales');
+    assertExpected(req, lessonFingerprint(material.leccion));
+    // Materiales no tienen historial estudiantil propio; la lección archivada preserva su contenido intacto.
+    await claimLessonMutation(tx, material.leccion);
     assetsToDelete.push({ publicId: material.publicId, url: material.url, tipo: material.tipo });
     await tx.material.delete({ where: { id: material.id } });
     return { data: { deleted: material.id } };

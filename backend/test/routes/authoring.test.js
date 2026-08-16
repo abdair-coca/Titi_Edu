@@ -99,6 +99,65 @@ describe('authoring JWT and idempotency', () => {
   });
 });
 
+describe('live lesson materials', () => {
+  const liveLesson = {
+    id: 'l-live', titulo: 'Lección viva', contenido: 'Contenido', formatoContenido: 'MARKDOWN', videoUrl: null, orden: 1,
+    estado: 'PUBLICADA', publishedAt: new Date('2026-08-16T00:00:00.000Z'), archivedAt: null, version: 4, recursoHtml: null,
+    modulo: { id: 'm-live', estado: 'PUBLICADO', version: 3, curso: { id: 'c-live', creadorId: author.id, version: 2, publicado: true } },
+  };
+  const expectedFingerprint = fingerprint({
+    moduleVersion: 3,
+    lesson: {
+      titulo: 'Lección viva', contenido: 'Contenido', formatoContenido: 'MARKDOWN', videoUrl: null, orden: 1,
+      estado: 'PUBLICADA', publishedAt: liveLesson.publishedAt, archivedAt: null, version: 4,
+    },
+    htmlResource: null,
+  });
+
+  it('adjunta y elimina material en lección publicada con CAS de la huella de lección', async () => {
+    mocks.client.leccion.findUnique.mockResolvedValue(liveLesson);
+    mocks.client.material.create.mockImplementation(({ data }) => Promise.resolve({ id: 'mat-live', ...data }));
+
+    const attached = await request(app).post('/api/authoring/lessons/l-live/materials')
+      .set(auth).set('Idempotency-Key', 'material-live-attach')
+      .field('expectedFingerprint', expectedFingerprint)
+      .attach('file', Buffer.from('material vivo'), { filename: 'material.md', contentType: 'text/markdown' });
+
+    expect(attached.status).toBe(201);
+    expect(mocks.client.curso.updateMany).toHaveBeenCalledWith({ where: { id: 'c-live', version: 2 }, data: { version: { increment: 1 } } });
+    expect(mocks.client.modulo.updateMany).toHaveBeenCalledWith({ where: { id: 'm-live', version: 3 }, data: { version: { increment: 1 } } });
+    expect(mocks.client.leccion.updateMany).toHaveBeenCalledWith({ where: { id: 'l-live', version: 4 }, data: { version: { increment: 1 } } });
+
+    mocks.client.material.findUnique.mockResolvedValue({
+      id: 'mat-live', nombre: 'material.md', tipo: 'otro', url: '/uploads/materials/material.md', publicId: null, sha256: 'a'.repeat(64), leccion: liveLesson,
+    });
+    const deleted = await request(app).delete('/api/authoring/materials/mat-live')
+      .set(auth).set('Idempotency-Key', 'material-live-delete').send({ expectedFingerprint });
+
+    expect(deleted.status).toBe(200);
+    expect(mocks.client.material.delete).toHaveBeenCalledWith({ where: { id: 'mat-live' } });
+  });
+
+  it.each(['attach', 'delete'])('rechaza %s cuando la lección está archivada', async (operation) => {
+    const archived = { ...liveLesson, estado: 'ARCHIVADA', archivedAt: new Date('2026-08-16T01:00:00.000Z') };
+    if (operation === 'attach') {
+      mocks.client.leccion.findUnique.mockResolvedValue(archived);
+      const response = await request(app).post('/api/authoring/lessons/l-live/materials')
+        .set(auth).set('Idempotency-Key', 'material-archived-attach')
+        .field('expectedFingerprint', expectedFingerprint)
+        .attach('file', Buffer.from('material archivado'), { filename: 'material.md', contentType: 'text/markdown' });
+      expect(response.status).toBe(409);
+      expect(response.body.message).toContain('Restaura la lección');
+      return;
+    }
+    mocks.client.material.findUnique.mockResolvedValue({ id: 'mat-archived', nombre: 'material.md', tipo: 'otro', url: '/uploads/materials/material.md', publicId: null, sha256: 'a'.repeat(64), leccion: archived });
+    const response = await request(app).delete('/api/authoring/materials/mat-archived')
+      .set(auth).set('Idempotency-Key', 'material-archived-delete').send({ expectedFingerprint });
+    expect(response.status).toBe(409);
+    expect(response.body.message).toContain('Restaura la lección');
+  });
+});
+
 describe('legacy authoring security boundary', () => {
   it.each([
     ['post', '/api/courses', {}],
