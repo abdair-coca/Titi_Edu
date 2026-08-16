@@ -46,6 +46,8 @@ export default function LearnCourse() {
 
   // IDs de lecciones completadas
   const [completed, setCompleted] = useState(() => new Set());
+  const [newLessons, setNewLessons] = useState(() => new Set());
+  const [baseProgress, setBaseProgress] = useState(null);
 
   // Cache de lecciones completas (con contenido) por moduloId
   // El endpoint GET /api/courses/:id no devuelve `contenido`, así que
@@ -115,6 +117,10 @@ export default function LearnCourse() {
             }),
           );
           setCompleted(completedIds);
+          const newIds = new Set();
+          (p.data?.modulos || []).forEach((m) => (m.lecciones || []).forEach((l) => { if (l.esNueva) newIds.add(l.id); }));
+          setNewLessons(newIds);
+          setBaseProgress(p.data);
         }
       })
       .catch((err) => {
