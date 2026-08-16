@@ -32,4 +32,13 @@ assert.match(integrations, /<ConfirmModal/);
 assert.match(integrations, /authoringMutation\('delete', `\/service-tokens\/\$\{tokenToDelete\.id\}`, \{\}\)/);
 assert.match(integrations, /token\.revokedAt && <button[\s\S]*?Eliminar<\/button>/);
 
+const modulesEditor = await readFile(new URL('../src/pages/teacher/ModulesEditor.jsx', import.meta.url), 'utf8');
+assert.match(modulesEditor, /\/lessons\/\$\{lesson\.id\}\/publish/);
+assert.match(modulesEditor, /\/lessons\/\$\{lesson\.id\}\/archive/);
+assert.match(modulesEditor, /\/lessons\/\$\{lesson\.id\}\/restore/);
+assert.match(modulesEditor, /\/lessons\/\$\{lesson\.id\}\/revisions/);
+assert.match(modulesEditor, /expectedFingerprint: lessonFingerprint\(module\.id, lesson\.id\)/);
+assert.match(modulesEditor, /<ConfirmationDialog[\s\S]*?onArchive=/);
+assert.doesNotMatch(modulesEditor, /window\.confirm/);
+
 console.log('Authoring evaluation contracts OK');
