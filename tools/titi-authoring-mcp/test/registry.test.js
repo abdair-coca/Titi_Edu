@@ -4,8 +4,8 @@ import { TOOL_NAMES, createToolDefinitions, DESTRUCTIVE_WRITE_ANNOTATIONS, DRAFT
 import { SERVER_INSTRUCTIONS } from '../src/server.js';
 
 const EXPECTED_NAMES = [
-  'list_categories', 'list_courses', 'get_course', 'create_course_draft',
-  'update_course_draft', 'create_module_draft', 'update_module_draft',
+  'list_categories', 'list_courses', 'get_course', 'get_course_fingerprints', 'get_module_fingerprints',
+  'create_course_draft', 'update_course_draft', 'create_module_draft', 'update_module_draft',
   'create_lesson_draft', 'update_lesson_draft', 'upsert_quiz_draft',
   'attach_material', 'delete_draft_resource', 'preview_course_publication',
   'publish_course', 'preview_module_publication', 'publish_module',
@@ -16,7 +16,8 @@ test('registry exposes exactly the requested tools with exact annotations', () =
   assert.deepEqual(TOOL_NAMES, EXPECTED_NAMES);
   const definitions = createToolDefinitions({ request: async () => ({ data: {} }) });
   for (const definition of definitions) {
-    const expected = ['list_categories', 'list_courses', 'get_course', 'preview_course_publication',
+    const expected = ['list_categories', 'list_courses', 'get_course', 'get_course_fingerprints',
+      'get_module_fingerprints', 'preview_course_publication',
       'preview_module_publication', 'preview_module_unpublish', 'get_quiz_analytics'].includes(definition.name)
       ? READ_ANNOTATIONS
       : ['delete_draft_resource', 'unpublish_module'].includes(definition.name)

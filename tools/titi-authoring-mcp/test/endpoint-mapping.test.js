@@ -24,6 +24,8 @@ test('every non-multipart tool maps to the real /api/authoring endpoint', async 
     ['list_categories', {}, 'GET', '/api/authoring/categories'],
     ['list_courses', {}, 'GET', '/api/authoring/courses'],
     ['get_course', { courseId: 'course-1' }, 'GET', '/api/authoring/courses/course-1'],
+    ['get_course_fingerprints', { courseId: 'course-1' }, 'GET', '/api/authoring/courses/course-1?view=fingerprints'],
+    ['get_module_fingerprints', { moduleId: 'module-1' }, 'GET', '/api/authoring/modules/module-1?view=fingerprints'],
     ['create_course_draft', { titulo: 'Course', descripcion: 'Description', nivel: 'basic', categoriaId: 'cat-1' }, 'POST', '/api/authoring/courses'],
     ['update_course_draft', { courseId: 'course-1', expectedFingerprint: fingerprint, titulo: 'Changed' }, 'PUT', '/api/authoring/courses/course-1'],
     ['create_module_draft', { courseId: 'course-1', expectedFingerprint: fingerprint, titulo: 'Module', orden: 1 }, 'POST', '/api/authoring/courses/course-1/modules'],

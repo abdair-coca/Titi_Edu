@@ -115,6 +115,10 @@ export function createToolDefinitions(client = createHttpClient()) {
       () => read(client, { method: 'GET', path: '/api/authoring/courses' })),
     tool('get_course', 'Get a full course authoring snapshot and resource fingerprints.', courseIdSchema, READ_ANNOTATIONS,
       ({ courseId }) => read(client, { method: 'GET', path: `/api/authoring/courses/${encoded(courseId)}` })),
+    tool('get_course_fingerprints', 'Get a course authoring fingerprint only (no snapshot). Use before writes to re-read the current fingerprint.', courseIdSchema, READ_ANNOTATIONS,
+      ({ courseId }) => read(client, { method: 'GET', path: `/api/authoring/courses/${encoded(courseId)}?view=fingerprints` })),
+    tool('get_module_fingerprints', 'Get a module authoring fingerprint only (no snapshot). Use before writes to re-read the current fingerprint.', moduleIdSchema, READ_ANNOTATIONS,
+      ({ moduleId }) => read(client, { method: 'GET', path: `/api/authoring/modules/${encoded(moduleId)}?view=fingerprints` })),
 
     tool('create_course_draft', 'Create a course draft. Never publishes it.', createCourseSchema, DRAFT_WRITE_ANNOTATIONS,
       (args) => write(client, args, async (idempotencyKey) => ({
