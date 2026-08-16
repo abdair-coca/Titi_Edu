@@ -175,12 +175,11 @@ router.get('/:id', optionalAuth, async (req, res) => {
           include: { profesor: { select: { id: true, username: true } } },
         },
         modulos: {
-          where: { estado: 'PUBLICADO' },
           orderBy: { orden: 'asc' },
           include: {
             lecciones: {
               orderBy: { orden: 'asc' },
-              select: { id: true, titulo: true, orden: true, videoUrl: true },
+              select: { id: true, titulo: true, orden: true, videoUrl: true, publishedAt: true, estado: true },
             },
             evaluacion: {
               select: { id: true, titulo: true, esFinal: true, notaMinima: true },
@@ -224,16 +223,28 @@ router.get('/:id', optionalAuth, async (req, res) => {
     });
 
     // Sin acceso al contenido: se oculta el video de cada lección (solo queda el temario).
-    const cursoOut = isOwner || isAdmin || enrolled
+    const visibleCourse = isOwner || isAdmin
       ? curso
       : {
           ...curso,
-          modulos: curso.modulos.map((m) => ({
-            ...m,
-            lecciones: m.lecciones.map(({ id, titulo, orden }) => ({ id, titulo, orden })),
-          })),
+          modulos: curso.modulos
+            .filter((module) => (module.estado === 'PUBLICADO' || module.estado === undefined))
+            .map((module) => ({
+              ...module,
+              lecciones: module.lecciones.filter((lesson) => (lesson.estado === 'PUBLICADA' || lesson.estado === undefined)),
+            })),
         };
 
+    // Sin acceso al contenido: se oculta el video de cada leccion (solo queda el temario).
+    const cursoOut = enrolled || isOwner || isAdmin
+      ? visibleCourse
+      : {
+          ...visibleCourse,
+          modulos: visibleCourse.modulos.map((module) => ({
+            ...module,
+            lecciones: module.lecciones.map(({ id, titulo, orden, publishedAt }) => ({ id, titulo, orden, publishedAt })),
+          })),
+        };
     res.json({
       success: true,
       data: {
@@ -535,8 +546,9 @@ router.get('/:id/progress', requireAuth, async (req, res) => {
           orderBy: { orden: 'asc' },
           include: {
             lecciones: {
+              where: { estado: 'PUBLICADA' },
               orderBy: { orden: 'asc' },
-              select: { id: true, titulo: true, orden: true },
+              select: { id: true, titulo: true, orden: true, publishedAt: true },
             },
           },
         },
@@ -560,24 +572,32 @@ router.get('/:id/progress', requireAuth, async (req, res) => {
       progresos.filter((p) => p.completada).map((p) => p.leccionId),
     );
 
+    const enrolledAt = access.inscripcion?.fechaInscripcion || new Date(0);
+    const isBaseLesson = (lesson) => !lesson.publishedAt || new Date(lesson.publishedAt) <= new Date(enrolledAt);
     const modulos = curso.modulos.map((m) => {
-      const total = m.lecciones.length;
-      const done = m.lecciones.filter((l) => completadas.has(l.id)).length;
+      const baseLessons = m.lecciones.filter(isBaseLesson);
+      const newLessons = m.lecciones.filter((lesson) => !isBaseLesson(lesson));
+      const total = baseLessons.length;
+      const done = baseLessons.filter((l) => completadas.has(l.id)).length;
       return {
         id: m.id,
         titulo: m.titulo,
         orden: m.orden,
         total,
         completadas: done,
+        nuevasPendientes: newLessons.filter((lesson) => !completadas.has(lesson.id)).length,
         lecciones: m.lecciones.map((l) => ({
           ...l,
           completada: completadas.has(l.id),
+          esNueva: !isBaseLesson(l),
         })),
       };
     });
 
-    const total = leccionIds.length;
-    const done = completadas.size;
+    const baseLessons = curso.modulos.flatMap((module) => module.lecciones).filter(isBaseLesson);
+    const newLessons = curso.modulos.flatMap((module) => module.lecciones).filter((lesson) => !isBaseLesson(lesson));
+    const total = baseLessons.length;
+    const done = baseLessons.filter((lesson) => completadas.has(lesson.id)).length;
     const porcentaje = total === 0 ? 0 : Math.round((done / total) * 100);
 
     res.json({
@@ -587,6 +607,8 @@ router.get('/:id/progress', requireAuth, async (req, res) => {
         total,
         completadas: done,
         porcentaje,
+        nuevasPendientes: newLessons.filter((lesson) => !completadas.has(lesson.id)).length,
+        nuevasTotal: newLessons.length,
         modulos,
       },
     });

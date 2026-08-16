@@ -198,10 +198,13 @@ router.get('/modules/:id/lessons', requireAuth, async (req, res) => {
     if (!access) return;
 
     const { lecciones, ...moduloSinLecciones } = modulo;
+    const visibleLessons = access.isOwner || access.isAdmin
+      ? lecciones
+      : lecciones.filter((lesson) => lesson.estado === 'PUBLICADA');
 
     res.json({
       success: true,
-      data: { modulo: moduloSinLecciones, lecciones },
+      data: { modulo: moduloSinLecciones, lecciones: visibleLessons },
     });
   } catch (err) {
     console.error('GET /api/modules/:id/lessons error', err);

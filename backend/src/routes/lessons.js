@@ -41,6 +41,7 @@ async function loadHtmlLesson(req, res) {
   }
   const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
     moduleState: leccion.modulo.estado,
+      lessonState: leccion.estado,
   });
   return access ? { leccion, access } : null;
 }
@@ -129,6 +130,7 @@ router.get('/lessons/:id', requireAuth, async (req, res) => {
     }
     const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
       moduleState: leccion.modulo.estado,
+      lessonState: leccion.estado,
     });
     if (!access) return;
 
@@ -319,13 +321,14 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
 
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true, modulo: { select: { cursoId: true, estado: true } } },
+      select: { id: true, estado: true, modulo: { select: { cursoId: true, estado: true } } },
     });
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
     const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
       moduleState: leccion.modulo.estado,
+      lessonState: leccion.estado,
     });
     if (!access) return;
 
@@ -408,13 +411,14 @@ router.get('/lessons/:id/note', requireAuth, async (req, res) => {
 
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true, modulo: { select: { cursoId: true, estado: true } } },
+      select: { id: true, estado: true, modulo: { select: { cursoId: true, estado: true } } },
     });
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
     const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
       moduleState: leccion.modulo.estado,
+      lessonState: leccion.estado,
     });
     if (!access) return;
 
@@ -447,13 +451,14 @@ router.put('/lessons/:id/note', requireAuth, async (req, res) => {
 
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true, modulo: { select: { cursoId: true, estado: true } } },
+      select: { id: true, estado: true, modulo: { select: { cursoId: true, estado: true } } },
     });
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
     const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
       moduleState: leccion.modulo.estado,
+      lessonState: leccion.estado,
     });
     if (!access) return;
 
@@ -477,13 +482,14 @@ router.get('/lessons/:id/comments', requireAuth, async (req, res) => {
   try {
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true, modulo: { select: { cursoId: true, estado: true } } },
+      select: { id: true, estado: true, modulo: { select: { cursoId: true, estado: true } } },
     });
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
     const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
       moduleState: leccion.modulo.estado,
+      lessonState: leccion.estado,
     });
     if (!access) return;
 
@@ -531,13 +537,14 @@ router.post('/lessons/:id/comments', requireAuth, async (req, res) => {
 
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true, modulo: { select: { cursoId: true, estado: true } } },
+      select: { id: true, estado: true, modulo: { select: { cursoId: true, estado: true } } },
     });
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
     const access = await ensureCourseContentAccess(req, res, leccion.modulo.cursoId, {
       moduleState: leccion.modulo.estado,
+      lessonState: leccion.estado,
     });
     if (!access) return;
 

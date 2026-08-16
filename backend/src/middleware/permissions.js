@@ -44,7 +44,7 @@ export async function loadOptionalUser(req) {
 
 // Acceso centralizado a contenido educativo. ADMIN y docentes del curso pueden
 // previsualizar borradores; estudiantes requieren curso/módulo publicados e inscripción.
-export async function ensureCourseContentAccess(req, res, cursoId, { moduleState = null } = {}) {
+export async function ensureCourseContentAccess(req, res, cursoId, { moduleState = null, lessonState = null } = {}) {
   const usuario = await loadCurrentUser(req, res);
   if (!usuario) return null;
 
@@ -70,7 +70,7 @@ export async function ensureCourseContentAccess(req, res, cursoId, { moduleState
     return { usuario, isOwner: true, isAdmin: false, enrolled: false, course: curso };
   }
 
-  if (!curso.publicado || (moduleState !== null && moduleState !== 'PUBLICADO')) {
+  if (!curso.publicado || (moduleState !== null && moduleState !== 'PUBLICADO') || (lessonState !== null && lessonState !== 'PUBLICADA')) {
     res.status(404).json({ success: false, message: 'Contenido no encontrado' });
     return null;
   }
@@ -85,5 +85,5 @@ export async function ensureCourseContentAccess(req, res, cursoId, { moduleState
     });
     return null;
   }
-  return { usuario, isOwner: false, isAdmin: false, enrolled: true, course: curso };
+  return { usuario, isOwner: false, isAdmin: false, enrolled: true, course: curso, inscripcion };
 }

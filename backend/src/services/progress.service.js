@@ -115,9 +115,10 @@ export async function checkCursoCompletado(usuarioId, cursoId) {
 
       const modulos = await tx.modulo.findMany({
         where: { cursoId, estado: 'PUBLICADO' },
-        select: { lecciones: { select: { id: true } }, evaluacion: { select: { id: true } } },
+        select: { lecciones: { where: { estado: 'PUBLICADA', OR: [{ publishedAt: null }, { publishedAt: { lte: inscripcion.fechaInscripcion } }] }, select: { id: true } }, evaluacion: { select: { id: true } } },
       });
-      const leccionIds = modulos.flatMap((module) => module.lecciones.map((lesson) => lesson.id));
+      const modulosBase = modulos.filter((module) => module.lecciones.length > 0);
+      const leccionIds = modulosBase.flatMap((module) => module.lecciones.map((lesson) => lesson.id));
       if (leccionIds.length === 0) return { completado: false };
 
       const completadas = await tx.progreso.count({
@@ -125,7 +126,7 @@ export async function checkCursoCompletado(usuarioId, cursoId) {
       });
       if (completadas < leccionIds.length) return { completado: false };
 
-      const evalIds = modulos.map((module) => module.evaluacion?.id).filter(Boolean);
+      const evalIds = modulosBase.map((module) => module.evaluacion?.id).filter(Boolean);
       const finales = await tx.evaluacion.findMany({ where: { cursoId, esFinal: true }, select: { id: true } });
       evalIds.push(...finales.map((evaluation) => evaluation.id));
       if (evalIds.length > 0) {
