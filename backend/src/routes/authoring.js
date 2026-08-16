@@ -2,6 +2,7 @@ import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import prisma from '../prisma.js';
 import { requireAuthoringJwt, requireAuthoringPrincipal } from '../middleware/authoring-auth.js';
@@ -221,8 +222,20 @@ router.get('/courses', requireAuthoringPrincipal('course:read'), handle(async (r
 }));
 
 router.get('/courses/:id', requireAuthoringPrincipal('course:read'), handle(async (req, res) => {
+  const fingerprintsOnly = req.query.view === 'fingerprints';
   const course = await loadCourseSnapshot(prisma, req.params.id);
   assertCourseAccess(req.authoringPrincipal, course);
+  if (fingerprintsOnly) {
+    res.json({
+      success: true,
+      data: {
+        fingerprint: courseResourceFingerprint(course),
+        publicationFingerprint: fingerprint(coursePublicationSummary(course)),
+        resources: Object.fromEntries(course.modulos.map((module) => [module.id, moduleResourceFingerprints(module)])),
+      },
+    });
+    return;
+  }
   res.json({
     success: true,
     data: {
@@ -235,10 +248,22 @@ router.get('/courses/:id', requireAuthoringPrincipal('course:read'), handle(asyn
 }));
 
 router.get('/modules/:id', requireAuthoringPrincipal('course:read'), handle(async (req, res) => {
+  const fingerprintsOnly = req.query.view === 'fingerprints';
   const module = await prisma.modulo.findUnique({ where: { id: req.params.id }, include: MODULE_SNAPSHOT_INCLUDE });
   if (!module) throw new AuthoringError(404, 'Módulo no encontrado');
   assertCourseAccess(req.authoringPrincipal, module.curso);
   const resources = moduleResourceFingerprints(module);
+  if (fingerprintsOnly) {
+    res.json({
+      success: true,
+      data: {
+        fingerprint: resources.module,
+        publicationFingerprint: fingerprint(modulePublicationSummary(module)),
+        resources,
+      },
+    });
+    return;
+  }
   res.json({
     success: true,
     data: {
@@ -404,6 +429,26 @@ function quizConfig(body) {
   return { intentosMax, notaMinima };
 }
 
+async function upsertQuizQuestions(tx, evaluationId, questions) {
+  const preguntas = questions.map((question, index) => ({
+    id: randomUUID(),
+    texto: String(question.texto).trim(),
+    tipo: question.tipo,
+    orden: question.orden,
+    evaluacionId: evaluationId,
+    _index: index,
+  }));
+  await tx.pregunta.createMany({ data: preguntas.map(({ _index, ...data }) => data) });
+  const opcionesData = preguntas.flatMap((pregunta) =>
+    questions[pregunta._index].options.map((option) => ({
+      texto: String(option.texto).trim(),
+      esCorrecta: Boolean(option.esCorrecta),
+      preguntaId: pregunta.id,
+    }))
+  );
+  if (opcionesData.length) await tx.opcion.createMany({ data: opcionesData });
+}
+
 router.put('/modules/:id/quiz', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
   await executeIdempotent(req, res, { accion: 'quiz.upsert' }, async (tx) => {
     const module = await tx.modulo.findUnique({
@@ -436,17 +481,7 @@ router.put('/modules/:id/quiz', requireAuthoringPrincipal('content:write'), hand
         data: { titulo: String(req.body.titulo).trim(), moduloId: module.id, esFinal: false, ...config },
       });
     }
-    for (const question of questions) {
-      await tx.pregunta.create({
-        data: {
-          texto: String(question.texto).trim(),
-          tipo: question.tipo,
-          orden: question.orden,
-          evaluacionId: evaluation.id,
-          opciones: { create: question.options.map((option) => ({ texto: String(option.texto).trim(), esCorrecta: Boolean(option.esCorrecta) })) },
-        },
-      });
-    }
+    await upsertQuizQuestions(tx, evaluation.id, questions);
     return { data: { evaluation } };
   });
 }));
@@ -478,17 +513,7 @@ router.put('/courses/:id/final-quiz', requireAuthoringPrincipal('content:write')
         data: { titulo: String(req.body.titulo).trim(), cursoId: course.id, esFinal: true, ...config },
       });
     }
-    for (const question of questions) {
-      await tx.pregunta.create({
-        data: {
-          texto: String(question.texto).trim(),
-          tipo: question.tipo,
-          orden: question.orden,
-          evaluacionId: evaluation.id,
-          opciones: { create: question.options.map((option) => ({ texto: String(option.texto).trim(), esCorrecta: Boolean(option.esCorrecta) })) },
-        },
-      });
-    }
+    await upsertQuizQuestions(tx, evaluation.id, questions);
     return { data: { evaluation } };
   });
 }));

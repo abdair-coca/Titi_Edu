@@ -14,8 +14,8 @@ const mocks = vi.hoisted(() => {
     recursoHtmlLeccion: { upsert: vi.fn() },
     material: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
     evaluacion: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
-    pregunta: { findMany: vi.fn(), create: vi.fn(), deleteMany: vi.fn() },
-    opcion: { deleteMany: vi.fn() },
+    pregunta: { findMany: vi.fn(), create: vi.fn(), createMany: vi.fn(), createManyAndReturn: vi.fn(), deleteMany: vi.fn() },
+    opcion: { deleteMany: vi.fn(), createMany: vi.fn() },
     intento: { findMany: vi.fn(), count: vi.fn() },
     progreso: { count: vi.fn() },
     notaLeccion: { count: vi.fn() },
@@ -62,6 +62,8 @@ beforeEach(() => {
   mocks.client.evaluacion.findFirst.mockResolvedValue(null);
   mocks.client.curso.updateMany.mockResolvedValue({ count: 1 });
   mocks.client.modulo.updateMany.mockResolvedValue({ count: 1 });
+  mocks.client.pregunta.createMany.mockResolvedValue({ count: 1 });
+  mocks.client.opcion.createMany.mockResolvedValue({ count: 1 });
 });
 
 describe('authoring JWT and idempotency', () => {
@@ -383,6 +385,42 @@ describe('publication freshness', () => {
   });
 });
 
+describe('GET ?view=fingerprints', () => {
+  it('devuelve solo fingerprints para curso', async () => {
+    const course = {
+      id: 'c-fp', titulo: 'Course', descripcion: 'Description', nivel: 'basic', categoriaId: 'cat1',
+      portadaUrl: null, emiteCertificado: true, publicado: false, creadorId: author.id, version: 0,
+      modulos: [],
+    };
+    mocks.client.curso.findUnique.mockResolvedValue(course);
+
+    const response = await request(app).get('/api/authoring/courses/c-fp?view=fingerprints').set(auth);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.fingerprint).toBeDefined();
+    expect(response.body.data.publicationFingerprint).toBeDefined();
+    expect(response.body.data.resources).toBeDefined();
+    expect(response.body.data.course).toBeUndefined();
+  });
+
+  it('devuelve solo fingerprints para modulo', async () => {
+    const module = {
+      id: 'm-fp', titulo: 'Draft', descripcion: null, orden: 1, estado: 'BORRADOR', version: 2,
+      curso: { id: 'c-fp-mod', creadorId: author.id, publicado: false, version: 1 },
+      lecciones: [], evaluacion: null,
+    };
+    mocks.client.modulo.findUnique.mockResolvedValue(module);
+
+    const response = await request(app).get('/api/authoring/modules/m-fp?view=fingerprints').set(auth);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.fingerprint).toBeDefined();
+    expect(response.body.data.publicationFingerprint).toBeDefined();
+    expect(response.body.data.resources).toBeDefined();
+    expect(response.body.data.module).toBeUndefined();
+  });
+});
+
 describe('evaluation authoring response contract', () => {
   const quiz = {
     titulo: 'Quiz',
@@ -430,6 +468,92 @@ describe('evaluation authoring response contract', () => {
     expect(response.status).toBe(200);
     expect(response.body.data.evaluation).toMatchObject({ id: 'ev-final', esFinal: true });
     expect(response.body.data).not.toHaveProperty('evaluacion');
+  });
+});
+
+describe('quiz batch upsert (5+ preguntas)', () => {
+  const buildQuiz = (count) => ({
+    titulo: 'Quiz grande',
+    intentosMax: 3,
+    notaMinima: 70,
+    questions: Array.from({ length: count }, (_, i) => ({
+      texto: `Pregunta ${i + 1}`,
+      tipo: 'OPCION_MULTIPLE',
+      orden: i + 1,
+      options: [
+        { texto: 'Correcta', esCorrecta: true },
+        { texto: 'Incorrecta', esCorrecta: false },
+      ],
+    })),
+  });
+
+  it('crea quiz modular con 7 preguntas sin 500', async () => {
+    const module = {
+      id: 'm-batch', titulo: 'Draft', descripcion: null, orden: 1, estado: 'BORRADOR', version: 2,
+      curso: { id: 'c-batch', creadorId: author.id, publicado: false, version: 4 },
+      lecciones: [], evaluacion: null,
+    };
+    mocks.client.modulo.findUnique.mockResolvedValue(module);
+    mocks.client.evaluacion.create.mockResolvedValue({ id: 'ev-batch', titulo: 'Quiz grande' });
+    const snapshot = await request(app).get('/api/authoring/modules/m-batch').set(auth);
+
+    const response = await request(app).put('/api/authoring/modules/m-batch/quiz')
+      .set(auth).set('Idempotency-Key', 'quiz-batch-7')
+      .send({ ...buildQuiz(7), expectedFingerprint: snapshot.body.data.fingerprint });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.evaluation).toMatchObject({ id: 'ev-batch' });
+    expect(mocks.client.pregunta.createMany).toHaveBeenCalledTimes(1);
+    expect(mocks.client.opcion.createMany).toHaveBeenCalledTimes(1);
+    expect(mocks.client.pregunta.createMany.mock.calls[0][0].data).toHaveLength(7);
+    const opciones = mocks.client.opcion.createMany.mock.calls[0][0].data;
+    expect(opciones).toHaveLength(14);
+    const preguntaIds = mocks.client.pregunta.createMany.mock.calls[0][0].data.map((question) => question.id);
+    expect(opciones.every((option) => preguntaIds.includes(option.preguntaId))).toBe(true);
+  });
+
+  it('reescribe quiz modular existente con 6 preguntas', async () => {
+    const module = {
+      id: 'm-batch-update', titulo: 'Draft', descripcion: null, orden: 1, estado: 'BORRADOR', version: 2,
+      curso: { id: 'c-batch-update', creadorId: author.id, publicado: false, version: 4 },
+      lecciones: [],
+      evaluacion: { id: 'ev-existing' },
+    };
+    mocks.client.modulo.findUnique.mockResolvedValue(module);
+    mocks.client.intento.count.mockResolvedValue(0);
+    mocks.client.pregunta.findMany.mockResolvedValue([{ id: 'q-old-1' }, { id: 'q-old-2' }]);
+    mocks.client.evaluacion.update.mockResolvedValue({ id: 'ev-existing', titulo: 'Quiz grande' });
+    const snapshot = await request(app).get('/api/authoring/modules/m-batch-update').set(auth);
+
+    const response = await request(app).put('/api/authoring/modules/m-batch-update/quiz')
+      .set(auth).set('Idempotency-Key', 'quiz-batch-update-6')
+      .send({ ...buildQuiz(6), expectedFingerprint: snapshot.body.data.fingerprint });
+
+    expect(response.status).toBe(200);
+    expect(mocks.client.pregunta.deleteMany).toHaveBeenCalled();
+    expect(mocks.client.pregunta.createMany).toHaveBeenCalledTimes(1);
+    expect(mocks.client.opcion.createMany).toHaveBeenCalledTimes(1);
+    expect(mocks.client.opcion.createMany.mock.calls[0][0].data).toHaveLength(12);
+  });
+
+  it('crea evaluacion final con 5 preguntas sin 500', async () => {
+    const course = {
+      id: 'c-batch-final', titulo: 'Course', descripcion: 'Description', nivel: 'basic', categoriaId: 'cat1',
+      portadaUrl: null, emiteCertificado: true, publicado: false, creadorId: author.id, version: 3,
+      modulos: [],
+    };
+    mocks.client.curso.findUnique.mockResolvedValue(course);
+    mocks.client.evaluacion.create.mockResolvedValue({ id: 'ev-batch-final', titulo: 'Quiz grande', esFinal: true });
+    const snapshot = await request(app).get('/api/authoring/courses/c-batch-final').set(auth);
+
+    const response = await request(app).put('/api/authoring/courses/c-batch-final/final-quiz')
+      .set(auth).set('Idempotency-Key', 'quiz-final-batch-5')
+      .send({ ...buildQuiz(5), expectedFingerprint: snapshot.body.data.fingerprint });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.evaluation).toMatchObject({ id: 'ev-batch-final' });
+    expect(mocks.client.pregunta.createMany).toHaveBeenCalledTimes(1);
+    expect(mocks.client.opcion.createMany.mock.calls[0][0].data).toHaveLength(10);
   });
 });
 
