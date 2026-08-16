@@ -325,14 +325,21 @@ router.post('/modules/:moduleId/lessons', requireAuthoringPrincipal('content:wri
     if (!req.body?.titulo || req.body?.contenido === undefined || req.body?.orden === undefined) {
       throw new AuthoringError(400, 'titulo, contenido y orden son requeridos');
     }
-    const video = validateVideoUrl(req.body.videoUrl);
+    const formatoContenido = req.body?.formatoContenido;
+    if (!['MARKDOWN', 'HTML'].includes(formatoContenido)) {
+      throw new AuthoringError(400, 'formatoContenido debe ser MARKDOWN o HTML');
+    }
+    if (formatoContenido === 'HTML' && String(req.body?.videoUrl || '').trim()) {
+      throw new AuthoringError(400, 'Una presentacion HTML no puede incluir videoUrl');
+    }
+    const video = formatoContenido === 'MARKDOWN' ? validateVideoUrl(req.body.videoUrl) : null;
     if (video && !video.ok) throw new AuthoringError(400, video.message);
     await claimModuleMutation(tx, module);
     const lesson = await tx.leccion.create({
       data: {
         titulo: String(req.body.titulo).trim(),
         contenido: String(req.body.contenido),
-        formatoContenido: 'MARKDOWN',
+        formatoContenido,
         videoUrl: video?.value || null,
         orden: parseOrder(req.body.orden),
         moduloId: module.id,
@@ -858,6 +865,9 @@ router.post('/lessons/:id/html', requireAuthoringPrincipal('content:write'), han
     assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
     assertDraftModule(lesson.modulo);
     assertExpected(req, lessonFingerprint(lesson));
+    if (lesson.formatoContenido !== 'HTML') {
+      throw new AuthoringError(409, 'Crea una presentacion HTML antes de subir su archivo');
+    }
     const validated = validateHtmlLessonResource(req.body);
     if (!validated.ok) throw new AuthoringError(400, validated.message);
     await claimModuleMutation(tx, lesson.modulo);

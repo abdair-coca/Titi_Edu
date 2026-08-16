@@ -433,16 +433,59 @@ describe('evaluation authoring response contract', () => {
   });
 });
 
+describe('lesson creation modes', () => {
+  const module = {
+    id: 'm-create', titulo: 'Modulo', descripcion: null, orden: 1, estado: 'BORRADOR', version: 2,
+    curso: { id: 'c-create', creadorId: author.id, publicado: false, version: 1 },
+  };
+  const expectedFingerprint = fingerprint({ titulo: 'Modulo', descripcion: null, orden: 1, estado: 'BORRADOR', version: 2 });
+
+  it.each([
+    ['MARKDOWN', { videoUrl: 'https://www.youtube.com/watch?v=abc' }],
+    ['HTML', {}],
+  ])('crea una %s sin campos del otro modo', async (formatoContenido, extra) => {
+    mocks.client.modulo.findUnique.mockResolvedValue(module);
+    mocks.client.leccion.create.mockImplementation(({ data }) => Promise.resolve({ id: `lesson-${formatoContenido}`, ...data }));
+
+    const response = await request(app).post('/api/authoring/modules/m-create/lessons')
+      .set(auth).set('Idempotency-Key', `lesson-create-${formatoContenido}`)
+      .send({ titulo: `Nueva ${formatoContenido}`, contenido: '', orden: 1, formatoContenido, expectedFingerprint, ...extra });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data.lesson.formatoContenido).toBe(formatoContenido);
+    expect(mocks.client.leccion.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        formatoContenido,
+        videoUrl: formatoContenido === 'MARKDOWN' ? 'https://www.youtube.com/watch?v=abc' : null,
+      }),
+    }));
+  });
+
+  it('rechaza formatos fuera de MARKDOWN y HTML, y video en presentacion', async () => {
+    mocks.client.modulo.findUnique.mockResolvedValue(module);
+    for (const [key, body] of [
+      ['invalid', { formatoContenido: 'TEXTO' }],
+      ['mixed', { formatoContenido: 'HTML', videoUrl: 'https://www.youtube.com/watch?v=abc' }],
+    ]) {
+      const response = await request(app).post('/api/authoring/modules/m-create/lessons')
+        .set(auth).set('Idempotency-Key', `lesson-create-${key}`)
+        .send({ titulo: 'Nueva', contenido: '', orden: 1, expectedFingerprint, ...body });
+      expect(response.status).toBe(400);
+    }
+    expect(mocks.client.leccion.create).not.toHaveBeenCalled();
+  });
+});
+
 describe('HTML lesson authoring', () => {
   it('uses lesson CAS, idempotency and draft-only mutation', async () => {
     const lesson = {
-      id: 'l-html', titulo: 'Actividad', contenido: 'Instrucciones', formatoContenido: 'MARKDOWN', videoUrl: null, orden: 1,
+      id: 'l-html', titulo: 'Presentacion', contenido: 'Instrucciones', formatoContenido: 'HTML', videoUrl: null, orden: 1,
       recursoHtml: null,
       modulo: { id: 'm-html', estado: 'BORRADOR', version: 2, curso: { id: 'c-html', creadorId: author.id, version: 3, publicado: false } },
     };
     const expectedFingerprint = fingerprint({
       moduleVersion: 2,
-      lesson: { titulo: 'Actividad', contenido: 'Instrucciones', formatoContenido: 'MARKDOWN', videoUrl: null, orden: 1 },
+      lesson: { titulo: 'Presentacion', contenido: 'Instrucciones', formatoContenido: 'HTML', videoUrl: null, orden: 1 },
       htmlResource: null,
     });
     mocks.client.leccion.findUnique.mockResolvedValue(lesson);
