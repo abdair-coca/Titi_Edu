@@ -10,7 +10,9 @@ const mocks = vi.hoisted(() => {
     categoria: { findMany: vi.fn() },
     curso: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), delete: vi.fn() },
     modulo: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
-    leccion: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
+    leccion: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
+    revisionLeccion: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn() },
+    intentoHtmlLeccion: { count: vi.fn() },
     recursoHtmlLeccion: { upsert: vi.fn() },
     material: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
     evaluacion: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
@@ -62,6 +64,8 @@ beforeEach(() => {
   mocks.client.evaluacion.findFirst.mockResolvedValue(null);
   mocks.client.curso.updateMany.mockResolvedValue({ count: 1 });
   mocks.client.modulo.updateMany.mockResolvedValue({ count: 1 });
+  mocks.client.leccion.updateMany.mockResolvedValue({ count: 1 });
+  mocks.client.revisionLeccion.create.mockResolvedValue({ id: 'revision-1' });
   mocks.client.pregunta.createMany.mockResolvedValue({ count: 1 });
   mocks.client.opcion.createMany.mockResolvedValue({ count: 1 });
 });
@@ -627,7 +631,7 @@ describe('HTML lesson authoring', () => {
       update: expect.objectContaining({ evaluable: true, intentosMax: 2 }),
     }));
     expect(mocks.client.modulo.updateMany).toHaveBeenCalledWith({
-      where: { id: 'm-html', version: 2, estado: 'BORRADOR' }, data: { version: { increment: 1 } },
+      where: { id: 'm-html', version: 2 }, data: { version: { increment: 1 } },
     });
 
     const replay = await request(app).post('/api/authoring/lessons/l-html/html')

@@ -131,7 +131,7 @@ function moduleResourceFingerprints(module) {
 function lessonFingerprint(lesson, moduleVersion = lesson.modulo?.version) {
   return fingerprint({
     moduleVersion,
-    lesson: Object.fromEntries(['titulo', 'contenido', 'formatoContenido', 'videoUrl', 'orden'].map((field) => [field, lesson[field]])),
+    lesson: Object.fromEntries(['titulo', 'contenido', 'formatoContenido', 'videoUrl', 'orden', 'estado', 'publishedAt', 'archivedAt', 'version'].map((field) => [field, lesson[field]])),
     htmlResource: lesson.recursoHtml
       ? {
           sha256: fingerprint(lesson.recursoHtml.html),
@@ -139,6 +139,37 @@ function lessonFingerprint(lesson, moduleVersion = lesson.modulo?.version) {
           intentosMax: lesson.recursoHtml.intentosMax,
         }
       : null,
+  });
+}
+
+function lessonContentSnapshot(lesson) {
+  return {
+    titulo: lesson.titulo,
+    contenido: lesson.contenido,
+    formatoContenido: lesson.formatoContenido,
+    videoUrl: lesson.videoUrl,
+    orden: lesson.orden,
+    estado: lesson.estado,
+    publishedAt: lesson.publishedAt,
+    archivedAt: lesson.archivedAt,
+    htmlResource: lesson.recursoHtml
+      ? {
+          html: lesson.recursoHtml.html,
+          evaluable: lesson.recursoHtml.evaluable,
+          intentosMax: lesson.recursoHtml.intentosMax,
+        }
+      : null,
+  };
+}
+
+async function createLessonRevision(tx, lesson, principal) {
+  await tx.revisionLeccion.create({
+    data: {
+      leccionId: lesson.id,
+      version: lesson.version,
+      snapshot: lessonContentSnapshot(lesson),
+      autorId: principal.usuario.id,
+    },
   });
 }
 
@@ -165,6 +196,16 @@ async function claimModuleVersion(tx, module, where = {}) {
 async function claimModuleMutation(tx, module) {
   await claimCourseVersion(tx, module.curso);
   await claimModuleVersion(tx, module, { estado: 'BORRADOR' });
+}
+
+async function claimLessonMutation(tx, lesson) {
+  await claimCourseVersion(tx, lesson.modulo.curso);
+  await claimModuleVersion(tx, lesson.modulo);
+  const claimed = await tx.leccion.updateMany({
+    where: { id: lesson.id, version: lesson.version },
+    data: { version: { increment: 1 } },
+  });
+  if (claimed.count !== 1) throw new AuthoringError(412, 'La lecciÃ³n cambiÃ³ durante la operaciÃ³n');
 }
 
 function assertExpected(req, actual) {
@@ -345,7 +386,6 @@ router.post('/modules/:moduleId/lessons', requireAuthoringPrincipal('content:wri
     const module = await tx.modulo.findUnique({ where: { id: req.params.moduleId }, include: { curso: true } });
     if (!module) throw new AuthoringError(404, 'Módulo no encontrado');
     assertCourseAccess(req.authoringPrincipal, module.curso);
-    assertDraftModule(module);
     assertExpected(req, resourceFingerprint(module, ['titulo', 'descripcion', 'orden', 'estado', 'version']));
     if (!req.body?.titulo || req.body?.contenido === undefined || req.body?.orden === undefined) {
       throw new AuthoringError(400, 'titulo, contenido y orden son requeridos');
@@ -359,7 +399,8 @@ router.post('/modules/:moduleId/lessons', requireAuthoringPrincipal('content:wri
     }
     const video = formatoContenido === 'MARKDOWN' ? validateVideoUrl(req.body.videoUrl) : null;
     if (video && !video.ok) throw new AuthoringError(400, video.message);
-    await claimModuleMutation(tx, module);
+    await claimCourseVersion(tx, module.curso);
+    await claimModuleVersion(tx, module);
     const lesson = await tx.leccion.create({
       data: {
         titulo: String(req.body.titulo).trim(),
@@ -368,6 +409,7 @@ router.post('/modules/:moduleId/lessons', requireAuthoringPrincipal('content:wri
         videoUrl: video?.value || null,
         orden: parseOrder(req.body.orden),
         moduloId: module.id,
+        estado: 'BORRADOR',
       },
     });
     return { status: 201, data: { lesson } };
@@ -382,23 +424,143 @@ router.put('/lessons/:id', requireAuthoringPrincipal('content:write'), handle(as
     });
     if (!lesson) throw new AuthoringError(404, 'Lección no encontrada');
     assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
-    assertDraftModule(lesson.modulo);
     assertExpected(req, lessonFingerprint(lesson));
-    const data = lesson.formatoContenido === 'HTML' ? {} : { formatoContenido: 'MARKDOWN' };
+    if (lesson.estado === 'ARCHIVADA') throw new AuthoringError(409, 'Restaura la leccion antes de editarla');
+    if (req.body?.orden !== undefined) throw new AuthoringError(409, 'El orden no se puede cambiar al editar una leccion viva');
+    const formatoContenido = req.body?.formatoContenido ?? lesson.formatoContenido;
+    if (!['MARKDOWN', 'HTML'].includes(formatoContenido)) {
+      throw new AuthoringError(400, 'formatoContenido debe ser MARKDOWN o HTML');
+    }
+    const data = { formatoContenido };
     if (req.body?.titulo !== undefined) data.titulo = String(req.body.titulo).trim();
     if (req.body?.contenido !== undefined) data.contenido = String(req.body.contenido);
-    if (req.body?.videoUrl !== undefined) {
-      if (lesson.formatoContenido === 'HTML' && req.body.videoUrl) {
-        throw new AuthoringError(400, 'Una lección HTML no puede incluir videoUrl');
-      }
+    if (formatoContenido === 'HTML') {
+      if (req.body?.videoUrl) throw new AuthoringError(400, 'Una leccion HTML no puede incluir videoUrl');
+      data.videoUrl = null;
+    } else if (req.body?.videoUrl !== undefined) {
       const video = validateVideoUrl(req.body.videoUrl);
       if (video && !video.ok) throw new AuthoringError(400, video.message);
       data.videoUrl = video?.value || null;
     }
-    if (req.body?.orden !== undefined) data.orden = parseOrder(req.body.orden);
-    await claimModuleMutation(tx, lesson.modulo);
+    await createLessonRevision(tx, lesson, req.authoringPrincipal);
+    await claimLessonMutation(tx, lesson);
     const updated = await tx.leccion.update({ where: { id: lesson.id }, data });
     return { data: { lesson: updated } };
+  });
+}));
+
+router.post('/lessons/:id/publish', requireAuthoringPrincipal('publish'), handle(async (req, res) => {
+  await executeIdempotent(req, res, { accion: 'lesson.publish' }, async (tx) => {
+    const lesson = await tx.leccion.findUnique({
+      where: { id: req.params.id },
+      include: { recursoHtml: true, modulo: { include: { curso: true } } },
+    });
+    if (!lesson) throw new AuthoringError(404, 'Leccion no encontrada');
+    assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
+    assertExpected(req, lessonFingerprint(lesson));
+    if (lesson.estado !== 'BORRADOR') throw new AuthoringError(409, 'Solo se puede publicar una leccion en borrador');
+    await claimCourseVersion(tx, lesson.modulo.curso);
+    await claimModuleVersion(tx, lesson.modulo);
+    const claimed = await tx.leccion.updateMany({
+      where: { id: lesson.id, version: lesson.version, estado: 'BORRADOR' },
+      data: { estado: 'PUBLICADA', publishedAt: new Date(), archivedAt: null, version: { increment: 1 } },
+    });
+    if (claimed.count !== 1) throw new AuthoringError(412, 'La leccion cambio durante la publicacion');
+    if (lesson.modulo.estado === 'BORRADOR') {
+      await tx.modulo.update({ where: { id: lesson.modulo.id }, data: { estado: 'PUBLICADO' } });
+    }
+    const publishedLesson = await tx.leccion.findUnique({ where: { id: lesson.id } });
+    return { data: { lesson: publishedLesson, moduleActivated: lesson.modulo.estado === 'BORRADOR' } };
+  });
+}));
+
+router.post('/lessons/:id/archive', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  await executeIdempotent(req, res, { accion: 'lesson.archive' }, async (tx) => {
+    const lesson = await tx.leccion.findUnique({
+      where: { id: req.params.id },
+      include: { recursoHtml: true, modulo: { include: { curso: true } } },
+    });
+    if (!lesson) throw new AuthoringError(404, 'Leccion no encontrada');
+    assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
+    assertExpected(req, lessonFingerprint(lesson));
+    if (lesson.estado === 'ARCHIVADA') throw new AuthoringError(409, 'La leccion ya esta archivada');
+    await claimLessonMutation(tx, lesson);
+    const archivedLesson = await tx.leccion.update({
+      where: { id: lesson.id },
+      data: { estado: 'ARCHIVADA', archivedAt: new Date() },
+    });
+    return { data: { lesson: archivedLesson } };
+  });
+}));
+
+router.post('/lessons/:id/restore', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  await executeIdempotent(req, res, { accion: 'lesson.restore' }, async (tx) => {
+    const lesson = await tx.leccion.findUnique({
+      where: { id: req.params.id },
+      include: { recursoHtml: true, modulo: { include: { curso: true } } },
+    });
+    if (!lesson) throw new AuthoringError(404, 'Leccion no encontrada');
+    assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
+    assertExpected(req, lessonFingerprint(lesson));
+    if (lesson.estado !== 'ARCHIVADA') throw new AuthoringError(409, 'La leccion no esta archivada');
+    await claimLessonMutation(tx, lesson);
+    const restoredLesson = await tx.leccion.update({
+      where: { id: lesson.id },
+      data: { estado: lesson.publishedAt ? 'PUBLICADA' : 'BORRADOR', archivedAt: null },
+    });
+    return { data: { lesson: restoredLesson } };
+  });
+}));
+
+router.get('/lessons/:id/revisions', requireAuthoringPrincipal('course:read'), handle(async (req, res) => {
+  const lesson = await prisma.leccion.findUnique({
+    where: { id: req.params.id },
+    include: { modulo: { include: { curso: true } } },
+  });
+  if (!lesson) throw new AuthoringError(404, 'Leccion no encontrada');
+  assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
+  const revisions = await prisma.revisionLeccion.findMany({
+    where: { leccionId: lesson.id },
+    orderBy: { version: 'desc' },
+    include: { autor: { select: { id: true, username: true } } },
+  });
+  res.json({ success: true, data: { revisions } });
+}));
+
+router.post('/lessons/:id/revisions/:revisionId/restore', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  await executeIdempotent(req, res, { accion: 'lesson.revision.restore' }, async (tx) => {
+    const lesson = await tx.leccion.findUnique({
+      where: { id: req.params.id },
+      include: { recursoHtml: true, modulo: { include: { curso: true } } },
+    });
+    if (!lesson) throw new AuthoringError(404, 'Leccion no encontrada');
+    assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
+    assertExpected(req, lessonFingerprint(lesson));
+    const revision = await tx.revisionLeccion.findUnique({ where: { id: req.params.revisionId } });
+    if (!revision || revision.leccionId !== lesson.id) throw new AuthoringError(404, 'Revision no encontrada');
+    const snapshot = revision.snapshot;
+    if (!snapshot || !['MARKDOWN', 'HTML'].includes(snapshot.formatoContenido)) {
+      throw new AuthoringError(409, 'La revision no contiene contenido restaurable');
+    }
+    await createLessonRevision(tx, lesson, req.authoringPrincipal);
+    await claimLessonMutation(tx, lesson);
+    const restored = await tx.leccion.update({
+      where: { id: lesson.id },
+      data: {
+        titulo: snapshot.titulo,
+        contenido: snapshot.contenido,
+        formatoContenido: snapshot.formatoContenido,
+        videoUrl: snapshot.formatoContenido === 'HTML' ? null : snapshot.videoUrl,
+      },
+    });
+    if (snapshot.htmlResource) {
+      await tx.recursoHtmlLeccion.upsert({
+        where: { leccionId: lesson.id },
+        update: snapshot.htmlResource,
+        create: { ...snapshot.htmlResource, leccionId: lesson.id },
+      });
+    }
+    return { data: { lesson: restored, restoredRevision: revision.id } };
   });
 }));
 
@@ -676,19 +838,20 @@ async function deleteResource(req, res, kind) {
       return { data: { deleted: module.id } };
     }
     if (kind === 'lesson') {
-      const lesson = await tx.leccion.findUnique({ where: { id: req.params.id }, include: { modulo: { include: { curso: true } }, materiales: { select: { publicId: true, url: true, tipo: true } } } });
+      const lesson = await tx.leccion.findUnique({ where: { id: req.params.id }, include: { recursoHtml: { select: { id: true, html: true, evaluable: true, intentosMax: true } }, modulo: { include: { curso: true } }, materiales: { select: { publicId: true, url: true, tipo: true } } } });
       if (!lesson) throw new AuthoringError(404, 'Lección no encontrada');
       assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
-      assertDraftModule(lesson.modulo);
       assetsToDelete.push(...lesson.materiales);
-      assertExpected(req, fingerprint({ moduleVersion: lesson.modulo.version, lesson: Object.fromEntries(['titulo', 'contenido', 'formatoContenido', 'videoUrl', 'orden'].map((field) => [field, lesson[field]])) }));
-      await claimModuleMutation(tx, lesson.modulo);
-      const [progress, notes, comments] = await Promise.all([
+      assertExpected(req, lessonFingerprint(lesson, lesson.modulo.version));
+      await claimCourseVersion(tx, lesson.modulo.curso);
+      await claimModuleVersion(tx, lesson.modulo);
+      const [progress, notes, comments, htmlAttempts] = await Promise.all([
         tx.progreso.count({ where: { leccionId: lesson.id } }),
         tx.notaLeccion.count({ where: { leccionId: lesson.id } }),
         tx.comentarioLeccion.count({ where: { leccionId: lesson.id } }),
+        lesson.recursoHtml ? tx.intentoHtmlLeccion.count({ where: { recursoHtmlId: lesson.recursoHtml.id } }) : 0,
       ]);
-      if (progress || notes || comments) throw new AuthoringError(409, 'La lección tiene historial y no puede borrarse');
+      if (progress || notes || comments || htmlAttempts) throw new AuthoringError(409, 'La lección tiene historial. Archivala para conservarlo');
       await tx.material.deleteMany({ where: { leccionId: lesson.id } });
       await tx.leccion.delete({ where: { id: lesson.id } });
       return { data: { deleted: lesson.id } };
@@ -888,14 +1051,15 @@ router.post('/lessons/:id/html', requireAuthoringPrincipal('content:write'), han
     });
     if (!lesson) throw new AuthoringError(404, 'Lección no encontrada');
     assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
-    assertDraftModule(lesson.modulo);
     assertExpected(req, lessonFingerprint(lesson));
     if (lesson.formatoContenido !== 'HTML') {
       throw new AuthoringError(409, 'Crea una presentacion HTML antes de subir su archivo');
     }
     const validated = validateHtmlLessonResource(req.body);
     if (!validated.ok) throw new AuthoringError(400, validated.message);
-    await claimModuleMutation(tx, lesson.modulo);
+    if (lesson.estado === 'ARCHIVADA') throw new AuthoringError(409, 'Restaura la leccion antes de editar su HTML');
+    await createLessonRevision(tx, lesson, req.authoringPrincipal);
+    await claimLessonMutation(tx, lesson);
     const resource = await tx.recursoHtmlLeccion.upsert({
       where: { leccionId: lesson.id },
       update: validated.data,
