@@ -29,6 +29,12 @@ enum EstadoModulo {
   PUBLICADO
 }
 
+enum EstadoLeccion {
+  BORRADOR
+  PUBLICADA
+  ARCHIVADA
+}
+
 enum FormatoContenido {
   TEXTO
   MARKDOWN
@@ -79,6 +85,7 @@ model Usuario {
   inventario         InventarioItem[]
   tokensServicio     TokenServicio[]
   operacionesAutoria OperacionAutoria[]
+  revisionesLeccion  RevisionLeccion[]
 }
 
 // Etapa 6 — catálogo de misiones diarias. Se siembran en seed.js (idempotente por codigo).
@@ -240,6 +247,10 @@ model Leccion {
   formatoContenido FormatoContenido    @default(TEXTO)
   videoUrl         String? // YouTube embed URL
   orden            Int
+  estado           EstadoLeccion       @default(BORRADOR)
+  publishedAt      DateTime?
+  archivedAt       DateTime?
+  version          Int                 @default(1)
   moduloId         String
   modulo           Modulo              @relation(fields: [moduloId], references: [id])
   materiales       Material[]
@@ -247,6 +258,23 @@ model Leccion {
   comentarios      ComentarioLeccion[]
   notas            NotaLeccion[]
   recursoHtml      RecursoHtmlLeccion?
+  revisiones       RevisionLeccion[]
+
+  @@index([moduloId, estado, orden])
+}
+
+model RevisionLeccion {
+  id        String   @id @default(uuid())
+  leccionId String
+  version   Int
+  snapshot  Json
+  createdAt DateTime @default(now())
+  autorId   String
+  leccion   Leccion  @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+  autor     Usuario  @relation(fields: [autorId], references: [id])
+
+  @@unique([leccionId, version])
+  @@index([leccionId, createdAt])
 }
 
 model Material {
