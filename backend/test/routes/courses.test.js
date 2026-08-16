@@ -49,7 +49,7 @@ describe('GET /api/courses/:id', () => {
     const res = await request(app).get('/api/courses/c1');
     expect(res.status).toBe(200);
     expect(res.body.data.curso.id).toBe('c1');
-    expect(prisma.curso.findUnique.mock.calls[0][0].include.modulos.where).toEqual({ estado: 'PUBLICADO' });
+    expect(prisma.curso.findUnique.mock.calls[0][0].include.modulos.where).toBeUndefined();
   });
 
   it('404 en un borrador para un guest (no filtra existencia)', async () => {
