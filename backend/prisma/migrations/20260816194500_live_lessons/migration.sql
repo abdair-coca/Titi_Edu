@@ -1,4 +1,4 @@
-﻿-- Lifecycle de lecciones vivas y revisiones recuperables.
+-- Lifecycle de lecciones vivas y revisiones recuperables.
 CREATE TYPE "EstadoLeccion" AS ENUM ('BORRADOR', 'PUBLICADA', 'ARCHIVADA');
 
 ALTER TABLE "Leccion"
