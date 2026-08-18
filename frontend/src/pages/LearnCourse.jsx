@@ -668,8 +668,6 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
     () => normalizeVideoUrl(leccion.videoUrl),
     [leccion.videoUrl],
   );
-  // Descripción colapsada por defecto (se despliega a pedido).
-  const [showDesc, setShowDesc] = useState(false);
   // Pop al cambiar de lección (también remonta por key en el padre). Ver motion.md §5.
   const articleRef = usePopIn([leccion.id]);
   const isHtml = leccion.formatoContenido === 'HTML';
@@ -705,40 +703,13 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
         </button>
       </div>
 
-      {/* Descripción de la lección — colapsada por defecto, desplegable */}
+      {/* Contenido de la lección — se muestra directo, sin toggle. */}
       {leccion.contenido ? (
-        <div className="mb-6">
-          <button
-            type="button"
-            onClick={() => setShowDesc((s) => !s)}
-            aria-expanded={showDesc}
-            className="inline-flex items-center gap-1.5 text-sm font-semibold text-titi-dark hover:text-titi-yellow-dark transition-colors"
-          >
-            <span
-              className={`text-xs transition-transform duration-200 ${showDesc ? 'rotate-90' : ''}`}
-              aria-hidden="true"
-            >
-              ▶
-            </span>
-            {showDesc ? 'Ocultar descripción' : 'Ver descripción'}
-          </button>
-          {/* Colapsable: grid-rows 0fr→1fr + fade, ease neutro (no pop). Ver motion.md §3. */}
-          <div
-            className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${
-              showDesc ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-            }`}
-          >
-            <div className="overflow-hidden">
-              <MarkdownContent
-                content={leccion.contenido}
-                format="MARKDOWN"
-                className={`mt-3 transition-opacity duration-300 ease-out motion-reduce:transition-none ${
-                  showDesc ? 'opacity-100' : 'opacity-0'
-                }`}
-              />
-            </div>
-          </div>
-        </div>
+        <MarkdownContent
+          content={leccion.contenido}
+          format="MARKDOWN"
+          className="mb-6"
+        />
       ) : (
         <p className="text-sm text-gray-400 font-medium mb-6">Cargando contenido…</p>
       )}

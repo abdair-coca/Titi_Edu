@@ -30,10 +30,11 @@ export default function HtmlLessonPlayer({ lessonId, onScoreRecorded }) {
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState(null);
   const [score, setScore] = useState(null);
+  const [bestScore, setBestScore] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
-    setSrcDoc(null); setAttemptToken(null); setScore(null); setError(null); setViewOnly(false); setAttemptsExhausted(false); setStatus('loading');
+    setSrcDoc(null); setAttemptToken(null); setScore(null); setBestScore(null); setError(null); setViewOnly(false); setAttemptsExhausted(false); setStatus('loading');
     async function load() {
       try {
         const { data } = await client.get(`/api/lessons/${lessonId}/html`);
@@ -56,6 +57,7 @@ export default function HtmlLessonPlayer({ lessonId, onScoreRecorded }) {
         setViewOnly(maxAttemptsReached);
         setAttemptsExhausted(maxAttemptsReached);
         setAttemptToken(token);
+        setBestScore(resource.bestScore ?? null);
         setSrcDoc(withAttemptToken(resource.html, maxAttemptsReached ? null : token));
         setStatus('ready');
       } catch (err) {
@@ -79,7 +81,8 @@ export default function HtmlLessonPlayer({ lessonId, onScoreRecorded }) {
           attemptToken,
         });
         if (!data?.success) throw new Error(data?.message || 'No se pudo registrar el puntaje');
-        setScore(data.data);
+        setScore(data.data.score);
+        setBestScore(data.data.bestScore ?? data.data.score);
         setStatus('submitted');
         await onScoreRecorded?.(data.data);
       } catch (err) {
@@ -105,7 +108,16 @@ export default function HtmlLessonPlayer({ lessonId, onScoreRecorded }) {
         className="w-full min-h-[32rem] rounded-2xl border border-gray-200 bg-white"
       />
       {attemptsExhausted && <p className="mt-3 text-xs font-semibold text-gray-500">Agotaste tus intentos. Podés revisar la presentación, pero ya no se registrará una nota.</p>}
-      {evaluable && !viewOnly && <p className="mt-3 text-xs font-semibold text-gray-500">{status === 'submitting' ? 'Registrando puntaje…' : score ? `Puntaje de práctica: ${score.score}/100. Mejor: ${score.bestScore}/100.` : 'La actividad registra un puntaje de práctica.'}</p>}
+      {evaluable && (score != null || bestScore != null) && (
+        <div className="mt-3 flex flex-wrap items-center gap-3 bg-titi-cream border border-gray-200 rounded-xl px-4 py-3">
+          <span className="text-sm font-bold text-titi-dark">Tu nota:</span>
+          <span className="text-xl font-black tabular-nums text-titi-dark">{bestScore ?? score}/100</span>
+          {score != null && bestScore != null && bestScore > score && (
+            <span className="text-xs font-semibold text-gray-500">Mejor puntaje de tus intentos</span>
+          )}
+          {status === 'submitting' && <span className="text-xs font-semibold text-gray-500">Registrando puntaje…</span>}
+        </div>
+      )}
       {error && status === 'ready' && <p className="mt-3 text-xs font-semibold text-red-600">{error}</p>}
     </section>
   );
