@@ -197,6 +197,7 @@ model Curso {
   titulo           String
   descripcion      String
   portadaUrl       String?
+  portadaPublicId  String?
   nivel            String
   publicado        Boolean  @default(false)
   emiteCertificado Boolean  @default(true)

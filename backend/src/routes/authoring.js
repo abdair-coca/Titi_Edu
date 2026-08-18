@@ -188,7 +188,7 @@ async function createLessonRevision(tx, lesson, principal) {
 }
 
 function courseResourceFingerprint(course) {
-  return resourceFingerprint(course, ['titulo', 'descripcion', 'nivel', 'categoriaId', 'portadaUrl', 'emiteCertificado', 'publicado', 'version']);
+  return resourceFingerprint(course, ['titulo', 'descripcion', 'nivel', 'categoriaId', 'portadaUrl', 'portadaPublicId', 'emiteCertificado', 'publicado', 'version']);
 }
 
 async function claimCourseVersion(tx, course, where = {}) {
@@ -241,6 +241,9 @@ function parseCourseData(body, partial = false) {
     const checked = validateHttpsUrl(body.portadaUrl, { rejectSvg: true });
     if (checked && !checked.ok) throw new AuthoringError(400, checked.message);
     data.portadaUrl = checked?.value || null;
+  }
+  if (body?.portadaPublicId !== undefined) {
+    data.portadaPublicId = body.portadaPublicId ? String(body.portadaPublicId).trim() : null;
   }
   if (body?.emiteCertificado !== undefined) {
     if (typeof body.emiteCertificado !== 'boolean') throw new AuthoringError(400, 'emiteCertificado debe ser booleano');
@@ -341,6 +344,7 @@ router.post('/courses', requireAuthoringPrincipal('course:create'), handle(async
 }));
 
 router.put('/courses/:id', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  const existing = await prisma.curso.findUnique({ where: { id: req.params.id }, select: { portadaPublicId: true } });
   await executeIdempotent(req, res, { accion: 'course.update', cursoId: req.params.id }, async (tx) => {
     const course = await tx.curso.findUnique({ where: { id: req.params.id } });
     assertCourseAccess(req.authoringPrincipal, course);
@@ -355,6 +359,12 @@ router.put('/courses/:id', requireAuthoringPrincipal('content:write'), handle(as
     const updated = await tx.curso.findUnique({ where: { id: course.id } });
     return { data: { course: updated } };
   });
+  // Solo limpiar el asset anterior cuando el cliente envía explícitamente portadaPublicId
+  // (un cambio de portada); editar otros campos no debe borrar la portada actual.
+  if (req.body?.portadaPublicId !== undefined && existing?.portadaPublicId) {
+    const newPublicId = req.body.portadaPublicId ? String(req.body.portadaPublicId).trim() : null;
+    if (newPublicId !== existing.portadaPublicId) await destroyAsset(existing.portadaPublicId, 'image');
+  }
 }));
 
 router.post('/courses/:courseId/modules', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
