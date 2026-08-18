@@ -32,6 +32,12 @@ se ahorra tokens (no se re-lee contenido completo) y no se pisan fingerprints.
 - `upsert_lesson_html` — sube/reemplaza el HTML de una lección HTML (`POST /lessons/:id/html`).
   Acepta `html` (autocontenido, <1MB), `evaluable`, `intentosMax` (1-10, requerido si evaluable).
   El HTML evaluable envía score a Titi (`TITI_SCORE` postMessage). Ver skill `titi-html-authoring`.
+- **Obligatorio ANTES de subir HTML**: validar contra el sandbox (`sandbox="allow-scripts"` sin
+  allow-same-origin) con el validador de la skill `titi-html-authoring`:
+  `node "C:\Users\abdai\.codex\skills\titi-html-authoring\assets\validate-titi-html.mjs" <archivo.html> --check-score`
+  Prohibido: `localStorage`/`sessionStorage`/`indexedDB`/`document.cookie`, `window.open`,
+  navegación, `iframe`, `form`, `fetch`, `target="_blank"` con URL externa. Si falla, corregir
+  antes de publicar.
 - `upsert_quiz_draft`
 - `attach_material`
 - `delete_draft_resource`
