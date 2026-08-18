@@ -5,6 +5,7 @@ import fs from 'fs';
 import { randomUUID } from 'crypto';
 import { fileURLToPath } from 'url';
 import prisma from '../prisma.js';
+import { runQuery } from '../db.js';
 import { requireAuthoringJwt, requireAuthoringPrincipal } from '../middleware/authoring-auth.js';
 import {
   AUTHORING_SCOPES,
@@ -22,6 +23,12 @@ import {
   verifyPublicationConfirmation,
 } from '../services/authoring.service.js';
 import { executeIdempotent } from '../services/authoring-idempotency.service.js';
+import {
+  cleanupDeletedCourseInNeo4j,
+  collectDeletionDependencies,
+  deletionFingerprint as createDeletionFingerprint,
+  deleteDeletionDependencies,
+} from '../services/content-deletion.service.js';
 import { cloudinaryEnabled, destroyAsset, uploadBuffer } from '../services/upload.service.js';
 
 const router = Router();
@@ -765,101 +772,51 @@ router.post('/lessons/:lessonId/materials', requireAuthoringPrincipal('material:
   }
 }));
 
+async function loadDeletionResource(client, kind, id) {
+  if (kind === 'course') return client.curso.findUnique({ where: { id } });
+  if (kind === 'module') return client.modulo.findUnique({ where: { id }, include: { curso: true } });
+  return client.leccion.findUnique({
+    where: { id },
+    include: { recursoHtml: true, modulo: { include: { curso: true } } },
+  });
+}
+
+function deletionResourceFingerprint(kind, resource) {
+  if (kind === 'course') return courseResourceFingerprint(resource);
+  if (kind === 'module') return resourceFingerprint(resource, ['titulo', 'descripcion', 'orden', 'estado', 'version']);
+  return lessonFingerprint(resource, resource.modulo.version);
+}
+
+function deletionCourse(kind, resource) {
+  return kind === 'course' ? resource : kind === 'module' ? resource.curso : resource.modulo.curso;
+}
+
+function deletionNotFoundMessage(kind) {
+  return { course: 'Curso no encontrado', module: 'Módulo no encontrado', lesson: 'Lección no encontrada' }[kind];
+}
+
+async function previewDeletion(req, res, kind) {
+  const resource = await loadDeletionResource(prisma, kind, req.params.id);
+  if (!resource) throw new AuthoringError(404, deletionNotFoundMessage(kind));
+  assertCourseAccess(req.authoringPrincipal, deletionCourse(kind, resource));
+  const dependencies = await collectDeletionDependencies(prisma, { kind, resourceId: resource.id });
+  const currentFingerprint = createDeletionFingerprint(kind, deletionResourceFingerprint(kind, resource), dependencies.impact);
+  const confirmation = createPublicationConfirmation({
+    resourceType: kind,
+    resourceId: resource.id,
+    expectedFingerprint: currentFingerprint,
+    action: 'delete',
+  });
+  if (!confirmation) throw new AuthoringError(503, 'AUTHORING_CONFIRMATION_SECRET no está configurado');
+  res.json({ success: true, data: { impact: dependencies.impact, fingerprint: currentFingerprint, ...confirmation } });
+}
+
 async function deleteResource(req, res, kind) {
-  const assetsToDelete = [];
-  await executeIdempotent(req, res, { accion: `${kind}.delete` }, async (tx) => {
-    if (kind === 'course') {
-      const course = await tx.curso.findUnique({
-        where: { id: req.params.id },
-        include: {
-          _count: { select: { inscripciones: true } },
-          modulos: { include: { lecciones: { select: { id: true, materiales: { select: { publicId: true, url: true, tipo: true } } } }, evaluacion: { select: { id: true } } } },
-        },
-      });
-      assertCourseAccess(req.authoringPrincipal, course);
-      if (course.publicado || course._count.inscripciones > 0) throw new AuthoringError(409, 'Solo se puede borrar un curso borrador sin inscripciones');
-      assertExpected(req, courseResourceFingerprint(course));
-      await claimCourseVersion(tx, course, { publicado: false });
-      const lessonIds = course.modulos.flatMap((module) => module.lecciones.map((lesson) => lesson.id));
-      assetsToDelete.push(...course.modulos.flatMap((module) => module.lecciones.flatMap((lesson) => lesson.materiales)));
-      const moduleEvaluationIds = course.modulos.map((module) => module.evaluacion?.id).filter(Boolean);
-      const finalEvaluations = await tx.evaluacion.findMany({ where: { cursoId: course.id }, select: { id: true } });
-      const evaluationIds = [...moduleEvaluationIds, ...finalEvaluations.map((evaluation) => evaluation.id)];
-      const [progress, notes, comments, attempts] = await Promise.all([
-        lessonIds.length ? tx.progreso.count({ where: { leccionId: { in: lessonIds } } }) : 0,
-        lessonIds.length ? tx.notaLeccion.count({ where: { leccionId: { in: lessonIds } } }) : 0,
-        lessonIds.length ? tx.comentarioLeccion.count({ where: { leccionId: { in: lessonIds } } }) : 0,
-        evaluationIds.length ? tx.intento.count({ where: { evaluacionId: { in: evaluationIds } } }) : 0,
-      ]);
-      if (progress || notes || comments || attempts) throw new AuthoringError(409, 'El curso tiene historial de aprendizaje y no puede borrarse');
-      if (lessonIds.length) {
-        await tx.material.deleteMany({ where: { leccionId: { in: lessonIds } } });
-        await tx.leccion.deleteMany({ where: { id: { in: lessonIds } } });
-      }
-      if (evaluationIds.length) {
-        const questions = await tx.pregunta.findMany({ where: { evaluacionId: { in: evaluationIds } }, select: { id: true } });
-        const questionIds = questions.map((question) => question.id);
-        if (questionIds.length) await tx.opcion.deleteMany({ where: { preguntaId: { in: questionIds } } });
-        await tx.pregunta.deleteMany({ where: { evaluacionId: { in: evaluationIds } } });
-        await tx.evaluacion.deleteMany({ where: { id: { in: evaluationIds } } });
-      }
-      await tx.modulo.deleteMany({ where: { cursoId: course.id } });
-      await tx.cursoProfesor.deleteMany({ where: { cursoId: course.id } });
-      await tx.curso.delete({ where: { id: course.id } });
-      return { data: { deleted: course.id } };
-    }
-    if (kind === 'module') {
-      const module = await tx.modulo.findUnique({ where: { id: req.params.id }, include: { curso: true, lecciones: { select: { id: true, materiales: { select: { publicId: true, url: true, tipo: true } } } }, evaluacion: { select: { id: true } } } });
-      if (!module) throw new AuthoringError(404, 'Módulo no encontrado');
-      assertCourseAccess(req.authoringPrincipal, module.curso);
-      assertDraftModule(module);
-      assertExpected(req, resourceFingerprint(module, ['titulo', 'descripcion', 'orden', 'estado', 'version']));
-      await claimModuleMutation(tx, module);
-      const lessonIds = module.lecciones.map((lesson) => lesson.id);
-      assetsToDelete.push(...module.lecciones.flatMap((lesson) => lesson.materiales));
-      const [progress, attempts] = await Promise.all([
-        lessonIds.length ? tx.progreso.count({ where: { leccionId: { in: lessonIds } } }) : 0,
-        module.evaluacion ? tx.intento.count({ where: { evaluacionId: module.evaluacion.id } }) : 0,
-      ]);
-      if (progress || attempts) throw new AuthoringError(409, 'El módulo tiene historial de aprendizaje y no puede borrarse');
-      if (lessonIds.length) {
-        const [notes, comments] = await Promise.all([
-          tx.notaLeccion.count({ where: { leccionId: { in: lessonIds } } }),
-          tx.comentarioLeccion.count({ where: { leccionId: { in: lessonIds } } }),
-        ]);
-        if (notes || comments) throw new AuthoringError(409, 'El módulo tiene historial y no puede borrarse');
-        await tx.material.deleteMany({ where: { leccionId: { in: lessonIds } } });
-        await tx.leccion.deleteMany({ where: { id: { in: lessonIds } } });
-      }
-      if (module.evaluacion) {
-        const questions = await tx.pregunta.findMany({ where: { evaluacionId: module.evaluacion.id }, select: { id: true } });
-        const questionIds = questions.map((question) => question.id);
-        if (questionIds.length) await tx.opcion.deleteMany({ where: { preguntaId: { in: questionIds } } });
-        await tx.pregunta.deleteMany({ where: { evaluacionId: module.evaluacion.id } });
-        await tx.evaluacion.delete({ where: { id: module.evaluacion.id } });
-      }
-      await tx.modulo.delete({ where: { id: module.id } });
-      return { data: { deleted: module.id } };
-    }
-    if (kind === 'lesson') {
-      const lesson = await tx.leccion.findUnique({ where: { id: req.params.id }, include: { recursoHtml: { select: { id: true, html: true, evaluable: true, intentosMax: true } }, modulo: { include: { curso: true } }, materiales: { select: { publicId: true, url: true, tipo: true } } } });
-      if (!lesson) throw new AuthoringError(404, 'Lección no encontrada');
-      assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
-      assetsToDelete.push(...lesson.materiales);
-      assertExpected(req, lessonFingerprint(lesson, lesson.modulo.version));
-      await claimCourseVersion(tx, lesson.modulo.curso);
-      await claimModuleVersion(tx, lesson.modulo);
-      const [progress, notes, comments, htmlAttempts] = await Promise.all([
-        tx.progreso.count({ where: { leccionId: lesson.id } }),
-        tx.notaLeccion.count({ where: { leccionId: lesson.id } }),
-        tx.comentarioLeccion.count({ where: { leccionId: lesson.id } }),
-        lesson.recursoHtml ? tx.intentoHtmlLeccion.count({ where: { recursoHtmlId: lesson.recursoHtml.id } }) : 0,
-      ]);
-      if (progress || notes || comments || htmlAttempts) throw new AuthoringError(409, 'La lección tiene historial. Archivala para conservarlo');
-      await tx.material.deleteMany({ where: { leccionId: lesson.id } });
-      await tx.leccion.delete({ where: { id: lesson.id } });
-      return { data: { deleted: lesson.id } };
-    }
+  await executeIdempotent(req, res, {
+    accion: `${kind}.delete`,
+    transactionOptions: kind === 'course' ? { timeout: 20_000, maxWait: 10_000 } : undefined,
+  }, async (tx) => {
+    if (kind === 'material') {
     const material = await tx.material.findUnique({ where: { id: req.params.id }, include: { leccion: { include: { recursoHtml: true, modulo: { include: { curso: true } } } } } });
     if (!material) throw new AuthoringError(404, 'Material no encontrado');
     assertCourseAccess(req.authoringPrincipal, material.leccion.modulo.curso);
@@ -867,17 +824,49 @@ async function deleteResource(req, res, kind) {
     assertExpected(req, lessonFingerprint(material.leccion));
     // Materiales no tienen historial estudiantil propio; la lección archivada preserva su contenido intacto.
     await claimLessonMutation(tx, material.leccion);
-    assetsToDelete.push({ publicId: material.publicId, url: material.url, tipo: material.tipo });
     await tx.material.delete({ where: { id: material.id } });
     return { data: { deleted: material.id } };
-  });
-  for (const asset of assetsToDelete) {
-    if (asset.publicId) {
-      await destroyAsset(asset.publicId, asset.tipo === 'imagen' ? 'image' : 'raw');
-    } else if (asset.url?.startsWith('/uploads/materials/')) {
-      await fs.promises.unlink(path.join(materialsDir, path.basename(asset.url))).catch(() => {});
     }
-  }
+
+    const resource = await loadDeletionResource(tx, kind, req.params.id);
+    if (!resource) throw new AuthoringError(404, deletionNotFoundMessage(kind));
+    const course = deletionCourse(kind, resource);
+    assertCourseAccess(req.authoringPrincipal, course);
+    const dependencies = await collectDeletionDependencies(tx, { kind, resourceId: resource.id });
+    const currentFingerprint = createDeletionFingerprint(kind, deletionResourceFingerprint(kind, resource), dependencies.impact);
+    assertExpected(req, currentFingerprint);
+    const confirmation = verifyPublicationConfirmation({
+      confirmationToken: req.body?.confirmationToken,
+      phrase: req.body?.phrase,
+      resourceType: kind,
+      resourceId: resource.id,
+      expectedFingerprint: currentFingerprint,
+      action: 'delete',
+    });
+    if (!confirmation.ok) {
+      throw new AuthoringError(422, confirmation.reason === 'expired' ? 'La confirmación expiró' : 'Confirmación de eliminación inválida');
+    }
+    if (kind === 'course') await claimCourseVersion(tx, resource);
+    if (kind === 'module') {
+      await claimCourseVersion(tx, course);
+      await claimModuleVersion(tx, resource);
+    }
+    if (kind === 'lesson') {
+      await claimCourseVersion(tx, course);
+      await claimModuleVersion(tx, resource.modulo);
+    }
+    await deleteDeletionDependencies(tx, dependencies);
+    // Intentionally retain Cloudinary and legacy disk assets. A later retention/reconciliation job
+    // can delete unreferenced files without making this irreversible database transaction partial.
+    return {
+      data: {
+        deleted: resource.id,
+        impact: dependencies.impact,
+        residualRisk: 'Los archivos de materiales en Cloudinary y disco quedan retenidos hasta una limpieza reconciliada.',
+      },
+    };
+  });
+  if (kind === 'course' && res.statusCode < 300) await cleanupDeletedCourseInNeo4j(runQuery, req.params.id);
 }
 
 for (const [route, kind, scope] of [
@@ -886,6 +875,12 @@ for (const [route, kind, scope] of [
   ['/lessons/:id', 'lesson', 'content:write'],
   ['/materials/:id', 'material', 'material:write'],
 ]) router.delete(route, requireAuthoringPrincipal(scope), handle((req, res) => deleteResource(req, res, kind)));
+
+for (const [route, kind] of [
+  ['/courses/:id/preview-deletion', 'course'],
+  ['/modules/:id/preview-deletion', 'module'],
+  ['/lessons/:id/preview-deletion', 'lesson'],
+]) router.post(route, requireAuthoringPrincipal('content:write'), handle((req, res) => previewDeletion(req, res, kind)));
 
 async function previewPublication(req, res, resourceType, action = 'publish') {
   const isCourse = resourceType === 'course';

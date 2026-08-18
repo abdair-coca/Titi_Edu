@@ -1,11 +1,43 @@
 import { Router } from 'express';
 import prisma from '../prisma.js';
+import { runQuery } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireRole } from '../middleware/permissions.js';
+import { createPublicationConfirmation, fingerprint, verifyPublicationConfirmation } from '../services/authoring.service.js';
+import { executeIdempotent } from '../services/authoring-idempotency.service.js';
+import {
+  cleanupDeletedCourseInNeo4j,
+  collectDeletionDependencies,
+  deletionFingerprint,
+  deleteDeletionDependencies,
+} from '../services/content-deletion.service.js';
 
 const router = Router();
 
 const ROLES_VALIDOS = ['ESTUDIANTE', 'PROFESOR', 'ADMIN'];
+
+class AdminDeletionError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
+
+function courseDeletionFingerprint(course, impact) {
+  const resource = Object.fromEntries([
+    'titulo', 'descripcion', 'nivel', 'categoriaId', 'portadaUrl', 'emiteCertificado', 'publicado', 'version',
+  ].map((field) => [field, course[field]]));
+  return deletionFingerprint('course', fingerprint(resource), impact);
+}
+
+function adminPrincipal(req) {
+  req.authoringPrincipal = {
+    kind: 'jwt',
+    actorKey: `admin:${req.dbUser.id}`,
+    usuario: req.dbUser,
+    tokenServicio: null,
+  };
+}
 
 // Todas las rutas exigen ADMIN.
 router.use(requireAuth, requireRole('ADMIN'));
@@ -139,63 +171,67 @@ router.put('/courses/:id/approve', async (req, res) => {
   }
 });
 
-// ---- DELETE /courses/:id  — borrado forzado (override del 409) ----
-// A diferencia del DELETE de courses.js, borra aunque tenga inscripciones.
-// Cascada completa en orden FK-safe. Los certificados se PRESERVAN: se les
-// pone cursoId = null (el título ya está congelado en cursoTitulo), porque un
-// certificado emitido es un hecho histórico que no debe desaparecer.
+// ---- POST /courses/:id/preview-deletion — impacto firmado para moderación ----
+router.post('/courses/:id/preview-deletion', async (req, res) => {
+  try {
+    const curso = await prisma.curso.findUnique({ where: { id: req.params.id } });
+    if (!curso) return res.status(404).json({ success: false, message: 'Curso no encontrado' });
+    const dependencies = await collectDeletionDependencies(prisma, { kind: 'course', resourceId: curso.id });
+    const currentFingerprint = courseDeletionFingerprint(curso, dependencies.impact);
+    const confirmation = createPublicationConfirmation({
+      resourceType: 'course', resourceId: curso.id, expectedFingerprint: currentFingerprint, action: 'delete',
+    });
+    if (!confirmation) return res.status(503).json({ success: false, message: 'AUTHORING_CONFIRMATION_SECRET no está configurado' });
+    res.json({ success: true, data: { impact: dependencies.impact, fingerprint: currentFingerprint, ...confirmation } });
+  } catch (err) {
+    console.error('POST /admin/courses/:id/preview-deletion error', err);
+    res.status(500).json({ success: false, message: 'Error preparando el borrado del curso' });
+  }
+});
+
+// ---- DELETE /courses/:id — borrado físico confirmado, idempotente y FK-safe ----
 router.delete('/courses/:id', async (req, res) => {
   try {
-    const curso = await prisma.curso.findUnique({
-      where: { id: req.params.id },
-      select: {
-        id: true,
-        modulos: { select: { id: true, evaluacion: { select: { id: true } }, lecciones: { select: { id: true } } } },
-      },
+    adminPrincipal(req);
+    await executeIdempotent(req, res, {
+      accion: 'admin.course.delete',
+      transactionOptions: { timeout: 20_000, maxWait: 10_000 },
+    }, async (tx) => {
+      const curso = await tx.curso.findUnique({ where: { id: req.params.id } });
+      if (!curso) throw new AdminDeletionError(404, 'Curso no encontrado');
+      const dependencies = await collectDeletionDependencies(tx, { kind: 'course', resourceId: curso.id });
+      const currentFingerprint = courseDeletionFingerprint(curso, dependencies.impact);
+      const expectedFingerprint = req.body?.expectedFingerprint || req.get('If-Match');
+      if (!expectedFingerprint) throw new AdminDeletionError(428, 'expectedFingerprint es requerido');
+      if (expectedFingerprint !== currentFingerprint) throw new AdminDeletionError(412, 'La vista previa quedó obsoleta');
+      const confirmation = verifyPublicationConfirmation({
+        confirmationToken: req.body?.confirmationToken,
+        phrase: req.body?.phrase,
+        resourceType: 'course',
+        resourceId: curso.id,
+        expectedFingerprint: currentFingerprint,
+        action: 'delete',
+      });
+      if (!confirmation.ok) {
+        throw new AdminDeletionError(422, confirmation.reason === 'expired' ? 'La confirmación expiró' : 'Confirmación de eliminación inválida');
+      }
+      const claimed = await tx.curso.updateMany({
+        where: { id: curso.id, version: curso.version },
+        data: { version: { increment: 1 } },
+      });
+      if (claimed.count !== 1) throw new AdminDeletionError(412, 'El curso cambió durante la operación');
+      await deleteDeletionDependencies(tx, dependencies);
+      return {
+        data: {
+          deleted: curso.id,
+          impact: dependencies.impact,
+          residualRisk: 'Los archivos de materiales en Cloudinary y disco quedan retenidos hasta una limpieza reconciliada.',
+        },
+      };
     });
-    if (!curso) {
-      return res.status(404).json({ success: false, message: 'Curso no encontrado' });
-    }
-
-    const moduloIds = curso.modulos.map((m) => m.id);
-    const leccionIds = curso.modulos.flatMap((m) => m.lecciones.map((l) => l.id));
-    const finales = await prisma.evaluacion.findMany({ where: { cursoId: curso.id }, select: { id: true } });
-    const evalIds = [
-      ...curso.modulos.map((m) => m.evaluacion?.id).filter(Boolean),
-      ...finales.map((e) => e.id),
-    ];
-    const preguntaIds = evalIds.length
-      ? (await prisma.pregunta.findMany({ where: { evaluacionId: { in: evalIds } }, select: { id: true } })).map((p) => p.id)
-      : [];
-
-    // Timeout amplio: la cascada hace muchos deleteMany secuenciales y la DB
-    // puede ser remota (Aura/Postgres administrado), superando el default de 5s.
-    await prisma.$transaction(
-      async (tx) => {
-        if (preguntaIds.length) await tx.opcion.deleteMany({ where: { preguntaId: { in: preguntaIds } } });
-        if (evalIds.length) {
-          await tx.pregunta.deleteMany({ where: { evaluacionId: { in: evalIds } } });
-          await tx.intento.deleteMany({ where: { evaluacionId: { in: evalIds } } });
-          await tx.evaluacion.deleteMany({ where: { id: { in: evalIds } } });
-        }
-        if (leccionIds.length) {
-          await tx.material.deleteMany({ where: { leccionId: { in: leccionIds } } });
-          await tx.progreso.deleteMany({ where: { leccionId: { in: leccionIds } } });
-          await tx.comentarioLeccion.deleteMany({ where: { leccionId: { in: leccionIds } } });
-          await tx.leccion.deleteMany({ where: { id: { in: leccionIds } } });
-        }
-        if (moduloIds.length) await tx.modulo.deleteMany({ where: { id: { in: moduloIds } } });
-        await tx.inscripcion.deleteMany({ where: { cursoId: curso.id } });
-        // Preservar certificados: desvincular del curso (el título queda congelado).
-        await tx.certificado.updateMany({ where: { cursoId: curso.id }, data: { cursoId: null } });
-        await tx.cursoProfesor.deleteMany({ where: { cursoId: curso.id } });
-        await tx.curso.delete({ where: { id: curso.id } });
-      },
-      { timeout: 20000, maxWait: 10000 },
-    );
-
-    res.json({ success: true, data: { deleted: curso.id } });
+    if (res.statusCode < 300) await cleanupDeletedCourseInNeo4j(runQuery, req.params.id);
   } catch (err) {
+    if (err instanceof AdminDeletionError) return res.status(err.status).json({ success: false, message: err.message });
     console.error('DELETE /admin/courses/:id error', err);
     res.status(500).json({ success: false, message: 'Error borrando el curso' });
   }
