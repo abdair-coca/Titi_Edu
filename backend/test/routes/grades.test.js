@@ -94,6 +94,7 @@ describe('GET /api/courses/:courseId/grades', () => {
     expect(alumno1.evaluaciones[0].aprobado).toBe(true);
     expect(alumno1.html[0].mejorPuntaje).toBe(85);
     expect(alumno1.progreso).toBe(50);
+    expect(res.body.data.lecciones.find((l) => l.htmlEvaluable).id).toBeDefined();
     expect(res.body.data.estudiantes.find((e) => e.usuario.id === 'u-s2').progreso).toBe(100);
   });
 

@@ -114,7 +114,7 @@ router.get('/courses/:courseId/grades', requireAuth, async (req, res) => {
 
     const leccionesPorModulo = curso.modulos.reduce((acc, m) => {
       m.lecciones.forEach((l) => {
-        acc[l.id] = { moduloId: m.id, moduloTitulo: m.titulo, titulo: l.titulo, recursoHtmlId: l.recursoHtml?.id ?? null, htmlEvaluable: l.recursoHtml?.evaluable ?? false };
+        acc[l.id] = { id: l.id, moduloId: m.id, moduloTitulo: m.titulo, titulo: l.titulo, recursoHtmlId: l.recursoHtml?.id ?? null, htmlEvaluable: l.recursoHtml?.evaluable ?? false };
       });
       return acc;
     }, {});
