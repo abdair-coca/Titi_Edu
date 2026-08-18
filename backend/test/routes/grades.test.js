@@ -66,8 +66,8 @@ beforeEach(() => {
   mocks.client.curso.findUnique.mockResolvedValue(curso);
   mocks.client.evaluacion.findFirst.mockResolvedValue(null);
   mocks.client.inscripcion.findMany.mockResolvedValue([
-    { completado: false, usuario: { id: 'u-s1', nombre: 'Alumno Uno', username: 'alumno1' } },
-    { completado: true, usuario: { id: 'u-s2', nombre: 'Alumno Dos', username: 'alumno2' } },
+    { completado: false, usuario: { id: 'u-s1', username: 'alumno1', email: 'a1@test.com' } },
+    { completado: true, usuario: { id: 'u-s2', username: 'alumno2', email: 'a2@test.com' } },
   ]);
   mocks.client.intento.findMany.mockResolvedValue([
     { usuarioId: 'u-s1', evaluacionId: 'e-1', nota: 92, aprobado: true, numero: 2 },

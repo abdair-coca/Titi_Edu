@@ -66,7 +66,7 @@ export default function ModulesEditor() {
     await mutate('post', `/courses/${courseId}/modules`, { titulo: `Módulo ${order}`, orden: order, expectedFingerprint: snapshot.fingerprint }, 'No se pudo crear el módulo');
   }
   async function addContent(module, formatoContenido) {
-    const order = (module.lecciones?.at(-1)?.orden ?? 0) + 1;
+    const orden = (module.lecciones?.at(-1)?.orden ?? 0) + 1;
     const isPresentation = formatoContenido === 'HTML';
     const data = await mutate('post', `/modules/${module.id}/lessons`, {
       titulo: `${isPresentation ? 'Nueva presentación' : 'Nueva lección'} ${order}`,

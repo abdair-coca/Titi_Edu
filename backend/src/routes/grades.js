@@ -85,7 +85,7 @@ router.get('/courses/:courseId/grades', requireAuth, async (req, res) => {
       where: { cursoId: curso.id },
       select: {
         completado: true,
-        usuario: { select: { id: true, nombre: true, username: true } },
+        usuario: { select: { id: true, username: true, email: true } },
       },
     });
 
@@ -168,7 +168,7 @@ router.get('/courses/:courseId/grades', requireAuth, async (req, res) => {
           mejorPuntaje: mejorHtml.get(`${uid}:${l.recursoHtmlId}`)?.mejorPuntaje ?? null,
         }));
       return {
-        usuario: { id: uid, nombre: ins.usuario.nombre, username: ins.usuario.username },
+        usuario: { id: uid, username: ins.usuario.username, email: ins.usuario.email },
         completado: ins.completado,
         progreso: totalLecciones > 0 ? Math.round((leccionesCompletadas / totalLecciones) * 100) : 0,
         leccionesCompletadas,

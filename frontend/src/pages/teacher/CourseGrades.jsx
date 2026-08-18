@@ -46,7 +46,7 @@ export default function CourseGrades() {
 
   const exportCsv = () => {
     if (!data) return;
-    const rows = [['Estudiante', 'Username', 'Progreso %', 'Completado', ...filtros.evaluaciones.map((e) => e.titulo), ...filtros.html.map((l) => l.titulo)]];
+    const rows = [['Usuario', 'Email', 'Progreso %', 'Completado', ...filtros.evaluaciones.map((e) => e.titulo), ...filtros.html.map((l) => l.titulo)]];
     data.estudiantes.forEach((est) => {
       const notasEval = filtros.evaluaciones.map((e) => {
         const nota = est.evaluaciones.find((n) => n.id === e.id);
@@ -56,7 +56,7 @@ export default function CourseGrades() {
         const nota = est.html.find((n) => n.leccionId === l.id);
         return nota?.mejorPuntaje ?? '';
       });
-      rows.push([est.usuario.nombre, est.usuario.username, est.progreso, est.completado ? 'Si' : 'No', ...notasEval, ...notasHtml]);
+      rows.push([est.usuario.username, est.usuario.email || '', est.progreso, est.completado ? 'Si' : 'No', ...notasEval, ...notasHtml]);
     });
     const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' });
@@ -126,7 +126,7 @@ export default function CourseGrades() {
           <table className="w-full text-sm min-w-[640px]">
             <thead>
               <tr className="border-b border-gray-100 text-left">
-                <th className="px-4 py-3 font-bold text-titi-dark">Estudiante</th>
+                <th className="px-4 py-3 font-bold text-titi-dark">Usuario</th>
                 <th className="px-4 py-3 font-bold text-titi-dark">Progreso</th>
                 <th className="px-4 py-3 font-bold text-titi-dark">Estado</th>
                 {filtros.evaluaciones.map((e) => (
@@ -146,8 +146,8 @@ export default function CourseGrades() {
               {data.estudiantes.map((est) => (
                 <tr key={est.usuario.id} className="border-b border-gray-50 hover:bg-titi-cream">
                   <td className="px-4 py-3">
-                    <p className="font-bold text-titi-dark">{est.usuario.nombre}</p>
-                    <p className="text-xs text-gray-400">@{est.usuario.username}</p>
+                    <p className="font-bold text-titi-dark">{est.usuario.username}</p>
+                    {est.usuario.email && <p className="text-xs text-gray-400">{est.usuario.email}</p>}
                   </td>
                   <td className="px-4 py-3 font-semibold text-gray-600">{est.progreso}%</td>
                   <td className="px-4 py-3">
