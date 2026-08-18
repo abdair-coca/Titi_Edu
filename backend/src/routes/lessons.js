@@ -148,7 +148,21 @@ router.get('/lessons/:id/html', requireAuth, async (req, res) => {
     const loaded = await loadHtmlLesson(req, res);
     if (!loaded) return;
     const { recursoHtml } = loaded.leccion;
-    res.json({ success: true, data: { html: recursoHtml.html, evaluable: recursoHtml.evaluable, intentosMax: recursoHtml.intentosMax } });
+    const resultado = recursoHtml.evaluable
+      ? await prisma.resultadoHtmlLeccion.findUnique({
+          where: { usuarioId_recursoHtmlId: { usuarioId: loaded.access.usuario.id, recursoHtmlId: recursoHtml.id } },
+          select: { mejorPuntaje: true },
+        })
+      : null;
+    res.json({
+      success: true,
+      data: {
+        html: recursoHtml.html,
+        evaluable: recursoHtml.evaluable,
+        intentosMax: recursoHtml.intentosMax,
+        bestScore: resultado?.mejorPuntaje ?? null,
+      },
+    });
   } catch (err) {
     console.error('GET /api/lessons/:id/html error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo contenido HTML' });

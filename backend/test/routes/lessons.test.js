@@ -35,8 +35,13 @@ describe('HTML lesson access and attempts', () => {
     allowStudent();
     const response = await request(app).get('/api/lessons/l-html/html').set('Authorization', `Bearer ${token}`);
     expect(response.status).toBe(200);
-    expect(response.body.data).toEqual({ html: htmlLesson.recursoHtml.html, evaluable: true, intentosMax: 2 });
+    expect(response.body.data).toEqual({ html: htmlLesson.recursoHtml.html, evaluable: true, intentosMax: 2, bestScore: null });
     expect(JSON.stringify(response.body)).not.toContain('url');
+
+    prisma.resultadoHtmlLeccion.findUnique.mockResolvedValue({ mejorPuntaje: 73 });
+    const scored = await request(app).get('/api/lessons/l-html/html').set('Authorization', `Bearer ${token}`);
+    expect(scored.status).toBe(200);
+    expect(scored.body.data.bestScore).toBe(73);
   });
 
   it('reserves an attempt transactionally and rejects exhausted limits', async () => {
