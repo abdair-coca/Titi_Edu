@@ -157,6 +157,7 @@ export default function MyTeaching() {
               busy={busy === curso.id}
               onEdit={() => navigate(`/teacher/courses/${curso.id}/edit`)}
               onContent={() => navigate(`/teacher/courses/${curso.id}/modules`)}
+              onGrades={() => navigate(`/teacher/courses/${curso.id}/grades`)}
               onTogglePublish={() => togglePublish(curso)}
               onDelete={() => startDelete(curso)}
             />
@@ -179,7 +180,7 @@ export default function MyTeaching() {
   );
 }
 
-function TeachingCard({ curso, busy, onEdit, onContent, onTogglePublish, onDelete }) {
+function TeachingCard({ curso, busy, onEdit, onContent, onGrades, onTogglePublish, onDelete }) {
   return (
     <article className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col overflow-hidden">
       <div className="relative h-32 bg-titi-yellow-light">
@@ -240,6 +241,15 @@ function TeachingCard({ curso, busy, onEdit, onContent, onTogglePublish, onDelet
           </button>
         </div>
         <div className="flex gap-2 text-xs">
+          <button
+            type="button"
+            onClick={onGrades}
+            disabled={busy}
+            className="text-titi-dark font-semibold hover:text-titi-yellow-dark disabled:opacity-50"
+          >
+            Notas
+          </button>
+          <span className="text-gray-300">·</span>
           <button
             type="button"
             onClick={onTogglePublish}

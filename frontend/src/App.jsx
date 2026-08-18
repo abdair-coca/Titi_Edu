@@ -26,6 +26,7 @@ import CourseDetail from './pages/CourseDetail.jsx'
 import MyCourses from './pages/MyCourses.jsx'
 import LearnCourse from './pages/LearnCourse.jsx'
 import MyTeaching from './pages/teacher/MyTeaching.jsx'
+import CourseGrades from './pages/teacher/CourseGrades.jsx'
 import CourseEditor from './pages/teacher/CourseEditor.jsx'
 import ModulesEditor from './pages/teacher/ModulesEditor.jsx'
 import EvaluationEditor from './pages/teacher/EvaluationEditor.jsx'
@@ -195,6 +196,7 @@ export default function App() {
             <Route path="/teacher/courses/:id/modules" element={<ModulesEditor />} />
             <Route path="/teacher/modules/:moduleId/evaluation" element={<EvaluationEditor mode="module" />} />
             <Route path="/teacher/courses/:id/final-evaluation" element={<EvaluationEditor mode="final" />} />
+            <Route path="/teacher/courses/:id/grades" element={<CourseGrades />} />
           </Route>
           <Route element={<AdminOnly />}>
             <Route path="/admin" element={<AdminDashboard />} />
