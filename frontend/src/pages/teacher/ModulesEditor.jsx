@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import MarkdownContent from '../../components/MarkdownContent.jsx';
 import TitiMascot from '../../components/TitiMascot.jsx';
+import DeletionConfirmationDialog from '../../components/DeletionConfirmationDialog.jsx';
 import { authoringError, authoringMutation } from '../../lib/authoring.js';
 import { resolveMediaUrl } from '../../lib/format.js';
 import { sanitizeMarkdownUrl } from '../../lib/markdown.js';
@@ -24,6 +25,7 @@ export default function ModulesEditor() {
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
   const [confirmation, setConfirmation] = useState(null);
+  const [deletionConfirm, setDeletionConfirm] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -74,8 +76,26 @@ export default function ModulesEditor() {
   }
   async function saveModule(module, fields) { await mutate('put', `/modules/${module.id}`, { ...fields, expectedFingerprint: moduleFingerprint(module.id) }, 'No se pudo guardar el módulo'); }
   async function saveLesson(module, lesson, fields) { return mutate('put', `/lessons/${lesson.id}`, { ...fields, expectedFingerprint: lessonFingerprint(module.id, lesson.id) }, 'No se pudo guardar la lección'); }
-  async function deleteModule(module) { await mutate('delete', `/modules/${module.id}`, { expectedFingerprint: moduleFingerprint(module.id) }, 'No se pudo eliminar el módulo'); }
-  async function deleteLesson(module, lesson) { const result = await mutate('delete', `/lessons/${lesson.id}`, { expectedFingerprint: lessonFingerprint(module.id, lesson.id) }, 'No se pudo eliminar la lección'); if (result) setActiveLessonId(null); }
+  async function startDeletion(kind, resource) {
+    setBusy(true); setError(null);
+    try {
+      const plural = kind === 'module' ? 'modules' : 'lessons';
+      const { data } = await authoringMutation('post', `/${plural}/${resource.id}/preview-deletion`, {});
+      if (!data?.success) throw new Error(data?.message || 'No se pudo preparar el borrado');
+      setDeletionConfirm({ kind, resource, ...data.data });
+    } catch (err) { setError(authoringError(err, 'No se pudo preparar el borrado')); }
+    finally { setBusy(false); }
+  }
+  async function finishDeletion(phrase) {
+    if (!deletionConfirm) return;
+    const { kind, resource, fingerprint, confirmationToken } = deletionConfirm;
+    const plural = kind === 'module' ? 'modules' : 'lessons';
+    const result = await mutate('delete', `/${plural}/${resource.id}`, { expectedFingerprint: fingerprint, confirmationToken, phrase }, 'No se pudo eliminar el recurso');
+    if (result) {
+      if (kind === 'lesson') setActiveLessonId(null);
+      setDeletionConfirm(null);
+    }
+  }
   async function publishLesson(module, lesson) { await mutate('post', `/lessons/${lesson.id}/publish`, { expectedFingerprint: lessonFingerprint(module.id, lesson.id) }, 'No se pudo publicar la lección'); }
   async function archiveLesson(module, lesson) { const result = await mutate('post', `/lessons/${lesson.id}/archive`, { expectedFingerprint: lessonFingerprint(module.id, lesson.id) }, 'No se pudo archivar la lección'); if (result) setConfirmation(null); }
   async function restoreLesson(module, lesson) { await mutate('post', `/lessons/${lesson.id}/restore`, { expectedFingerprint: lessonFingerprint(module.id, lesson.id) }, 'No se pudo restaurar la lección'); }
@@ -131,13 +151,14 @@ export default function ModulesEditor() {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
       <aside className="bg-white border border-gray-100 rounded-2xl p-4 flex flex-col gap-3 max-h-[80vh] overflow-y-auto">
         <button type="button" onClick={addModule} disabled={busy} className="w-full bg-titi-cream text-titi-dark font-bold text-sm px-3 py-2 rounded-xl border border-dashed border-titi-yellow hover:bg-titi-yellow-light disabled:opacity-50">+ Agregar módulo</button>
-        {modules.length === 0 ? <p className="text-sm text-gray-400 text-center py-6">Todavía no hay módulos.</p> : modules.map((module) => <ModuleNode key={module.id} module={module} activeLessonId={activeLessonId} busy={busy} onSelect={setActiveLessonId} onSave={(fields) => saveModule(module, fields)} onAddLesson={() => addContent(module, 'MARKDOWN')} onAddPresentation={() => addContent(module, 'HTML')} onDelete={() => deleteModule(module)} onDeleteLesson={(lesson) => deleteLesson(module, lesson)} onEditEvaluation={() => navigate(`/teacher/modules/${module.id}/evaluation`)} onPublish={() => startPublish('module', module)} onUnpublish={() => startUnpublish(module)} />)}
+        {modules.length === 0 ? <p className="text-sm text-gray-400 text-center py-6">Todavía no hay módulos.</p> : modules.map((module) => <ModuleNode key={module.id} module={module} activeLessonId={activeLessonId} busy={busy} onSelect={setActiveLessonId} onSave={(fields) => saveModule(module, fields)} onAddLesson={() => addContent(module, 'MARKDOWN')} onAddPresentation={() => addContent(module, 'HTML')} onDelete={() => startDeletion('module', module)} onDeleteLesson={(lesson) => startDeletion('lesson', lesson)} onEditEvaluation={() => navigate(`/teacher/modules/${module.id}/evaluation`)} onPublish={() => startPublish('module', module)} onUnpublish={() => startUnpublish(module)} />)}
       </aside>
       <section className="lg:col-span-2 bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 min-h-[60vh]">
         {!activeLesson ? <EmptyState /> : <LessonEditor key={activeLesson.id} lesson={activeLesson} readOnly={activeLesson.estado === 'ARCHIVADA'} busy={busy} onSave={(fields) => saveLesson(activeModule, activeLesson, fields)} onUpload={(file, name) => uploadMaterial(activeModule, activeLesson, file, name)} onUploadHtml={(file, evaluable, intentosMax) => uploadHtml(activeModule, activeLesson, file, evaluable, intentosMax)} onDeleteMaterial={(material) => deleteMaterial(activeModule, material)} onPublish={() => publishLesson(activeModule, activeLesson)} onArchive={() => setConfirmation({ action: 'archive', module: activeModule, lesson: activeLesson })} onRestore={() => restoreLesson(activeModule, activeLesson)} onRestoreRevision={(revision) => restoreRevision(activeModule, activeLesson, revision)} />}
       </section>
     </div>
     <ConfirmationDialog value={confirmation} busy={busy} onClose={() => setConfirmation(null)} onConfirm={finishConfirmation} onArchive={() => archiveLesson(confirmation.module, confirmation.lesson)} />
+    <DeletionConfirmationDialog value={deletionConfirm} busy={busy} onCancel={() => setDeletionConfirm(null)} onConfirm={finishDeletion} />
   </div>;
 }
 
@@ -151,9 +172,9 @@ function ModuleNode({ module, activeLessonId, busy, onSelect, onSave, onAddLesso
   return <div className="border border-gray-100 rounded-xl bg-titi-cream/40 p-3">
     <div className="flex gap-2 items-center"><input value={title} disabled={locked} onChange={(event) => setTitle(event.target.value)} onBlur={saveTitle} className="min-w-0 flex-1 bg-transparent text-sm font-bold text-titi-dark disabled:opacity-80" /><span className={`text-[11px] font-bold px-2 py-1 rounded-full ${locked ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-gray-100 text-gray-600 border border-gray-200'}`}>{module.estado}</span></div>
     <div className="flex flex-wrap gap-1 mt-2">{LESSON_FILTERS.map(([value, label]) => <button key={value} type="button" onClick={() => setFilter(value)} className={`text-[10px] px-2 py-1 rounded-full font-bold ${filter === value ? 'bg-titi-yellow text-titi-dark' : 'bg-white text-gray-600 border border-gray-200'}`}>{label}</button>)}</div>
-    <ol className="mt-2 space-y-1">{lessons.map((lesson) => <li key={lesson.id} className="flex items-center gap-1"><button type="button" onClick={() => onSelect(lesson.id)} className={`flex-1 min-w-0 text-left text-sm px-2 py-1.5 rounded-lg truncate ${activeLessonId === lesson.id ? 'bg-titi-yellow text-titi-dark font-bold' : 'text-titi-dark hover:bg-titi-yellow-light'}`}>{lesson.orden}. {lesson.titulo}<span className="ml-1 text-[10px] opacity-70">{lesson.estado || 'BORRADOR'} · v{lesson.version || 1}</span></button>{lesson.estado === 'BORRADOR' && <button type="button" onClick={() => onDeleteLesson(lesson)} disabled={busy} className="text-red-500 text-xs font-bold px-1" aria-label="Eliminar lección">×</button>}</li>)}</ol>
+    <ol className="mt-2 space-y-1">{lessons.map((lesson) => <li key={lesson.id} className="flex items-center gap-1"><button type="button" onClick={() => onSelect(lesson.id)} className={`flex-1 min-w-0 text-left text-sm px-2 py-1.5 rounded-lg truncate ${activeLessonId === lesson.id ? 'bg-titi-yellow text-titi-dark font-bold' : 'text-titi-dark hover:bg-titi-yellow-light'}`}>{lesson.orden}. {lesson.titulo}<span className="ml-1 text-[10px] opacity-70">{lesson.estado || 'BORRADOR'} · v{lesson.version || 1}</span></button><button type="button" onClick={() => onDeleteLesson(lesson)} disabled={busy} className="text-red-500 text-xs font-bold px-1" aria-label="Eliminar lección">×</button></li>)}</ol>
     {!lessons.length && <p className="text-xs text-gray-400 py-2">Sin lecciones en este estado.</p>}
-    <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={onAddLesson} disabled={busy} className="text-xs font-bold text-titi-dark bg-white border border-dashed border-titi-yellow rounded-lg px-2 py-1.5">+ Lección</button><button type="button" onClick={onAddPresentation} disabled={busy} className="text-xs font-bold text-titi-dark bg-white border border-dashed border-titi-yellow rounded-lg px-2 py-1.5">+ Presentación</button>{!locked && <><button type="button" onClick={onEditEvaluation} className="text-xs font-bold text-titi-dark bg-white border border-gray-200 rounded-lg px-2 py-1.5">Evaluación</button><button type="button" onClick={onPublish} disabled={busy} className="text-xs font-bold text-green-700 bg-green-50 border border-green-200 rounded-lg px-2 py-1.5">Publicar módulo</button><button type="button" onClick={onDelete} disabled={busy} className="text-xs font-bold text-red-500 px-1">Eliminar</button></>}{locked && <button type="button" onClick={onEditEvaluation} className="text-xs font-bold text-titi-dark bg-white border border-gray-200 rounded-lg px-2 py-1.5">Ver evaluación</button>}</div>
+    <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={onAddLesson} disabled={busy} className="text-xs font-bold text-titi-dark bg-white border border-dashed border-titi-yellow rounded-lg px-2 py-1.5">+ Lección</button><button type="button" onClick={onAddPresentation} disabled={busy} className="text-xs font-bold text-titi-dark bg-white border border-dashed border-titi-yellow rounded-lg px-2 py-1.5">+ Presentación</button>{!locked && <><button type="button" onClick={onEditEvaluation} className="text-xs font-bold text-titi-dark bg-white border border-gray-200 rounded-lg px-2 py-1.5">Evaluación</button><button type="button" onClick={onPublish} disabled={busy} className="text-xs font-bold text-green-700 bg-green-50 border border-green-200 rounded-lg px-2 py-1.5">Publicar módulo</button></>}{locked && <button type="button" onClick={onEditEvaluation} className="text-xs font-bold text-titi-dark bg-white border border-gray-200 rounded-lg px-2 py-1.5">Ver evaluación</button>}<button type="button" onClick={onDelete} disabled={busy} className="text-xs font-bold text-red-500 px-1">Eliminar</button></div>
   </div>;
 }
 

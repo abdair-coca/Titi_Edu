@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import client from '../../api/client.js';
 import { useAuth } from '../../context/AuthContext.jsx';
 import { useStaggerReveal } from '../../lib/motion.js';
-import ConfirmModal from '../../components/ConfirmModal.jsx';
+import DeletionConfirmationDialog from '../../components/DeletionConfirmationDialog.jsx';
 import { authoringError, authoringMutation } from '../../lib/authoring.js';
 import { sanitizeMarkdownUrl } from '../../lib/markdown.js';
 
@@ -15,7 +15,7 @@ export default function MyTeaching() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null); // id del curso ocupado
-  const [confirm, setConfirm] = useState(null); // { type: 'delete', curso }
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [publishConfirm, setPublishConfirm] = useState(null);
 
   const gridRef = useStaggerReveal([cursos.length]);
@@ -71,24 +71,39 @@ export default function MyTeaching() {
     finally { setBusy(null); }
   }
 
-  async function handleDelete(curso) {
+  async function startDelete(curso) {
     setBusy(curso.id);
     try {
-      const snapshot = await client.get(`/api/authoring/courses/${curso.id}`);
-      if (!snapshot.data?.success) throw new Error(snapshot.data?.message || 'No se pudo validar el curso');
+      const { data } = await authoringMutation('post', `/courses/${curso.id}/preview-deletion`, {});
+      if (!data?.success) throw new Error(data?.message || 'No se pudo preparar el borrado');
+      setDeleteConfirm({ kind: 'course', curso, ...data.data });
+    } catch (err) {
+      setError(authoringError(err, 'No se pudo preparar el borrado del curso'));
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleDelete(phrase) {
+    if (!deleteConfirm) return;
+    const { curso, fingerprint, confirmationToken } = deleteConfirm;
+    setBusy(curso.id);
+    try {
       const { data } = await authoringMutation('delete', `/courses/${curso.id}`, {
-        expectedFingerprint: snapshot.data.data.fingerprint,
+        expectedFingerprint: fingerprint,
+        confirmationToken,
+        phrase,
       });
       if (data?.success) {
         setCursos((prev) => prev.filter((c) => c.id !== curso.id));
+        setDeleteConfirm(null);
       } else {
-        alert(data?.message || 'No se pudo borrar el curso');
+        throw new Error(data?.message || 'No se pudo borrar el curso');
       }
     } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Error');
+      setError(authoringError(err, 'No se pudo borrar el curso'));
     } finally {
       setBusy(null);
-      setConfirm(null);
     }
   }
 
@@ -143,23 +158,18 @@ export default function MyTeaching() {
               onEdit={() => navigate(`/teacher/courses/${curso.id}/edit`)}
               onContent={() => navigate(`/teacher/courses/${curso.id}/modules`)}
               onTogglePublish={() => togglePublish(curso)}
-              onDelete={() => setConfirm({ type: 'delete', curso })}
+              onDelete={() => startDelete(curso)}
             />
           ))}
         </div>
       )}
 
-      <ConfirmModal
-        open={Boolean(confirm)}
-        title={confirm ? `¿Eliminar "${confirm.curso.titulo}"?` : ''}
-        message="Esta acción no se puede deshacer. Si el curso tiene estudiantes inscritos, no podrá eliminarse."
-        confirmText="Eliminar curso"
-        cancelText="Cancelar"
-        danger
-        onConfirm={() => confirm && handleDelete(confirm.curso)}
-        onCancel={() => setConfirm(null)}
-      />
-      <SignedConfirmation
+      <DeletionConfirmationDialog
+        value={deleteConfirm}
+        busy={Boolean(busy)}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteConfirm(null)}
+      />      <SignedConfirmation
         value={publishConfirm}
         busy={Boolean(busy)}
         onCancel={() => setPublishConfirm(null)}

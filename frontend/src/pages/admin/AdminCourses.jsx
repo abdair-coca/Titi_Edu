@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import client from '../../api/client.js';
-import ConfirmModal from '../../components/ConfirmModal.jsx';
+import DeletionConfirmationDialog from '../../components/DeletionConfirmationDialog.jsx';
 import { useStaggerReveal } from '../../lib/motion.js';
+import { authoringHeaders } from '../../lib/authoring.js';
 
 const FILTROS = [
   { value: 'all', label: 'Todos' },
@@ -15,7 +16,7 @@ export default function AdminCourses() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(null);
-  const [confirm, setConfirm] = useState(null); // curso a borrar
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
   const listRef = useStaggerReveal([cursos.length]);
 
@@ -50,17 +51,36 @@ export default function AdminCourses() {
     }
   }
 
-  async function remove(curso) {
+  async function startDelete(curso) {
     setBusy(curso.id);
     try {
-      const { data } = await client.delete(`/api/admin/courses/${curso.id}`);
-      if (data?.success) setCursos((prev) => prev.filter((c) => c.id !== curso.id));
-      else alert(data?.message || 'No se pudo borrar');
+      const { data } = await client.post(`/api/admin/courses/${curso.id}/preview-deletion`);
+      if (!data?.success) throw new Error(data?.message || 'No se pudo preparar el borrado');
+      setDeleteConfirm({ kind: 'course', curso, ...data.data });
     } catch (err) {
-      alert(err.response?.data?.message || err.message || 'Error');
+      setError(err.response?.data?.message || err.message || 'No se pudo preparar el borrado');
     } finally {
       setBusy(null);
-      setConfirm(null);
+    }
+  }
+
+  async function remove(phrase) {
+    if (!deleteConfirm) return;
+    const { curso, fingerprint, confirmationToken } = deleteConfirm;
+    setBusy(curso.id);
+    try {
+      const { data } = await client.delete(`/api/admin/courses/${curso.id}`, {
+        data: { expectedFingerprint: fingerprint, confirmationToken, phrase },
+        headers: authoringHeaders(),
+      });
+      if (data?.success) {
+        setCursos((prev) => prev.filter((c) => c.id !== curso.id));
+        setDeleteConfirm(null);
+      } else throw new Error(data?.message || 'No se pudo borrar');
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'No se pudo borrar');
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -140,7 +160,7 @@ export default function AdminCourses() {
                 )}
                 <button
                   type="button"
-                  onClick={() => setConfirm(curso)}
+                  onClick={() => startDelete(curso)}
                   disabled={busy === curso.id}
                   className="text-red-500 font-semibold text-xs hover:underline disabled:opacity-50"
                 >
@@ -152,15 +172,11 @@ export default function AdminCourses() {
         </div>
       )}
 
-      <ConfirmModal
-        open={Boolean(confirm)}
-        title={confirm ? `¿Eliminar "${confirm.titulo}"?` : ''}
-        message="Borrado forzado de admin: elimina el curso aunque tenga inscritos, junto con sus módulos, lecciones, progresos, inscripciones y certificados. Esta acción no se puede deshacer."
-        confirmText="Eliminar curso"
-        cancelText="Cancelar"
-        danger
-        onConfirm={() => confirm && remove(confirm)}
-        onCancel={() => setConfirm(null)}
+      <DeletionConfirmationDialog
+        value={deleteConfirm}
+        busy={Boolean(busy)}
+        onConfirm={remove}
+        onCancel={() => setDeleteConfirm(null)}
       />
     </div>
   );
