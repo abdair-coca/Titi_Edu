@@ -1,8 +1,7 @@
 [mcp_servers.titi_authoring]
-command = "node"
-args = ["tools/titi-authoring-mcp/src/index.js"]
-cwd = "."
-env_vars = ["TITI_SERVICE_TOKEN"]
+command = "powershell.exe"
+args = ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", "start-windows.ps1"]
+cwd = "C:/Users/abdai/Desktop/base de datos/SocialNeo/tools/titi-authoring-mcp"
 required = true
 startup_timeout_sec = 15
 tool_timeout_sec = 60
