@@ -41,6 +41,11 @@ export async function executeIdempotent(req, res, {
   const requestHash = requestFingerprint(req, fingerprintExtra);
   if (await resolveExisting(req, res, requestHash)) return;
 
+  // Las operaciones de autoría incluyen snapshot de revisión + lógica, y la
+  // transacción default de Prisma (5000ms) se queda corta con contenidos
+  // grandes (HTML). Elevamos el default para evitar P2028 "transaction closed".
+  const txOptions = transactionOptions ?? { timeout: 20_000, maxWait: 10_000 };
+
   try {
     const result = await prisma.$transaction(async (tx) => {
       const operation = await tx.operacionAutoria.create({
@@ -66,7 +71,7 @@ export async function executeIdempotent(req, res, {
         data: { estado: 'COMPLETADA', httpStatus: outcome.status || 200, response: jsonValue(persistedBody) },
       });
       return { status: outcome.status || 200, body };
-    }, transactionOptions);
+    }, txOptions);
     return res.status(result.status).json(result.body);
   } catch (err) {
     if (err?.code === 'P2002' && await resolveExisting(req, res, requestHash)) return;
