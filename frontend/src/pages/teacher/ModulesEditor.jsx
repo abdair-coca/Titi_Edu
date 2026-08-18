@@ -69,7 +69,7 @@ export default function ModulesEditor() {
     const orden = (module.lecciones?.at(-1)?.orden ?? 0) + 1;
     const isPresentation = formatoContenido === 'HTML';
     const data = await mutate('post', `/modules/${module.id}/lessons`, {
-      titulo: `${isPresentation ? 'Nueva presentación' : 'Nueva lección'} ${order}`,
+      titulo: `${isPresentation ? 'Nueva presentación' : 'Nueva lección'} ${orden}`,
       contenido: '', orden, formatoContenido, expectedFingerprint: moduleFingerprint(module.id),
     }, isPresentation ? 'No se pudo crear la presentación' : 'No se pudo crear la lección');
     if (data?.lesson?.id) setActiveLessonId(data.lesson.id);
