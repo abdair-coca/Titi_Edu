@@ -4,3 +4,6 @@ frontend/public/GifTiti/
 
 # Agent-local generated registry
 .atl/
+
+# Playwright MCP snapshots
+.playwright-mcp/
