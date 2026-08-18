@@ -1044,7 +1044,7 @@ router.post('/service-tokens/:id/revoke', requireAuthoringPrincipal(), requireAu
 }));
 
 router.post('/lessons/:id/html', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
-  await executeIdempotent(req, res, { accion: 'lesson.html.upsert' }, async (tx) => {
+  await executeIdempotent(req, res, { accion: 'lesson.html.upsert', transactionOptions: { timeout: 20_000, maxWait: 10_000 } }, async (tx) => {
     const lesson = await tx.leccion.findUnique({
       where: { id: req.params.id },
       include: { recursoHtml: true, modulo: { include: { curso: true } } },
