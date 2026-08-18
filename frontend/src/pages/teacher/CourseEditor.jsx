@@ -5,7 +5,7 @@ import { authoringError, authoringMutation } from '../../lib/authoring.js';
 import client from '../../api/client.js';
 
 const NIVELES = ['principiante', 'intermedio', 'avanzado'];
-const EMPTY_FORM = { titulo: '', descripcion: '', nivel: 'principiante', categoriaId: '', portadaUrl: '', emiteCertificado: true };
+const EMPTY_FORM = { titulo: '', descripcion: '', nivel: 'principiante', categoriaId: '', portadaUrl: '', portadaPublicId: '', emiteCertificado: true };
 
 export default function CourseEditor() {
   const { id } = useParams();
@@ -17,6 +17,7 @@ export default function CourseEditor() {
   const [published, setPublished] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
 
@@ -43,7 +44,7 @@ export default function CourseEditor() {
       const course = data.data.course;
       setForm({
         titulo: course.titulo || '', descripcion: course.descripcion || '', nivel: course.nivel || 'principiante',
-        categoriaId: course.categoriaId || '', portadaUrl: course.portadaUrl || '', emiteCertificado: Boolean(course.emiteCertificado),
+        categoriaId: course.categoriaId || '', portadaUrl: course.portadaUrl || '', portadaPublicId: course.portadaPublicId || '', emiteCertificado: Boolean(course.emiteCertificado),
       });
       setFingerprint(data.data.fingerprint);
       setPublished(Boolean(course.publicado));
@@ -54,9 +55,23 @@ export default function CourseEditor() {
   useEffect(() => { loadCourse(); }, [loadCourse]);
   const onChange = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }));
 
+  async function handlePortadaUpload(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploading(true); setError(null);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const { data } = await client.post('/api/authoring/uploads/portada', formData);
+      if (!data?.success) throw new Error(data?.message || 'No se pudo subir la imagen');
+      setForm((current) => ({ ...current, portadaUrl: data.data.url, portadaPublicId: data.data.publicId || '' }));
+    } catch (err) { setError(authoringError(err, 'No se pudo subir la imagen')); }
+    finally { setUploading(false); }
+  }
+
   async function handleSubmit(event, { gotoContent = false } = {}) {
     event?.preventDefault?.();
-    const payload = { ...form, titulo: form.titulo.trim(), descripcion: form.descripcion.trim(), portadaUrl: form.portadaUrl.trim() || null };
+    const payload = { ...form, titulo: form.titulo.trim(), descripcion: form.descripcion.trim(), portadaUrl: form.portadaUrl.trim() || null, portadaPublicId: form.portadaPublicId?.trim() || null };
     if (!payload.titulo || !payload.descripcion || !payload.categoriaId) { setError('Título, descripción y categoría son obligatorios'); return; }
     setSaving(true); setError(null); setSuccess(null);
     try {
@@ -91,7 +106,16 @@ export default function CourseEditor() {
           <Field label="Nivel" required><select value={form.nivel} onChange={onChange('nivel')} disabled={published} className="titi-input capitalize disabled:opacity-60">{NIVELES.map((nivel) => <option key={nivel} value={nivel}>{nivel}</option>)}</select></Field>
           <Field label="Categoría" required><select value={form.categoriaId} onChange={onChange('categoriaId')} disabled={published} className="titi-input disabled:opacity-60" required><option value="" disabled>Elegí una categoría</option>{categorias.map((category) => <option key={category.id} value={category.id}>{category.icono} {category.nombre}</option>)}</select></Field>
         </div>
-        <Field label="URL de portada (opcional)"><input type="url" value={form.portadaUrl} onChange={onChange('portadaUrl')} disabled={published} placeholder="https://…" className="titi-input disabled:opacity-60" /></Field>
+        <Field label="Portada del curso (opcional)">
+          {form.portadaUrl && <img src={form.portadaUrl} alt="Portada del curso" className="h-28 w-full object-cover rounded-xl border border-gray-100" />}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <label className={`inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:border-titi-yellow hover:text-titi-dark cursor-pointer ${uploading ? 'opacity-60 pointer-events-none' : ''}`}>
+              <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={published} onChange={handlePortadaUpload} />
+              {uploading ? 'Subiendo…' : 'Subir imagen'}
+            </label>
+            <input type="url" value={form.portadaUrl} onChange={onChange('portadaUrl')} disabled={published || uploading} placeholder="https://… o subí una imagen" className="titi-input disabled:opacity-60" />
+          </div>
+        </Field>
         <label className="flex items-start gap-3 rounded-xl bg-titi-cream border border-gray-100 p-4 cursor-pointer"><input type="checkbox" checked={form.emiteCertificado} onChange={(event) => setForm((current) => ({ ...current, emiteCertificado: event.target.checked }))} disabled={published} className="mt-1 h-4 w-4 accent-titi-yellow" /><span><span className="block text-sm font-bold text-titi-dark">Emitir certificado al completar</span><span className="block text-xs text-gray-500 mt-1">El curso otorgará certificado cuando el estudiante cumpla requisitos.</span></span></label>
         {error && <div className="bg-red-50 border border-red-200 rounded-xl p-3"><p className="text-sm font-semibold text-red-700">{error}</p></div>}
         {success && <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2"><CheckIcon className="w-4 h-4 text-green-700" /><p className="text-sm font-semibold text-green-700">{success}</p></div>}

@@ -726,6 +726,29 @@ router.delete('/evaluations/:id', requireAuthoringPrincipal('content:write'), ha
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
+router.post('/uploads/portada', requireAuthoringPrincipal('content:write'), upload.single('file'), handle(async (req, res) => {
+  if (!req.file) throw new AuthoringError(400, 'Imagen requerida (campo "file")');
+  const inspection = inspectAuthoringFile(req.file);
+  if (!inspection.ok) throw new AuthoringError(400, inspection.message);
+  if (inspection.resourceType !== 'image') {
+    throw new AuthoringError(400, 'La portada debe ser una imagen (PNG, JPG o WebP)');
+  }
+  const productionUpload = process.env.NODE_ENV === 'production';
+  if (productionUpload && !cloudinaryEnabled) {
+    throw new AuthoringError(503, 'Cloudinary no está configurado para uploads de autoría');
+  }
+  const publicId = `portada-${fingerprint({ actor: req.authoringPrincipal.actorKey, sha256: inspection.sha256 }).slice(0, 32)}`;
+  let stored;
+  if (productionUpload || cloudinaryEnabled) {
+    stored = await uploadBuffer(req.file.buffer, 'titi/portadas', 'image', { public_id: publicId, overwrite: true });
+  } else {
+    const filename = `portada-${inspection.sha256.slice(0, 24)}${inspection.extension}`;
+    await fs.promises.writeFile(path.join(materialsDir, filename), req.file.buffer);
+    stored = { url: `/uploads/materials/${filename}`, publicId: null };
+  }
+  res.status(201).json({ success: true, data: { url: stored.url, publicId: stored.publicId } });
+}));
+
 router.post('/lessons/:lessonId/materials', requireAuthoringPrincipal('material:write'), upload.single('file'), handle(async (req, res) => {
   if (!req.file) throw new AuthoringError(400, 'Archivo requerido (campo "file")');
   const inspection = inspectAuthoringFile(req.file);
