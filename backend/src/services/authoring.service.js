@@ -290,17 +290,22 @@ function isSafeAnchorHref(value) {
 }
 
 function hasOnlySafeHtmlReferences(html) {
-  for (const match of html.matchAll(HTML_RESOURCE_ATTRIBUTES)) {
+  // Solo validamos referencias en markup HTML y CSS. El contenido de <script>
+  // es código JS (puede contener "src=", "href=", "url(" en strings) y NO debe
+  // interpretarse como recurso embebido. Se extrae antes de validar.
+  const codeStripped = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+
+  for (const match of codeStripped.matchAll(HTML_RESOURCE_ATTRIBUTES)) {
     if (!attributeValue(match).toLowerCase().startsWith('data:')) return false;
   }
-  for (const tag of html.matchAll(HTML_TAG)) {
+  for (const tag of codeStripped.matchAll(HTML_TAG)) {
     const tagName = tag[1].toLowerCase();
     for (const href of tag[0].matchAll(HTML_HREF_ATTRIBUTE)) {
       const value = attributeValue(href);
       if (tagName === 'a' ? !isSafeAnchorHref(value) : value && !value.startsWith('#')) return false;
     }
   }
-  for (const match of html.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi)) {
+  for (const match of codeStripped.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gi)) {
     const value = match[2].trim();
     if (!value.toLowerCase().startsWith('data:') && !value.startsWith('#')) return false;
   }

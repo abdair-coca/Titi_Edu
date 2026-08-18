@@ -147,6 +147,22 @@ describe('HTML lesson resource validation', () => {
     expect(withRefresh).toMatchObject({ ok: false });
   });
 
+  it('ignores src/href/url tokens inside script code but validates CSS url()', () => {
+    const html = '<html><body><script>const src = "x".trim(); if (a == b) {} const u = "url(foo)";</script><img src="data:image/png;base64,AA=="></body></html>';
+    const resource = validateHtmlLessonResource({ html });
+    expect(resource).toMatchObject({ ok: true });
+
+    const withRealExternal = validateHtmlLessonResource({
+      html: '<html><body><script>const x=1</script><img src="https://evil.example/x.png"></body></html>',
+    });
+    expect(withRealExternal).toMatchObject({ ok: false });
+
+    const cssExternal = validateHtmlLessonResource({
+      html: '<html><body><style>.a{background:url(https://evil.example/x)}</style></body></html>',
+    });
+    expect(cssExternal).toMatchObject({ ok: false });
+  });
+
   it('rejects external resources and unsafe anchor protocols', () => {
     for (const html of [
       '<html><body><img src="https://example.com/x.png"></body></html>',
