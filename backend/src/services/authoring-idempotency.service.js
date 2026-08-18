@@ -32,6 +32,7 @@ export async function executeIdempotent(req, res, {
   cursoId = null,
   contexto = null,
   fingerprintExtra = {},
+  transactionOptions = undefined,
 }, mutation) {
   const idempotencyKey = req.get('Idempotency-Key');
   if (!idempotencyKey || idempotencyKey.length > 200) {
@@ -65,7 +66,7 @@ export async function executeIdempotent(req, res, {
         data: { estado: 'COMPLETADA', httpStatus: outcome.status || 200, response: jsonValue(persistedBody) },
       });
       return { status: outcome.status || 200, body };
-    });
+    }, transactionOptions);
     return res.status(result.status).json(result.body);
   } catch (err) {
     if (err?.code === 'P2002' && await resolveExisting(req, res, requestHash)) return;

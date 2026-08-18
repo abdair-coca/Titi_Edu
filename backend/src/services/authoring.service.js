@@ -120,8 +120,10 @@ export function createPublicationConfirmation({ resourceType, resourceId, expect
   const secret = confirmationSecret();
   if (!secret) return null;
   const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
-  const verb = action === 'unpublish' ? 'DESPUBLICAR' : 'PUBLICAR';
-  const phrase = `${verb} ${resourceType === 'course' ? 'CURSO' : 'MODULO'} ${resourceId}`;
+  const verb = action === 'delete' ? 'ELIMINAR' : action === 'unpublish' ? 'DESPUBLICAR' : 'PUBLICAR';
+  const label = { course: 'CURSO', module: 'MODULO', lesson: 'LECCION' }[resourceType];
+  if (!label) throw new Error('resourceType de confirmación no soportado');
+  const phrase = `${verb} ${label} ${resourceId}`;
   const payload = Buffer.from(canonicalJson({ action, resourceType, resourceId, expectedFingerprint, phrase, expiresAt }))
     .toString('base64url');
   const signature = createHmac('sha256', secret).update(payload).digest('base64url');
