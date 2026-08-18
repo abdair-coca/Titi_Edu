@@ -134,6 +134,19 @@ describe('HTML lesson resource validation', () => {
     expect(resource).toMatchObject({ ok: true });
   });
 
+  it('allows a self-authored CSP meta but rejects other http-equiv metas', () => {
+    const withCsp = validateHtmlLessonResource({
+      html: '<html><head><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; script-src \'unsafe-inline\'"></head><body>ok</body></html>',
+    });
+    expect(withCsp).toMatchObject({ ok: true });
+    expect(withCsp.data.html).toContain("default-src 'none'");
+
+    const withRefresh = validateHtmlLessonResource({
+      html: '<html><head><meta http-equiv="refresh" content="0;url=https://evil.example"></head><body>no</body></html>',
+    });
+    expect(withRefresh).toMatchObject({ ok: false });
+  });
+
   it('rejects external resources and unsafe anchor protocols', () => {
     for (const html of [
       '<html><body><img src="https://example.com/x.png"></body></html>',

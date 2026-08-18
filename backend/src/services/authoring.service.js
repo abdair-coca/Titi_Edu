@@ -321,7 +321,12 @@ export function validateHtmlLessonResource({ html, evaluable = false, intentosMa
   if (/<(?:iframe|frame|object|embed|base|link|form)\b/i.test(html)) {
     return { ok: false, message: 'El HTML no permite recursos embebidos ni formularios externos' };
   }
-  if (/<meta\b[^>]*http-equiv\s*=/i.test(html) || /\bsrcset\s*=/i.test(html)) {
+  // Se tolera el meta CSP propio de Titi (se re-inyecta igual), pero no otros
+  // metadatos activos (refresh/redirect) ni srcset con recursos remotos.
+  if (/<meta\b[^>]*http-equiv\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/i.test(html) && !/<meta\b[^>]*http-equiv\s*=\s*["']?content-security-policy["']?/i.test(html)) {
+    return { ok: false, message: 'El HTML no permite metadatos activos ni srcset' };
+  }
+  if (/\bsrcset\s*=/i.test(html)) {
     return { ok: false, message: 'El HTML no permite metadatos activos ni srcset' };
   }
   if (/\b(?:javascript|vbscript)\s*:/i.test(html) || /@import\b/i.test(html) || !hasOnlySafeHtmlReferences(html)) {
