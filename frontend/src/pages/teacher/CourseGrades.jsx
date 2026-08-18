@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import client from '../../api/client.js';
 
 export default function CourseGrades() {
-  const { courseId } = useParams();
+  const { id: courseId } = useParams();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
