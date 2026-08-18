@@ -63,11 +63,14 @@ export const updateModuleSchema = z.object({
   { message: 'At least one editable module field is required' },
 );
 
+const lessonFormat = z.enum(['MARKDOWN', 'HTML']);
+
 export const createLessonSchema = z.object({
   moduleId: id,
   expectedFingerprint: fingerprint,
   titulo: title,
   contenido: z.string().max(500_000),
+  formatoContenido: lessonFormat.optional(),
   videoUrl: videoUrl.optional(),
   orden: order,
   idempotencyKey,
@@ -78,12 +81,25 @@ export const updateLessonSchema = z.object({
   expectedFingerprint: fingerprint,
   titulo: title.optional(),
   contenido: z.string().max(500_000).optional(),
+  formatoContenido: lessonFormat.optional(),
   videoUrl: videoUrl.optional(),
   orden: order.optional(),
   idempotencyKey,
 }).strict().refine(
-  (value) => ['titulo', 'contenido', 'videoUrl', 'orden'].some((key) => key in value),
+  (value) => ['titulo', 'contenido', 'formatoContenido', 'videoUrl', 'orden'].some((key) => key in value),
   { message: 'At least one editable lesson field is required' },
+);
+
+export const upsertLessonHtmlSchema = z.object({
+  lessonId: id,
+  expectedFingerprint: fingerprint,
+  html: z.string().trim().min(1).max(1_000_000),
+  evaluable: z.boolean().optional(),
+  intentosMax: z.number().int().min(1).max(10).optional(),
+  idempotencyKey,
+}).strict().refine(
+  (value) => value.evaluable ? value.intentosMax !== undefined : value.intentosMax === undefined,
+  { message: 'intentosMax is required for evaluable HTML and only allowed when evaluable is true' },
 );
 
 const quizOptionSchema = z.object({
@@ -152,6 +168,7 @@ export const schemaRegistry = Object.freeze({
   updateModuleSchema,
   createLessonSchema,
   updateLessonSchema,
+  upsertLessonHtmlSchema,
   upsertQuizSchema,
   attachMaterialSchema,
   deleteResourceSchema,

@@ -17,6 +17,7 @@ import {
   updateCourseSchema,
   updateLessonSchema,
   updateModuleSchema,
+  upsertLessonHtmlSchema,
   upsertQuizSchema,
 } from './schemas.js';
 
@@ -140,14 +141,19 @@ export function createToolDefinitions(client = createHttpClient()) {
         method: 'PUT', path: `/api/authoring/modules/${encoded(args.moduleId)}`,
         body: without(args, ['moduleId', 'idempotencyKey']),
       }))),
-    tool('create_lesson_draft', 'Create a Markdown lesson in a draft module.', createLessonSchema, DRAFT_WRITE_ANNOTATIONS,
+    tool('create_lesson_draft', 'Create a lesson in a draft module. Defaults to Markdown; use formatoContenido HTML for presentations.', createLessonSchema, DRAFT_WRITE_ANNOTATIONS,
       (args) => write(client, args, async () => ({
         method: 'POST', path: `/api/authoring/modules/${encoded(args.moduleId)}/lessons`,
-        body: without(args, ['moduleId', 'idempotencyKey']),
+        body: { ...without(args, ['moduleId', 'idempotencyKey']), formatoContenido: args.formatoContenido ?? 'MARKDOWN' },
       }))),
     tool('update_lesson_draft', 'Update a lesson in a draft module using its latest fingerprint.', updateLessonSchema, DRAFT_WRITE_ANNOTATIONS,
       (args) => write(client, args, async () => ({
         method: 'PUT', path: `/api/authoring/lessons/${encoded(args.lessonId)}`,
+        body: without(args, ['lessonId', 'idempotencyKey']),
+      }))),
+    tool('upsert_lesson_html', 'Create or replace an HTML presentation resource for an HTML lesson using its latest fingerprint. Evaluable HTML reports a score to Titi.', upsertLessonHtmlSchema, DRAFT_WRITE_ANNOTATIONS,
+      (args) => write(client, args, async () => ({
+        method: 'POST', path: `/api/authoring/lessons/${encoded(args.lessonId)}/html`,
         body: without(args, ['lessonId', 'idempotencyKey']),
       }))),
     tool('upsert_quiz_draft', 'Create or replace a module quiz while the module is a draft.', upsertQuizSchema, DRAFT_WRITE_ANNOTATIONS,

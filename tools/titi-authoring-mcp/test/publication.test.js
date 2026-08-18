@@ -55,3 +55,14 @@ test('active URL schemas require HTTPS, safe media, and allowlisted video hosts'
   assert.equal(lesson.safeParse({ ...baseLesson, videoUrl: 'https://evil.example/embed/1' }).success, false);
   assert.equal(lesson.safeParse({ ...baseLesson, videoUrl: 'https://www.youtube.com/watch?v=abc' }).success, true);
 });
+
+test('upsert_lesson_html requires intentosMax when evaluable and rejects it otherwise', () => {
+  const definitions = createToolDefinitions({ request: async () => ({ data: {} }) });
+  const html = definitions.find((entry) => entry.name === 'upsert_lesson_html').inputSchema;
+  const base = { lessonId: 'lesson-1', expectedFingerprint: fingerprint, html: '<html><body>Hola</body></html>' };
+  assert.equal(html.safeParse(base).success, true);
+  assert.equal(html.safeParse({ ...base, evaluable: true }).success, false);
+  assert.equal(html.safeParse({ ...base, evaluable: true, intentosMax: 3 }).success, true);
+  assert.equal(html.safeParse({ ...base, evaluable: true, intentosMax: 11 }).success, false);
+  assert.equal(html.safeParse({ ...base, evaluable: false, intentosMax: 3 }).success, false);
+});

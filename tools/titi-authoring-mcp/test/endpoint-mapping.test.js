@@ -32,6 +32,7 @@ test('every non-multipart tool maps to the real /api/authoring endpoint', async 
     ['update_module_draft', { moduleId: 'module-1', expectedFingerprint: fingerprint, titulo: 'Changed' }, 'PUT', '/api/authoring/modules/module-1'],
     ['create_lesson_draft', { moduleId: 'module-1', expectedFingerprint: fingerprint, titulo: 'Lesson', contenido: 'Body', orden: 1 }, 'POST', '/api/authoring/modules/module-1/lessons'],
     ['update_lesson_draft', { lessonId: 'lesson-1', expectedFingerprint: fingerprint, contenido: 'Changed' }, 'PUT', '/api/authoring/lessons/lesson-1'],
+    ['upsert_lesson_html', { lessonId: 'lesson-1', expectedFingerprint: fingerprint, html: '<html><body>Hola</body></html>', evaluable: true, intentosMax: 3 }, 'POST', '/api/authoring/lessons/lesson-1/html'],
     ['upsert_quiz_draft', { moduleId: 'module-1', expectedFingerprint: fingerprint, titulo: 'Quiz', questions: [{ texto: 'Q', tipo: 'OPCION_MULTIPLE', options: [{ texto: 'A', esCorrecta: true }] }] }, 'PUT', '/api/authoring/modules/module-1/quiz'],
     ['delete_draft_resource', { resourceType: 'material', resourceId: 'material-1', expectedFingerprint: fingerprint }, 'DELETE', '/api/authoring/materials/material-1'],
     ['preview_course_publication', { courseId: 'course-1' }, 'POST', '/api/authoring/courses/course-1/preview-publication'],
@@ -52,4 +53,24 @@ test('every non-multipart tool maps to the real /api/authoring endpoint', async 
     assert.equal(calls.at(-1).path, path, name);
   }
   assert.match(calls.find((call) => call.method === 'DELETE').idempotencyKey, /^[0-9a-f-]{36}$/i);
+});
+
+test('create_lesson_draft defaults to MARKDOWN and forwards explicit HTML', async () => {
+  const calls = [];
+  const client = {
+    request: async (request) => {
+      calls.push(request);
+      return { data: { ok: true } };
+    },
+  };
+  const tools = new Map(createToolDefinitions(client).map((entry) => [entry.name, entry]));
+  await tools.get('create_lesson_draft').run({
+    moduleId: 'module-1', expectedFingerprint: fingerprint, titulo: 'L', contenido: 'Body', orden: 1,
+  });
+  await tools.get('create_lesson_draft').run({
+    moduleId: 'module-1', expectedFingerprint: fingerprint, titulo: 'P', contenido: '', orden: 2, formatoContenido: 'HTML',
+  });
+  assert.equal(calls[0].body.formatoContenido, 'MARKDOWN');
+  assert.equal(calls[1].body.formatoContenido, 'HTML');
+  assert.equal('formatoContenido' in calls[1].body && calls[1].body.formatoContenido === 'HTML', true);
 });

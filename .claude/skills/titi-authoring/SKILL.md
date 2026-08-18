@@ -27,7 +27,11 @@ se ahorra tokens (no se re-lee contenido completo) y no se pisan fingerprints.
 ### Writes
 - `create_course_draft`, `update_course_draft`
 - `create_module_draft`, `update_module_draft`
-- `create_lesson_draft`, `update_lesson_draft`
+- `create_lesson_draft`, `update_lesson_draft` — aceptan `formatoContenido: MARKDOWN|HTML`
+  (por defecto MARKDOWN si no se pasa).
+- `upsert_lesson_html` — sube/reemplaza el HTML de una lección HTML (`POST /lessons/:id/html`).
+  Acepta `html` (autocontenido, <1MB), `evaluable`, `intentosMax` (1-10, requerido si evaluable).
+  El HTML evaluable envía score a Titi (`TITI_SCORE` postMessage). Ver skill `titi-html-authoring`.
 - `upsert_quiz_draft`
 - `attach_material`
 - `delete_draft_resource`
@@ -57,6 +61,7 @@ Para un write a un recurso del curso (módulo/lección/quiz/material), el
 | Módulo | fingerprint del módulo (`resources[moduleId]` en respuesta de curso, o `get_module_fingerprints`) |
 | Quiz de módulo | fingerprint del módulo |
 | Lección | fingerprint de la lección individual |
+| HTML de lección (`upsert_lesson_html`) | fingerprint de la lección individual |
 | Material | fingerprint del material individual |
 | `delete_draft_resource` | fingerprint del recurso individual |
 | Curso | fingerprint del curso |

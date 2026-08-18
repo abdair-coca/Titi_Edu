@@ -6,7 +6,7 @@ import { SERVER_INSTRUCTIONS } from '../src/server.js';
 const EXPECTED_NAMES = [
   'list_categories', 'list_courses', 'get_course', 'get_course_fingerprints', 'get_module_fingerprints',
   'create_course_draft', 'update_course_draft', 'create_module_draft', 'update_module_draft',
-  'create_lesson_draft', 'update_lesson_draft', 'upsert_quiz_draft',
+  'create_lesson_draft', 'update_lesson_draft', 'upsert_lesson_html', 'upsert_quiz_draft',
   'attach_material', 'delete_draft_resource', 'preview_course_publication',
   'publish_course', 'preview_module_publication', 'publish_module',
   'preview_module_unpublish', 'unpublish_module', 'get_quiz_analytics',
