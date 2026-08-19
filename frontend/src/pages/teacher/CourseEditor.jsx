@@ -114,7 +114,7 @@ export default function CourseEditor() {
               <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={published} onChange={handlePortadaUpload} />
               {uploading ? 'Subiendo…' : 'Subir imagen'}
             </label>
-            <input type="url" value={form.portadaUrl} onChange={onChange('portadaUrl')} disabled={published || uploading} placeholder="https://… o subí una imagen" className="titi-input disabled:opacity-60" />
+            <input type="text" value={form.portadaUrl} onChange={onChange('portadaUrl')} disabled={published || uploading} placeholder="https://… o subí una imagen" className="titi-input disabled:opacity-60" />
           </div>
         </Field>
         <label className="flex items-start gap-3 rounded-xl bg-titi-cream border border-gray-100 p-4 cursor-pointer"><input type="checkbox" checked={form.emiteCertificado} onChange={(event) => setForm((current) => ({ ...current, emiteCertificado: event.target.checked }))} disabled={published} className="mt-1 h-4 w-4 accent-titi-yellow" /><span><span className="block text-sm font-bold text-titi-dark">Emitir certificado al completar</span><span className="block text-xs text-gray-500 mt-1">El curso otorgará certificado cuando el estudiante cumpla requisitos.</span></span></label>
