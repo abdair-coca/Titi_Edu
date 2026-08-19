@@ -6,6 +6,7 @@ import { useStaggerReveal } from '../../lib/motion.js';
 import DeletionConfirmationDialog from '../../components/DeletionConfirmationDialog.jsx';
 import { authoringError, authoringMutation } from '../../lib/authoring.js';
 import { sanitizeMarkdownUrl } from '../../lib/markdown.js';
+import { resolveMediaUrl } from '../../lib/format.js';
 
 export default function MyTeaching() {
   const navigate = useNavigate();
@@ -184,9 +185,9 @@ function TeachingCard({ curso, busy, onEdit, onContent, onGrades, onTogglePublis
   return (
     <article className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col overflow-hidden">
       <div className="relative h-32 bg-titi-yellow-light">
-        {sanitizeMarkdownUrl(curso.portadaUrl) ? (
+        {resolveMediaUrl(sanitizeMarkdownUrl(curso.portadaUrl)) ? (
           <img
-            src={sanitizeMarkdownUrl(curso.portadaUrl)}
+            src={resolveMediaUrl(sanitizeMarkdownUrl(curso.portadaUrl))}
             alt=""
             className="w-full h-full object-cover"
             onError={(e) => { e.currentTarget.style.display = 'none'; }}

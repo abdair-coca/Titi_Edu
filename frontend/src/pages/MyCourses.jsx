@@ -19,7 +19,7 @@ import DailyMissions from '../components/DailyMissions.jsx';
 import CategoriesExplorer from '../components/CategoriesExplorer.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
 import { sanitizeMarkdownUrl } from '../lib/markdown.js';
-import { relativeTime } from '../lib/format.js';
+import { relativeTime, resolveMediaUrl } from '../lib/format.js';
 
 // Cuántos nodos se ven en la ruta antes de "Ver toda la ruta".
 const RUTA_VISIBLE = 4;
@@ -353,7 +353,7 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
           >
             {curso.portadaUrl ? (
               <img
-                src={sanitizeMarkdownUrl(curso.portadaUrl)}
+                src={resolveMediaUrl(sanitizeMarkdownUrl(curso.portadaUrl))}
                 alt=""
                 className="w-full h-full object-cover"
                 loading="lazy"

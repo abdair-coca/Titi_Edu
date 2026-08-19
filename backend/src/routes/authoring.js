@@ -238,9 +238,16 @@ function parseCourseData(body, partial = false) {
   }
   if (body?.categoriaId !== undefined) data.categoriaId = String(body.categoriaId);
   if (body?.portadaUrl !== undefined) {
-    const checked = validateHttpsUrl(body.portadaUrl, { rejectSvg: true });
-    if (checked && !checked.ok) throw new AuthoringError(400, checked.message);
-    data.portadaUrl = checked?.value || null;
+    const raw = String(body.portadaUrl || '').trim();
+    // Dev sin Cloudinary sube a disco y devuelve ruta relativa /uploads/...
+    // (mismo origen que el backend). Producción siempre es HTTPS de Cloudinary.
+    if (raw.startsWith('/uploads/')) {
+      data.portadaUrl = raw;
+    } else {
+      const checked = validateHttpsUrl(raw, { rejectSvg: true });
+      if (checked && !checked.ok) throw new AuthoringError(400, checked.message);
+      data.portadaUrl = checked?.value || null;
+    }
   }
   if (body?.portadaPublicId !== undefined) {
     data.portadaPublicId = body.portadaPublicId ? String(body.portadaPublicId).trim() : null;

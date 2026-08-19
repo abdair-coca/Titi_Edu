@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { CheckIcon } from '../../components/icons.jsx';
+import { resolveMediaUrl } from '../../lib/format.js';
 import { authoringError, authoringMutation } from '../../lib/authoring.js';
 import client from '../../api/client.js';
 
@@ -107,7 +108,7 @@ export default function CourseEditor() {
           <Field label="Categoría" required><select value={form.categoriaId} onChange={onChange('categoriaId')} disabled={published} className="titi-input disabled:opacity-60" required><option value="" disabled>Elegí una categoría</option>{categorias.map((category) => <option key={category.id} value={category.id}>{category.icono} {category.nombre}</option>)}</select></Field>
         </div>
         <Field label="Portada del curso (opcional)">
-          {form.portadaUrl && <img src={form.portadaUrl} alt="Portada del curso" className="h-28 w-full object-cover rounded-xl border border-gray-100" />}
+          {form.portadaUrl && <img src={resolveMediaUrl(form.portadaUrl)} alt="Portada del curso" className="h-28 w-full object-cover rounded-xl border border-gray-100" />}
           <div className="flex flex-col sm:flex-row gap-3">
             <label className={`inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:border-titi-yellow hover:text-titi-dark cursor-pointer ${uploading ? 'opacity-60 pointer-events-none' : ''}`}>
               <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={published} onChange={handlePortadaUpload} />

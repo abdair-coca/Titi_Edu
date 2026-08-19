@@ -4,6 +4,7 @@ import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useStaggerReveal } from '../lib/motion.js';
 import { sanitizeMarkdownUrl } from '../lib/markdown.js';
+import { resolveMediaUrl } from '../lib/format.js';
 import { BooksIcon, GraduationIcon, UsersIcon, CheckIcon } from '../components/icons.jsx';
 
 function formatDateEs(value) {
@@ -155,7 +156,7 @@ export default function CourseDetail() {
             <div className="relative h-40 sm:h-48 md:h-56 bg-gradient-to-br from-titi-yellow-light via-titi-yellow-light to-titi-yellow/40 overflow-hidden">
               {curso.portadaUrl ? (
                 <img
-                  src={sanitizeMarkdownUrl(curso.portadaUrl)}
+                  src={resolveMediaUrl(sanitizeMarkdownUrl(curso.portadaUrl))}
                   alt={curso.titulo}
                   className="w-full h-full object-cover"
                   onError={(e) => {
