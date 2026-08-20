@@ -14,10 +14,11 @@ Guía de trabajo específica del frontend.
 
 ## Spec viva — Rediseño Sección Learn (`pages/LearnCourse.jsx`)
 
-> **Estado: PARCIAL.** El backend de **notas** está implementado (`NotaLeccion` +
-> `GET/PUT /api/lessons/:id/note`). El layout de 3 columnas y la card "Profundiza"
-> (stub de IA) son el spec de abajo. Implementar el resto **solo cuando el usuario
-> lo pida** (no es parte del plan de Etapa 6).
+> **Estado: IMPLEMENTADO.** Layout de 3 columnas, riel lateral Notas/Materiales/
+> Comentarios, notas (`NotaLeccion` + `GET/PUT /api/lessons/:id/note`) y la card
+> "Profundiza" (stub de IA) ya viven en `pages/LearnCourse.jsx`. QA responsive
+> 375px/1440px verificado. La integración real con Claude API (`POST /api/lessons/:id/ai`)
+> queda pendiente — contrato listo, key nunca en el frontend.
 
 ### Objetivo: layout de 3 columnas dentro del shell
 
