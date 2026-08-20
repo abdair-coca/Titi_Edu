@@ -704,14 +704,12 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
       </div>
 
       {/* Contenido de la lección — se muestra directo, sin toggle. */}
-      {leccion.contenido ? (
+      {leccion.contenido && (
         <MarkdownContent
           content={leccion.contenido}
           format="MARKDOWN"
           className="mb-6"
         />
-      ) : (
-        <p className="text-sm text-gray-400 font-medium mb-6">Cargando contenido…</p>
       )}
 
       {/* Profundiza en este tema (chips de IA — stub por ahora) */}
