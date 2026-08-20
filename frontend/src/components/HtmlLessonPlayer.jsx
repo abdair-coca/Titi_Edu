@@ -108,14 +108,27 @@ export default function HtmlLessonPlayer({ lessonId, onScoreRecorded }) {
         className="w-full min-h-[32rem] rounded-2xl border border-gray-200 bg-white"
       />
       {attemptsExhausted && <p className="mt-3 text-xs font-semibold text-gray-500">Agotaste tus intentos. Podés revisar la presentación, pero ya no se registrará una nota.</p>}
-      {evaluable && (score != null || bestScore != null) && (
+      {evaluable && (status === 'submitting' || score != null || bestScore != null) && (
         <div className="mt-3 flex flex-wrap items-center gap-3 bg-titi-cream border border-gray-200 rounded-xl px-4 py-3">
-          <span className="text-sm font-bold text-titi-dark">Tu nota:</span>
-          <span className="text-xl font-black tabular-nums text-titi-dark">{bestScore ?? score}/100</span>
-          {score != null && bestScore != null && bestScore > score && (
-            <span className="text-xs font-semibold text-gray-500">Mejor puntaje de tus intentos</span>
+          {status === 'submitting' ? (
+            <>
+              <span
+                className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-titi-dark"
+                aria-hidden="true"
+              />
+              <span className="text-sm font-semibold text-gray-500" role="status">
+                Registrando puntaje…
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-sm font-bold text-titi-dark">Tu nota:</span>
+              <span className="text-xl font-black tabular-nums text-titi-dark">{bestScore ?? score}/100</span>
+              {score != null && bestScore != null && bestScore > score && (
+                <span className="text-xs font-semibold text-gray-500">Mejor puntaje de tus intentos</span>
+              )}
+            </>
           )}
-          {status === 'submitting' && <span className="text-xs font-semibold text-gray-500">Registrando puntaje…</span>}
         </div>
       )}
       {error && status === 'ready' && <p className="mt-3 text-xs font-semibold text-red-600">{error}</p>}
