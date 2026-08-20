@@ -239,10 +239,11 @@ Como en la Etapa 6: cada subfase cierra con un **MINOR**; el cierre corta el **M
 - **Rediseño catálogo de Cursos (v2 + v2.1):** ✅ implementado. Histórico en
   [archive/courses-redesign.md](archive/courses-redesign.md). Pendiente opcional no
   bloqueante: repaso responsive 375px + checklist `design.md` §12.
-- **Rediseño LearnCourse (3 columnas):** parcial. Backend de notas implementado
-  (`NotaLeccion` + `GET/PUT /api/lessons/:id/note`). El layout de 3 columnas y la
-  card "Profundiza" (stub de Claude API) viven como spec en `frontend/agent.md`.
-- **Catálogo guest + gate de acceso (sin tag, en curso):** guests navegan
+- **Rediseño LearnCourse (3 columnas):** ✅ implementado. Layout 3 columnas,
+  riel Notas/Materiales/Comentarios, notas y card "Profundiza" (stub IA) en
+  `pages/LearnCourse.jsx`; QA responsive 375px/1440px OK. Pendiente solo la
+  integración real de la card "Profundiza" con Claude API (`POST /api/lessons/:id/ai`).
+- **Catálogo guest + gate de acceso (sin tag):** ✅ implementado. Guests navegan
   `/` → catálogo público (`GuestShell.jsx`) y `CourseDetail` sin login; contenido
   real de curso (módulos/lecciones/evaluaciones) y endpoints sociales exigen
   login + inscripción vía `middleware/permissions.js`. Interceptor axios maneja
