@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import client from '../api/client.js';
+import TitiMascot from './TitiMascot.jsx';
 
 function withAttemptToken(html, attemptToken) {
   if (!attemptToken) return html;
@@ -18,6 +19,33 @@ export function isTitiScoreMessage(event, iframeWindow, attemptToken) {
     && Number.isFinite(message?.score)
     && message.score >= 0
     && message.score <= 100;
+}
+
+function HtmlLessonLoading() {
+  return (
+    <section className="mb-6" role="status" aria-busy="true" aria-live="polite">
+      <div className="min-h-[32rem] overflow-hidden rounded-2xl border border-gray-200 bg-white">
+        <div className="flex items-center gap-3 border-b border-gray-100 bg-titi-dark px-4 py-3">
+          <span className="h-3 w-3 animate-pulse rounded-full bg-titi-yellow" aria-hidden="true" />
+          <span className="h-3 w-40 animate-pulse rounded-full bg-white/20" aria-hidden="true" />
+        </div>
+        <div className="flex min-h-[28rem] flex-col items-center px-6 py-8 sm:px-10">
+          <TitiMascot state="pensando" size="md" message="" className="mb-5" />
+          <div className="w-full max-w-2xl space-y-4" aria-hidden="true">
+            <div className="mx-auto h-8 w-3/4 animate-pulse rounded-lg bg-gray-100" />
+            <div className="mx-auto h-3 w-full animate-pulse rounded-full bg-gray-100" />
+            <div className="mx-auto h-3 w-5/6 animate-pulse rounded-full bg-gray-100" />
+            <div className="grid grid-cols-1 gap-4 pt-4 sm:grid-cols-2">
+              <div className="h-24 animate-pulse rounded-xl bg-titi-cream" />
+              <div className="h-24 animate-pulse rounded-xl bg-titi-cream" />
+            </div>
+          </div>
+          <p className="mt-6 text-sm font-semibold text-gray-500">Preparando tu presentación…</p>
+        </div>
+      </div>
+      <span className="sr-only">Cargando actividad HTML…</span>
+    </section>
+  );
 }
 
 export default function HtmlLessonPlayer({ lessonId, onScoreRecorded }) {
@@ -94,7 +122,7 @@ export default function HtmlLessonPlayer({ lessonId, onScoreRecorded }) {
     return () => window.removeEventListener('message', receiveScore);
   }, [attemptToken, attemptsExhausted, lessonId, onScoreRecorded, status, viewOnly]);
 
-  if (status === 'loading') return <p className="text-sm font-semibold text-gray-400">Cargando actividad HTML…</p>;
+  if (status === 'loading') return <HtmlLessonLoading />;
   if (status === 'error') return <p className="text-sm font-semibold text-red-600">{error}</p>;
 
   return (
