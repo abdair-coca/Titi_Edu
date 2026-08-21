@@ -2,6 +2,48 @@ import { useEffect, useRef, useState } from 'react';
 import client from '../api/client.js';
 import TitiMascot from './TitiMascot.jsx';
 
+let mermaidPromise;
+let mermaidRenderId = 0;
+
+function loadMermaid() {
+  if (!mermaidPromise) {
+    mermaidPromise = import('mermaid').then((module) => {
+      const mermaid = module.default || module.mermaid || module;
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: 'strict',
+        theme: 'base',
+        flowchart: { curve: 'basis', padding: 10, nodeSpacing: 32, rankSpacing: 40, htmlLabels: false },
+      });
+      return mermaid;
+    });
+  }
+  return mermaidPromise;
+}
+
+async function renderHtmlDiagrams(html) {
+  if (!/class\s*=\s*["'][^"']*\bmermaid\b|data-flow\s*=/i.test(html)) return html;
+
+  const parsedDocument = new DOMParser().parseFromString(html, 'text/html');
+  const diagrams = [...parsedDocument.querySelectorAll('.mermaid, .flowchart[data-flow]')];
+  if (!diagrams.length) return html;
+
+  const mermaid = await loadMermaid();
+  for (const diagram of diagrams) {
+    const definition = diagram.dataset.flow || diagram.textContent.trim();
+    if (!definition) continue;
+    const { svg } = await mermaid.render(`titi-diagram-${++mermaidRenderId}`, definition);
+    const wrapper = parsedDocument.createElement('div');
+    wrapper.className = 'mermaid titi-mermaid-rendered';
+    const svgDocument = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    wrapper.append(parsedDocument.importNode(svgDocument.documentElement, true));
+    diagram.replaceWith(wrapper);
+  }
+
+  parsedDocument.querySelectorAll('script[src*="mermaid"]').forEach((script) => script.remove());
+  return `<!doctype html>${parsedDocument.documentElement.outerHTML}`;
+}
+
 function withAttemptToken(html, attemptToken) {
   if (!attemptToken) return html;
   const bootstrap = `<script>window.__TITI_ATTEMPT_TOKEN=${JSON.stringify(attemptToken)};</script>`;
@@ -87,7 +129,9 @@ export default function HtmlLessonPlayer({ lessonId, title, onScoreRecorded }) {
         setAttemptsExhausted(maxAttemptsReached);
         setAttemptToken(token);
         setBestScore(resource.bestScore ?? null);
-        setSrcDoc(withAttemptToken(resource.html, maxAttemptsReached ? null : token));
+        const preparedHtml = await renderHtmlDiagrams(resource.html);
+        if (cancelled) return;
+        setSrcDoc(withAttemptToken(preparedHtml, maxAttemptsReached ? null : token));
         setStatus('ready');
       } catch (err) {
         if (!cancelled) {

@@ -9,6 +9,9 @@ export default defineConfig({
       lowlight: fileURLToPath(new URL('./src/lib/lowlight-subset.js', import.meta.url)),
     },
   },
+  optimizeDeps: {
+    include: ['mermaid', 'dayjs', '@braintree/sanitize-url'],
+  },
   server: {
     port: 5173,
     host: true,
