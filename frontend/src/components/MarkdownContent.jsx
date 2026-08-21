@@ -1,8 +1,23 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
+import python from 'highlight.js/lib/languages/python';
+import javascript from 'highlight.js/lib/languages/javascript';
+import typescript from 'highlight.js/lib/languages/typescript';
+import bash from 'highlight.js/lib/languages/bash';
+import json from 'highlight.js/lib/languages/json';
+import xml from 'highlight.js/lib/languages/xml';
+import css from 'highlight.js/lib/languages/css';
+import sql from 'highlight.js/lib/languages/sql';
+import markdown from 'highlight.js/lib/languages/markdown';
+import yaml from 'highlight.js/lib/languages/yaml';
+import c from 'highlight.js/lib/languages/c';
+import cpp from 'highlight.js/lib/languages/cpp';
+import java from 'highlight.js/lib/languages/java';
 import 'highlight.js/styles/github.css';
 import { isExternalMarkdownUrl, sanitizeMarkdownUrl } from '../lib/markdown.js';
+
+const HIGHLIGHT_LANGUAGES = { python, javascript, typescript, bash, json, xml, css, sql, markdown, yaml, c, cpp, java };
 
 function SafeLink({ href, children, ...props }) {
   const safeHref = sanitizeMarkdownUrl(href);
@@ -36,7 +51,7 @@ export default function MarkdownContent({ content, format = 'TEXTO', className =
     <div className={`titi-markdown text-sm sm:text-base text-gray-600 leading-relaxed ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeHighlight]}
+        rehypePlugins={[[rehypeHighlight, { languages: HIGHLIGHT_LANGUAGES }]]}
         skipHtml
         urlTransform={sanitizeMarkdownUrl}
         components={{
