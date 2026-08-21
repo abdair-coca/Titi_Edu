@@ -93,6 +93,7 @@ export default function LessonComments({ lessonId, hideHeader = false, onCount }
               <img
                 src={user.avatarUrl}
                 alt=""
+                loading="lazy"
                 className="hidden sm:block w-10 h-10 rounded-full bg-titi-cream border-2 border-titi-yellow shrink-0"
               />
             ) : (

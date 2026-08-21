@@ -103,6 +103,7 @@ export default function CommentSection({ postId, onCountChange }) {
               <img
                 src={user.avatarUrl}
                 alt=""
+                loading="lazy"
                 className="hidden sm:block w-8 h-8 rounded-full bg-titi-cream border border-gray-100 shrink-0 mt-1"
               />
             )}
@@ -186,6 +187,7 @@ function CommentItem({ comment: c, replies, onReply, canReply, depth = 0 }) {
             <img
               src={c.authorAvatar}
               alt={c.author}
+              loading="lazy"
               className="w-8 h-8 rounded-full bg-titi-cream border border-gray-100"
             />
           ) : (

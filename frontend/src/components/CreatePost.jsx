@@ -103,6 +103,7 @@ export default function CreatePost({ onCreated }) {
           <img
             src={user.avatarUrl}
             alt=""
+            loading="lazy"
             className="hidden sm:block w-11 h-11 rounded-full bg-titi-cream border-2 border-titi-yellow shrink-0 mt-1"
           />
         ) : (

@@ -116,6 +116,7 @@ function NotificationItem({ notif, onClick }) {
           <img
             src={notif.actor.avatarUrl}
             alt=""
+            loading="lazy"
             className="w-11 h-11 rounded-full bg-titi-cream border-2 border-titi-yellow shrink-0"
           />
         ) : (

@@ -298,7 +298,7 @@ function UserResult({ user }) {
         className="flex items-center gap-3 p-2 rounded-xl hover:bg-titi-cream transition-colors"
       >
         {user.avatarUrl ? (
-          <img src={user.avatarUrl} alt={user.username} className="w-12 h-12 rounded-full bg-titi-cream border-2 border-titi-yellow" />
+          <img src={user.avatarUrl} alt={user.username} loading="lazy" className="w-12 h-12 rounded-full bg-titi-cream border-2 border-titi-yellow" />
         ) : (
           <div className="w-12 h-12 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold border-2 border-titi-yellow">
             {user.username?.[0]?.toUpperCase() ?? '?'}
@@ -318,7 +318,7 @@ function PostResult({ post }) {
   return (
     <li className="flex gap-3 p-2 rounded-xl hover:bg-titi-cream transition-colors">
       {imageUrl ? (
-        <img src={imageUrl} alt="" className="w-16 h-16 rounded-lg object-cover bg-titi-cream border border-gray-100 shrink-0" />
+        <img src={imageUrl} alt="" loading="lazy" className="w-16 h-16 rounded-lg object-cover bg-titi-cream border border-gray-100 shrink-0" />
       ) : (
         <div className="w-16 h-16 rounded-lg bg-titi-yellow/20 border border-gray-100 shrink-0 grid place-items-center text-gray-500 text-xs font-bold">
           texto
