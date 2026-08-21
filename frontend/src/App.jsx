@@ -5,37 +5,40 @@ import {
   Route,
   useLocation,
 } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
 import { useAuth } from './context/AuthContext.jsx';
-import Login from './pages/Login.jsx';
-import Register from './pages/Register.jsx';
-import Feed from './pages/Feed.jsx';
-import Explore from './pages/Explore.jsx';
-import Profile from './pages/Profile.jsx';
-import HashtagFeed from './pages/HashtagFeed.jsx';
-import Notifications from './pages/Notifications.jsx';
 import Navbar from './components/Navbar.jsx';
 import GuestShell from './components/GuestShell.jsx';
 import PageTransition from './components/PageTransition.jsx';
 import ScrollToTop from './components/ScrollToTop.jsx';
 import GotaToast from './components/GotaToast.jsx';
 import WeeklyPrizeCelebration from './components/WeeklyPrizeCelebration.jsx';
-import Leaderboard from './pages/Leaderboard.jsx'
-import Shop from './pages/Shop.jsx';
-import Courses from './pages/Courses.jsx'
-import CourseDetail from './pages/CourseDetail.jsx'
-import MyCourses from './pages/MyCourses.jsx'
-import LearnCourse from './pages/LearnCourse.jsx'
-import MyTeaching from './pages/teacher/MyTeaching.jsx'
-import CourseGrades from './pages/teacher/CourseGrades.jsx'
-import CourseEditor from './pages/teacher/CourseEditor.jsx'
-import ModulesEditor from './pages/teacher/ModulesEditor.jsx'
-import EvaluationEditor from './pages/teacher/EvaluationEditor.jsx'
-import Integrations from './pages/teacher/Integrations.jsx'
-import Certificates, { VerifyCertificate } from './pages/Certificates.jsx'
-import AdminDashboard from './pages/admin/AdminDashboard.jsx'
-import AdminUsers from './pages/admin/AdminUsers.jsx'
-import AdminCourses from './pages/admin/AdminCourses.jsx'
-import AdminCategories from './pages/admin/AdminCategories.jsx'
+
+const Login = lazy(() => import('./pages/Login.jsx'));
+const Register = lazy(() => import('./pages/Register.jsx'));
+const Feed = lazy(() => import('./pages/Feed.jsx'));
+const Explore = lazy(() => import('./pages/Explore.jsx'));
+const Profile = lazy(() => import('./pages/Profile.jsx'));
+const HashtagFeed = lazy(() => import('./pages/HashtagFeed.jsx'));
+const Notifications = lazy(() => import('./pages/Notifications.jsx'));
+const Leaderboard = lazy(() => import('./pages/Leaderboard.jsx'));
+const Shop = lazy(() => import('./pages/Shop.jsx'));
+const Courses = lazy(() => import('./pages/Courses.jsx'));
+const CourseDetail = lazy(() => import('./pages/CourseDetail.jsx'));
+const MyCourses = lazy(() => import('./pages/MyCourses.jsx'));
+const LearnCourse = lazy(() => import('./pages/LearnCourse.jsx'));
+const MyTeaching = lazy(() => import('./pages/teacher/MyTeaching.jsx'));
+const CourseGrades = lazy(() => import('./pages/teacher/CourseGrades.jsx'));
+const CourseEditor = lazy(() => import('./pages/teacher/CourseEditor.jsx'));
+const ModulesEditor = lazy(() => import('./pages/teacher/ModulesEditor.jsx'));
+const EvaluationEditor = lazy(() => import('./pages/teacher/EvaluationEditor.jsx'));
+const Integrations = lazy(() => import('./pages/teacher/Integrations.jsx'));
+const Certificates = lazy(() => import('./pages/Certificates.jsx').then(m => ({ default: m.Certificates })));
+const VerifyCertificate = lazy(() => import('./pages/Certificates.jsx').then(m => ({ default: m.VerifyCertificate })));
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
+const AdminUsers = lazy(() => import('./pages/admin/AdminUsers.jsx'));
+const AdminCourses = lazy(() => import('./pages/admin/AdminCourses.jsx'));
+const AdminCategories = lazy(() => import('./pages/admin/AdminCategories.jsx'));
 
 // ---- Layouts ----
 
@@ -156,7 +159,8 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
-      <Routes>
+      <Suspense fallback={<FullScreenLoader />}>
+        <Routes>
         {/* Landing pública */}
         <Route path="/" element={<Home />} />
 
@@ -208,7 +212,19 @@ export default function App() {
 
         {/* 404 */}
         <Route path="*" element={<Placeholder title="404 — Ruta no encontrada" />} />
-      </Routes>
+        </Routes>
+      </Suspense>
     </>
+  );
+}
+
+function FullScreenLoader() {
+  return (
+    <div className="bg-titi-cream min-h-screen flex items-center justify-center">
+      <div className="flex flex-col items-center gap-4">
+        <img src="/Titi.png" alt="Titi" className="w-24 h-24 object-contain" />
+        <div className="w-12 h-12 border-4 border-titi-yellow-light border-t-titi-yellow rounded-full animate-spin" />
+      </div>
+    </div>
   );
 }
