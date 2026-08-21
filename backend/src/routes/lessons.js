@@ -7,6 +7,7 @@ import { actualizarRacha, checkCursoCompletado } from '../services/progress.serv
 import { checkLogrosLeccion } from '../services/achievement.service.js';
 import { otorgarGotas } from '../services/gotas.service.js';
 import { avanzarMisiones } from '../services/mision.service.js';
+import { normalizeLessonOrder } from '../services/content-deletion.service.js';
 
 const router = Router();
 
@@ -263,6 +264,7 @@ router.delete('/lessons/:id', requireAuth, requireRole('PROFESOR', 'ADMIN'), asy
       await tx.progreso.deleteMany({ where: { leccionId: leccion.id } });
       await tx.comentarioLeccion.deleteMany({ where: { leccionId: leccion.id } });
       await tx.leccion.delete({ where: { id: leccion.id } });
+      await normalizeLessonOrder(tx, leccion.modulo.id);
     });
 
     res.json({ success: true, data: { deleted: leccion.id } });

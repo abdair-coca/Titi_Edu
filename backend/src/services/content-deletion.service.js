@@ -106,6 +106,21 @@ export function deletionFingerprint(kind, resourceFingerprint, impact) {
   return fingerprint({ kind, resource: resourceFingerprint, impact });
 }
 
+export async function normalizeLessonOrder(tx, moduleId) {
+  const lessons = await tx.leccion.findMany({
+    where: { moduloId: moduleId },
+    orderBy: [{ orden: 'asc' }, { id: 'asc' }],
+    select: { id: true, orden: true },
+  });
+
+  for (const [index, lesson] of lessons.entries()) {
+    const nextOrder = index + 1;
+    if (lesson.orden !== nextOrder) {
+      await tx.leccion.update({ where: { id: lesson.id }, data: { orden: nextOrder } });
+    }
+  }
+}
+
 export async function deleteDeletionDependencies(tx, dependencies) {
   const { kind, resourceId, moduleIds, lessonIds, evaluationIds, questionIds, htmlResourceIds } = dependencies;
 

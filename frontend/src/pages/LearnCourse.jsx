@@ -482,7 +482,7 @@ export default function LearnCourse() {
                   {modulo.titulo}
                 </h3>
                 <ul>
-                  {modulo.lecciones?.map((leccion) => {
+                  {modulo.lecciones?.map((leccion, index) => {
                     const isActive = leccion.id === activeId;
                     const isDone = completed.has(leccion.id);
                     return (
@@ -508,7 +508,7 @@ export default function LearnCourse() {
                             </span>
                           ) : (
                             <span className="text-xs font-bold text-gray-400 w-4 shrink-0 tabular-nums text-center">
-                              {leccion.orden}
+                              {index + 1}
                             </span>
                           )}
                           <span className="line-clamp-2 flex-1">

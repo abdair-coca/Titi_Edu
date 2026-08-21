@@ -28,6 +28,7 @@ import {
   collectDeletionDependencies,
   deletionFingerprint as createDeletionFingerprint,
   deleteDeletionDependencies,
+  normalizeLessonOrder,
 } from '../services/content-deletion.service.js';
 import { cloudinaryEnabled, destroyAsset, uploadBuffer } from '../services/upload.service.js';
 
@@ -896,6 +897,7 @@ async function deleteResource(req, res, kind) {
       await claimModuleVersion(tx, resource.modulo);
     }
     await deleteDeletionDependencies(tx, dependencies);
+    if (kind === 'lesson') await normalizeLessonOrder(tx, resource.modulo.id);
     // Intentionally retain Cloudinary and legacy disk assets. A later retention/reconciliation job
     // can delete unreferenced files without making this irreversible database transaction partial.
     return {
