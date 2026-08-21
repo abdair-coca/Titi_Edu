@@ -22,6 +22,8 @@ assert.match(player, /import\('mermaid'\)/);
 assert.match(player, /querySelectorAll\('\.mermaid, \.flowchart\[data-flow\]'\)/);
 assert.match(player, /htmlLabels: false/);
 assert.match(player, /parseFromString\(svg, 'image\/svg\+xml'\)/);
+assert.match(player, /decodeMermaidDefinition\(rawDefinition\)/);
+assert.match(player, /node\.textContent = decodeMermaidDefinition\(node\.textContent\)/);
 assert.match(player, /evaluable && !viewOnly/);
 assert.match(player, /Agotaste tus intentos\. Pod\u00e9s revisar la presentaci\u00f3n, pero ya no se registrar\u00e1 una nota\./u);
 assert.match(player, /evaluable && !viewOnly/);

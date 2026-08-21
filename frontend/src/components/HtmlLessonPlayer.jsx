@@ -21,6 +21,18 @@ function loadMermaid() {
   return mermaidPromise;
 }
 
+function decodeMermaidDefinition(value) {
+  const decoder = document.createElement('textarea');
+  let decoded = value;
+  for (let pass = 0; pass < 3; pass += 1) {
+    decoder.innerHTML = decoded;
+    const next = decoder.value;
+    if (next === decoded) break;
+    decoded = next;
+  }
+  return decoded;
+}
+
 async function renderHtmlDiagrams(html) {
   if (!/class\s*=\s*["'][^"']*\bmermaid\b|data-flow\s*=/i.test(html)) return html;
 
@@ -30,12 +42,16 @@ async function renderHtmlDiagrams(html) {
 
   const mermaid = await loadMermaid();
   for (const diagram of diagrams) {
-    const definition = diagram.dataset.flow || diagram.textContent.trim();
+    const rawDefinition = diagram.dataset.flow || diagram.textContent.trim();
+    const definition = decodeMermaidDefinition(rawDefinition).trim();
     if (!definition) continue;
     const { svg } = await mermaid.render(`titi-diagram-${++mermaidRenderId}`, definition);
     const wrapper = parsedDocument.createElement('div');
     wrapper.className = 'mermaid titi-mermaid-rendered';
     const svgDocument = new DOMParser().parseFromString(svg, 'image/svg+xml');
+    svgDocument.querySelectorAll('text, tspan').forEach((node) => {
+      if (!node.children.length) node.textContent = decodeMermaidDefinition(node.textContent);
+    });
     wrapper.append(parsedDocument.importNode(svgDocument.documentElement, true));
     diagram.replaceWith(wrapper);
   }
