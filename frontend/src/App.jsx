@@ -54,13 +54,17 @@ function AppShell() {
 
   return (
     <div className="min-h-screen bg-titi-cream">
-      <Navbar />
+      <Navbar learnMode={isLearn} />
       {/* Toasts/overlays globales de gamificación (fixed, no afectan el layout). */}
       <GotaToast />
       <WeeklyPrizeCelebration />
-      {/* En móvil: deja espacio para el top bar (h-14) y el bottom nav (h-16 + safe area iOS). */}
-      {/* En desktop (md+): solo padding-left para el sidebar (w-64). */}
-      <main className="min-h-screen pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-20">
+      {/* En móvil: deja espacio para el top bar y el bottom nav con safe area iOS. */}
+      {/* LearnCourse usa lg como corte; el resto de la app conserva md. */}
+      <main
+        className={isLearn
+          ? 'min-h-screen pt-12 lg:pt-0 pb-[calc(4.5rem+env(safe-area-inset-bottom))] lg:pb-0 lg:pl-20'
+          : 'min-h-screen pt-14 md:pt-0 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 md:pl-20'}
+      >
         <div
           className={
             isLearn

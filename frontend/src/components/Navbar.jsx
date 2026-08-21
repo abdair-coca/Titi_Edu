@@ -88,9 +88,9 @@ function sidebarItemClass({ isActive }) {
 // Las etiquetas del sidebar solo se ven cuando el rail está expandido (hover).
 const sidebarLabel = 'whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200';
 
-function Sidebar({ user, onLogout, unread, streak }) {
+function Sidebar({ user, onLogout, unread, streak, desktopVisibility = 'md:flex' }) {
   return (
-    <aside className="hidden md:flex group fixed left-0 top-0 h-screen w-20 hover:w-64 bg-titi-dark border-r border-white/10 flex-col z-50 text-white overflow-hidden transition-[width] duration-200 ease-out">
+    <aside className={`hidden ${desktopVisibility} group fixed left-0 top-0 h-screen w-20 hover:w-64 bg-titi-dark border-r border-white/10 flex-col z-50 text-white overflow-hidden transition-[width] duration-200 ease-out`}>
       <Link to="/feed" className="flex items-center gap-2 h-16 px-5 border-b border-white/10 shrink-0">
         <img
           src="/favicon.png"
@@ -230,19 +230,19 @@ function Sidebar({ user, onLogout, unread, streak }) {
 }
 
 // ---- Top bar móvil ----
-function MobileTopBar({ user, onLogout, unread, streak, showStreak }) {
+function MobileTopBar({ user, onLogout, unread, streak, showStreak, mobileVisibility = 'md:hidden', compact = false }) {
   return (
-    <header className="md:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-titi-dark text-white border-b border-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-      <div className="h-full px-4 flex items-center justify-between gap-2">
+    <header className={`${mobileVisibility} fixed top-0 left-0 right-0 z-50 ${compact ? 'h-12' : 'h-14'} bg-titi-dark text-white border-b border-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)]`}>
+      <div className={`h-full ${compact ? 'px-3 gap-1.5' : 'px-4 gap-2'} flex items-center justify-between`}>
         <Link to="/feed">
-          <TitiLogo size="md" />
+          <TitiLogo size={compact ? 'sm' : 'md'} />
         </Link>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center ${compact ? 'gap-1' : 'gap-2'}`}>
           {user?.rol === 'ADMIN' && (
             <Link
               to="/admin"
               aria-label="Panel de administración"
-              className="p-2 rounded-full text-white/85 hover:text-titi-yellow hover:bg-white/10 transition-colors"
+              className={`${compact ? 'p-1.5' : 'p-2'} rounded-full text-white/85 hover:text-titi-yellow hover:bg-white/10 transition-colors`}
             >
               <Icon.Shield className="w-5 h-5" />
             </Link>
@@ -271,7 +271,7 @@ function MobileTopBar({ user, onLogout, unread, streak, showStreak }) {
           <Link
             to="/notifications"
             aria-label="Notificaciones"
-            className="relative p-2 rounded-full text-white/85 hover:text-titi-yellow hover:bg-white/10 transition-colors"
+              className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-full text-white/85 hover:text-titi-yellow hover:bg-white/10 transition-colors`}
           >
             <Icon.Bell className="w-5 h-5" />
             <NotifBadge count={unread} />
@@ -280,7 +280,7 @@ function MobileTopBar({ user, onLogout, unread, streak, showStreak }) {
             type="button"
             onClick={onLogout}
             aria-label="Cerrar sesión"
-            className="-mr-2 p-2 rounded-full text-white/85 hover:text-red-500 hover:bg-white/10 transition-colors"
+            className={`${compact ? '-mr-1 p-1.5' : '-mr-2 p-2'} rounded-full text-white/85 hover:text-red-500 hover:bg-white/10 transition-colors`}
           >
             <Icon.Logout className="w-5 h-5" />
           </button>
@@ -308,59 +308,61 @@ function MiniFlame({ active }) {
 }
 
 // ---- Bottom nav móvil ----
-function bottomItemClass({ isActive }) {
-  const base = 'flex flex-col items-center justify-center gap-0.5 h-full text-xs font-bold transition-colors';
+function bottomItemClass({ isActive, compact = false }) {
+  const base = `flex flex-col items-center justify-center gap-0.5 h-full ${compact ? 'text-[11px]' : 'text-xs'} font-bold transition-colors`;
   return isActive
     ? `${base} text-titi-yellow`
     : `${base} text-white/70 hover:text-white`;
 }
 
-function MobileBottomNav({ user }) {
+function MobileBottomNav({ user, mobileVisibility = 'md:hidden', compact = false }) {
   // Un PROFESOR/ADMIN no se inscribe en cursos — ve directo su panel docente.
   const isTeacher = user?.rol === 'PROFESOR' || user?.rol === 'ADMIN';
 
   return (
     <nav
       aria-label="Navegación principal"
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 h-16 bg-titi-dark text-white border-t border-titi-dark shadow-lg"
+      className={`${mobileVisibility} fixed bottom-0 left-0 right-0 z-50 ${compact ? 'h-14' : 'h-16'} bg-titi-dark text-white border-t border-titi-dark shadow-lg`}
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="grid grid-cols-5 h-full">
-        <NavLink to="/feed" className={bottomItemClass} aria-label="Inicio" end>
-          <Icon.Home className="w-7 h-7" />
+        <NavLink to="/feed" className={(props) => bottomItemClass({ ...props, compact })} aria-label="Inicio" end>
+          <Icon.Home className={compact ? 'w-6 h-6' : 'w-7 h-7'} />
         </NavLink>
-        <NavLink to="/explore" className={bottomItemClass} aria-label="Explorar">
-          <Icon.Compass className="w-7 h-7" />
+        <NavLink to="/explore" className={(props) => bottomItemClass({ ...props, compact })} aria-label="Explorar">
+          <Icon.Compass className={compact ? 'w-6 h-6' : 'w-7 h-7'} />
         </NavLink>
-        <NavLink to="/courses" className={bottomItemClass} aria-label="Cursos">
-          <Icon.Books className="w-7 h-7" />
+        <NavLink to="/courses" className={(props) => bottomItemClass({ ...props, compact })} aria-label="Cursos">
+          <Icon.Books className={compact ? 'w-6 h-6' : 'w-7 h-7'} />
         </NavLink>
         {isTeacher ? (
-          <NavLink to="/teacher" className={bottomItemClass} aria-label="Enseñar">
-            <Icon.Cap className="w-7 h-7" />
+          <NavLink to="/teacher" className={(props) => bottomItemClass({ ...props, compact })} aria-label="Enseñar">
+            <Icon.Cap className={compact ? 'w-6 h-6' : 'w-7 h-7'} />
           </NavLink>
         ) : (
-          <NavLink to="/my-courses" className={bottomItemClass} aria-label="Mis cursos">
-            <Icon.Target className="w-7 h-7" />
+          <NavLink to="/my-courses" className={(props) => bottomItemClass({ ...props, compact })} aria-label="Mis cursos">
+            <Icon.Target className={compact ? 'w-6 h-6' : 'w-7 h-7'} />
           </NavLink>
         )}
         <NavLink
           to={user?.username ? `/profile/${user.username}` : '/feed'}
-          className={bottomItemClass}
+          className={(props) => bottomItemClass({ ...props, compact })}
           aria-label="Perfil"
         >
-          <Icon.User className="w-7 h-7" />
+          <Icon.User className={compact ? 'w-6 h-6' : 'w-7 h-7'} />
         </NavLink>
       </div>
     </nav>
   );
 }
 
-export default function Navbar() {
+export default function Navbar({ learnMode = false }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const unread = useUnreadNotifications();
   const streak = useStreak();
+  const mobileVisibility = learnMode ? 'lg:hidden' : 'md:hidden';
+  const desktopVisibility = learnMode ? 'lg:flex' : 'md:flex';
 
   function handleLogout() {
     logout();
@@ -369,15 +371,23 @@ export default function Navbar() {
 
   return (
     <>
-      <Sidebar user={user} onLogout={handleLogout} unread={unread} streak={streak} />
+      <Sidebar
+        user={user}
+        onLogout={handleLogout}
+        unread={unread}
+        streak={streak}
+        desktopVisibility={desktopVisibility}
+      />
       <MobileTopBar
         user={user}
         onLogout={handleLogout}
         unread={unread}
         streak={streak}
         showStreak={Boolean(user)}
+        mobileVisibility={mobileVisibility}
+        compact={learnMode}
       />
-      <MobileBottomNav user={user} />
+      <MobileBottomNav user={user} mobileVisibility={mobileVisibility} compact={learnMode} />
     </>
   );
 }

@@ -412,7 +412,7 @@ export default function LearnCourse() {
   }
 
   return (
-    <div className="flex min-h-screen md:min-h-0 md:h-[calc(100vh-1.5rem)] md:overflow-hidden bg-titi-cream md:gap-3">
+    <div className="flex min-h-screen lg:min-h-0 lg:h-[calc(100vh-1.5rem)] lg:overflow-hidden bg-titi-cream lg:gap-3">
       <StreakToast
         shown={streakToast.shown}
         racha={streakToast.racha}
@@ -426,11 +426,11 @@ export default function LearnCourse() {
       <aside
         className={`
           w-72 bg-white border-r border-gray-100 flex flex-col
-          fixed top-14 bottom-16 left-0 z-40 overflow-y-auto scrollbar-none
+          fixed top-12 bottom-14 left-0 z-40 overflow-y-auto scrollbar-none
           transition-transform duration-200
           ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
-          md:static md:inset-auto md:h-full md:transform-none
-          md:border-r-0 md:border md:border-gray-100 md:rounded-2xl
+          lg:static lg:inset-auto lg:h-full lg:transform-none
+          lg:border-r-0 lg:border lg:border-gray-100 lg:rounded-2xl
         `}
       >
         {/* Header del sidebar */}
@@ -564,21 +564,25 @@ export default function LearnCourse() {
         <div
           aria-hidden="true"
           onClick={() => setDrawerOpen(false)}
-          className="fixed inset-0 bg-black/30 z-30 md:hidden"
+          className="fixed inset-0 bg-black/30 z-30 lg:hidden"
         />
       )}
 
       {/* === Centro + columna derecha === */}
-      <div className="flex-1 flex flex-col lg:flex-row min-w-0 min-h-0 md:h-full lg:gap-3">
-        <main className="flex-1 p-3 sm:p-4 md:p-5 overflow-y-auto scrollbar-none min-w-0 min-h-0">
+      <div className="flex-1 flex flex-col lg:flex-row min-w-0 min-h-0 lg:h-full lg:gap-3">
+        <main className="flex-1 p-4 sm:p-5 lg:p-5 overflow-y-auto scrollbar-none min-w-0 min-h-0">
           <div className="max-w-5xl mx-auto">
             {/* Toggle del drawer en móvil */}
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="md:hidden mb-4 w-full text-sm font-semibold text-titi-dark bg-white border border-gray-200 rounded-xl px-4 py-3 hover:bg-gray-50 transition-colors inline-flex items-center gap-2 justify-center"
+              className="lg:hidden mb-4 w-full text-sm font-semibold text-titi-dark bg-white border border-gray-200 rounded-xl px-3 py-2.5 hover:bg-gray-50 transition-colors inline-flex items-center justify-between gap-2"
             >
-              ☰ Ver lecciones ({completedCount}/{totalLessons})
+              <span className="inline-flex items-center gap-2">
+                <span aria-hidden="true">☰</span>
+                <span>Lecciones · {completedCount}/{totalLessons}</span>
+              </span>
+              <span aria-hidden="true" className="text-base leading-none">⌄</span>
             </button>
 
             {certBanner && (
