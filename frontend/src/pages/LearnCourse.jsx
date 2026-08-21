@@ -693,7 +693,7 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
         </div>
       )}
 
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-3 mb-3">
         <h1 className="text-xl sm:text-2xl font-bold text-titi-dark">
           {leccion.titulo}
         </h1>
@@ -733,31 +733,38 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
       )}
 
       {/* Fila de acción */}
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
         {hasNext && (
           <button
             type="button"
             onClick={onNext}
-            className="bg-white text-titi-dark font-bold text-sm px-5 py-3 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 inline-flex items-center gap-2"
+            className={`order-2 lg:order-1 w-full sm:w-auto justify-center bg-white text-titi-dark font-bold text-sm px-5 py-3 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 inline-flex items-center gap-2 ${completed ? 'bg-titi-yellow border-titi-yellow text-titi-dark shadow-[0_4px_0px_#E6B800] lg:bg-white lg:border-gray-200 lg:text-titi-dark lg:shadow-[0_4px_0px_#E5E7EB]' : ''}`}
           >
-            Siguiente lección →
+            <span className="lg:hidden">{completed ? 'Continuar →' : 'Siguiente lección →'}</span>
+            <span className="hidden lg:inline">Siguiente lección →</span>
           </button>
         )}
         {completed ? (
-          <button
-            type="button"
-            disabled
-            className="bg-green-500 text-white font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#16A34A] cursor-default inline-flex items-center gap-2"
-          >
-            <span aria-hidden="true">✓</span>
-            Lección completada
-          </button>
+          <>
+            <span className="order-1 lg:hidden w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-green-50 border border-green-200 px-4 py-2 text-sm font-bold text-green-700">
+              <span aria-hidden="true">✓</span>
+              Lección completada
+            </span>
+            <button
+              type="button"
+              disabled
+              className="hidden lg:inline-flex order-2 bg-green-500 text-white font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#16A34A] cursor-default items-center gap-2"
+            >
+              <span aria-hidden="true">✓</span>
+              Lección completada
+            </button>
+          </>
         ) : (
           <button
             type="button"
             onClick={onComplete}
             disabled={completing}
-            className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="order-1 lg:order-2 w-full sm:w-auto bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {completing ? 'Marcando…' : 'Marcar como completada'}
           </button>
@@ -782,69 +789,85 @@ function DeepenCard() {
 
   return (
     <section className="bg-titi-yellow-light/60 border border-titi-yellow/40 rounded-2xl mb-6">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-        className="w-full flex items-center justify-between gap-2 p-4 sm:p-5 text-left"
-      >
-        <span className="text-base font-bold text-titi-dark flex items-center gap-2">
-          <span aria-hidden="true">✨</span> Profundiza en este tema
+      <div className="lg:hidden flex items-center justify-between gap-3 p-4">
+        <div className="min-w-0">
+          <p className="text-base font-bold text-titi-dark flex items-center gap-2">
+            <span aria-hidden="true">✨</span> Profundiza en este tema
+          </p>
+          <p className="mt-1 text-xs font-medium text-gray-500">
+            Contenido complementario, ejercicios y más.
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full bg-titi-yellow px-2.5 py-1 text-xs font-bold text-titi-dark">
+          Próximamente
         </span>
-        <span
-          className={`text-sm text-titi-dark transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-          aria-hidden="true"
+      </div>
+
+      <div className="hidden lg:block">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="w-full flex items-center justify-between gap-2 p-4 sm:p-5 text-left"
         >
-          ▾
-        </span>
-      </button>
-
-      {/* Colapsable: grid-rows 0fr→1fr + fade, ease neutro (no pop). Ver motion.md §3. */}
-      <div
-        className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${
-          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-        }`}
-      >
-        <div className="overflow-hidden">
-          <div
-            className={`px-4 sm:px-5 pb-4 sm:pb-5 transition-opacity duration-300 ease-out motion-reduce:transition-none ${
-              open ? 'opacity-100' : 'opacity-0'
-            }`}
+          <span className="text-base font-bold text-titi-dark flex items-center gap-2">
+            <span aria-hidden="true">✨</span> Profundiza en este tema
+          </span>
+          <span
+            className={`text-sm text-titi-dark transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+            aria-hidden="true"
           >
-          <div className="flex flex-wrap gap-2">
-            {DEEPEN_PROMPTS.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                onClick={() => setSelected(prompt)}
-                className={[
-                  'text-sm font-semibold px-4 py-2.5 rounded-xl border transition-all duration-150',
-                  selected === prompt
-                    ? 'bg-titi-yellow text-titi-dark border-titi-yellow'
-                    : 'bg-white text-titi-dark border-gray-200 hover:border-titi-yellow hover:bg-titi-cream',
-                ].join(' ')}
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
+            ▾
+          </span>
+        </button>
 
-          {selected && (
-            <div ref={respRef} className="mt-4 bg-white border border-gray-100 rounded-xl p-4 flex items-start gap-3">
-              <img
-                src="/Titi.png"
-                alt="Titi"
-                className="w-10 h-10 object-contain select-none shrink-0"
-                draggable={false}
-              />
-              <div className="min-w-0">
-                <p className="text-sm font-bold text-titi-dark">{selected}</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Titi va a responder esto con IA muy pronto. Función en construcción 🛠️
-                </p>
+        {/* Colapsable: grid-rows 0fr→1fr + fade, ease neutro (no pop). Ver motion.md §3. */}
+        <div
+          className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${
+            open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div
+              className={`px-4 sm:px-5 pb-4 sm:pb-5 transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+                open ? 'opacity-100' : 'opacity-0'
+              }`}
+            >
+              <div className="flex flex-wrap gap-2">
+                {DEEPEN_PROMPTS.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    onClick={() => setSelected(prompt)}
+                    className={[
+                      'text-sm font-semibold px-4 py-2.5 rounded-xl border transition-all duration-150',
+                      selected === prompt
+                        ? 'bg-titi-yellow text-titi-dark border-titi-yellow'
+                        : 'bg-white text-titi-dark border-gray-200 hover:border-titi-yellow hover:bg-titi-cream',
+                    ].join(' ')}
+                  >
+                    {prompt}
+                  </button>
+                ))}
               </div>
+
+              {selected && (
+                <div ref={respRef} className="mt-4 bg-white border border-gray-100 rounded-xl p-4 flex items-start gap-3">
+                  <img
+                    src="/Titi.png"
+                    alt="Titi"
+                    className="w-10 h-10 object-contain select-none shrink-0"
+                    draggable={false}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-titi-dark">{selected}</p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Titi va a responder esto con IA muy pronto. Función en construcción 🛠️
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
           </div>
         </div>
       </div>
@@ -904,6 +927,9 @@ function LessonSidePanels({
         <div className="overflow-hidden min-w-0 min-h-0">
           {active && (
             <div
+              id={`lesson-panel-${displayKey}`}
+              role="tabpanel"
+              aria-labelledby={`lesson-tab-${displayKey}`}
               className={`w-full lg:w-80 bg-white p-4 sm:p-5 lg:h-full lg:overflow-y-auto scrollbar-none transition-opacity duration-300 ease-out motion-reduce:transition-none ${
                 expanded ? 'opacity-100' : 'opacity-0'
               }`}
@@ -942,7 +968,11 @@ function LessonSidePanels({
       </div>
 
       {/* Riel de íconos */}
-      <nav className={`flex lg:flex-col gap-1 p-2 bg-white lg:w-24 lg:h-full shrink-0 justify-center lg:justify-start ${expanded ? 'lg:border-l border-gray-100' : ''}`}>
+      <nav
+        role="tablist"
+        aria-label="Recursos de la lección"
+        className={`grid grid-cols-3 lg:flex lg:flex-col gap-1 p-2 bg-white lg:w-24 lg:h-full shrink-0 justify-center lg:justify-start ${expanded ? 'lg:border-l border-gray-100' : ''}`}
+      >
         {PANELS.map(({ key, label, Icon }) => {
           const isOpen = open === key;
           return (
@@ -950,11 +980,14 @@ function LessonSidePanels({
               key={key}
               type="button"
               onClick={() => toggle(key)}
-              aria-pressed={isOpen}
+              id={`lesson-tab-${key}`}
+              role="tab"
+              aria-selected={isOpen}
+              aria-controls={`lesson-panel-${key}`}
               className={[
                 'flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl transition-colors w-full',
                 isOpen
-                  ? 'bg-titi-yellow-light text-titi-dark'
+                  ? 'bg-titi-yellow-light text-titi-dark border-b-2 border-titi-yellow lg:border-b-0'
                   : 'text-gray-500 hover:bg-titi-cream hover:text-titi-dark',
               ].join(' ')}
             >
