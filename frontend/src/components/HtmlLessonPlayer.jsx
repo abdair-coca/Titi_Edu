@@ -48,7 +48,7 @@ function HtmlLessonLoading() {
   );
 }
 
-export default function HtmlLessonPlayer({ lessonId, onScoreRecorded }) {
+export default function HtmlLessonPlayer({ lessonId, title, onScoreRecorded }) {
   const iframeRef = useRef(null);
   const [srcDoc, setSrcDoc] = useState(null);
   const [attemptToken, setAttemptToken] = useState(null);
@@ -59,10 +59,11 @@ export default function HtmlLessonPlayer({ lessonId, onScoreRecorded }) {
   const [error, setError] = useState(null);
   const [score, setScore] = useState(null);
   const [bestScore, setBestScore] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    setSrcDoc(null); setAttemptToken(null); setScore(null); setBestScore(null); setError(null); setViewOnly(false); setAttemptsExhausted(false); setStatus('loading');
+    setSrcDoc(null); setAttemptToken(null); setScore(null); setBestScore(null); setError(null); setViewOnly(false); setAttemptsExhausted(false); setIsFullscreen(false); setStatus('loading');
     async function load() {
       try {
         const { data } = await client.get(`/api/lessons/${lessonId}/html`);
@@ -101,7 +102,7 @@ export default function HtmlLessonPlayer({ lessonId, onScoreRecorded }) {
 
   useEffect(() => {
     async function receiveScore(event) {
-      if (viewOnly || attemptsExhausted || !isTitiScoreMessage(event, iframeRef.current?.contentWindow, attemptToken) || status !== 'ready') return;
+      if (!(evaluable && !viewOnly) || attemptsExhausted || !isTitiScoreMessage(event, iframeRef.current?.contentWindow, attemptToken) || status !== 'ready') return;
       setStatus('submitting');
       try {
         const { data } = await client.post(`/api/lessons/${lessonId}/html-results`, {
@@ -120,21 +121,72 @@ export default function HtmlLessonPlayer({ lessonId, onScoreRecorded }) {
     }
     window.addEventListener('message', receiveScore);
     return () => window.removeEventListener('message', receiveScore);
-  }, [attemptToken, attemptsExhausted, lessonId, onScoreRecorded, status, viewOnly]);
+  }, [attemptToken, attemptsExhausted, evaluable, lessonId, onScoreRecorded, status, viewOnly]);
+
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      setIsFullscreen(
+        document.fullscreenElement === iframeRef.current
+          || document.webkitFullscreenElement === iframeRef.current,
+      );
+    };
+    document.addEventListener('fullscreenchange', syncFullscreenState);
+    document.addEventListener('webkitfullscreenchange', syncFullscreenState);
+    return () => {
+      document.removeEventListener('fullscreenchange', syncFullscreenState);
+      document.removeEventListener('webkitfullscreenchange', syncFullscreenState);
+    };
+  }, []);
+
+  const handleFullscreen = () => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+
+    const isCurrentFullscreen = document.fullscreenElement === iframe
+      || document.webkitFullscreenElement === iframe;
+    if (isCurrentFullscreen) {
+      document.exitFullscreen?.();
+      return;
+    }
+
+    const requestFullscreen = iframe.requestFullscreen || iframe.webkitRequestFullscreen;
+    requestFullscreen?.call(iframe);
+  };
 
   if (status === 'loading') return <HtmlLessonLoading />;
   if (status === 'error') return <p className="text-sm font-semibold text-red-600">{error}</p>;
 
   return (
     <section className="mb-6">
-      <iframe
-        ref={iframeRef}
-        title="Actividad HTML"
-        srcDoc={srcDoc}
-        sandbox="allow-scripts"
-        referrerPolicy="no-referrer"
-        className="w-full min-h-[32rem] rounded-2xl border border-gray-200 bg-white"
-      />
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white lg:contents">
+        <div className="flex flex-col gap-3 bg-titi-dark px-4 py-3 sm:flex-row sm:items-center sm:justify-between lg:hidden">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-white">{title || 'Presentación interactiva'}</p>
+            <span className="mt-1 inline-flex rounded-full bg-white/10 px-2 py-1 text-[11px] font-bold text-titi-yellow">
+              Presentación interactiva
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleFullscreen}
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-white/20 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-white/10 sm:w-auto"
+            aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Ver presentación en pantalla completa'}
+          >
+            <span aria-hidden="true">⛶</span>
+            {isFullscreen ? 'Salir' : 'Pantalla completa'}
+          </button>
+        </div>
+        <iframe
+          ref={iframeRef}
+          title={title || 'Actividad HTML'}
+          srcDoc={srcDoc}
+          sandbox="allow-scripts"
+          referrerPolicy="no-referrer"
+          allow="fullscreen"
+          allowFullScreen
+          className="h-[clamp(24rem,62vh,32rem)] w-full bg-white lg:h-auto lg:min-h-[32rem] lg:rounded-2xl lg:border lg:border-gray-200"
+        />
+      </div>
       {attemptsExhausted && <p className="mt-3 text-xs font-semibold text-gray-500">Agotaste tus intentos. Podés revisar la presentación, pero ya no se registrará una nota.</p>}
       {evaluable && (status === 'submitting' || score != null || bestScore != null) && (
         <div className="mt-3 flex flex-wrap items-center gap-3 bg-titi-cream border border-gray-200 rounded-xl px-4 py-3">

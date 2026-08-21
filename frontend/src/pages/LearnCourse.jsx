@@ -717,7 +717,13 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
       )}
 
       {/* Profundiza en este tema (chips de IA — stub por ahora) */}
-      {isHtml && <HtmlLessonPlayer lessonId={leccion.id} onScoreRecorded={onComplete} />}
+      {isHtml && (
+        <HtmlLessonPlayer
+          lessonId={leccion.id}
+          title={leccion.titulo}
+          onScoreRecorded={onComplete}
+        />
+      )}
       <DeepenCard />
 
       {completeError && (

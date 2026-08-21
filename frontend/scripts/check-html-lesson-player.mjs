@@ -17,11 +17,11 @@ assert.match(player, /viewOnly/);
 assert.match(player, /attemptsExhausted/);
 assert.match(player, /err\.response\?\.status !== 409/);
 assert.match(player, /withAttemptToken\(resource\.html, maxAttemptsReached \? null : token\)/);
-assert.match(player, /viewOnly \|\| attemptsExhausted/);
+assert.match(player, /evaluable && !viewOnly/);
 assert.match(player, /Agotaste tus intentos\. Pod\u00e9s revisar la presentaci\u00f3n, pero ya no se registrar\u00e1 una nota\./u);
 assert.match(player, /evaluable && !viewOnly/);
 assert.match(editor, /accept="\.html,text\/html"/);
 assert.match(editor, /\/lessons\/\$\{lesson\.id\}\/html/);
-assert.match(learn, /<HtmlLessonPlayer lessonId=\{leccion\.id\} onScoreRecorded=\{onComplete\}/);
+assert.match(learn, /<HtmlLessonPlayer[\s\S]*lessonId=\{leccion\.id\}[\s\S]*title=\{leccion\.titulo\}[\s\S]*onScoreRecorded=\{onComplete\}/);
 
 console.log('HTML lesson player security contract: pass');
