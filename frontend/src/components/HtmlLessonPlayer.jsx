@@ -106,13 +106,15 @@ function HtmlLessonLoading() {
   );
 }
 
-export default function HtmlLessonPlayer({ lessonId, title, onScoreRecorded }) {
+export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, onScoreRecorded }) {
   const iframeRef = useRef(null);
   const [srcDoc, setSrcDoc] = useState(null);
   const [attemptToken, setAttemptToken] = useState(null);
   const [evaluable, setEvaluable] = useState(false);
   const [viewOnly, setViewOnly] = useState(false);
   const [attemptsExhausted, setAttemptsExhausted] = useState(false);
+  const [remainingAttempts, setRemainingAttempts] = useState(null);
+  const [maxAttempts, setMaxAttempts] = useState(null);
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState(null);
   const [score, setScore] = useState(null);
@@ -121,7 +123,7 @@ export default function HtmlLessonPlayer({ lessonId, title, onScoreRecorded }) {
 
   useEffect(() => {
     let cancelled = false;
-    setSrcDoc(null); setAttemptToken(null); setScore(null); setBestScore(null); setError(null); setViewOnly(false); setAttemptsExhausted(false); setIsFullscreen(false); setStatus('loading');
+    setSrcDoc(null); setAttemptToken(null); setScore(null); setBestScore(null); setError(null); setViewOnly(false); setAttemptsExhausted(false); setRemainingAttempts(null); setMaxAttempts(null); setIsFullscreen(false); setStatus('loading');
     async function load() {
       try {
         const { data } = await client.get(`/api/lessons/${lessonId}/html`);
@@ -129,11 +131,13 @@ export default function HtmlLessonPlayer({ lessonId, title, onScoreRecorded }) {
         const resource = data.data;
         let token = null;
         let maxAttemptsReached = false;
+        let remaining = null;
         if (resource.evaluable) {
           try {
             const attempt = await client.post(`/api/lessons/${lessonId}/html-attempts`);
             if (!attempt.data?.success) throw new Error(attempt.data?.message || 'No se pudo iniciar el intento');
             token = attempt.data.data.attemptToken;
+            remaining = attempt.data.data.remaining;
           } catch (err) {
             if (err.response?.status !== 409) throw err;
             maxAttemptsReached = true;
@@ -141,9 +145,12 @@ export default function HtmlLessonPlayer({ lessonId, title, onScoreRecorded }) {
         }
         if (cancelled) return;
         setEvaluable(Boolean(resource.evaluable));
+        onEvaluableChange?.(Boolean(resource.evaluable));
         setViewOnly(maxAttemptsReached);
         setAttemptsExhausted(maxAttemptsReached);
         setAttemptToken(token);
+        setMaxAttempts(resource.evaluable ? resource.intentosMax : null);
+        setRemainingAttempts(maxAttemptsReached ? 0 : remaining);
         setBestScore(resource.bestScore ?? null);
         const preparedHtml = await renderHtmlDiagrams(resource.html);
         if (cancelled) return;
@@ -158,7 +165,7 @@ export default function HtmlLessonPlayer({ lessonId, title, onScoreRecorded }) {
     }
     load();
     return () => { cancelled = true; };
-  }, [lessonId]);
+  }, [lessonId, onEvaluableChange]);
 
   useEffect(() => {
     async function receiveScore(event) {
@@ -247,6 +254,11 @@ export default function HtmlLessonPlayer({ lessonId, title, onScoreRecorded }) {
           className="h-[clamp(24rem,62vh,32rem)] w-full bg-white lg:h-auto lg:min-h-[32rem] lg:rounded-2xl lg:border lg:border-gray-200"
         />
       </div>
+      {evaluable && remainingAttempts != null && (
+        <div className="mt-3 inline-flex items-center rounded-xl border border-gray-200 bg-titi-cream px-4 py-2 text-sm font-bold text-titi-dark">
+          Intentos restantes: <span className="ml-1 tabular-nums">{remainingAttempts} de {maxAttempts}</span>
+        </div>
+      )}
       {attemptsExhausted && <p className="mt-3 text-xs font-semibold text-gray-500">Agotaste tus intentos. Podés revisar la presentación, pero ya no se registrará una nota.</p>}
       {evaluable && (status === 'submitting' || score != null || bestScore != null) && (
         <div className="mt-3 flex flex-wrap items-center gap-3 bg-titi-cream border border-gray-200 rounded-xl px-4 py-3">

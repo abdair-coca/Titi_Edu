@@ -63,6 +63,7 @@ export default function LearnCourse() {
   // UI state al marcar como completada
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState(null);
+  const [activeHtmlEvaluable, setActiveHtmlEvaluable] = useState(null);
 
   // Mobile: drawer de lecciones abierto
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -271,12 +272,14 @@ export default function LearnCourse() {
   const handleSelectLesson = (lessonId) => {
     setActiveId(lessonId);
     setActiveEvalId(null);
+    setActiveHtmlEvaluable(null);
     setCompleteError(null);
     setDrawerOpen(false);
   };
 
   const handleSelectEval = (evalId) => {
     setActiveEvalId(evalId);
+    setActiveHtmlEvaluable(null);
     setCompleteError(null);
     setDrawerOpen(false);
   };
@@ -348,6 +351,17 @@ export default function LearnCourse() {
     } finally {
       setCompleting(false);
     }
+  };
+
+  const handleHtmlScoreRecorded = (data) => {
+    if (!activeId) return;
+    setCompleteError(null);
+    setCompleted((prev) => {
+      const next = new Set(prev);
+      next.add(activeId);
+      return next;
+    });
+    handleProgressEvents(data);
   };
 
   // --- Render: loading ---
@@ -603,6 +617,9 @@ export default function LearnCourse() {
                 completing={completing}
                 completeError={completeError}
                 onComplete={handleComplete}
+                htmlEvaluable={activeHtmlEvaluable}
+                onHtmlEvaluableChange={setActiveHtmlEvaluable}
+                onHtmlScoreRecorded={handleHtmlScoreRecorded}
                 hasNext={hasNext}
                 onNext={handleNext}
                 onSaveNote={() => setSidePanel('notas')}
@@ -667,7 +684,7 @@ function MaterialChip({ material }) {
   );
 }
 
-function LessonView({ leccion, completed, completing, completeError, onComplete, hasNext, onNext, onSaveNote }) {
+function LessonView({ leccion, completed, completing, completeError, onComplete, htmlEvaluable, onHtmlEvaluableChange, onHtmlScoreRecorded, hasNext, onNext, onSaveNote }) {
   const videoEmbed = useMemo(
     () => normalizeVideoUrl(leccion.videoUrl),
     [leccion.videoUrl],
@@ -721,7 +738,8 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
         <HtmlLessonPlayer
           lessonId={leccion.id}
           title={leccion.titulo}
-          onScoreRecorded={onComplete}
+          onEvaluableChange={onHtmlEvaluableChange}
+          onScoreRecorded={onHtmlScoreRecorded}
         />
       )}
       <DeepenCard />
@@ -765,6 +783,10 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
               Lección completada
             </button>
           </>
+        ) : isHtml && htmlEvaluable !== false ? (
+          <p className="order-1 lg:order-2 text-sm font-semibold text-gray-500">
+            {htmlEvaluable === null ? 'Preparando la actividad…' : 'Completá la actividad para registrar tu nota.'}
+          </p>
         ) : (
           <button
             type="button"
