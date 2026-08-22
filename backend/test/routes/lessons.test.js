@@ -3,6 +3,10 @@ import request from 'supertest';
 import jwt from 'jsonwebtoken';
 
 vi.mock('../../src/db.js', () => ({ runQuery: vi.fn(), toNumber: (v) => Number(v ?? 0), default: {} }));
+vi.mock('../../src/services/progress.service.js', () => ({ actualizarRacha: vi.fn(), checkCursoCompletado: vi.fn() }));
+vi.mock('../../src/services/achievement.service.js', () => ({ checkLogrosLeccion: vi.fn() }));
+vi.mock('../../src/services/gotas.service.js', () => ({ otorgarGotas: vi.fn() }));
+vi.mock('../../src/services/mision.service.js', () => ({ avanzarMisiones: vi.fn() }));
 vi.mock('../../src/prisma.js', () => {
   const client = {
     usuario: { findUnique: vi.fn() },
@@ -12,7 +16,7 @@ vi.mock('../../src/prisma.js', () => {
     inscripcion: { findUnique: vi.fn() },
     intentoHtmlLeccion: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     resultadoHtmlLeccion: { findUnique: vi.fn(), upsert: vi.fn() },
-    progreso: { upsert: vi.fn() },
+    progreso: { findUnique: vi.fn(), upsert: vi.fn() },
   };
   client.$transaction = vi.fn(async (callback) => callback(client));
   return { default: client };
@@ -60,6 +64,11 @@ describe('HTML lesson access and attempts', () => {
 
   it('stores best practice score and returns an idempotent result', async () => {
     allowStudent();
+    checkCursoCompletado.mockResolvedValueOnce({
+      completado: true,
+      nuevo: true,
+      certificado: { id: 'cert-1', codigoVerif: 'ABC123' },
+    });
     prisma.intentoHtmlLeccion.findUnique.mockResolvedValue({ id: 'a1', token: 'attempt-1', usuarioId: 'u1', recursoHtmlId: 'rh-1', puntaje: null });
     prisma.resultadoHtmlLeccion.findUnique.mockResolvedValue(null);
     prisma.intentoHtmlLeccion.update.mockResolvedValue({ id: 'a1', puntaje: 84 });
@@ -71,29 +80,46 @@ describe('HTML lesson access and attempts', () => {
     expect(first.body.data).toEqual({
       score: 84, bestScore: 84, replayed: false, practice: true,
       progreso: { id: 'p1', usuarioId: 'u1', leccionId: 'l-html', completada: true },
+      cursoCompletado: { nuevo: true, certificado: { id: 'cert-1', codigoVerif: 'ABC123' } },
     });
     expect(prisma.progreso.upsert).toHaveBeenCalledWith(expect.objectContaining({
       where: { usuarioId_leccionId: { usuarioId: 'u1', leccionId: 'l-html' } },
       create: expect.objectContaining({ completada: true }),
     }));
+    expect(checkCursoCompletado).toHaveBeenCalledWith('u1', 'c1');
 
     prisma.intentoHtmlLeccion.findUnique.mockResolvedValue({ id: 'a1', token: 'attempt-1', usuarioId: 'u1', recursoHtmlId: 'rh-1', puntaje: 84 });
     prisma.resultadoHtmlLeccion.findUnique.mockResolvedValue({ mejorPuntaje: 84 });
     const replay = await request(app).post('/api/lessons/l-html/html-results')
       .set('Authorization', `Bearer ${token}`).send({ attemptToken: 'attempt-1', score: 12 });
     expect(replay.status).toBe(200);
-    expect(replay.body.data).toEqual({ score: 84, bestScore: 84, replayed: true, practice: true, progreso: null });
+    expect(replay.body.data).toEqual({
+      score: 84,
+      bestScore: 84,
+      replayed: true,
+      practice: true,
+      progreso: null,
+      cursoCompletado: null,
+    });
     expect(prisma.intentoHtmlLeccion.update).toHaveBeenCalledTimes(1);
     expect(prisma.progreso.upsert).toHaveBeenCalledTimes(1);
+    expect(checkCursoCompletado).toHaveBeenCalledTimes(1);
   });
 });
 
 import app from '../../src/app.js';
 import prisma from '../../src/prisma.js';
+import { actualizarRacha, checkCursoCompletado } from '../../src/services/progress.service.js';
+import { checkLogrosLeccion } from '../../src/services/achievement.service.js';
+import { otorgarGotas } from '../../src/services/gotas.service.js';
+import { avanzarMisiones } from '../../src/services/mision.service.js';
 
 const token = jwt.sign({ id: 'neo-1' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  checkCursoCompletado.mockResolvedValue({ completado: false, logros: [] });
+});
 
 describe('legacy lesson authoring mutations', () => {
   it('requires auth and blocks update/create outside /api/authoring', async () => {
@@ -207,5 +233,47 @@ describe('POST /api/lessons/:id/complete (inscripción)', () => {
       .post('/api/lessons/l1/complete')
       .set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(403);
+  });
+
+  it('rechaza completar manualmente una actividad HTML evaluable', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
+    prisma.leccion.findUnique.mockResolvedValue({
+      id: 'l-html',
+      recursoHtml: { evaluable: true },
+      modulo: { cursoId: 'c1', estado: 'PUBLICADO' },
+    });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'other', publicado: true, profesores: [] });
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
+
+    const res = await request(app).post('/api/lessons/l-html/complete').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(409);
+    expect(res.body.message).toContain('HTML evaluables');
+    expect(prisma.progreso.upsert).not.toHaveBeenCalled();
+  });
+
+  it('mantiene el completado manual para una lección normal', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE', racha: 0, ultimaActividad: null });
+    prisma.leccion.findUnique.mockResolvedValue({
+      id: 'l-normal',
+      recursoHtml: null,
+      modulo: { cursoId: 'c1', estado: 'PUBLICADO' },
+    });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'other', publicado: true, profesores: [] });
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
+    prisma.progreso.findUnique.mockResolvedValue(null);
+    prisma.progreso.upsert.mockResolvedValue({ id: 'p1', completada: true });
+    actualizarRacha.mockResolvedValue({ racha: 1, subio: true, rota: false });
+    checkLogrosLeccion.mockResolvedValue([]);
+    otorgarGotas.mockResolvedValue({ otorgadas: 0 });
+    avanzarMisiones.mockResolvedValue(undefined);
+
+    const res = await request(app).post('/api/lessons/l-normal/complete').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(prisma.progreso.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { usuarioId_leccionId: { usuarioId: 'u1', leccionId: 'l-normal' } },
+    }));
   });
 });

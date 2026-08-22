@@ -235,7 +235,30 @@ router.post('/lessons/:id/html-results', requireAuth, async (req, res) => {
         : current;
       return { attempt: completedAttempt, progreso, bestScore: best.mejorPuntaje, replayed: false };
     });
-    res.json({ success: true, data: { score: result.attempt.puntaje, bestScore: result.bestScore, replayed: result.replayed, practice: true, progreso: result.progreso || null } });
+    const cursoCompletado = result.replayed
+      ? null
+      : await checkCursoCompletado(loaded.access.usuario.id, loaded.leccion.modulo.cursoId);
+    res.json({
+      success: true,
+      data: {
+        score: result.attempt.puntaje,
+        bestScore: result.bestScore,
+        replayed: result.replayed,
+        practice: true,
+        progreso: result.progreso || null,
+        cursoCompletado: cursoCompletado?.completado
+          ? {
+              nuevo: Boolean(cursoCompletado.nuevo),
+              certificado: cursoCompletado.certificado
+                ? {
+                    id: cursoCompletado.certificado.id,
+                    codigoVerif: cursoCompletado.certificado.codigoVerif,
+                  }
+                : null,
+            }
+          : null,
+      },
+    });
   } catch (err) {
     if (err instanceof HtmlLessonError) return res.status(err.status).json({ success: false, message: err.message });
     console.error('POST /api/lessons/:id/html-results error', err);
@@ -337,7 +360,7 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
 
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true, estado: true, modulo: { select: { cursoId: true, estado: true } } },
+      select: { id: true, estado: true, recursoHtml: { select: { evaluable: true } }, modulo: { select: { cursoId: true, estado: true } } },
     });
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
@@ -347,6 +370,12 @@ router.post('/lessons/:id/complete', requireAuth, async (req, res) => {
       lessonState: leccion.estado,
     });
     if (!access) return;
+    if (leccion.recursoHtml?.evaluable) {
+      return res.status(409).json({
+        success: false,
+        message: 'Las actividades HTML evaluables se completan al registrar su puntaje',
+      });
+    }
 
     // ¿Era la primera vez que la completa? Sólo en ese caso actualizamos la racha.
     const previo = await prisma.progreso.findUnique({
