@@ -118,7 +118,11 @@ async function runSerializable(client, operation) {
   let lastError;
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
-      return await client.$transaction(operation, { isolationLevel: 'Serializable' });
+      return await client.$transaction(operation, {
+        isolationLevel: 'Serializable',
+        maxWait: 10_000,
+        timeout: 30_000,
+      });
     } catch (error) {
       lastError = error;
       if (error?.code !== 'P2034') throw error;
