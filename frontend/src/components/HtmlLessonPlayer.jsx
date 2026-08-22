@@ -129,20 +129,9 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
         const { data } = await client.get(`/api/lessons/${lessonId}/html`);
         if (!data?.success) throw new Error(data?.message || 'No se pudo cargar la actividad HTML');
         const resource = data.data;
-        let token = null;
-        let maxAttemptsReached = false;
-        let remaining = null;
-        if (resource.evaluable) {
-          try {
-            const attempt = await client.post(`/api/lessons/${lessonId}/html-attempts`);
-            if (!attempt.data?.success) throw new Error(attempt.data?.message || 'No se pudo iniciar el intento');
-            token = attempt.data.data.attemptToken;
-            remaining = attempt.data.data.remaining;
-          } catch (err) {
-            if (err.response?.status !== 409) throw err;
-            maxAttemptsReached = true;
-          }
-        }
+        const token = resource.evaluable ? resource.attemptToken : null;
+        const maxAttemptsReached = Boolean(resource.evaluable && resource.attemptsExhausted);
+        const remaining = resource.evaluable ? resource.remainingAttempts : null;
         if (cancelled) return;
         setEvaluable(Boolean(resource.evaluable));
         onEvaluableChange?.(Boolean(resource.evaluable));
@@ -150,7 +139,7 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
         setAttemptsExhausted(maxAttemptsReached);
         setAttemptToken(token);
         setMaxAttempts(resource.evaluable ? resource.intentosMax : null);
-        setRemainingAttempts(maxAttemptsReached ? 0 : remaining);
+        setRemainingAttempts(remaining);
         setBestScore(resource.bestScore ?? null);
         const preparedHtml = await renderHtmlDiagrams(resource.html);
         if (cancelled) return;
@@ -179,9 +168,17 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
         if (!data?.success) throw new Error(data?.message || 'No se pudo registrar el puntaje');
         setScore(data.data.score);
         setBestScore(data.data.bestScore ?? data.data.score);
+        setRemainingAttempts(data.data.remaining ?? null);
+        setAttemptsExhausted(data.data.remaining === 0);
+        setViewOnly(data.data.remaining === 0);
         setStatus('submitted');
         await onScoreRecorded?.(data.data);
       } catch (err) {
+        if (err.response?.status === 409) {
+          setAttemptsExhausted(true);
+          setViewOnly(true);
+          setRemainingAttempts(0);
+        }
         setError(err.response?.data?.message || err.message || 'No se pudo registrar el puntaje');
         setStatus('ready');
       }
