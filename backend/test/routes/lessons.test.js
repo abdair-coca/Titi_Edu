@@ -14,7 +14,7 @@ vi.mock('../../src/prisma.js', () => {
     modulo: { findUnique: vi.fn() },
     curso: { findUnique: vi.fn() },
     inscripcion: { findUnique: vi.fn() },
-    intentoHtmlLeccion: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
+    intentoHtmlLeccion: { count: vi.fn(), create: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     resultadoHtmlLeccion: { findUnique: vi.fn(), upsert: vi.fn() },
     progreso: { findUnique: vi.fn(), upsert: vi.fn() },
   };
@@ -33,13 +33,22 @@ describe('HTML lesson access and attempts', () => {
     prisma.curso.findUnique.mockResolvedValue({ creadorId: 'other', publicado: true, profesores: [] });
     prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
     prisma.leccion.findUnique.mockResolvedValue(htmlLesson);
+    prisma.intentoHtmlLeccion.count.mockResolvedValue(0);
   }
 
   it('returns authenticated HTML source without a public URL', async () => {
     allowStudent();
     const response = await request(app).get('/api/lessons/l-html/html').set('Authorization', `Bearer ${token}`);
     expect(response.status).toBe(200);
-    expect(response.body.data).toEqual({ html: htmlLesson.recursoHtml.html, evaluable: true, intentosMax: 2, bestScore: null });
+    expect(response.body.data).toMatchObject({
+      html: htmlLesson.recursoHtml.html,
+      evaluable: true,
+      intentosMax: 2,
+      bestScore: null,
+      remainingAttempts: 2,
+      attemptsExhausted: false,
+    });
+    expect(response.body.data.attemptToken).toEqual(expect.any(String));
     expect(JSON.stringify(response.body)).not.toContain('url');
 
     prisma.resultadoHtmlLeccion.findUnique.mockResolvedValue({ mejorPuntaje: 73 });
@@ -48,18 +57,44 @@ describe('HTML lesson access and attempts', () => {
     expect(scored.body.data.bestScore).toBe(73);
   });
 
-  it('reserves an attempt transactionally and rejects exhausted limits', async () => {
+  it('issues a temporary token without consuming an attempt and rejects exhausted limits', async () => {
     allowStudent();
     prisma.intentoHtmlLeccion.count.mockResolvedValue(1);
-    prisma.intentoHtmlLeccion.create.mockImplementation(({ data }) => Promise.resolve({ ...data, id: 'a2' }));
     const started = await request(app).post('/api/lessons/l-html/html-attempts').set('Authorization', `Bearer ${token}`);
-    expect(started.status).toBe(201);
-    expect(started.body.data).toMatchObject({ numero: 2, remaining: 0 });
-    expect(started.body.data.attemptToken).toMatch(/^[A-Za-z0-9_-]{32}$/);
+    expect(started.status).toBe(200);
+    expect(started.body.data).toMatchObject({ remaining: 1 });
+    expect(started.body.data.attemptToken).toEqual(expect.any(String));
+    expect(prisma.intentoHtmlLeccion.create).not.toHaveBeenCalled();
+    expect(prisma.intentoHtmlLeccion.count).toHaveBeenCalledWith({
+      where: { usuarioId: 'u1', recursoHtmlId: 'rh-1', puntaje: { not: null } },
+    });
 
     prisma.intentoHtmlLeccion.count.mockResolvedValue(2);
     const exhausted = await request(app).post('/api/lessons/l-html/html-attempts').set('Authorization', `Bearer ${token}`);
     expect(exhausted.status).toBe(409);
+  });
+
+  it('creates the persisted attempt only when a temporary token submits a score', async () => {
+    allowStudent();
+    prisma.intentoHtmlLeccion.count.mockResolvedValue(1);
+    const started = await request(app).post('/api/lessons/l-html/html-attempts').set('Authorization', `Bearer ${token}`);
+    const attemptToken = started.body.data.attemptToken;
+    prisma.intentoHtmlLeccion.findUnique.mockResolvedValue(null);
+    prisma.intentoHtmlLeccion.findFirst.mockResolvedValue({ numero: 4 });
+    prisma.intentoHtmlLeccion.create.mockImplementation(({ data }) => Promise.resolve({ ...data, id: 'a5', puntaje: null }));
+    prisma.intentoHtmlLeccion.update.mockResolvedValue({ id: 'a5', puntaje: 77 });
+    prisma.resultadoHtmlLeccion.findUnique.mockResolvedValue(null);
+    prisma.progreso.upsert.mockResolvedValue({ id: 'p1', completada: true });
+    prisma.resultadoHtmlLeccion.upsert.mockResolvedValue({ mejorPuntaje: 77 });
+
+    const response = await request(app).post('/api/lessons/l-html/html-results')
+      .set('Authorization', `Bearer ${token}`).send({ attemptToken, score: 77 });
+
+    expect(response.status).toBe(200);
+    expect(prisma.intentoHtmlLeccion.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ token: attemptToken, numero: 5, usuarioId: 'u1', recursoHtmlId: 'rh-1' }),
+    });
+    expect(response.body.data.remaining).toBe(0);
   });
 
   it('stores best practice score and returns an idempotent result', async () => {
@@ -78,7 +113,7 @@ describe('HTML lesson access and attempts', () => {
       .set('Authorization', `Bearer ${token}`).send({ attemptToken: 'attempt-1', score: 84 });
     expect(first.status).toBe(200);
     expect(first.body.data).toEqual({
-      score: 84, bestScore: 84, replayed: false, practice: true,
+      score: 84, bestScore: 84, remaining: 1, replayed: false, practice: true,
       progreso: { id: 'p1', usuarioId: 'u1', leccionId: 'l-html', completada: true },
       cursoCompletado: { nuevo: true, certificado: { id: 'cert-1', codigoVerif: 'ABC123' } },
     });
@@ -90,12 +125,14 @@ describe('HTML lesson access and attempts', () => {
 
     prisma.intentoHtmlLeccion.findUnique.mockResolvedValue({ id: 'a1', token: 'attempt-1', usuarioId: 'u1', recursoHtmlId: 'rh-1', puntaje: 84 });
     prisma.resultadoHtmlLeccion.findUnique.mockResolvedValue({ mejorPuntaje: 84 });
+    prisma.intentoHtmlLeccion.count.mockResolvedValue(1);
     const replay = await request(app).post('/api/lessons/l-html/html-results')
       .set('Authorization', `Bearer ${token}`).send({ attemptToken: 'attempt-1', score: 12 });
     expect(replay.status).toBe(200);
     expect(replay.body.data).toEqual({
       score: 84,
       bestScore: 84,
+      remaining: 1,
       replayed: true,
       practice: true,
       progreso: null,

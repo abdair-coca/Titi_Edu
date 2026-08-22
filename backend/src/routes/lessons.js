@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { randomBytes } from 'crypto';
+import jwt from 'jsonwebtoken';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { loadCurrentUser, requireRole, isOwnerOrAdmin, ensureCourseContentAccess } from '../middleware/permissions.js';
@@ -15,6 +15,25 @@ class HtmlLessonError extends Error {
   constructor(status, message) {
     super(message);
     this.status = status;
+  }
+}
+
+const HTML_ATTEMPT_TOKEN_TYPE = 'html-lesson-attempt';
+
+function issueHtmlAttemptToken({ userId, lessonId, resourceId }) {
+  return jwt.sign(
+    { type: HTML_ATTEMPT_TOKEN_TYPE, userId, lessonId, resourceId },
+    process.env.JWT_SECRET,
+    { expiresIn: '2h' },
+  );
+}
+
+function verifyHtmlAttemptToken(token) {
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    return payload?.type === HTML_ATTEMPT_TOKEN_TYPE ? payload : null;
+  } catch {
+    return null;
   }
 }
 
@@ -149,11 +168,18 @@ router.get('/lessons/:id/html', requireAuth, async (req, res) => {
     const loaded = await loadHtmlLesson(req, res);
     if (!loaded) return;
     const { recursoHtml } = loaded.leccion;
-    const resultado = recursoHtml.evaluable
-      ? await prisma.resultadoHtmlLeccion.findUnique({
-          where: { usuarioId_recursoHtmlId: { usuarioId: loaded.access.usuario.id, recursoHtmlId: recursoHtml.id } },
-          select: { mejorPuntaje: true },
-        })
+    const attemptsWhere = { usuarioId: loaded.access.usuario.id, recursoHtmlId: recursoHtml.id };
+    const [resultado, usedAttempts] = recursoHtml.evaluable
+      ? await Promise.all([
+          prisma.resultadoHtmlLeccion.findUnique({
+            where: { usuarioId_recursoHtmlId: { usuarioId: loaded.access.usuario.id, recursoHtmlId: recursoHtml.id } },
+            select: { mejorPuntaje: true },
+          }),
+          prisma.intentoHtmlLeccion.count({ where: { ...attemptsWhere, puntaje: { not: null } } }),
+        ])
+      : [null, 0];
+    const remainingAttempts = recursoHtml.evaluable
+      ? Math.max(0, recursoHtml.intentosMax - usedAttempts)
       : null;
     res.json({
       success: true,
@@ -162,6 +188,15 @@ router.get('/lessons/:id/html', requireAuth, async (req, res) => {
         evaluable: recursoHtml.evaluable,
         intentosMax: recursoHtml.intentosMax,
         bestScore: resultado?.mejorPuntaje ?? null,
+        remainingAttempts,
+        attemptsExhausted: recursoHtml.evaluable ? remainingAttempts === 0 : false,
+        attemptToken: recursoHtml.evaluable && remainingAttempts > 0
+          ? issueHtmlAttemptToken({
+              userId: loaded.access.usuario.id,
+              lessonId: loaded.leccion.id,
+              resourceId: recursoHtml.id,
+            })
+          : null,
       },
     });
   } catch (err) {
@@ -170,21 +205,25 @@ router.get('/lessons/:id/html', requireAuth, async (req, res) => {
   }
 });
 
-// ---- POST /api/lessons/:id/html-attempts — reserva atómica de intento ----
+// ---- POST /api/lessons/:id/html-attempts — token temporal, no consume intento ----
 router.post('/lessons/:id/html-attempts', requireAuth, async (req, res) => {
   try {
     const loaded = await loadHtmlLesson(req, res);
     if (!loaded) return;
     const { recursoHtml: resource } = loaded.leccion;
     if (!resource.evaluable) return res.status(409).json({ success: false, message: 'Este contenido HTML no es evaluable' });
-    const attempt = await runSerializable(async (tx) => {
-      const used = await tx.intentoHtmlLeccion.count({ where: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id } });
-      if (used >= resource.intentosMax) throw new HtmlLessonError(409, 'Ya alcanzaste el máximo de intentos para este contenido HTML');
-      return tx.intentoHtmlLeccion.create({
-        data: { token: randomBytes(24).toString('base64url'), numero: used + 1, usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id },
-      });
+    const used = await prisma.intentoHtmlLeccion.count({
+      where: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id, puntaje: { not: null } },
     });
-    res.status(201).json({ success: true, data: { attemptToken: attempt.token, numero: attempt.numero, remaining: resource.intentosMax - attempt.numero } });
+    if (used >= resource.intentosMax) {
+      return res.status(409).json({ success: false, message: 'Ya alcanzaste el máximo de intentos para este contenido HTML' });
+    }
+    const attemptToken = issueHtmlAttemptToken({
+      userId: loaded.access.usuario.id,
+      lessonId: loaded.leccion.id,
+      resourceId: resource.id,
+    });
+    res.json({ success: true, data: { attemptToken, remaining: resource.intentosMax - used } });
   } catch (err) {
     if (err instanceof HtmlLessonError) return res.status(err.status).json({ success: false, message: err.message });
     console.error('POST /api/lessons/:id/html-attempts error', err);
@@ -197,7 +236,7 @@ router.post('/lessons/:id/html-results', requireAuth, async (req, res) => {
   try {
     const score = Number(req.body?.score);
     const attemptToken = String(req.body?.attemptToken || '');
-    if (!Number.isFinite(score) || score < 0 || score > 100 || !attemptToken || attemptToken.length > 200) {
+    if (!Number.isFinite(score) || score < 0 || score > 100 || !attemptToken || attemptToken.length > 512) {
       return res.status(400).json({ success: false, message: 'score debe estar entre 0 y 100 y attemptToken es requerido' });
     }
     const loaded = await loadHtmlLesson(req, res);
@@ -205,15 +244,43 @@ router.post('/lessons/:id/html-results', requireAuth, async (req, res) => {
     const { recursoHtml: resource } = loaded.leccion;
     if (!resource.evaluable) return res.status(409).json({ success: false, message: 'Este contenido HTML no es evaluable' });
     const result = await runSerializable(async (tx) => {
-      const attempt = await tx.intentoHtmlLeccion.findUnique({ where: { token: attemptToken } });
-      if (!attempt || attempt.usuarioId !== loaded.access.usuario.id || attempt.recursoHtmlId !== resource.id) {
+      let attempt = await tx.intentoHtmlLeccion.findUnique({ where: { token: attemptToken } });
+      if (attempt && (attempt.usuarioId !== loaded.access.usuario.id || attempt.recursoHtmlId !== resource.id)) {
         throw new HtmlLessonError(404, 'Intento HTML no encontrado');
+      }
+      const used = await tx.intentoHtmlLeccion.count({
+        where: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id, puntaje: { not: null } },
+      });
+      if (!attempt) {
+        const tokenPayload = verifyHtmlAttemptToken(attemptToken);
+        if (!tokenPayload
+          || tokenPayload.userId !== loaded.access.usuario.id
+          || tokenPayload.lessonId !== loaded.leccion.id
+          || tokenPayload.resourceId !== resource.id) {
+          throw new HtmlLessonError(404, 'Intento HTML no encontrado');
+        }
+        if (used >= resource.intentosMax) {
+          throw new HtmlLessonError(409, 'Ya alcanzaste el máximo de intentos para este contenido HTML');
+        }
+        const lastAttempt = await tx.intentoHtmlLeccion.findFirst({
+          where: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id },
+          orderBy: { numero: 'desc' },
+          select: { numero: true },
+        });
+        attempt = await tx.intentoHtmlLeccion.create({
+          data: {
+            token: attemptToken,
+            numero: (lastAttempt?.numero ?? 0) + 1,
+            usuarioId: loaded.access.usuario.id,
+            recursoHtmlId: resource.id,
+          },
+        });
       }
       const current = await tx.resultadoHtmlLeccion.findUnique({
         where: { usuarioId_recursoHtmlId: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id } },
       });
       if (attempt.puntaje !== null && attempt.puntaje !== undefined) {
-        return { attempt, bestScore: current?.mejorPuntaje ?? attempt.puntaje, replayed: true };
+        return { attempt, bestScore: current?.mejorPuntaje ?? attempt.puntaje, remaining: Math.max(0, resource.intentosMax - used), replayed: true };
       }
       const completedAttempt = await tx.intentoHtmlLeccion.update({ where: { id: attempt.id }, data: { puntaje: score, resultadoAt: new Date() } });
       const progreso = await tx.progreso.upsert({
@@ -233,7 +300,7 @@ router.post('/lessons/:id/html-results', requireAuth, async (req, res) => {
             create: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id, mejorPuntaje: score, intentoId: attempt.id },
           })
         : current;
-      return { attempt: completedAttempt, progreso, bestScore: best.mejorPuntaje, replayed: false };
+      return { attempt: completedAttempt, progreso, bestScore: best.mejorPuntaje, remaining: Math.max(0, resource.intentosMax - used - 1), replayed: false };
     });
     const cursoCompletado = result.replayed
       ? null
@@ -243,6 +310,7 @@ router.post('/lessons/:id/html-results', requireAuth, async (req, res) => {
       data: {
         score: result.attempt.puntaje,
         bestScore: result.bestScore,
+        remaining: result.remaining,
         replayed: result.replayed,
         practice: true,
         progreso: result.progreso || null,

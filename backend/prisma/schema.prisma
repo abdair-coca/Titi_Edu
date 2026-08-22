@@ -308,8 +308,8 @@ model RecursoHtmlLeccion {
   @@index([leccionId])
 }
 
-// Cada inicio consume un intento. El token opaco vincula el postMessage al
-// estudiante y hace idempotente la entrega del puntaje.
+// El token temporal vincula el postMessage al estudiante. El intento se persiste
+// y consume cupo recién cuando se entrega un puntaje válido.
 model IntentoHtmlLeccion {
   id            String                @id @default(uuid())
   token         String                @unique
