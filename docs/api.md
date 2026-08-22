@@ -149,8 +149,10 @@ existe URL p�blica. El servidor exige documento autocontenido, recursos inline
 `data:`, sin red externa, formularios, frames, `srcset` ni `meta http-equiv`, e
 inyecta CSP restrictiva. El frontend usa `iframe srcDoc sandbox="allow-scripts"`.
 
-Para HTML evaluable, `POST /api/lessons/:id/html-attempts` reserva un intento y
-devuelve `{ attemptToken, numero, remaining }`. La actividad env�a:
+Para HTML evaluable, `GET /api/lessons/:id/html` devuelve un token temporal junto
+con `remainingAttempts` y `attemptsExhausted`; cargar o recargar la página no crea
+un intento. `POST /api/lessons/:id/html-attempts` sigue disponible por compatibilidad
+y también devuelve un token temporal sin consumir cupo. La actividad env�a:
 
 ```js
 window.parent.postMessage({
@@ -163,8 +165,10 @@ window.parent.postMessage({
 
 El player valida `event.source === iframe.contentWindow`, tipo, rango y token; no
 conf�a en `event.origin`. Luego env�a `{ score, attemptToken }` a
-`POST /api/lessons/:id/html-results`. El puntaje es pr�ctica/autodeclarado, no nota
-oficial ni credencial.
+`POST /api/lessons/:id/html-results`. Este endpoint persiste intento, puntaje y
+progreso en una sola transacción; reintentar mismo token es idempotente. Solo
+intentos con `puntaje` registrado consumen cupo. El puntaje es pr�ctica/autodeclarado,
+no nota oficial ni credencial.
 
 
 ## Cursos vivos
