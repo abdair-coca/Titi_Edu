@@ -162,3 +162,4 @@ curl -X POST "https://titi-backend.onrender.com/api/admin/rag/courses/<COURSE_ID
 - El indexado asíncrono actualmente registra el error y queda para reintento manual; la cola/reintentos formales son Fase 2.
 - El índice vectorial ANN todavía no es necesario para el piloto pequeño; evaluar HNSW/IVFFlat con métricas en Fase 5.
 - No se hizo deploy productivo: primero hay que configurar secretos en staging y probar un curso piloto con usuarios reales autorizados.
+- En este Windows, `prisma generate` normal encontró un `EPERM` sobre el query engine bloqueado; `prisma validate` y `prisma generate --no-engine` pasaron. El deploy/CI debe ejecutar `prisma generate` en un entorno limpio.
