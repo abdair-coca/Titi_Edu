@@ -142,7 +142,7 @@ curl -X POST "https://titi-backend.onrender.com/api/admin/rag/courses/<COURSE_ID
 ```
 
 4. Esperá `success: true` y verificá al menos un resultado `INDEXED`.
-5. Con un estudiante inscrito, abrí `https://titiedu.vercel.app/learn/<COURSE_ID>` y una lección publicada.
+5. Con un estudiante inscrito, abrí `https://titiedu.vercel.app/courses/<COURSE_ID>/learn` y una lección publicada.
 6. Verificá que aparezca **Tutor de la lección**, abrilo y preguntá sobre el contenido.
 7. Esperá una respuesta con `[1]` y una sección **Fuentes**.
 8. Preguntá algo fuera del material: debe responder que no encontró evidencia suficiente o no afirmar datos sin cita.
