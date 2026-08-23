@@ -31,6 +31,7 @@ import {
   normalizeLessonOrder,
 } from '../services/content-deletion.service.js';
 import { cloudinaryEnabled, destroyAsset, uploadBuffer } from '../services/upload.service.js';
+import { scheduleLessonIndex } from '../services/rag.service.js';
 
 const router = Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -449,6 +450,7 @@ router.post('/modules/:moduleId/lessons', requireAuthoringPrincipal('content:wri
 }));
 
 router.put('/lessons/:id', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  let updatedLessonId = null;
   await executeIdempotent(req, res, { accion: 'lesson.update' }, async (tx) => {
     const lesson = await tx.leccion.findUnique({
       where: { id: req.params.id },
@@ -477,11 +479,14 @@ router.put('/lessons/:id', requireAuthoringPrincipal('content:write'), handle(as
     await createLessonRevision(tx, lesson, req.authoringPrincipal);
     await claimLessonMutation(tx, lesson);
     const updated = await tx.leccion.update({ where: { id: lesson.id }, data });
+    updatedLessonId = updated.id;
     return { data: { lesson: updated } };
   });
+  if (updatedLessonId) scheduleLessonIndex(updatedLessonId);
 }));
 
 router.post('/lessons/:id/publish', requireAuthoringPrincipal('publish'), handle(async (req, res) => {
+  let publishedLessonId = null;
   await executeIdempotent(req, res, { accion: 'lesson.publish' }, async (tx) => {
     const lesson = await tx.leccion.findUnique({
       where: { id: req.params.id },
@@ -502,8 +507,10 @@ router.post('/lessons/:id/publish', requireAuthoringPrincipal('publish'), handle
       await tx.modulo.update({ where: { id: lesson.modulo.id }, data: { estado: 'PUBLICADO' } });
     }
     const publishedLesson = await tx.leccion.findUnique({ where: { id: lesson.id } });
+    publishedLessonId = publishedLesson.id;
     return { data: { lesson: publishedLesson, moduleActivated: lesson.modulo.estado === 'BORRADOR' } };
   });
+  if (publishedLessonId) scheduleLessonIndex(publishedLessonId);
 }));
 
 router.post('/lessons/:id/archive', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
@@ -1086,6 +1093,7 @@ router.post('/service-tokens/:id/revoke', requireAuthoringPrincipal(), requireAu
 }));
 
 router.post('/lessons/:id/html', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  let updatedLessonId = null;
   await executeIdempotent(req, res, { accion: 'lesson.html.upsert', transactionOptions: { timeout: 20_000, maxWait: 10_000 } }, async (tx) => {
     const lesson = await tx.leccion.findUnique({
       where: { id: req.params.id },
@@ -1111,8 +1119,10 @@ router.post('/lessons/:id/html', requireAuthoringPrincipal('content:write'), han
       where: { id: lesson.id },
       data: { formatoContenido: 'HTML', videoUrl: null },
     });
+    updatedLessonId = updated.id;
     return { data: { lesson: updated, htmlResource: resource } };
   });
+  if (updatedLessonId) scheduleLessonIndex(updatedLessonId);
 }));
 
 router.delete('/service-tokens/:id', requireAuthoringPrincipal(), requireAuthoringJwt, handle(async (req, res) => {

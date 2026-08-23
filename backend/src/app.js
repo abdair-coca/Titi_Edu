@@ -26,6 +26,7 @@ import rankingRoutes from './routes/ranking.js'
 import shopRoutes from './routes/shop.js'
 import authoringRoutes from './routes/authoring.js'
 import gradesRoutes from './routes/grades.js'
+import ragRoutes from './routes/rag.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -85,6 +86,7 @@ app.use('/api', materialRoutes)
 app.use('/api', evaluationRoutes)
 app.use('/api/categories', categoryRoutes)
 app.use('/api/progress', progressRoutes)
+app.use('/api', ragRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/gotas', gotasRoutes)
 app.use('/api/missions', missionsRoutes)
