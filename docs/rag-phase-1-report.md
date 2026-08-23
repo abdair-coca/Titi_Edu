@@ -14,6 +14,7 @@ Estado: implementado y verificado en local; producción queda protegida por flag
 - Acceso restringido a usuarios autenticados con inscripción o rol docente/admin autorizado.
 - Flag fail-closed por curso mediante `RAG_ENABLED=true` + `RAG_COURSE_IDS=<id>`.
 - Reindexado autorizado de un curso piloto y reindexado asíncrono al guardar/publicar contenido.
+- El reindexado automático también valida `RAG_COURSE_IDS`; no indexa cursos fuera de la allowlist.
 - Tutor integrado en `LearnCourse`; no aparece para estudiantes hasta que el curso esté habilitado e indexado.
 
 ## 2. Archivos y migración
@@ -29,6 +30,8 @@ Estado: implementado y verificado en local; producción queda protegida por flag
 - `frontend/src/pages/LearnCourse.jsx`
 - `backend/test/routes/rag.test.js`
 - `backend/test/services/rag.service.test.js`
+- `backend/test/services/rag.indexing.test.js`
+- `backend/scripts/e2e-rag-phase1.mjs`
 - `frontend/scripts/check-rag-contract.mjs`
 - `docs/api.md`
 
@@ -61,6 +64,8 @@ La migración crea `vector(1536)`, por eso el proveedor de embeddings debe entre
 | `20c713c` | Persistencia Prisma + pgvector |
 | `969934b` | Servicio, endpoints, integración frontend y flag |
 | `14cdca8` | Tests de permisos, citas, validación y extracción |
+| `a78d2c1` | Corrección del flag en indexado automático |
+| `79579ce` | E2E contra Neon + proveedores mockeados |
 
 ### Resultados locales
 
@@ -89,11 +94,23 @@ markdown URL sanitation: pass
 
 frontend: npm run build
 ✓ built in 1m 21s
+
+backend E2E controlada:
+node scripts/e2e-rag-phase1.mjs
+lessonsProcessed: 3
+readyDocuments: 3
+storedFragments: 21
+chatStatus: 200
+citationCount: 5
 ```
 
 El primer `vitest` paralelo falló por agotamiento de recursos de workers en Windows; la ejecución serial terminó verde. El build emitió únicamente el warning preexistente de chunks grandes.
 
 No se ejecutó una llamada real a Groq/embeddings porque no hay credenciales de proveedor en este entorno. La ruta está cubierta con proveedor mockeado y queda lista para comprobar con claves de staging.
+
+La E2E sí usó la base Neon real, pero levantó mocks locales de embeddings y Groq:
+reindexó el curso piloto, verificó documentos/fragmentos persistidos y consultó el chat como estudiante inscrito.
+El script exige `RAG_E2E_ALLOW_DB_WRITE=true` para evitar escrituras accidentales.
 
 ### Consultas SQL de comprobación
 
@@ -146,6 +163,15 @@ curl -X POST "https://titi-backend.onrender.com/api/admin/rag/courses/<COURSE_ID
 6. Verificá que aparezca **Tutor de la lección**, abrilo y preguntá sobre el contenido.
 7. Esperá una respuesta con `[1]` y una sección **Fuentes**.
 8. Preguntá algo fuera del material: debe responder que no encontró evidencia suficiente o no afirmar datos sin cita.
+
+Para repetir la E2E backend + Neon con proveedores mockeados:
+
+```powershell
+$env:RAG_E2E_ALLOW_DB_WRITE='true'
+$env:RAG_E2E_COURSE_ID='<COURSE_ID>'
+$env:RAG_E2E_STUDENT_USERNAME='<STUDENT_USERNAME>'
+node backend/scripts/e2e-rag-phase1.mjs
+```
 
 ### Casos de error esperados
 
