@@ -18,7 +18,8 @@ Códigos: `200/201` ok · `400` validación · `401` no autenticado · `403` sin
 Montaje (`app.js`): `/api/auth`, `/api/users`, `/api/posts`, `/api/search`,
 `/api/comments`, `/api/notifications`, `/api/sounds`, `/api/locations`,
 `/api/courses`, `/api` (modules+lessons+materials+evaluations), `/api/categories`,
-`/api/progress`, `/api/admin`, `/api/gotas`, `/api/missions`, `/api/ranking`.
+`/api/progress`, `/api/admin`, `/api/gotas`, `/api/missions`, `/api/ranking`,
+`/api` (RAG tutor y reindexado autorizado).
 
 ---
 
@@ -86,6 +87,22 @@ PUT    /api/lessons/:id/note                  Guardar/actualizar nota (máx 5000
 POST   /api/lessons/:lessonId/materials   Subir (multipart, autor) — pdf|word|imagen|codigo|otro, 10 MB
 DELETE /api/materials/:id                 Borrar (autor) — borra archivo del storage
 ```
+
+## Tutor RAG — `/api/lessons/:id/chat`
+
+Disponible solo para estudiantes inscritos (o docentes/admin con acceso al curso),
+lecciones publicadas y cursos incluidos explícitamente en `RAG_COURSE_IDS`.
+El retrieval usa únicamente documentos activos y publicados del curso.
+
+```
+GET  /api/lessons/:id/chat/status          Estado de flag e indexado (auth)
+POST /api/lessons/:id/chat                 { message } → { answer, citations, usage }
+POST /api/admin/rag/courses/:courseId/reindex  Reindexar curso (autor/profesor/admin)
+```
+
+El chat devuelve `No encontré evidencia suficiente...` cuando no hay fragmentos
+recuperables. `citations` identifica lección, módulo y extracto; el tutor no tiene
+endpoints para modificar notas, progreso o inscripciones.
 
 ## Categorías — `/api/categories`
 ```
