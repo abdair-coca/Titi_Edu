@@ -177,6 +177,9 @@ export async function indexLesson(lessonId) {
   if (!lesson || lesson.estado !== 'PUBLICADA' || lesson.modulo.estado !== 'PUBLICADO' || !lesson.modulo.curso.publicado) {
     return { status: 'SKIPPED', lessonId };
   }
+  if (!ragEnabledForCourse(lesson.modulo.curso.id)) {
+    return { status: 'SKIPPED', lessonId, reason: 'feature_disabled' };
+  }
 
   const content = lessonRagText(lesson);
   if (!content) return { status: 'SKIPPED', lessonId, reason: 'empty' };
