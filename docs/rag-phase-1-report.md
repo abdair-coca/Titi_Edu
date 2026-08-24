@@ -76,6 +76,7 @@ El proveedor configurado es `BAAI/bge-m3`, con 1024 dimensiones normalizadas.
 | `6541211` | Servicio inicial de embeddings BGE-M3 para Hugging Face Space |
 | `88157b3` | Ignorar artefactos Python locales |
 | `f440d1c` | Migración a `vector(1024)`, timeout y contrato BGE-M3 |
+| `a3a2f89` | Adaptación del proveedor a Gradio Space gratuito |
 
 ### Resultados locales
 
@@ -83,9 +84,9 @@ El proveedor configurado es `BAAI/bge-m3`, con 1024 dimensiones normalizadas.
 npx prisma validate
 The schema at prisma\\schema.prisma is valid 🚀
 
-npx vitest run test/services/rag.service.test.js test/services/rag.indexing.test.js test/routes/rag.test.js --maxWorkers=1 --minWorkers=1
-Test Files  3 passed (3)
-Tests       10 passed (10)
+npx vitest run --maxWorkers=1 --minWorkers=1
+Test Files  24 passed (24)
+Tests       220 passed (220)
 
 npm run lint
 eslint src test  # exit 0
