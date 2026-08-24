@@ -8,7 +8,7 @@ Estado: implementado y verificado en local; producción queda protegida por flag
 
 - Persistencia PostgreSQL con `pgvector` para documentos, versiones, estado y fragmentos.
 - Extracción de texto visible desde HTML: elimina `script`, `style` y etiquetas, y decodifica entidades.
-- Indexado de lecciones publicadas con hash de contenido, chunks solapados y embeddings Gradio/BGE-M3.
+- Indexado de lecciones publicadas con hash de contenido, chunks solapados y embeddings EmbeddingGemma.
 - Retrieval por similitud coseno filtrado por curso publicado, módulo/lección publicada y documento activo/listo.
 - Tutor Groq con prompt de grounding, citas `[1]`, respuesta explícita sin evidencia y rechazo conceptual de acciones del sistema.
 - Acceso restringido a usuarios autenticados con inscripción o rol docente/admin autorizado.
@@ -16,14 +16,14 @@ Estado: implementado y verificado en local; producción queda protegida por flag
 - Reindexado autorizado de un curso piloto y reindexado asíncrono al guardar/publicar contenido.
 - El reindexado automático también valida `RAG_COURSE_IDS`; no indexa cursos fuera de la allowlist.
 - Tutor integrado en `LearnCourse`; no aparece para estudiantes hasta que el curso esté habilitado e indexado.
-- Servicio separado `embedding-service/` basado en Gradio para `BAAI/bge-m3`, con fallback automático GPU/CPU.
-- Timeout de 120 segundos y un reintento para cold starts o respuestas transitorias del Space gratuito.
+- Servicio local `embedding-service/` basado en EmbeddingGemma, con fallback automático GPU/CPU.
+- El backend distingue embeddings de `query` y `document` usando prompts oficiales de retrieval.
 
 ## 2. Archivos y migración
 
 - `backend/prisma/schema.prisma`
 - `backend/prisma/migrations/20260823010000_rag_phase_1/migration.sql`
-- `backend/prisma/migrations/20260824010000_rag_bge_m3_1024/migration.sql`
+- `backend/prisma/migrations/20260824020000_rag_embeddinggemma_768/migration.sql`
 - `backend/src/services/rag.service.js`
 - `backend/src/routes/rag.js`
 - `backend/src/routes/authoring.js`
@@ -39,10 +39,12 @@ Estado: implementado y verificado en local; producción queda protegida por flag
 - `docs/api.md`
 - `embedding-service/app.py`, `embedding-service/README.md`, `embedding-service/requirements.txt`
 
-La migración `20260824010000_rag_bge_m3_1024` elimina únicamente los fragmentos vectoriales
-anteriores, marca los documentos como `PENDIENTE` y cambia la columna a `vector(1024)`.
+La migración `20260824020000_rag_embeddinggemma_768` elimina únicamente los fragmentos vectoriales
+anteriores, marca los documentos como `PENDIENTE` y cambia la columna a `vector(768)`.
 Los documentos y versiones se conservan. Es obligatorio reindexar antes de usar el tutor.
-El proveedor configurado es `BAAI/bge-m3`, con 1024 dimensiones normalizadas.
+El proveedor configurado es `google/embeddinggemma-300M`, con 768 dimensiones normalizadas.
+La migración histórica `20260824010000_rag_bge_m3_1024` se conserva sin modificar para no romper
+el historial de Prisma; BGE-M3 y Gradio ya no forman parte del runtime.
 
 ## 3. Endpoints y comportamiento
 
@@ -73,10 +75,7 @@ El proveedor configurado es `BAAI/bge-m3`, con 1024 dimensiones normalizadas.
 | `14cdca8` | Tests de permisos, citas, validación y extracción |
 | `a78d2c1` | Corrección del flag en indexado automático |
 | `79579ce` | E2E contra Neon + proveedores mockeados |
-| `6541211` | Servicio inicial de embeddings BGE-M3 para Hugging Face Space |
-| `88157b3` | Ignorar artefactos Python locales |
-| `f440d1c` | Migración a `vector(1024)`, timeout y contrato BGE-M3 |
-| `a3a2f89` | Adaptación del proveedor a Gradio Space gratuito |
+| `c368865` | Reemplazo del runtime BGE-M3/Gradio por EmbeddingGemma local |
 
 ### Resultados locales
 
@@ -117,7 +116,7 @@ citationCount: 5
 
 El primer `vitest` paralelo falló por agotamiento de recursos de workers en Windows; la ejecución serial terminó verde. El build emitió únicamente el warning preexistente de chunks grandes.
 
-No se ejecutó una llamada real a Groq/embeddings porque el Hugging Face Space todavía no tiene URL/secreto configurados en este entorno. La ruta está cubierta con proveedor mockeado y queda lista para comprobar con el Space desplegado.
+No se ejecutó una llamada real a Groq/embeddings porque el servicio local no estaba levantado durante la suite. La ruta está cubierta con proveedor mockeado y queda lista para comprobar con EmbeddingGemma local.
 
 La E2E sí usó la base Neon real, pero levantó mocks locales de embeddings y Groq:
 reindexó el curso piloto, verificó documentos/fragmentos persistidos y consultó el chat como estudiante inscrito.
@@ -145,13 +144,12 @@ La consulta de retrieval usa `<=>` y limita a documentos activos/listos del curs
 
 ## 5. Guía manual
 
-### Configuración del servicio de embeddings
+### Configuración del servicio local
 
-1. Creá un Hugging Face Space Gradio gratuito.
-2. Subí el contenido de `embedding-service/`.
-3. Agregá el secreto `EMBEDDING_API_KEY` en el Space.
-4. Usá CPU gratuita; seleccioná GPU gratuita solo si aparece disponible. La aplicación detecta CUDA y vuelve a CPU automáticamente.
-5. Verificá `https://<owner>-<space>.hf.space/gradio_api/openapi.json` y confirmá endpoint `/gradio_api/call/embed`.
+1. Desde `embedding-service/`, creá el entorno Python según su `README.md`.
+2. Aceptá la licencia Gemma en Hugging Face y configurá `HF_TOKEN`.
+3. Levantá `uvicorn` en `127.0.0.1:8001`.
+4. Verificá `/health`: debe devolver `google/embeddinggemma-300M`, `768` y el dispositivo activo.
 
 ### Configuración local/staging
 
@@ -159,11 +157,11 @@ La consulta de retrieval usa `<=>` y limita a documentos activos/listos del curs
 2. Configurá:
    - `RAG_ENABLED=true`
    - `RAG_COURSE_IDS=<ID_DEL_CURSO_PILOTO>`
-   - `EMBEDDING_API_URL=https://<owner>-<space>.hf.space`
-   - `EMBEDDING_API_KEY=<mismo-secreto-del-Space>`
-   - `EMBEDDING_MODEL=BAAI/bge-m3`
-   - `EMBEDDING_DIMENSIONS=1024`
-   - `EMBEDDING_PROVIDER=gradio`
+   - `EMBEDDING_API_URL=http://127.0.0.1:8001`
+   - `EMBEDDING_API_KEY=local-dev-key`
+   - `EMBEDDING_MODEL=google/embeddinggemma-300M`
+   - `EMBEDDING_DIMENSIONS=768`
+   - `EMBEDDING_PROVIDER=local`
    - `EMBEDDING_TIMEOUT_MS=120000`
    - `EMBEDDING_MAX_RETRIES=1`
    - `GROQ_API_KEY=<secreto>`
@@ -207,8 +205,8 @@ node backend/scripts/e2e-rag-phase1.mjs
 ## 6. Riesgos pendientes
 
 - Fase 1 no incluye PDF, historial, cuota diaria, retención ni métricas; quedan para Fases 2–3.
-- BGE-M3 corre en infraestructura gratuita: el Space puede dormir, tardar en despertar o limitar CPU/GPU.
-- El embedding está fijado a 1024 dimensiones; cambiar de modelo requiere migración/versionado y reindexado.
+- EmbeddingGemma local no está disponible para el backend desplegado en Render; producción requiere un host alcanzable.
+- El embedding está fijado a 768 dimensiones; cambiar de modelo requiere migración/versionado y reindexado.
 - El indexado asíncrono actualmente registra el error y queda para reintento manual; la cola/reintentos formales son Fase 2.
 - El índice vectorial ANN todavía no es necesario para el piloto pequeño; evaluar HNSW/IVFFlat con métricas en Fase 5.
 - No se hizo deploy productivo: primero hay que configurar secretos en staging y probar un curso piloto con usuarios reales autorizados.

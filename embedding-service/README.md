@@ -1,48 +1,71 @@
----
-title: Titi BGE-M3 Embeddings
-sdk: gradio
-sdk_version: 5.12.0
-app_file: app.py
----
+# Titi EmbeddingGemma local
 
-# Titi BGE-M3 Embeddings
+Servidor local de embeddings para el tutor RAG de Titi. Usa
+`google/embeddinggemma-300M`, entrega vectores normalizados de **768
+dimensiones** y funciona con CPU o GPU local.
 
-Gradio embedding service for Titi's RAG tutor. It serves `BAAI/bge-m3` with
-1024-dimensional normalized dense vectors.
+## Requisitos
 
-## Hugging Face Space setup
+- Python 3.11+
+- CPU o GPU local
+- Cuenta Hugging Face con licencia Gemma aceptada
+- Token Hugging Face con permiso de lectura para descargar el modelo
 
-1. Create a Gradio Space with this directory as its repository content.
-2. Add `EMBEDDING_API_KEY` as a Space secret with a long random value.
-3. Select free CPU hardware. Select free GPU hardware only when Hugging Face
-   offers it for the Space; the application automatically falls back to CPU.
-4. Configure Titi backend with the Space URL:
+## Instalación
 
-```env
-EMBEDDING_API_URL=https://<space-owner>-<space-name>.hf.space
-EMBEDDING_API_KEY=<same-space-secret>
-EMBEDDING_MODEL=BAAI/bge-m3
-EMBEDDING_DIMENSIONS=1024
-EMBEDDING_PROVIDER=gradio
+PowerShell:
+
+```powershell
+cd embedding-service
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-The first request after sleep can be slow while the model loads. Titi's
-backend uses a configurable timeout (`EMBEDDING_TIMEOUT_MS`, default 120000).
+Aceptá la licencia de Gemma en Hugging Face y configurá el token:
 
-## Contract
-
-```http
-GET /gradio_api/openapi.json
-POST /gradio_api/call/embed
-Authorization: Bearer <EMBEDDING_API_KEY>
-Content-Type: application/json
+```powershell
+$env:HF_TOKEN="hf_..."
+huggingface-cli login --token $env:HF_TOKEN
 ```
 
-Gradio request body:
+## Ejecución
+
+```powershell
+$env:EMBEDDING_API_KEY="local-dev-key"
+python -m uvicorn app:app --host 127.0.0.1 --port 8001
+```
+
+El primer arranque descarga el modelo y puede tardar. Luego:
+
+```text
+GET  http://127.0.0.1:8001/health
+POST http://127.0.0.1:8001/embeddings
+```
+
+## Contrato
+
+Consulta:
 
 ```json
-{"data":["texto 1"]}
+{
+  "model": "google/embeddinggemma-300M",
+  "input": "¿Qué es una variable?",
+  "kind": "query"
+}
 ```
 
-The POST returns an `event_id`. The backend reads the completion from
-`GET /gradio_api/call/embed/<event_id>` and validates 1024 dimensions.
+Documento:
+
+```json
+{
+  "model": "google/embeddinggemma-300M",
+  "input": "Una variable almacena un valor.",
+  "kind": "document",
+  "title": "Variables"
+}
+```
+
+El endpoint devuelve formato OpenAI-compatible. La consulta usa el prompt de
+retrieval y el documento usa el título recomendado por EmbeddingGemma.
