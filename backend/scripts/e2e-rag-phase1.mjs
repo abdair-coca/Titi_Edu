@@ -26,7 +26,7 @@ function json(response, status, payload) {
   response.end(JSON.stringify(payload));
 }
 
-const embedding = Array.from({ length: 1536 }, () => 0.01);
+const embedding = Array.from({ length: 1024 }, () => 0.01);
 const embeddingMock = await startProviderMock((req, res) => {
   if (req.method !== 'POST' || req.url !== '/embeddings') return json(res, 404, { error: 'not_found' });
   json(res, 200, { data: [{ embedding }], usage: { prompt_tokens: 1, total_tokens: 1 } });
@@ -43,8 +43,8 @@ process.env.RAG_ENABLED = 'true';
 process.env.RAG_COURSE_IDS = courseId;
 process.env.EMBEDDING_API_URL = `http://127.0.0.1:${embeddingMock.address().port}`;
 process.env.EMBEDDING_API_KEY = 'e2e-mock';
-process.env.EMBEDDING_MODEL = 'e2e-mock-1536';
-process.env.EMBEDDING_DIMENSIONS = '1536';
+process.env.EMBEDDING_MODEL = 'e2e-mock-1024';
+process.env.EMBEDDING_DIMENSIONS = '1024';
 process.env.GROQ_API_URL = `http://127.0.0.1:${chatMock.address().port}/chat/completions`;
 process.env.GROQ_API_KEY = 'e2e-mock';
 process.env.GROQ_MODEL = 'e2e-mock-chat';

@@ -4,7 +4,7 @@ import prisma from '../prisma.js';
 const DEFAULT_CHUNK_SIZE = 900;
 const DEFAULT_CHUNK_OVERLAP = 120;
 const DEFAULT_RETRIEVAL_LIMIT = 5;
-const VECTOR_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS || 1536);
+export const VECTOR_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS || 1024);
 
 export class RagError extends Error {
   constructor(status, message) {
@@ -111,7 +111,7 @@ function hashContent(content) {
   return createHash('sha256').update(content, 'utf8').digest('hex');
 }
 
-function formatVector(vector) {
+export function formatVector(vector) {
   if (!Array.isArray(vector) || vector.length !== VECTOR_DIMENSIONS || vector.some((value) => !Number.isFinite(Number(value)))) {
     throw new RagError(502, `El embedding debe tener ${VECTOR_DIMENSIONS} dimensiones`);
   }
@@ -122,11 +122,31 @@ export async function createEmbedding(input) {
   const apiKey = process.env.EMBEDDING_API_KEY?.trim();
   const model = embeddingModel();
   if (!apiKey) throw new RagError(503, 'El proveedor de embeddings no está configurado');
-  const response = await fetch(embeddingEndpoint(), {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, input }),
-  });
+  const timeoutMs = Number(process.env.EMBEDDING_TIMEOUT_MS || 120000);
+  const maxRetries = Number(process.env.EMBEDDING_MAX_RETRIES || 1);
+  let response;
+  for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+    try {
+      response = await fetch(embeddingEndpoint(), {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, input }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (error) {
+      if (attempt === maxRetries) {
+        if (error.name === 'TimeoutError' || error.name === 'AbortError') {
+          throw new RagError(504, 'El proveedor de embeddings tardó demasiado en responder');
+        }
+        throw new RagError(502, 'No se pudo contactar al proveedor de embeddings');
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+      continue;
+    }
+    if (![429, 502, 503, 504].includes(response.status) || attempt === maxRetries) break;
+    await response.arrayBuffer().catch(() => {});
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
   const payload = await readJsonResponse(response, 'embeddings');
   return payload?.data?.[0]?.embedding;
 }
