@@ -53,3 +53,17 @@ services:
         sync: false
       - key: GROQ_MODEL
         sync: false
+      - key: RAG_CHAT_MODE
+        sync: false
+      - key: RAG_CHAT_RATE_LIMIT_PER_MINUTE
+        sync: false
+      - key: RAG_CHAT_DAILY_QUOTA
+        sync: false
+      - key: RAG_CHAT_TIMEOUT_MS
+        sync: false
+      - key: RAG_PRINCIPAL_SALT
+        sync: false
+      - key: AI_GATEWAY_URL
+        sync: false
+      - key: AI_GATEWAY_TOKEN
+        sync: false
