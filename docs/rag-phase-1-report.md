@@ -127,8 +127,13 @@ es el siguiente requisito para ejecutar el servicio.
 
 La instalación local quedó verificada con `pip check`, `py_compile` y las versiones
 `sentence-transformers 6.0.0`, `transformers 5.15.1`, `torch 2.13.0+cpu` y
-`fastapi 0.115.6`. El modelo está descargado en la caché local de Hugging Face,
-pero todavía no se pudo ejecutar una inferencia real por la presión de memoria.
+`fastapi 0.115.6`. El modelo está descargado en la caché local de Hugging Face y
+la inferencia real ya respondió correctamente.
+
+La integración real Backend → servicio local quedó verificada después de levantar Uvicorn:
+`createEmbedding('prueba backend local')` respondió correctamente con `dimensions: 768`.
+La primera solicitud se ejecutó mientras el modelo todavía iniciaba y falló; al repetirla
+con `/health` listo respondió correctamente.
 
 La E2E sí usó la base Neon real, pero levantó mocks locales de embeddings y Groq:
 reindexó el curso piloto, verificó documentos/fragmentos persistidos y consultó el chat como estudiante inscrito.
