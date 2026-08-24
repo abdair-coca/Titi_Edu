@@ -66,6 +66,7 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
     const result = await chatWithCourseContext({
       courseId: loaded.lesson.modulo.cursoId,
       lessonId: loaded.lesson.id,
+      principalId: loaded.access.usuario.id,
       message,
     });
     return res.json({ success: true, data: result });

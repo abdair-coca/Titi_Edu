@@ -75,7 +75,12 @@ describe('RAG lesson routes', () => {
     expect(response.status).toBe(200);
     expect(response.body.data).toMatchObject({ answer: 'Las variables guardan valores. [1]' });
     expect(response.body.data.citations[0]).toMatchObject({ number: 1, lessonId: 'l-1' });
-    expect(mocks.chatWithCourseContext).toHaveBeenCalledWith({ courseId: 'c-1', lessonId: 'l-1', message: '¿Qué es una variable?' });
+    expect(mocks.chatWithCourseContext).toHaveBeenCalledWith({
+      courseId: 'c-1',
+      lessonId: 'l-1',
+      principalId: 'u-student',
+      message: '¿Qué es una variable?',
+    });
   });
 
   it('rejects oversized questions', async () => {
