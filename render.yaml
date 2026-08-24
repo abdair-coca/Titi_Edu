@@ -29,3 +29,25 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      - key: RAG_ENABLED
+        sync: false
+      - key: RAG_COURSE_IDS
+        sync: false
+      - key: EMBEDDING_API_URL
+        sync: false
+      - key: EMBEDDING_API_KEY
+        sync: false
+      - key: EMBEDDING_MODEL
+        sync: false
+      - key: EMBEDDING_DIMENSIONS
+        sync: false
+      - key: EMBEDDING_TIMEOUT_MS
+        sync: false
+      - key: EMBEDDING_MAX_RETRIES
+        sync: false
+      - key: GROQ_API_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        sync: false
