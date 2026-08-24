@@ -118,7 +118,8 @@ citationCount: 5
 
 El primer `vitest` paralelo falló por agotamiento de recursos de workers en Windows; la ejecución serial terminó verde. El build emitió únicamente el warning preexistente de chunks grandes.
 
-No se ejecutó una llamada real a Groq/embeddings porque el servicio local no estaba levantado durante la suite. La ruta está cubierta con proveedor mockeado y queda lista para comprobar con EmbeddingGemma local.
+La suite usa proveedor mockeado. También se intentó cargar EmbeddingGemma local fuera de la suite;
+la descarga fue rechazada por autenticación de Hugging Face, detallado abajo.
 
 La instalación local quedó verificada con `pip check`, `py_compile` y las versiones
 `sentence-transformers 3.4.1`, `transformers 4.57.0.dev0`, `torch 2.13.0+cpu` y
