@@ -76,6 +76,8 @@ el historial de Prisma; BGE-M3 y Gradio ya no forman parte del runtime.
 | `a78d2c1` | Corrección del flag en indexado automático |
 | `79579ce` | E2E contra Neon + proveedores mockeados |
 | `c368865` | Reemplazo del runtime BGE-M3/Gradio por EmbeddingGemma local |
+| `5153589` | Dependencias compatibles con EmbeddingGemma |
+| `1cf72f4` | Ignorar entorno virtual Python local |
 
 ### Resultados locales
 
@@ -117,6 +119,11 @@ citationCount: 5
 El primer `vitest` paralelo falló por agotamiento de recursos de workers en Windows; la ejecución serial terminó verde. El build emitió únicamente el warning preexistente de chunks grandes.
 
 No se ejecutó una llamada real a Groq/embeddings porque el servicio local no estaba levantado durante la suite. La ruta está cubierta con proveedor mockeado y queda lista para comprobar con EmbeddingGemma local.
+
+La instalación local quedó verificada con `pip check`, `py_compile` y las versiones
+`sentence-transformers 3.4.1`, `transformers 4.57.0.dev0`, `torch 2.13.0+cpu` y
+`fastapi 0.115.6`. La carga real del modelo respondió `401 Unauthorized` porque
+EmbeddingGemma es un repositorio gated y este entorno no tiene `HF_TOKEN`.
 
 La E2E sí usó la base Neon real, pero levantó mocks locales de embeddings y Groq:
 reindexó el curso piloto, verificó documentos/fragmentos persistidos y consultó el chat como estudiante inscrito.
