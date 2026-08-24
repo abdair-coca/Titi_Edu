@@ -135,6 +135,18 @@ La integración real Backend → servicio local quedó verificada después de le
 La primera solicitud se ejecutó mientras el modelo todavía iniciaba y falló; al repetirla
 con `/health` listo respondió correctamente.
 
+### Ejecución del piloto con EmbeddingGemma (2026-08-24)
+
+- Se creó respaldo de Neon antes de modificar el historial: `titi-neon-before-rag-gemma-20260824.dump`.
+- La migración `20260824010000_rag_bge_m3_1024` fue marcada como aplicada sin ejecutar su SQL,
+  por decisión de producto; no se alteró a 1024 dimensiones.
+- Se aplicó únicamente `20260824020000_rag_embeddinggemma_768`.
+- `prisma migrate status`: esquema actualizado.
+- Verificación SQL: `DocumentoRag` y `FragmentoRag` existen; `FragmentoRag.embedding` es `vector(768)`.
+- Reindexado real del curso piloto `bceba93d-d954-4bc9-abf7-db865b1df8ff`: 3 documentos LISTO y 21 fragmentos.
+- Retrieval real: 3 resultados para `estructuras selectivas en Python`, con citas de `Estructuras Selectivas`.
+- Tests RAG: 12 tests pasaron (6 de servicios, 5 de rutas y 1 de indexado).
+
 La E2E sí usó la base Neon real, pero levantó mocks locales de embeddings y Groq:
 reindexó el curso piloto, verificó documentos/fragmentos persistidos y consultó el chat como estudiante inscrito.
 El script exige `RAG_E2E_ALLOW_DB_WRITE=true` para evitar escrituras accidentales.
