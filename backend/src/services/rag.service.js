@@ -4,7 +4,7 @@ import prisma from '../prisma.js';
 const DEFAULT_CHUNK_SIZE = 900;
 const DEFAULT_CHUNK_OVERLAP = 120;
 const DEFAULT_RETRIEVAL_LIMIT = 5;
-export const VECTOR_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS || 1024);
+export const VECTOR_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS || 768);
 
 export class RagError extends Error {
   constructor(status, message) {
@@ -33,19 +33,13 @@ function embeddingModel() {
 }
 
 function embeddingProvider() {
-  return process.env.EMBEDDING_PROVIDER?.trim().toLowerCase() || 'openai';
+  return process.env.EMBEDDING_PROVIDER?.trim().toLowerCase() || 'local';
 }
 
 function embeddingEndpoint() {
   const base = process.env.EMBEDDING_API_URL?.trim();
   if (!base) throw new RagError(503, 'El proveedor de embeddings no está configurado');
   return base.endsWith('/embeddings') ? base : `${base.replace(/\/$/, '')}/embeddings`;
-}
-
-function gradioEndpoint(path) {
-  const base = process.env.EMBEDDING_API_URL?.trim();
-  if (!base) throw new RagError(503, 'El proveedor de embeddings no está configurado');
-  return `${base.replace(/\/$/, '')}/gradio_api/${path.replace(/^\//, '')}`;
 }
 
 function groqEndpoint() {
@@ -66,27 +60,6 @@ async function readJsonResponse(response, label) {
     throw new RagError(502, `El proveedor de ${label} no respondió correctamente`);
   }
   return payload;
-}
-
-async function readGradioCompletion(response) {
-  const body = await response.text().catch(() => '');
-  if (!response.ok) {
-    throw new RagError(502, 'El proveedor Gradio no respondió correctamente');
-  }
-  const blocks = body.split(/\r?\n\r?\n/);
-  for (const block of blocks) {
-    const event = block.match(/^event:\s*(.+)$/m)?.[1]?.trim();
-    const data = block.match(/^data:\s*(.+)$/m)?.[1]?.trim();
-    if (event === 'error') throw new RagError(502, 'El proveedor Gradio devolvió un error');
-    if (event !== 'complete' || !data) continue;
-    try {
-      const outputs = JSON.parse(data);
-      return Array.isArray(outputs?.[0]) ? outputs[0] : outputs;
-    } catch {
-      throw new RagError(502, 'El proveedor Gradio devolvió una respuesta inválida');
-    }
-  }
-  throw new RagError(502, 'El proveedor Gradio no completó la solicitud');
 }
 
 export function decodeHtmlEntities(value) {
@@ -149,36 +122,18 @@ export function formatVector(vector) {
   return `[${vector.map((value) => Number(value)).join(',')}]`;
 }
 
-async function createOpenAiEmbedding(input, apiKey, model, timeoutMs) {
+async function createOpenAiEmbedding(input, apiKey, model, timeoutMs, metadata = {}) {
   const response = await fetch(embeddingEndpoint(), {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, input }),
+    body: JSON.stringify({ model, input, ...metadata }),
     signal: AbortSignal.timeout(timeoutMs),
   });
   const payload = await readJsonResponse(response, 'embeddings');
   return payload?.data?.[0]?.embedding;
 }
 
-async function createGradioEmbedding(input, apiKey, timeoutMs) {
-  const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
-  const submit = await fetch(gradioEndpoint('call/embed'), {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ data: [input] }),
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  const submitPayload = await readJsonResponse(submit, 'embeddings Gradio');
-  const eventId = submitPayload?.event_id;
-  if (!eventId) throw new RagError(502, 'El proveedor Gradio no devolvió un event_id');
-  const completion = await fetch(gradioEndpoint(`call/embed/${encodeURIComponent(eventId)}`), {
-    headers: { Authorization: `Bearer ${apiKey}`, Accept: 'text/event-stream' },
-    signal: AbortSignal.timeout(timeoutMs),
-  });
-  return readGradioCompletion(completion);
-}
-
-export async function createEmbedding(input) {
+export async function createEmbedding(input, { kind = 'query', title = null } = {}) {
   const apiKey = process.env.EMBEDDING_API_KEY?.trim();
   const model = embeddingModel();
   if (!apiKey) throw new RagError(503, 'El proveedor de embeddings no está configurado');
@@ -186,9 +141,8 @@ export async function createEmbedding(input) {
   const maxRetries = Math.max(0, Number(process.env.EMBEDDING_MAX_RETRIES) || 1);
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     try {
-      return embeddingProvider() === 'gradio'
-        ? await createGradioEmbedding(input, apiKey, timeoutMs)
-        : await createOpenAiEmbedding(input, apiKey, model, timeoutMs);
+      const metadata = embeddingProvider() === 'local' ? { kind, title } : {};
+      return await createOpenAiEmbedding(input, apiKey, model, timeoutMs, metadata);
     } catch (error) {
       const retryable = error.name === 'TimeoutError'
         || error.name === 'AbortError'
@@ -278,7 +232,7 @@ export async function indexLesson(lessonId) {
     const chunks = chunkText(content);
     await prisma.fragmentoRag.deleteMany({ where: { documentoId: document.id } });
     for (let index = 0; index < chunks.length; index += 1) {
-      const embedding = formatVector(await createEmbedding(chunks[index]));
+      const embedding = formatVector(await createEmbedding(chunks[index], { kind: 'document', title: lesson.titulo }));
       await prisma.$executeRaw`
         INSERT INTO "FragmentoRag" ("id", "documentoId", "orden", "contenido", "embedding")
         VALUES (${randomUUID()}, ${document.id}, ${index}, ${chunks[index]}, ${embedding}::vector)
@@ -319,7 +273,7 @@ export async function indexCourse(courseId) {
 }
 
 export async function searchCourseContext(courseId, query, limit = DEFAULT_RETRIEVAL_LIMIT) {
-  const embedding = formatVector(await createEmbedding(query));
+  const embedding = formatVector(await createEmbedding(query, { kind: 'query' }));
   const rows = await prisma.$queryRaw`
     SELECT
       f."id",

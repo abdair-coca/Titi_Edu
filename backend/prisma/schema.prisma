@@ -298,7 +298,7 @@ model FragmentoRag {
   documentoId String
   orden       Int
   contenido   String
-  embedding   Unsupported("vector(1024)")
+  embedding   Unsupported("vector(768)")
   documento   DocumentoRag                @relation(fields: [documentoId], references: [id], onDelete: Cascade)
 
   @@unique([documentoId, orden])

@@ -1,74 +1,71 @@
 import os
+from typing import Literal
 
-import gradio as gr
 import torch
-from transformers import AutoModel, AutoTokenizer
+from fastapi import FastAPI, Header, HTTPException
+from pydantic import BaseModel, Field
+from sentence_transformers import SentenceTransformer
 
 
-MODEL_ID = os.getenv("EMBEDDING_MODEL", "BAAI/bge-m3")
-EXPECTED_DIMENSIONS = 1024
-MAX_LENGTH = int(os.getenv("EMBEDDING_MAX_LENGTH", "8192"))
-MAX_BATCH_SIZE = int(os.getenv("EMBEDDING_MAX_BATCH_SIZE", "8"))
-API_KEY = os.getenv("EMBEDDING_API_KEY", "").strip()
-FORCE_CPU = os.getenv("EMBEDDING_FORCE_CPU", "false").lower() == "true"
-DEVICE = torch.device("cpu" if FORCE_CPU or not torch.cuda.is_available() else "cuda")
+MODEL_ID = os.getenv("EMBEDDING_MODEL", "google/embeddinggemma-300M")
+EXPECTED_DIMENSIONS = 768
+API_KEY = os.getenv("EMBEDDING_API_KEY", "local-dev-key").strip()
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-model = AutoModel.from_pretrained(
-    MODEL_ID,
-    torch_dtype=torch.float16 if DEVICE.type == "cuda" else torch.float32,
-).to(DEVICE)
-model.eval()
+model = SentenceTransformer(MODEL_ID, device=DEVICE)
+
+app = FastAPI(title="Titi EmbeddingGemma Local", version="1.0.0")
+
+
+class EmbeddingRequest(BaseModel):
+    model: str = MODEL_ID
+    input: str | list[str] = Field(min_length=1)
+    kind: Literal["query", "document"] = "query"
+    title: str | None = None
+
 
 def require_api_key(authorization: str | None) -> None:
     if API_KEY and authorization != f"Bearer {API_KEY}":
-        raise gr.Error("Invalid embedding service credentials")
+        raise HTTPException(status_code=401, detail="Invalid embedding service credentials")
 
 
-def mean_pool(last_hidden_state: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
-    mask = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
-    masked = last_hidden_state * mask
-    return masked.sum(dim=1) / torch.clamp(mask.sum(dim=1), min=1e-9)
+def prepare_text(value: str, kind: str, title: str | None) -> str:
+    if kind == "document":
+        return f"title: {title or 'none'} | text: {value}"
+    return f"task: search result | query: {value}"
 
 
-def encode_texts(texts: list[str]) -> list[list[float]]:
-    outputs: list[list[float]] = []
-    for start in range(0, len(texts), MAX_BATCH_SIZE):
-        batch = texts[start:start + MAX_BATCH_SIZE]
-        encoded = tokenizer(
-            batch,
-            padding=True,
-            truncation=True,
-            max_length=MAX_LENGTH,
-            return_tensors="pt",
-        )
-        encoded = {key: value.to(DEVICE) for key, value in encoded.items()}
-        with torch.inference_mode():
-            hidden = model(**encoded).last_hidden_state
-            pooled = mean_pool(hidden, encoded["attention_mask"])
-            normalized = torch.nn.functional.normalize(pooled, p=2, dim=1)
-        outputs.extend(normalized.float().cpu().tolist())
-    return outputs
+@app.get("/health")
+def health() -> dict:
+    return {
+        "status": "ok",
+        "model": MODEL_ID,
+        "dimensions": EXPECTED_DIMENSIONS,
+        "device": DEVICE,
+    }
 
 
-def embed(text: str, request: gr.Request) -> list[float]:
-    require_api_key(request.headers.get("authorization"))
-    if not isinstance(text, str) or not text.strip():
-        raise gr.Error("input must be a non-empty string")
-    vector = encode_texts([text])[0]
-    if len(vector) != EXPECTED_DIMENSIONS:
-        raise gr.Error("Embedding model returned an unexpected dimension")
-    return vector
+@app.post("/embeddings")
+def embeddings(request: EmbeddingRequest, authorization: str | None = Header(default=None)) -> dict:
+    require_api_key(authorization)
+    values = [request.input] if isinstance(request.input, str) else request.input
+    if not values or any(not isinstance(value, str) or not value.strip() for value in values):
+        raise HTTPException(status_code=400, detail="input must contain non-empty strings")
 
-
-demo = gr.Interface(
-    fn=embed,
-    inputs=gr.Textbox(label="Text"),
-    outputs=gr.JSON(label="Embedding"),
-    api_name="embed",
-    title="Titi BGE-M3 Embeddings",
-    description="Private embedding endpoint for Titi RAG.",
-)
-
-if __name__ == "__main__":
-    demo.queue().launch()
+    texts = [prepare_text(value, request.kind, request.title) for value in values]
+    vectors = model.encode(
+        texts,
+        normalize_embeddings=True,
+        convert_to_numpy=True,
+        show_progress_bar=False,
+    ).tolist()
+    if any(len(vector) != EXPECTED_DIMENSIONS for vector in vectors):
+        raise HTTPException(status_code=500, detail="EmbeddingGemma returned an unexpected dimension")
+    return {
+        "object": "list",
+        "model": MODEL_ID,
+        "data": [
+            {"object": "embedding", "index": index, "embedding": vector}
+            for index, vector in enumerate(vectors)
+        ],
+    }

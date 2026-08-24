@@ -34,11 +34,41 @@ describe('RAG text preparation', () => {
       .toBe('Título Contenido Actividad');
   });
 
-  it('uses the BGE-M3 1024-dimensional provider contract', async () => {
+  it('uses the EmbeddingGemma 768-dimensional local provider contract', async () => {
     process.env.EMBEDDING_API_URL = 'https://embeddings.example';
     process.env.EMBEDDING_API_KEY = 'test-key';
-    process.env.EMBEDDING_MODEL = 'BAAI/bge-m3';
-    const embedding = Array.from({ length: 1024 }, () => 0.01);
+    process.env.EMBEDDING_MODEL = 'google/embeddinggemma-300M';
+    process.env.EMBEDDING_PROVIDER = 'local';
+    const embedding = Array.from({ length: 768 }, () => 0.01);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ data: [{ embedding }] }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(createEmbedding('Una variable almacena un valor.', { kind: 'document', title: 'Variables' }))
+      .resolves.toEqual(embedding);
+    expect(fetchMock).toHaveBeenCalledWith('https://embeddings.example/embeddings', expect.objectContaining({
+      method: 'POST',
+      body: JSON.stringify({
+        model: 'google/embeddinggemma-300M',
+        input: 'Una variable almacena un valor.',
+        kind: 'document',
+        title: 'Variables',
+      }),
+    }));
+    expect(formatVector(embedding)).toContain('0.01');
+    expect(() => formatVector(Array.from({ length: 1536 }, () => 0.01)))
+      .toThrow('El embedding debe tener 768 dimensiones');
+  });
+
+  it('sends retrieval queries with the query kind', async () => {
+    process.env.EMBEDDING_API_URL = 'https://embeddings.example';
+    process.env.EMBEDDING_API_KEY = 'test-key';
+    process.env.EMBEDDING_MODEL = 'google/embeddinggemma-300M';
+    process.env.EMBEDDING_PROVIDER = 'local';
+    const embedding = Array.from({ length: 768 }, () => 0.02);
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -49,39 +79,12 @@ describe('RAG text preparation', () => {
     await expect(createEmbedding('¿Qué es una variable?')).resolves.toEqual(embedding);
     expect(fetchMock).toHaveBeenCalledWith('https://embeddings.example/embeddings', expect.objectContaining({
       method: 'POST',
-      body: JSON.stringify({ model: 'BAAI/bge-m3', input: '¿Qué es una variable?' }),
-    }));
-    expect(formatVector(embedding)).toContain('0.01');
-    expect(() => formatVector(Array.from({ length: 1536 }, () => 0.01)))
-      .toThrow('El embedding debe tener 1024 dimensiones');
-  });
-
-  it('consumes the Gradio queue API and unwraps its completed vector', async () => {
-    process.env.EMBEDDING_API_URL = 'https://embeddings.example';
-    process.env.EMBEDDING_API_KEY = 'test-key';
-    process.env.EMBEDDING_MODEL = 'BAAI/bge-m3';
-    process.env.EMBEDDING_PROVIDER = 'gradio';
-    const embedding = Array.from({ length: 1024 }, () => 0.02);
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ event_id: 'event-123' }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        text: async () => `event: complete\ndata: ${JSON.stringify([embedding])}\n\n`,
-      });
-    vi.stubGlobal('fetch', fetchMock);
-
-    await expect(createEmbedding('Texto para Gradio')).resolves.toEqual(embedding);
-    expect(fetchMock).toHaveBeenNthCalledWith(1, 'https://embeddings.example/gradio_api/call/embed', expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify({ data: ['Texto para Gradio'] }),
-    }));
-    expect(fetchMock).toHaveBeenNthCalledWith(2, 'https://embeddings.example/gradio_api/call/embed/event-123', expect.objectContaining({
-      headers: expect.objectContaining({ Accept: 'text/event-stream' }),
+      body: JSON.stringify({
+        model: 'google/embeddinggemma-300M',
+        input: '¿Qué es una variable?',
+        kind: 'query',
+        title: null,
+      }),
     }));
   });
 });
