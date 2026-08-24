@@ -32,10 +32,20 @@ function embeddingModel() {
   return model;
 }
 
+function embeddingProvider() {
+  return process.env.EMBEDDING_PROVIDER?.trim().toLowerCase() || 'openai';
+}
+
 function embeddingEndpoint() {
   const base = process.env.EMBEDDING_API_URL?.trim();
   if (!base) throw new RagError(503, 'El proveedor de embeddings no está configurado');
   return base.endsWith('/embeddings') ? base : `${base.replace(/\/$/, '')}/embeddings`;
+}
+
+function gradioEndpoint(path) {
+  const base = process.env.EMBEDDING_API_URL?.trim();
+  if (!base) throw new RagError(503, 'El proveedor de embeddings no está configurado');
+  return `${base.replace(/\/$/, '')}/gradio_api/${path.replace(/^\//, '')}`;
 }
 
 function groqEndpoint() {
@@ -56,6 +66,27 @@ async function readJsonResponse(response, label) {
     throw new RagError(502, `El proveedor de ${label} no respondió correctamente`);
   }
   return payload;
+}
+
+async function readGradioCompletion(response) {
+  const body = await response.text().catch(() => '');
+  if (!response.ok) {
+    throw new RagError(502, 'El proveedor Gradio no respondió correctamente');
+  }
+  const blocks = body.split(/\r?\n\r?\n/);
+  for (const block of blocks) {
+    const event = block.match(/^event:\s*(.+)$/m)?.[1]?.trim();
+    const data = block.match(/^data:\s*(.+)$/m)?.[1]?.trim();
+    if (event === 'error') throw new RagError(502, 'El proveedor Gradio devolvió un error');
+    if (event !== 'complete' || !data) continue;
+    try {
+      const outputs = JSON.parse(data);
+      return Array.isArray(outputs?.[0]) ? outputs[0] : outputs;
+    } catch {
+      throw new RagError(502, 'El proveedor Gradio devolvió una respuesta inválida');
+    }
+  }
+  throw new RagError(502, 'El proveedor Gradio no completó la solicitud');
 }
 
 export function decodeHtmlEntities(value) {
@@ -118,37 +149,60 @@ export function formatVector(vector) {
   return `[${vector.map((value) => Number(value)).join(',')}]`;
 }
 
+async function createOpenAiEmbedding(input, apiKey, model, timeoutMs) {
+  const response = await fetch(embeddingEndpoint(), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ model, input }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const payload = await readJsonResponse(response, 'embeddings');
+  return payload?.data?.[0]?.embedding;
+}
+
+async function createGradioEmbedding(input, apiKey, timeoutMs) {
+  const headers = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' };
+  const submit = await fetch(gradioEndpoint('call/embed'), {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ data: [input] }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const submitPayload = await readJsonResponse(submit, 'embeddings Gradio');
+  const eventId = submitPayload?.event_id;
+  if (!eventId) throw new RagError(502, 'El proveedor Gradio no devolvió un event_id');
+  const completion = await fetch(gradioEndpoint(`call/embed/${encodeURIComponent(eventId)}`), {
+    headers: { Authorization: `Bearer ${apiKey}`, Accept: 'text/event-stream' },
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  return readGradioCompletion(completion);
+}
+
 export async function createEmbedding(input) {
   const apiKey = process.env.EMBEDDING_API_KEY?.trim();
   const model = embeddingModel();
   if (!apiKey) throw new RagError(503, 'El proveedor de embeddings no está configurado');
   const timeoutMs = Math.max(1000, Number(process.env.EMBEDDING_TIMEOUT_MS) || 120000);
   const maxRetries = Math.max(0, Number(process.env.EMBEDDING_MAX_RETRIES) || 1);
-  let response;
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     try {
-      response = await fetch(embeddingEndpoint(), {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, input }),
-        signal: AbortSignal.timeout(timeoutMs),
-      });
+      return embeddingProvider() === 'gradio'
+        ? await createGradioEmbedding(input, apiKey, timeoutMs)
+        : await createOpenAiEmbedding(input, apiKey, model, timeoutMs);
     } catch (error) {
-      if (attempt === maxRetries) {
+      const retryable = error.name === 'TimeoutError'
+        || error.name === 'AbortError'
+        || [429, 502, 503, 504].includes(error.status);
+      if (!retryable || attempt === maxRetries) {
         if (error.name === 'TimeoutError' || error.name === 'AbortError') {
           throw new RagError(504, 'El proveedor de embeddings tardó demasiado en responder');
         }
+        if (error instanceof RagError) throw error;
         throw new RagError(502, 'No se pudo contactar al proveedor de embeddings');
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
-      continue;
     }
-    if (![429, 502, 503, 504].includes(response.status) || attempt === maxRetries) break;
-    await response.arrayBuffer().catch(() => {});
-    await new Promise((resolve) => setTimeout(resolve, 1000));
   }
-  const payload = await readJsonResponse(response, 'embeddings');
-  return payload?.data?.[0]?.embedding;
 }
 
 async function generateAnswer({ message, context }) {

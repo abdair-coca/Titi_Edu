@@ -1,9 +1,7 @@
 import os
-from typing import Union
 
+import gradio as gr
 import torch
-from fastapi import FastAPI, Header, HTTPException
-from pydantic import BaseModel, Field
 from transformers import AutoModel, AutoTokenizer
 
 
@@ -22,17 +20,9 @@ model = AutoModel.from_pretrained(
 ).to(DEVICE)
 model.eval()
 
-app = FastAPI(title="Titi BGE-M3 Embeddings", version="1.0.0")
-
-
-class EmbeddingRequest(BaseModel):
-    model: str = MODEL_ID
-    input: Union[str, list[str]] = Field(min_length=1)
-
-
 def require_api_key(authorization: str | None) -> None:
     if API_KEY and authorization != f"Bearer {API_KEY}":
-        raise HTTPException(status_code=401, detail="Invalid embedding service credentials")
+        raise gr.Error("Invalid embedding service credentials")
 
 
 def mean_pool(last_hidden_state: torch.Tensor, attention_mask: torch.Tensor) -> torch.Tensor:
@@ -61,33 +51,24 @@ def encode_texts(texts: list[str]) -> list[list[float]]:
     return outputs
 
 
-@app.get("/health")
-def health() -> dict:
-    return {
-        "status": "ok",
-        "model": MODEL_ID,
-        "dimensions": EXPECTED_DIMENSIONS,
-        "device": str(DEVICE),
-    }
+def embed(text: str, request: gr.Request) -> list[float]:
+    require_api_key(request.headers.get("authorization"))
+    if not isinstance(text, str) or not text.strip():
+        raise gr.Error("input must be a non-empty string")
+    vector = encode_texts([text])[0]
+    if len(vector) != EXPECTED_DIMENSIONS:
+        raise gr.Error("Embedding model returned an unexpected dimension")
+    return vector
 
 
-@app.post("/embeddings")
-def embeddings(request: EmbeddingRequest, authorization: str | None = Header(default=None)) -> dict:
-    require_api_key(authorization)
-    texts = [request.input] if isinstance(request.input, str) else request.input
-    if not texts or any(not isinstance(text, str) or not text.strip() for text in texts):
-        raise HTTPException(status_code=400, detail="input must contain non-empty strings")
-    if len(texts) > MAX_BATCH_SIZE:
-        raise HTTPException(status_code=413, detail=f"input supports at most {MAX_BATCH_SIZE} texts")
+demo = gr.Interface(
+    fn=embed,
+    inputs=gr.Textbox(label="Text"),
+    outputs=gr.JSON(label="Embedding"),
+    api_name="embed",
+    title="Titi BGE-M3 Embeddings",
+    description="Private embedding endpoint for Titi RAG.",
+)
 
-    vectors = encode_texts(texts)
-    if any(len(vector) != EXPECTED_DIMENSIONS for vector in vectors):
-        raise HTTPException(status_code=500, detail="Embedding model returned an unexpected dimension")
-    return {
-        "object": "list",
-        "model": MODEL_ID,
-        "data": [
-            {"object": "embedding", "index": index, "embedding": vector}
-            for index, vector in enumerate(vectors)
-        ],
-    }
+if __name__ == "__main__":
+    demo.queue().launch()

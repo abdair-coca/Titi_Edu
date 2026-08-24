@@ -41,6 +41,8 @@ services:
         sync: false
       - key: EMBEDDING_DIMENSIONS
         sync: false
+      - key: EMBEDDING_PROVIDER
+        sync: false
       - key: EMBEDDING_TIMEOUT_MS
         sync: false
       - key: EMBEDDING_MAX_RETRIES

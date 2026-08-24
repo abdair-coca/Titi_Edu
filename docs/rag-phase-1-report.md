@@ -8,7 +8,7 @@ Estado: implementado y verificado en local; producción queda protegida por flag
 
 - Persistencia PostgreSQL con `pgvector` para documentos, versiones, estado y fragmentos.
 - Extracción de texto visible desde HTML: elimina `script`, `style` y etiquetas, y decodifica entidades.
-- Indexado de lecciones publicadas con hash de contenido, chunks solapados y embeddings OpenAI-compatible.
+- Indexado de lecciones publicadas con hash de contenido, chunks solapados y embeddings Gradio/BGE-M3.
 - Retrieval por similitud coseno filtrado por curso publicado, módulo/lección publicada y documento activo/listo.
 - Tutor Groq con prompt de grounding, citas `[1]`, respuesta explícita sin evidencia y rechazo conceptual de acciones del sistema.
 - Acceso restringido a usuarios autenticados con inscripción o rol docente/admin autorizado.
@@ -16,7 +16,7 @@ Estado: implementado y verificado en local; producción queda protegida por flag
 - Reindexado autorizado de un curso piloto y reindexado asíncrono al guardar/publicar contenido.
 - El reindexado automático también valida `RAG_COURSE_IDS`; no indexa cursos fuera de la allowlist.
 - Tutor integrado en `LearnCourse`; no aparece para estudiantes hasta que el curso esté habilitado e indexado.
-- Servicio separado `embedding-service/` compatible con OpenAI para `BAAI/bge-m3`, con fallback automático GPU/CPU.
+- Servicio separado `embedding-service/` basado en Gradio para `BAAI/bge-m3`, con fallback automático GPU/CPU.
 - Timeout de 120 segundos y un reintento para cold starts o respuestas transitorias del Space gratuito.
 
 ## 2. Archivos y migración
@@ -37,7 +37,7 @@ Estado: implementado y verificado en local; producción queda protegida por flag
 - `backend/scripts/e2e-rag-phase1.mjs`
 - `frontend/scripts/check-rag-contract.mjs`
 - `docs/api.md`
-- `embedding-service/Dockerfile`, `embedding-service/app.py`, `embedding-service/README.md`
+- `embedding-service/app.py`, `embedding-service/README.md`, `embedding-service/requirements.txt`
 
 La migración `20260824010000_rag_bge_m3_1024` elimina únicamente los fragmentos vectoriales
 anteriores, marca los documentos como `PENDIENTE` y cambia la columna a `vector(1024)`.
@@ -73,7 +73,7 @@ El proveedor configurado es `BAAI/bge-m3`, con 1024 dimensiones normalizadas.
 | `14cdca8` | Tests de permisos, citas, validación y extracción |
 | `a78d2c1` | Corrección del flag en indexado automático |
 | `79579ce` | E2E contra Neon + proveedores mockeados |
-| `6541211` | Servicio Docker de embeddings BGE-M3 para Hugging Face Space |
+| `6541211` | Servicio inicial de embeddings BGE-M3 para Hugging Face Space |
 | `88157b3` | Ignorar artefactos Python locales |
 | `f440d1c` | Migración a `vector(1024)`, timeout y contrato BGE-M3 |
 
@@ -146,11 +146,11 @@ La consulta de retrieval usa `<=>` y limita a documentos activos/listos del curs
 
 ### Configuración del servicio de embeddings
 
-1. Creá un Hugging Face Space Docker gratuito.
+1. Creá un Hugging Face Space Gradio gratuito.
 2. Subí el contenido de `embedding-service/`.
 3. Agregá el secreto `EMBEDDING_API_KEY` en el Space.
 4. Usá CPU gratuita; seleccioná GPU gratuita solo si aparece disponible. La aplicación detecta CUDA y vuelve a CPU automáticamente.
-5. Verificá `https://<owner>-<space>.hf.space/health`: debe responder `model: BAAI/bge-m3`, `dimensions: 1024`.
+5. Verificá `https://<owner>-<space>.hf.space/gradio_api/openapi.json` y confirmá endpoint `/gradio_api/call/embed`.
 
 ### Configuración local/staging
 
@@ -162,6 +162,7 @@ La consulta de retrieval usa `<=>` y limita a documentos activos/listos del curs
    - `EMBEDDING_API_KEY=<mismo-secreto-del-Space>`
    - `EMBEDDING_MODEL=BAAI/bge-m3`
    - `EMBEDDING_DIMENSIONS=1024`
+   - `EMBEDDING_PROVIDER=gradio`
    - `EMBEDDING_TIMEOUT_MS=120000`
    - `EMBEDDING_MAX_RETRIES=1`
    - `GROQ_API_KEY=<secreto>`
