@@ -122,8 +122,8 @@ export async function createEmbedding(input) {
   const apiKey = process.env.EMBEDDING_API_KEY?.trim();
   const model = embeddingModel();
   if (!apiKey) throw new RagError(503, 'El proveedor de embeddings no está configurado');
-  const timeoutMs = Number(process.env.EMBEDDING_TIMEOUT_MS || 120000);
-  const maxRetries = Number(process.env.EMBEDDING_MAX_RETRIES || 1);
+  const timeoutMs = Math.max(1000, Number(process.env.EMBEDDING_TIMEOUT_MS) || 120000);
+  const maxRetries = Math.max(0, Number(process.env.EMBEDDING_MAX_RETRIES) || 1);
   let response;
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     try {
