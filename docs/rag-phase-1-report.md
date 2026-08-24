@@ -1,6 +1,6 @@
 # Informe — RAG Fase 1: tutor de texto + HTML
 
-Fecha: 2026-08-23  
+Fecha: 2026-08-24
 Rama: `codex/rag-fase-1`  
 Estado: implementado y verificado en local; producción queda protegida por flag apagado.
 
@@ -16,11 +16,14 @@ Estado: implementado y verificado en local; producción queda protegida por flag
 - Reindexado autorizado de un curso piloto y reindexado asíncrono al guardar/publicar contenido.
 - El reindexado automático también valida `RAG_COURSE_IDS`; no indexa cursos fuera de la allowlist.
 - Tutor integrado en `LearnCourse`; no aparece para estudiantes hasta que el curso esté habilitado e indexado.
+- Servicio separado `embedding-service/` compatible con OpenAI para `BAAI/bge-m3`, con fallback automático GPU/CPU.
+- Timeout de 120 segundos y un reintento para cold starts o respuestas transitorias del Space gratuito.
 
 ## 2. Archivos y migración
 
 - `backend/prisma/schema.prisma`
 - `backend/prisma/migrations/20260823010000_rag_phase_1/migration.sql`
+- `backend/prisma/migrations/20260824010000_rag_bge_m3_1024/migration.sql`
 - `backend/src/services/rag.service.js`
 - `backend/src/routes/rag.js`
 - `backend/src/routes/authoring.js`
@@ -34,8 +37,12 @@ Estado: implementado y verificado en local; producción queda protegida por flag
 - `backend/scripts/e2e-rag-phase1.mjs`
 - `frontend/scripts/check-rag-contract.mjs`
 - `docs/api.md`
+- `embedding-service/Dockerfile`, `embedding-service/app.py`, `embedding-service/README.md`
 
-La migración crea `vector(1536)`, por eso el proveedor de embeddings debe entregar exactamente 1536 dimensiones en Fase 1.
+La migración `20260824010000_rag_bge_m3_1024` elimina únicamente los fragmentos vectoriales
+anteriores, marca los documentos como `PENDIENTE` y cambia la columna a `vector(1024)`.
+Los documentos y versiones se conservan. Es obligatorio reindexar antes de usar el tutor.
+El proveedor configurado es `BAAI/bge-m3`, con 1024 dimensiones normalizadas.
 
 ## 3. Endpoints y comportamiento
 
@@ -66,6 +73,9 @@ La migración crea `vector(1536)`, por eso el proveedor de embeddings debe entre
 | `14cdca8` | Tests de permisos, citas, validación y extracción |
 | `a78d2c1` | Corrección del flag en indexado automático |
 | `79579ce` | E2E contra Neon + proveedores mockeados |
+| `6541211` | Servicio Docker de embeddings BGE-M3 para Hugging Face Space |
+| `88157b3` | Ignorar artefactos Python locales |
+| `f440d1c` | Migración a `vector(1024)`, timeout y contrato BGE-M3 |
 
 ### Resultados locales
 
@@ -73,9 +83,9 @@ La migración crea `vector(1536)`, por eso el proveedor de embeddings debe entre
 npx prisma validate
 The schema at prisma\\schema.prisma is valid 🚀
 
-npx vitest run --maxWorkers=1 --minWorkers=1
-Test Files  23 passed (23)
-Tests       217 passed (217)
+npx vitest run test/services/rag.service.test.js test/services/rag.indexing.test.js test/routes/rag.test.js --maxWorkers=1 --minWorkers=1
+Test Files  3 passed (3)
+Tests       10 passed (10)
 
 npm run lint
 eslint src test  # exit 0
@@ -106,7 +116,7 @@ citationCount: 5
 
 El primer `vitest` paralelo falló por agotamiento de recursos de workers en Windows; la ejecución serial terminó verde. El build emitió únicamente el warning preexistente de chunks grandes.
 
-No se ejecutó una llamada real a Groq/embeddings porque no hay credenciales de proveedor en este entorno. La ruta está cubierta con proveedor mockeado y queda lista para comprobar con claves de staging.
+No se ejecutó una llamada real a Groq/embeddings porque el Hugging Face Space todavía no tiene URL/secreto configurados en este entorno. La ruta está cubierta con proveedor mockeado y queda lista para comprobar con el Space desplegado.
 
 La E2E sí usó la base Neon real, pero levantó mocks locales de embeddings y Groq:
 reindexó el curso piloto, verificó documentos/fragmentos persistidos y consultó el chat como estudiante inscrito.
@@ -134,15 +144,26 @@ La consulta de retrieval usa `<=>` y limita a documentos activos/listos del curs
 
 ## 5. Guía manual
 
+### Configuración del servicio de embeddings
+
+1. Creá un Hugging Face Space Docker gratuito.
+2. Subí el contenido de `embedding-service/`.
+3. Agregá el secreto `EMBEDDING_API_KEY` en el Space.
+4. Usá CPU gratuita; seleccioná GPU gratuita solo si aparece disponible. La aplicación detecta CUDA y vuelve a CPU automáticamente.
+5. Verificá `https://<owner>-<space>.hf.space/health`: debe responder `model: BAAI/bge-m3`, `dimensions: 1024`.
+
 ### Configuración local/staging
 
 1. Aplicá la migración en el backend: `npx prisma migrate deploy`.
 2. Configurá:
    - `RAG_ENABLED=true`
    - `RAG_COURSE_IDS=<ID_DEL_CURSO_PILOTO>`
-   - `EMBEDDING_API_URL=<endpoint-compatible-con-/embeddings>`
-   - `EMBEDDING_API_KEY=<secreto>`
-   - `EMBEDDING_MODEL=<modelo-de-1536-dimensiones>`
+   - `EMBEDDING_API_URL=https://<owner>-<space>.hf.space`
+   - `EMBEDDING_API_KEY=<mismo-secreto-del-Space>`
+   - `EMBEDDING_MODEL=BAAI/bge-m3`
+   - `EMBEDDING_DIMENSIONS=1024`
+   - `EMBEDDING_TIMEOUT_MS=120000`
+   - `EMBEDDING_MAX_RETRIES=1`
    - `GROQ_API_KEY=<secreto>`
    - `GROQ_MODEL=<modelo-chat>`
 3. Reiniciá el backend.
@@ -184,7 +205,8 @@ node backend/scripts/e2e-rag-phase1.mjs
 ## 6. Riesgos pendientes
 
 - Fase 1 no incluye PDF, historial, cuota diaria, retención ni métricas; quedan para Fases 2–3.
-- El embedding está fijado a 1536 dimensiones; cambiar de modelo requiere migración/versionado.
+- BGE-M3 corre en infraestructura gratuita: el Space puede dormir, tardar en despertar o limitar CPU/GPU.
+- El embedding está fijado a 1024 dimensiones; cambiar de modelo requiere migración/versionado y reindexado.
 - El indexado asíncrono actualmente registra el error y queda para reintento manual; la cola/reintentos formales son Fase 2.
 - El índice vectorial ANN todavía no es necesario para el piloto pequeño; evaluar HNSW/IVFFlat con métricas en Fase 5.
 - No se hizo deploy productivo: primero hay que configurar secretos en staging y probar un curso piloto con usuarios reales autorizados.
