@@ -11,3 +11,4 @@ frontend/public/GifTiti/
 # Python runtime artifacts
 __pycache__/
 *.py[cod]
+embedding-service/.venv/
