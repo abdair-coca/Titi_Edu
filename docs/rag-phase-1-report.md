@@ -79,6 +79,7 @@ el historial de Prisma; BGE-M3 y Gradio ya no forman parte del runtime.
 | `5153589` | Dependencias compatibles con EmbeddingGemma |
 | `1cf72f4` | Ignorar entorno virtual Python local |
 | `da11f7a` | Alinear dependencias finales con EmbeddingGemma |
+| `d89cc20` | Registrar migración y reindexado piloto |
 
 ### Resultados locales
 
