@@ -78,6 +78,7 @@ el historial de Prisma; BGE-M3 y Gradio ya no forman parte del runtime.
 | `c368865` | Reemplazo del runtime BGE-M3/Gradio por EmbeddingGemma local |
 | `5153589` | Dependencias compatibles con EmbeddingGemma |
 | `1cf72f4` | Ignorar entorno virtual Python local |
+| `da11f7a` | Alinear dependencias finales con EmbeddingGemma |
 
 ### Resultados locales
 
@@ -118,13 +119,16 @@ citationCount: 5
 
 El primer `vitest` paralelo falló por agotamiento de recursos de workers en Windows; la ejecución serial terminó verde. El build emitió únicamente el warning preexistente de chunks grandes.
 
-La suite usa proveedor mockeado. También se intentó cargar EmbeddingGemma local fuera de la suite;
-la descarga fue rechazada por autenticación de Hugging Face, detallado abajo.
+La suite usa proveedor mockeado. La autenticación quedó verificada con `hf auth whoami`
+(`abdair-coca`) y la descarga del modelo terminó. La inicialización de pesos todavía termina
+con código `1` en este equipo Windows con 8 GB de RAM y cerca de 1 GB libre; el proceso
+necesita más memoria durante la carga. Cerrar aplicaciones o usar un equipo con más RAM
+es el siguiente requisito para ejecutar el servicio.
 
 La instalación local quedó verificada con `pip check`, `py_compile` y las versiones
-`sentence-transformers 3.4.1`, `transformers 4.57.0.dev0`, `torch 2.13.0+cpu` y
-`fastapi 0.115.6`. La carga real del modelo respondió `401 Unauthorized` porque
-EmbeddingGemma es un repositorio gated y este entorno no tiene `HF_TOKEN`.
+`sentence-transformers 6.0.0`, `transformers 5.15.1`, `torch 2.13.0+cpu` y
+`fastapi 0.115.6`. El modelo está descargado en la caché local de Hugging Face,
+pero todavía no se pudo ejecutar una inferencia real por la presión de memoria.
 
 La E2E sí usó la base Neon real, pero levantó mocks locales de embeddings y Groq:
 reindexó el curso piloto, verificó documentos/fragmentos persistidos y consultó el chat como estudiante inscrito.
