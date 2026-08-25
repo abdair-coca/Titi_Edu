@@ -9,6 +9,20 @@ frontend staging -> backend staging -> PostgreSQL/Neo4j staging
                   -> EmbeddingGemma staging -> AI Gateway staging -> Groq
 ```
 
+## Ruta recomendada: híbrida
+
+Para primer piloto no desplegamos Render. Usamos DBs staging administradas y
+servicios de aplicación locales:
+
+```text
+Neon branch + Neo4j Aura separado
+              ↓
+backend + frontend + gateway + EmbeddingGemma locales
+```
+
+`render.staging.yaml` queda preparado para una etapa posterior. No es necesario
+para validar RAG E2E ahora.
+
 ## Recursos necesarios
 
 - PostgreSQL staging con `pgvector`.
@@ -16,22 +30,22 @@ frontend staging -> backend staging -> PostgreSQL/Neo4j staging
 - Cuenta docente/admin para reindexar.
 - Cuenta estudiante `student@gmail.com`.
 - Curso, módulo y lección publicados.
-- Servicio EmbeddingGemma con URL HTTPS y API key interna.
-- Servicio AI Gateway con token interno.
+- EmbeddingGemma local funcionando en `127.0.0.1:8001`.
+- AI Gateway local funcionando en `127.0.0.1:8080`.
 - Cuenta Groq y modelo habilitado.
 - Cuenta Hugging Face con licencia Gemma aceptada.
 
 ## Configuración
 
-Usar plantillas:
+Usar plantillas híbridas:
 
 - `backend/.env.staging.example`
 - `ai-gateway/.env.staging.example`
 - `embedding-service/.env.staging.example`
 - `render.staging.yaml`
 
-Copiar cada plantilla como `.env.staging` solo para ejecución local. En Render,
-cargar valores en variables privadas del servicio. Nunca subir secretos al repo.
+Copiar cada plantilla como `.env.staging` solo para ejecución local. Nunca subir
+secretos al repo. Render se configura después, si el piloto local sale verde.
 
 Backend staging debe usar:
 
@@ -51,12 +65,13 @@ RAG_CHAT_MODE=gateway
 2. Crear Neo4j staging y configurar sus credenciales.
 3. Crear usuario docente/admin y `student@gmail.com`.
 4. Publicar curso, módulo y lección.
-5. Desplegar EmbeddingGemma y verificar `GET /health` con dimensión `768`.
-6. Desplegar AI Gateway y verificar `GET /health`.
-7. Desplegar backend y configurar URL/token de ambos servicios.
-8. Reindexar curso con usuario docente/admin.
-9. Confirmar documentos `LISTO` y fragmentos almacenados.
-10. Abrir lección con `student@gmail.com` y probar Tutor.
+5. Levantar EmbeddingGemma y verificar `GET /health` con dimensión `768`.
+6. Levantar AI Gateway y verificar `GET /health`.
+7. Levantar backend con `.env.staging`.
+8. Levantar frontend apuntando a backend local.
+9. Reindexar curso con usuario docente/admin.
+10. Confirmar documentos `LISTO` y fragmentos almacenados.
+11. Abrir lección con `student@gmail.com` y probar Tutor.
 
 ## E2E backend
 
