@@ -8,6 +8,7 @@ import {
   indexCourse,
   ragEnabledForCourse,
   ragStatusForLesson,
+  ragUserAllowed,
 } from '../services/rag.service.js';
 
 const router = Router();
@@ -34,10 +35,17 @@ async function loadLessonAccess(req, res) {
   return access ? { lesson, access } : null;
 }
 
+function requirePilotUser(res, usuario) {
+  if (ragUserAllowed(usuario)) return true;
+  res.status(403).json({ success: false, message: 'El tutor IA está habilitado solo para usuario piloto' });
+  return false;
+}
+
 router.get('/lessons/:id/chat/status', requireAuth, async (req, res) => {
   try {
     const loaded = await loadLessonAccess(req, res);
     if (!loaded) return;
+    if (!requirePilotUser(res, loaded.access.usuario)) return;
     const status = await ragStatusForLesson(req.params.id);
     res.json({
       success: true,
@@ -60,6 +68,7 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
     }
     const loaded = await loadLessonAccess(req, res);
     if (!loaded) return;
+    if (!requirePilotUser(res, loaded.access.usuario)) return;
     if (!ragEnabledForCourse(loaded.lesson.modulo.cursoId)) {
       return res.status(404).json({ success: false, message: 'El tutor todavía no está habilitado para este curso' });
     }

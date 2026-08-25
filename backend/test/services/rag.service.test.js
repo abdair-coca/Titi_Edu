@@ -6,6 +6,8 @@ import {
   htmlToText,
   lessonRagText,
   normalizeText,
+  ragEnabledForCourse,
+  ragUserAllowed,
 } from '../../src/services/rag.service.js';
 
 afterEach(() => {
@@ -14,9 +16,27 @@ afterEach(() => {
   delete process.env.EMBEDDING_API_KEY;
   delete process.env.EMBEDDING_MODEL;
   delete process.env.EMBEDDING_PROVIDER;
+  delete process.env.RAG_ENABLED;
+  delete process.env.RAG_COURSE_IDS;
+  delete process.env.RAG_ALLOWED_USER_EMAIL;
 });
 
 describe('RAG text preparation', () => {
+  it('allows explicit wildcard course scope without enabling empty scope', () => {
+    process.env.RAG_ENABLED = 'true';
+    process.env.RAG_COURSE_IDS = '*';
+    expect(ragEnabledForCourse('course-any')).toBe(true);
+    process.env.RAG_COURSE_IDS = '';
+    expect(ragEnabledForCourse('course-any')).toBe(false);
+  });
+
+  it('allows only configured pilot email', () => {
+    process.env.RAG_ALLOWED_USER_EMAIL = 'student@gmail.com';
+    expect(ragUserAllowed({ email: 'student@gmail.com' })).toBe(true);
+    expect(ragUserAllowed({ email: 'other@gmail.com' })).toBe(false);
+    expect(ragUserAllowed({ email: null })).toBe(false);
+  });
+
   it('removes executable HTML and keeps visible text', () => {
     expect(htmlToText('<h1>Variables</h1><script>alert(1)</script><p>x &amp; y</p>'))
       .toBe('Variables x & y');

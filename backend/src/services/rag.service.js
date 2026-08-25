@@ -43,7 +43,13 @@ function opaquePrincipalId(value) {
 export function ragEnabledForCourse(courseId) {
   if (process.env.RAG_ENABLED !== 'true') return false;
   const enabledCourses = csvValues(process.env.RAG_COURSE_IDS);
-  return enabledCourses.includes(courseId);
+  return enabledCourses.includes('*') || enabledCourses.includes(courseId);
+}
+
+export function ragUserAllowed(usuario) {
+  const allowedEmail = process.env.RAG_ALLOWED_USER_EMAIL?.trim().toLowerCase();
+  if (!allowedEmail) return false;
+  return String(usuario?.email || '').trim().toLowerCase() === allowedEmail;
 }
 
 function embeddingModel() {

@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   ragStatusForLesson: vi.fn(),
   chatWithCourseContext: vi.fn(),
   indexCourse: vi.fn(),
+  ragUserAllowed: vi.fn(),
 }));
 
 vi.mock('../../src/prisma.js', () => ({ default: mocks.client }));
@@ -23,6 +24,7 @@ vi.mock('../../src/services/rag.service.js', () => ({
   ragStatusForLesson: mocks.ragStatusForLesson,
   chatWithCourseContext: mocks.chatWithCourseContext,
   indexCourse: mocks.indexCourse,
+  ragUserAllowed: mocks.ragUserAllowed,
 }));
 
 import app from '../../src/app.js';
@@ -31,7 +33,7 @@ const studentToken = jwt.sign({ id: 'neo-student' }, process.env.JWT_SECRET, { e
 const teacherToken = jwt.sign({ id: 'neo-teacher' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
 function allowStudent() {
-  mocks.client.usuario.findUnique.mockResolvedValue({ id: 'u-student', rol: 'ESTUDIANTE' });
+  mocks.client.usuario.findUnique.mockResolvedValue({ id: 'u-student', email: 'student@gmail.com', rol: 'ESTUDIANTE' });
   mocks.client.leccion.findUnique.mockResolvedValue({
     id: 'l-1', estado: 'PUBLICADA', modulo: { cursoId: 'c-1', estado: 'PUBLICADO' },
   });
@@ -44,6 +46,7 @@ describe('RAG lesson routes', () => {
     vi.clearAllMocks();
     mocks.ragEnabledForCourse.mockReturnValue(true);
     mocks.ragStatusForLesson.mockResolvedValue({ enabled: true, indexed: true, status: 'LISTO' });
+    mocks.ragUserAllowed.mockReturnValue(true);
     mocks.chatWithCourseContext.mockResolvedValue({
       answer: 'Las variables guardan valores. [1]',
       citations: [{ number: 1, lessonId: 'l-1', title: 'Variables', excerpt: '...' }],
@@ -81,6 +84,25 @@ describe('RAG lesson routes', () => {
       principalId: 'u-student',
       message: '¿Qué es una variable?',
     });
+  });
+
+  it('blocks enrolled students outside pilot account', async () => {
+    allowStudent();
+    mocks.ragUserAllowed.mockReturnValue(false);
+    const response = await request(app).post('/api/lessons/l-1/chat')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ message: '¿Qué es una variable?' });
+    expect(response.status).toBe(403);
+    expect(mocks.chatWithCourseContext).not.toHaveBeenCalled();
+  });
+
+  it('blocks status access outside pilot account', async () => {
+    allowStudent();
+    mocks.ragUserAllowed.mockReturnValue(false);
+    const response = await request(app).get('/api/lessons/l-1/chat/status')
+      .set('Authorization', `Bearer ${studentToken}`);
+    expect(response.status).toBe(403);
+    expect(mocks.ragStatusForLesson).not.toHaveBeenCalled();
   });
 
   it('rejects oversized questions', async () => {
