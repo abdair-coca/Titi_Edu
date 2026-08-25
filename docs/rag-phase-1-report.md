@@ -1,8 +1,8 @@
 # Informe — RAG Fase 1: tutor de texto + HTML
 
-Fecha: 2026-08-24
-Rama: `codex/rag-fase-1`  
-Estado: implementado y verificado en local; producción queda protegida por flag apagado.
+Fecha: 2026-08-25
+Rama: `main`
+Estado: implementado y verificado con E2E mock y live; producción queda protegida por flag apagado.
 
 ## 1. Qué implementamos
 
@@ -109,22 +109,29 @@ markdown URL sanitation: pass
 frontend: npm run build
 ✓ built in 1m 21s
 
-backend E2E controlada:
-node scripts/e2e-rag-phase1.mjs
+backend E2E controlada con mocks:
+node --env-file=.env.staging scripts/e2e-rag-phase1.mjs
 lessonsProcessed: 3
 readyDocuments: 3
 storedFragments: 21
 chatStatus: 200
-citationCount: 5
+citationCount: 1
+
+backend E2E live:
+node --env-file=.env.staging scripts/e2e-rag-phase1.mjs
+lessonsProcessed: 3
+readyDocuments: 3
+storedFragments: 21
+chatStatus: 200
+citationCount: 4
 ```
 
 El primer `vitest` paralelo falló por agotamiento de recursos de workers en Windows; la ejecución serial terminó verde. El build emitió únicamente el warning preexistente de chunks grandes.
 
-La suite usa proveedor mockeado. La autenticación quedó verificada con `hf auth whoami`
-(`abdair-coca`) y la descarga del modelo terminó. La inicialización de pesos todavía termina
-con código `1` en este equipo Windows con 8 GB de RAM y cerca de 1 GB libre; el proceso
-necesita más memoria durante la carga. Cerrar aplicaciones o usar un equipo con más RAM
-es el siguiente requisito para ejecutar el servicio.
+La suite hermética usa proveedores mockeados. La autenticación quedó verificada con
+`hf auth whoami` (`abdair-coca`) y la descarga del modelo terminó. El servicio debe
+ejecutarse con `embedding-service\\.venv\\Scripts\\python.exe`, porque el Python global
+no tiene `torch` instalado.
 
 La instalación local quedó verificada con `pip check`, `py_compile` y las versiones
 `sentence-transformers 6.0.0`, `transformers 5.15.1`, `torch 2.13.0+cpu` y
@@ -136,7 +143,7 @@ La integración real Backend → servicio local quedó verificada después de le
 La primera solicitud se ejecutó mientras el modelo todavía iniciaba y falló; al repetirla
 con `/health` listo respondió correctamente.
 
-### Ejecución del piloto con EmbeddingGemma (2026-08-24)
+### Ejecución del piloto con EmbeddingGemma (2026-08-25)
 
 - Se creó respaldo de Neon antes de modificar el historial: `titi-neon-before-rag-gemma-20260824.dump`.
 - La migración `20260824010000_rag_bge_m3_1024` fue marcada como aplicada sin ejecutar su SQL,
@@ -148,9 +155,23 @@ con `/health` listo respondió correctamente.
 - Retrieval real: 3 resultados para `estructuras selectivas en Python`, con citas de `Estructuras Selectivas`.
 - Tests RAG: 12 tests pasaron (6 de servicios, 5 de rutas y 1 de indexado).
 
-La E2E sí usó la base Neon real, pero levantó mocks locales de embeddings y Groq:
-reindexó el curso piloto, verificó documentos/fragmentos persistidos y consultó el chat como estudiante inscrito.
+La E2E mock usa la base Neon real, pero levanta proveedores locales en proceso:
+reindexa el curso piloto, verifica documentos/fragmentos persistidos y consulta el chat como estudiante inscrito.
 El script exige `RAG_E2E_ALLOW_DB_WRITE=true` para evitar escrituras accidentales.
+
+La E2E live también fue verificada contra Neon real, EmbeddingGemma real y AI Gateway real:
+
+```text
+lessonsProcessed: 3
+readyDocuments: 3
+storedFragments: 21
+chatStatus: 200
+citationCount: 4
+```
+
+EmbeddingGemma respondió desde `127.0.0.1:8001` con `google/embeddinggemma-300M`
+y dimensión `768`; AI Gateway respondió desde `127.0.0.1:8080` usando el modelo Groq
+aprobado para la cuenta de staging.
 
 ### Consultas SQL de comprobación
 
