@@ -55,6 +55,8 @@ if (useMocks) {
   process.env.GROQ_API_URL = `http://127.0.0.1:${chatMock.address().port}/chat/completions`;
   process.env.GROQ_API_KEY = 'e2e-mock';
   process.env.GROQ_MODEL = 'e2e-mock-chat';
+  process.env.RAG_CHAT_MODE = 'direct';
+  process.env.RAG_CHAT_MODEL = 'e2e-mock-chat';
 } else if (!process.env.EMBEDDING_API_URL || !process.env.EMBEDDING_API_KEY || !process.env.EMBEDDING_MODEL) {
   throw new Error('Live E2E requires EMBEDDING_API_URL, EMBEDDING_API_KEY and EMBEDDING_MODEL');
 }
