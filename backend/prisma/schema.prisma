@@ -47,6 +47,12 @@ enum EstadoOperacionAutoria {
   FALLIDA
 }
 
+enum EstadoDocumentoRag {
+  PENDIENTE
+  LISTO
+  FALLIDO
+}
+
 model Usuario {
   id       String @id @default(uuid())
   neoId    String @unique
@@ -260,8 +266,43 @@ model Leccion {
   notas            NotaLeccion[]
   recursoHtml      RecursoHtmlLeccion?
   revisiones       RevisionLeccion[]
+  documentosRag    DocumentoRag[]
 
   @@index([moduloId, estado, orden])
+}
+
+// Documento indexado para el tutor RAG. Solo contiene material educativo
+// publicado; nunca almacena notas, progreso ni datos personales del usuario.
+model DocumentoRag {
+  id            String             @id @default(uuid())
+  leccionId     String
+  version       Int
+  estado        EstadoDocumentoRag @default(PENDIENTE)
+  activo        Boolean            @default(true)
+  hashContenido String
+  modelo        String
+  error         String?
+  indexadoAt    DateTime?
+  createdAt     DateTime           @default(now())
+  leccion       Leccion            @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+  fragmentos    FragmentoRag[]
+
+  @@unique([leccionId, version])
+  @@index([leccionId, activo, estado])
+}
+
+// El embedding se escribe/consulta con SQL porque Prisma aún no expone
+// operaciones vectoriales portables para pgvector.
+model FragmentoRag {
+  id          String                      @id @default(uuid())
+  documentoId String
+  orden       Int
+  contenido   String
+  embedding   Unsupported("vector(768)")
+  documento   DocumentoRag                @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+
+  @@unique([documentoId, orden])
+  @@index([documentoId])
 }
 
 model RevisionLeccion {

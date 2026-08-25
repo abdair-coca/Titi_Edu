@@ -9,6 +9,7 @@
     "dev": "node --watch src/index.js",
     "start": "node src/index.js",
     "seed": "node prisma/seed.js",
+    "test:e2e:rag": "node scripts/e2e-rag-phase1.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

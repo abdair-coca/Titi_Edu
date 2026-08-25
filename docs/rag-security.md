@@ -1,0 +1,65 @@
+# Seguridad del tutor RAG
+
+## Flujo de datos
+
+El backend autentica al estudiante, verifica su acceso al curso y recupera únicamente
+fragmentos publicados del curso solicitado. El LLM nunca recibe credenciales ni acceso
+directo a PostgreSQL/pgvector.
+
+En local/staging, el backend puede llamar directamente al proveedor usando
+`RAG_CHAT_MODE=direct`. En producción, el modo directo queda bloqueado: se requiere
+`RAG_CHAT_MODE=gateway`, `AI_GATEWAY_URL` y `AI_GATEWAY_TOKEN`.
+
+Durante piloto staging, `RAG_COURSE_IDS=*` permite indexar cualquier curso publicado
+y `RAG_ALLOWED_USER_EMAIL` limita el consumo de status/chat a una sola cuenta. El
+reindexado sigue protegido para admin, propietario o profesor del curso.
+
+## Controles implementados
+
+- Contexto delimitado como datos no confiables.
+- Detección de señales de prompt injection en consulta y contenido recuperado.
+- Bloqueo determinista de solicitudes para modificar notas, progreso, inscripciones o ejecutar SQL.
+- Sin herramientas ni llamadas a APIs de negocio desde el LLM.
+- Validación de citas: solo se aceptan números de fuentes recuperadas.
+- Respuesta fija cuando no hay evidencia o la respuesta no está grounded.
+- Rate limit local: 5 mensajes/minuto y 30/día por estudiante, configurable.
+- Errores de proveedor convertidos a respuestas controladas.
+- Eventos de seguridad sin guardar el texto completo de la conversación.
+
+## Gateway IA
+
+`ai-gateway/` es un servicio Node sin dependencias externas que mantiene Groq server-side.
+En staging usa límites en memoria. En producción falla cerrado si
+`AI_GATEWAY_STATE_STORE` no es `redis`; todavía falta implementar el adaptador Redis
+compartido antes de desplegarlo públicamente.
+
+El gateway:
+
+- autentica al backend con `AI_GATEWAY_TOKEN`;
+- recibe un identificador opaco del estudiante;
+- limita cuota, concurrencia y tamaño de request;
+- aplica timeout y circuit breaker;
+- rechaza tools/function calling;
+- no registra prompts ni respuestas completas.
+
+## Verificación local
+
+```powershell
+cd ai-gateway
+$env:AI_GATEWAY_TOKEN='gateway-local-token'
+$env:AI_GATEWAY_USER_SALT='local-salt'
+$env:GROQ_API_KEY='<secreto>'
+$env:GROQ_MODEL='<modelo>'
+npm start
+```
+
+Para habilitar el backend contra el gateway:
+
+```env
+RAG_CHAT_MODE=gateway
+AI_GATEWAY_URL=http://127.0.0.1:8080
+AI_GATEWAY_TOKEN=gateway-local-token
+```
+
+No habilitar `RAG_CHAT_MODE=gateway` en producción hasta contar con Redis y métricas
+compartidas. Sin gateway configurado, producción responde `503` deliberadamente.

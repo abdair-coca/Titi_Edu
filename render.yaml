@@ -29,3 +29,43 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      - key: RAG_ENABLED
+        sync: false
+      - key: RAG_COURSE_IDS
+        sync: false
+      - key: RAG_ALLOWED_USER_EMAIL
+        sync: false
+      - key: EMBEDDING_API_URL
+        sync: false
+      - key: EMBEDDING_API_KEY
+        sync: false
+      - key: EMBEDDING_MODEL
+        sync: false
+      - key: EMBEDDING_DIMENSIONS
+        sync: false
+      - key: EMBEDDING_PROVIDER
+        sync: false
+      - key: EMBEDDING_TIMEOUT_MS
+        sync: false
+      - key: EMBEDDING_MAX_RETRIES
+        sync: false
+      - key: GROQ_API_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        sync: false
+      - key: RAG_CHAT_MODE
+        sync: false
+      - key: RAG_CHAT_RATE_LIMIT_PER_MINUTE
+        sync: false
+      - key: RAG_CHAT_DAILY_QUOTA
+        sync: false
+      - key: RAG_CHAT_TIMEOUT_MS
+        sync: false
+      - key: RAG_PRINCIPAL_SALT
+        sync: false
+      - key: AI_GATEWAY_URL
+        sync: false
+      - key: AI_GATEWAY_TOKEN
+        sync: false

@@ -10,6 +10,7 @@ import AchievementToast from '../components/AchievementToast.jsx';
 import EvaluationQuiz from '../components/EvaluationQuiz.jsx';
 import MarkdownContent from '../components/MarkdownContent.jsx';
 import HtmlLessonPlayer from '../components/HtmlLessonPlayer.jsx';
+import RagTutorCard from '../components/RagTutorCard.jsx';
 import { resolveMediaUrl } from '../lib/format.js';
 import { sanitizeMarkdownUrl } from '../lib/markdown.js';
 import { usePopIn, useStaggerReveal } from '../lib/motion.js';
@@ -742,7 +743,7 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
           onScoreRecorded={onHtmlScoreRecorded}
         />
       )}
-      <DeepenCard />
+      <RagTutorCard lessonId={leccion.id} />
 
       {completeError && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-4">
@@ -799,107 +800,6 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
         )}
       </div>
     </article>
-  );
-}
-
-// ---- Profundiza en este tema (chips de IA — STUB, sin IA real todavía) ----
-const DEEPEN_PROMPTS = [
-  'Quiero preguntas de práctica',
-  'Explica este tema de forma sencilla',
-  'Hazme un resumen',
-  'Dame ejemplos de la vida real',
-];
-
-function DeepenCard() {
-  const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState(null);
-  const respRef = usePopIn([selected]);
-
-  return (
-    <section className="bg-titi-yellow-light/60 border border-titi-yellow/40 rounded-2xl mb-6">
-      <div className="lg:hidden flex items-center justify-between gap-3 p-4">
-        <div className="min-w-0">
-          <p className="text-base font-bold text-titi-dark flex items-center gap-2">
-            <span aria-hidden="true">✨</span> Profundiza en este tema
-          </p>
-          <p className="mt-1 text-xs font-medium text-gray-500">
-            Contenido complementario, ejercicios y más.
-          </p>
-        </div>
-        <span className="shrink-0 rounded-full bg-titi-yellow px-2.5 py-1 text-xs font-bold text-titi-dark">
-          Próximamente
-        </span>
-      </div>
-
-      <div className="hidden lg:block">
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          className="w-full flex items-center justify-between gap-2 p-4 sm:p-5 text-left"
-        >
-          <span className="text-base font-bold text-titi-dark flex items-center gap-2">
-            <span aria-hidden="true">✨</span> Profundiza en este tema
-          </span>
-          <span
-            className={`text-sm text-titi-dark transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
-            aria-hidden="true"
-          >
-            ▾
-          </span>
-        </button>
-
-        {/* Colapsable: grid-rows 0fr→1fr + fade, ease neutro (no pop). Ver motion.md §3. */}
-        <div
-          className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${
-            open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-          }`}
-        >
-          <div className="overflow-hidden">
-            <div
-              className={`px-4 sm:px-5 pb-4 sm:pb-5 transition-opacity duration-300 ease-out motion-reduce:transition-none ${
-                open ? 'opacity-100' : 'opacity-0'
-              }`}
-            >
-              <div className="flex flex-wrap gap-2">
-                {DEEPEN_PROMPTS.map((prompt) => (
-                  <button
-                    key={prompt}
-                    type="button"
-                    onClick={() => setSelected(prompt)}
-                    className={[
-                      'text-sm font-semibold px-4 py-2.5 rounded-xl border transition-all duration-150',
-                      selected === prompt
-                        ? 'bg-titi-yellow text-titi-dark border-titi-yellow'
-                        : 'bg-white text-titi-dark border-gray-200 hover:border-titi-yellow hover:bg-titi-cream',
-                    ].join(' ')}
-                  >
-                    {prompt}
-                  </button>
-                ))}
-              </div>
-
-              {selected && (
-                <div ref={respRef} className="mt-4 bg-white border border-gray-100 rounded-xl p-4 flex items-start gap-3">
-                  <img
-                    src="/Titi.png"
-                    alt="Titi"
-                    className="w-10 h-10 object-contain select-none shrink-0"
-                    draggable={false}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-titi-dark">{selected}</p>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Titi va a responder esto con IA muy pronto. Función en construcción 🛠️
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 

@@ -7,3 +7,11 @@ frontend/public/GifTiti/
 
 # Playwright MCP snapshots
 .playwright-mcp/
+
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+embedding-service/.venv/
+backend/.env.staging
+ai-gateway/.env.staging
+embedding-service/.env.staging
