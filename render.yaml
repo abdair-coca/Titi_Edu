@@ -33,6 +33,8 @@ services:
         sync: false
       - key: RAG_COURSE_IDS
         sync: false
+      - key: RAG_ALLOWED_USER_EMAIL
+        sync: false
       - key: EMBEDDING_API_URL
         sync: false
       - key: EMBEDDING_API_KEY

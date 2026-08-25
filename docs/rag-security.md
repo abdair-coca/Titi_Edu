@@ -10,6 +10,10 @@ En local/staging, el backend puede llamar directamente al proveedor usando
 `RAG_CHAT_MODE=direct`. En producción, el modo directo queda bloqueado: se requiere
 `RAG_CHAT_MODE=gateway`, `AI_GATEWAY_URL` y `AI_GATEWAY_TOKEN`.
 
+Durante piloto staging, `RAG_COURSE_IDS=*` permite indexar cualquier curso publicado
+y `RAG_ALLOWED_USER_EMAIL` limita el consumo de status/chat a una sola cuenta. El
+reindexado sigue protegido para admin, propietario o profesor del curso.
+
 ## Controles implementados
 
 - Contexto delimitado como datos no confiables.

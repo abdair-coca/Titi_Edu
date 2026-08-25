@@ -12,3 +12,6 @@ frontend/public/GifTiti/
 __pycache__/
 *.py[cod]
 embedding-service/.venv/
+backend/.env.staging
+ai-gateway/.env.staging
+embedding-service/.env.staging
