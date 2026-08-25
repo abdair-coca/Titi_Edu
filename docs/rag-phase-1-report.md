@@ -183,10 +183,15 @@ La consulta de retrieval usa `<=>` y limita a documentos activos/listos del curs
 
 ### Configuración local/staging
 
+Blueprint staging: `render.staging.yaml`. Despliega backend, gateway y servicio
+EmbeddingGemma separados. El servicio de embeddings usa plan con recursos mayores
+porque carga el modelo al iniciar; validar costo y memoria antes de desplegar.
+
 1. Aplicá la migración en el backend: `npx prisma migrate deploy`.
 2. Configurá:
    - `RAG_ENABLED=true`
-   - `RAG_COURSE_IDS=<ID_DEL_CURSO_PILOTO>`
+   - `RAG_COURSE_IDS=*` (staging: todos los cursos publicados)
+   - `RAG_ALLOWED_USER_EMAIL=student@gmail.com` (staging: único consumidor)
    - `EMBEDDING_API_URL=http://127.0.0.1:8001`
    - `EMBEDDING_API_KEY=local-dev-key`
    - `EMBEDDING_MODEL=google/embeddinggemma-300M`
@@ -200,17 +205,17 @@ La consulta de retrieval usa `<=>` y limita a documentos activos/listos del curs
 
 ### Indexar y probar
 
-1. Entrá a `https://titiedu.vercel.app` con un usuario profesor propietario/admin.
+1. Entrá al frontend staging con un usuario profesor propietario/admin.
 2. Abrí DevTools → Application/Local Storage y copiá el JWT, o usá el token de la sesión.
 3. Ejecutá:
 
 ```bash
-curl -X POST "https://titi-backend.onrender.com/api/admin/rag/courses/<COURSE_ID>/reindex" ^
+curl -X POST "<STAGING_BACKEND_URL>/api/admin/rag/courses/<COURSE_ID>/reindex" ^
   -H "Authorization: Bearer <TOKEN>"
 ```
 
 4. Esperá `success: true` y verificá al menos un resultado `INDEXED`.
-5. Con un estudiante inscrito, abrí `https://titiedu.vercel.app/courses/<COURSE_ID>/learn` y una lección publicada.
+5. Con `student@gmail.com` inscrito, abrí el frontend staging en una lección publicada.
 6. Verificá que aparezca **Tutor de la lección**, abrilo y preguntá sobre el contenido.
 7. Esperá una respuesta con `[1]` y una sección **Fuentes**.
 8. Preguntá algo fuera del material: debe responder que no encontró evidencia suficiente o no afirmar datos sin cita.
@@ -223,6 +228,11 @@ $env:RAG_E2E_COURSE_ID='<COURSE_ID>'
 $env:RAG_E2E_STUDENT_USERNAME='<STUDENT_USERNAME>'
 node backend/scripts/e2e-rag-phase1.mjs
 ```
+
+La misma prueba usa proveedores reales cuando `RAG_E2E_USE_MOCKS=false`. En ese
+modo requiere `EMBEDDING_API_URL`, `EMBEDDING_API_KEY` y `EMBEDDING_MODEL` reales;
+Groq usa la configuración de chat del backend. El estudiante se puede seleccionar
+por `RAG_E2E_STUDENT_EMAIL` (por defecto `student@gmail.com`) o por username.
 
 ### Casos de error esperados
 

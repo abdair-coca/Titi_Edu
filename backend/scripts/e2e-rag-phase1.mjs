@@ -6,12 +6,14 @@ import request from 'supertest';
 const courseId = process.env.RAG_E2E_COURSE_ID;
 const adminUsername = process.env.RAG_E2E_ADMIN_USERNAME || 'admin';
 const studentUsername = process.env.RAG_E2E_STUDENT_USERNAME;
+const studentEmail = process.env.RAG_E2E_STUDENT_EMAIL || 'student@gmail.com';
+const useMocks = process.env.RAG_E2E_USE_MOCKS !== 'false';
 
 if (process.env.RAG_E2E_ALLOW_DB_WRITE !== 'true') {
   throw new Error('Set RAG_E2E_ALLOW_DB_WRITE=true to allow the controlled indexing E2E');
 }
-if (!courseId || !studentUsername) {
-  throw new Error('RAG_E2E_COURSE_ID and RAG_E2E_STUDENT_USERNAME are required');
+if (!courseId || (!studentUsername && !studentEmail)) {
+  throw new Error('RAG_E2E_COURSE_ID and a student username or email are required');
 }
 
 function startProviderMock(handler) {
@@ -26,29 +28,36 @@ function json(response, status, payload) {
   response.end(JSON.stringify(payload));
 }
 
-const embedding = Array.from({ length: 768 }, () => 0.01);
-const embeddingMock = await startProviderMock((req, res) => {
-  if (req.method !== 'POST' || req.url !== '/embeddings') return json(res, 404, { error: 'not_found' });
-  json(res, 200, { data: [{ embedding }], usage: { prompt_tokens: 1, total_tokens: 1 } });
-});
-const chatMock = await startProviderMock((req, res) => {
-  if (req.method !== 'POST' || req.url !== '/chat/completions') return json(res, 404, { error: 'not_found' });
-  json(res, 200, {
-    choices: [{ message: { content: 'Respuesta E2E basada en el material publicado. [1]' } }],
-    usage: { prompt_tokens: 10, completion_tokens: 9, total_tokens: 19 },
-  });
-});
-
 process.env.RAG_ENABLED = 'true';
-process.env.RAG_COURSE_IDS = courseId;
-process.env.EMBEDDING_API_URL = `http://127.0.0.1:${embeddingMock.address().port}`;
-process.env.EMBEDDING_API_KEY = 'e2e-mock';
-process.env.EMBEDDING_MODEL = 'e2e-mock-768';
-process.env.EMBEDDING_DIMENSIONS = '768';
-process.env.EMBEDDING_PROVIDER = 'openai';
-process.env.GROQ_API_URL = `http://127.0.0.1:${chatMock.address().port}/chat/completions`;
-process.env.GROQ_API_KEY = 'e2e-mock';
-process.env.GROQ_MODEL = 'e2e-mock-chat';
+process.env.RAG_COURSE_IDS = process.env.RAG_COURSE_IDS || '*';
+process.env.RAG_ALLOWED_USER_EMAIL = process.env.RAG_ALLOWED_USER_EMAIL || studentEmail;
+
+let embeddingMock;
+let chatMock;
+if (useMocks) {
+  const embedding = Array.from({ length: 768 }, () => 0.01);
+  embeddingMock = await startProviderMock((req, res) => {
+    if (req.method !== 'POST' || req.url !== '/embeddings') return json(res, 404, { error: 'not_found' });
+    json(res, 200, { data: [{ embedding }], usage: { prompt_tokens: 1, total_tokens: 1 } });
+  });
+  chatMock = await startProviderMock((req, res) => {
+    if (req.method !== 'POST' || req.url !== '/chat/completions') return json(res, 404, { error: 'not_found' });
+    json(res, 200, {
+      choices: [{ message: { content: 'Respuesta E2E basada en el material publicado. [1]' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 9, total_tokens: 19 },
+    });
+  });
+  process.env.EMBEDDING_API_URL = `http://127.0.0.1:${embeddingMock.address().port}`;
+  process.env.EMBEDDING_API_KEY = 'e2e-mock';
+  process.env.EMBEDDING_MODEL = 'e2e-mock-768';
+  process.env.EMBEDDING_DIMENSIONS = '768';
+  process.env.EMBEDDING_PROVIDER = 'openai';
+  process.env.GROQ_API_URL = `http://127.0.0.1:${chatMock.address().port}/chat/completions`;
+  process.env.GROQ_API_KEY = 'e2e-mock';
+  process.env.GROQ_MODEL = 'e2e-mock-chat';
+} else if (!process.env.EMBEDDING_API_URL || !process.env.EMBEDDING_API_KEY || !process.env.EMBEDDING_MODEL) {
+  throw new Error('Live E2E requires EMBEDDING_API_URL, EMBEDDING_API_KEY and EMBEDDING_MODEL');
+}
 
 const [{ default: app }, { default: prisma }] = await Promise.all([
   import('../src/app.js'),
@@ -62,7 +71,9 @@ function tokenFor(usuario) {
 try {
   const [admin, student, lesson] = await Promise.all([
     prisma.usuario.findUnique({ where: { username: adminUsername }, select: { neoId: true, rol: true } }),
-    prisma.usuario.findUnique({ where: { username: studentUsername }, select: { id: true, neoId: true, rol: true } }),
+    studentUsername
+      ? prisma.usuario.findUnique({ where: { username: studentUsername }, select: { id: true, neoId: true, email: true, rol: true } })
+      : prisma.usuario.findUnique({ where: { email: studentEmail }, select: { id: true, neoId: true, email: true, rol: true } }),
     prisma.leccion.findFirst({
       where: { estado: 'PUBLICADA', modulo: { cursoId: courseId, estado: 'PUBLICADO', curso: { publicado: true } } },
       select: { id: true },
@@ -70,7 +81,7 @@ try {
     }),
   ]);
   if (!admin || admin.rol !== 'ADMIN') throw new Error(`Admin user not found: ${adminUsername}`);
-  if (!student || student.rol !== 'ESTUDIANTE') throw new Error(`Student user not found: ${studentUsername}`);
+  if (!student || student.rol !== 'ESTUDIANTE') throw new Error(`Student user not found: ${studentUsername || studentEmail}`);
   if (!lesson) throw new Error('No published lesson found in the pilot course');
 
   const enrollment = await prisma.inscripcion.findUnique({ where: { usuarioId_cursoId: { usuarioId: student.id, cursoId: courseId } } });
@@ -109,7 +120,7 @@ try {
 } finally {
   await prisma.$disconnect();
   await Promise.all([
-    new Promise((resolve) => embeddingMock.close(resolve)),
-    new Promise((resolve) => chatMock.close(resolve)),
+    embeddingMock ? new Promise((resolve) => embeddingMock.close(resolve)) : Promise.resolve(),
+    chatMock ? new Promise((resolve) => chatMock.close(resolve)) : Promise.resolve(),
   ]);
 }
