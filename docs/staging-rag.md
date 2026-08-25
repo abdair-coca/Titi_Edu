@@ -15,7 +15,7 @@ Para primer piloto no desplegamos Render. Usamos DBs staging administradas y
 servicios de aplicación locales:
 
 ```text
-Neon branch + Neo4j Aura separado
+Neon branch + Neo4j Aura existente
               ↓
 backend + frontend + gateway + EmbeddingGemma locales
 ```
@@ -23,10 +23,14 @@ backend + frontend + gateway + EmbeddingGemma locales
 `render.staging.yaml` queda preparado para una etapa posterior. No es necesario
 para validar RAG E2E ahora.
 
+Neo4j queda compartido temporalmente porque no se creará otra instancia. Esto
+reduce setup, pero no aísla datos sociales. No ejecutar borrados, seed global ni
+scripts destructivos contra ese grafo.
+
 ## Recursos necesarios
 
 - PostgreSQL staging con `pgvector`.
-- Neo4j staging aislado.
+- Credenciales de instancia Neo4j existente.
 - Cuenta docente/admin para reindexar.
 - Cuenta estudiante `student@gmail.com`.
 - Curso, módulo y lección publicados.
@@ -62,14 +66,14 @@ RAG_CHAT_MODE=gateway
 ## Orden de ejecución
 
 1. Crear DB PostgreSQL staging y aplicar `npx prisma migrate deploy`.
-2. Crear Neo4j staging y configurar sus credenciales.
-3. Crear usuario docente/admin y `student@gmail.com`.
-4. Publicar curso, módulo y lección.
+2. Configurar credenciales de Neo4j existente y verificar conexión sin mutar datos.
+3. Verificar usuario docente/admin y `student@gmail.com` en ambas DB.
+4. Verificar curso, módulo, lección publicada e inscripción en Neon staging.
 5. Levantar EmbeddingGemma y verificar `GET /health` con dimensión `768`.
 6. Levantar AI Gateway y verificar `GET /health`.
 7. Levantar backend con `.env.staging`.
 8. Levantar frontend apuntando a backend local.
-9. Reindexar curso con usuario docente/admin.
+9. Reindexar curso con usuario docente/admin; esto escribe solo documentos RAG en Neon.
 10. Confirmar documentos `LISTO` y fragmentos almacenados.
 11. Abrir lección con `student@gmail.com` y probar Tutor.
 
