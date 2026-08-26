@@ -1,115 +1,122 @@
-# Staging RAG — guía operativa
+# Piloto RAG sobre producción — guía operativa
 
 ## Objetivo
 
-Probar flujo RAG completo sin tocar producción:
+Probar flujo RAG Fase 1 sobre datos reales de producción, con proveedores locales
+temporales y costo incremental cero:
 
 ```text
-frontend staging -> backend staging -> PostgreSQL/Neo4j staging
-                  -> EmbeddingGemma staging -> AI Gateway staging -> Groq
+frontend producción -> backend producción -> Neon main / Neo4j Aura
+                     -> Cloudflare Tunnel -> EmbeddingGemma local
+                     -> AI Gateway local -> Groq o modelo local
 ```
 
-## Ruta recomendada: híbrida
+El piloto no usa branch Neon separada. La branch `rag-staging` fue eliminada.
+La PC local y los túneles deben permanecer activos durante cada prueba.
 
-Para primer piloto no desplegamos Render. Usamos DBs staging administradas y
-servicios de aplicación locales:
+## Alcance
 
 ```text
-Neon branch + Neo4j Aura existente
+Neon main + Neo4j Aura producción
               ↓
-backend + frontend + gateway + EmbeddingGemma locales
+backend Render producción
+              ↓
+Cloudflare Tunnel
+       ↙                  ↘
+EmbeddingGemma local    AI Gateway local
+                             ↓
+                           Groq
 ```
 
-`render.staging.yaml` queda preparado para una etapa posterior. No es necesario
-para validar RAG E2E ahora.
-
-Neo4j queda compartido temporalmente porque no se creará otra instancia. Esto
-reduce setup, pero no aísla datos sociales. No ejecutar borrados, seed global ni
-scripts destructivos contra ese grafo.
+No se avanzan Fases RAG 2–5 hasta cerrar este piloto visual.
 
 ## Recursos necesarios
 
-- PostgreSQL staging con `pgvector`.
-- Credenciales de instancia Neo4j existente.
+- PostgreSQL producción Neon `main` con `pgvector`.
+- Neo4j Aura producción existente.
 - Cuenta docente/admin para reindexar.
-- Cuenta estudiante `student@gmail.com`.
-- Curso, módulo y lección publicados.
-- EmbeddingGemma local funcionando en `127.0.0.1:8001`.
-- AI Gateway local funcionando en `127.0.0.1:8080`.
-- Cuenta Groq y modelo habilitado.
-- Cuenta Hugging Face con licencia Gemma aceptada.
+- Una cuenta estudiante piloto autorizada.
+- Curso, módulo, lección e inscripción productivos.
+- EmbeddingGemma local en `127.0.0.1:8001`.
+- AI Gateway local en `127.0.0.1:8080`.
+- Cloudflare Tunnel activo para ambos servicios.
+- Cuota gratuita disponible en Groq, o modelo local compatible.
+- Cuenta Hugging Face con licencia Gemma aceptada y token de lectura.
 
 ## Configuración
 
-Usar plantillas híbridas:
+Usar producción Render para backend. No reemplazar su `DATABASE_URL`:
 
-- `backend/.env.staging.example`
-- `ai-gateway/.env.staging.example`
-- `embedding-service/.env.staging.example`
-- `render.staging.yaml`
+- `render.yaml`
+- `backend/.env.example`
+- `ai-gateway/.env.staging.example` solo como referencia local
+- `embedding-service/.env.staging.example` solo como referencia local
 
-Copiar cada plantilla como `.env.staging` solo para ejecución local. Nunca subir
-secretos al repo. Render se configura después, si el piloto local sale verde.
+Nunca subir secretos al repo ni compartirlos por chat.
 
-Backend staging debe usar:
+Backend producción debe usar valores cerrados:
 
 ```env
 RAG_ENABLED=true
-RAG_COURSE_IDS=*
-RAG_ALLOWED_USER_EMAIL=student@gmail.com
+RAG_COURSE_IDS=<PRODUCTION_COURSE_ID>
+RAG_ALLOWED_USER_EMAIL=<PILOT_USER_EMAIL>
 RAG_CHAT_MODE=gateway
+EMBEDDING_API_URL=https://<EMBEDDING_TUNNEL_HOST>
+AI_GATEWAY_URL=https://<GATEWAY_TUNNEL_HOST>
 ```
 
-`RAG_COURSE_IDS=*` vuelve indexables todos cursos publicados. No indexa borradores.
-`student@gmail.com` debe existir en ambas DB y estar inscrito en curso.
+No usar `RAG_COURSE_IDS=*` en producción.
+El usuario piloto debe existir en Neo4j, Postgres y estar inscrito en curso.
 
 ## Orden de ejecución
 
-1. Crear DB PostgreSQL staging y aplicar `npx prisma migrate deploy`.
-2. Configurar credenciales de Neo4j existente y verificar conexión sin mutar datos.
-3. Verificar usuario docente/admin y `student@gmail.com` en ambas DB.
-4. Verificar curso, módulo, lección publicada e inscripción en Neon staging.
-5. Levantar EmbeddingGemma y verificar `GET /health` con dimensión `768`.
-6. Levantar AI Gateway y verificar `GET /health`.
-7. Levantar backend con `.env.staging`.
-8. Levantar frontend apuntando a backend local.
-9. Reindexar curso con usuario docente/admin; esto escribe solo documentos RAG en Neon.
-10. Confirmar documentos `LISTO` y fragmentos almacenados.
-11. Abrir lección con `student@gmail.com` y probar Tutor.
+1. Confirmar respaldo y branch Neon `rag-staging` eliminada.
+2. Verificar producción con `GET /api/health`.
+3. Levantar EmbeddingGemma local y verificar dimensión `768`.
+4. Levantar AI Gateway local con `NODE_ENV=development` y estado memory.
+5. Crear túneles HTTPS para puertos `8001` y `8080`.
+6. Verificar ambos servicios desde una red externa.
+7. Configurar Render con curso y usuario piloto exactos.
+8. Aplicar migraciones con `npx prisma migrate deploy`.
+9. Reindexar curso desde `/api/admin/rag/courses/:courseId/reindex`.
+10. Confirmar documentos `LISTO` y fragmentos en Neon `main`.
+11. Abrir lección productiva con usuario piloto.
 
-## E2E backend
+## Reindexado productivo
 
-Desde `backend/`:
+Requiere token de usuario admin, propietario o profesor asignado:
 
-```powershell
-$env:RAG_E2E_ALLOW_DB_WRITE='true'
-$env:RAG_E2E_USE_MOCKS='false'
-$env:RAG_E2E_COURSE_ID='<STAGING_COURSE_ID>'
-$env:RAG_E2E_ADMIN_USERNAME='<STAGING_ADMIN_USERNAME>'
-$env:RAG_E2E_STUDENT_EMAIL='student@gmail.com'
-npm run test:e2e:rag
+```text
+POST /api/admin/rag/courses/<PRODUCTION_COURSE_ID>/reindex
+Authorization: Bearer <ADMIN_OR_TEACHER_TOKEN>
 ```
 
-La prueba confirma reindexado, documentos listos, fragmentos, chat, citas y
-permisos del estudiante piloto.
+No ejecutar `backend/scripts/e2e-rag-phase1.mjs` contra producción sin revisar
+variables y consentimiento de escritura. El script reindexa y escribe datos.
 
 ## Validación manual
 
-- Usuario piloto ve Tutor.
+- Usuario piloto ve Tutor en curso piloto.
 - Usuario piloto recibe respuesta con fuentes.
 - Pregunta fuera del material devuelve fallback sin evidencia.
+- Solicitud para modificar notas/progreso recibe rechazo.
 - Otro estudiante recibe `403`.
 - Estudiante sin inscripción recibe `403`.
-- Admin/docente puede reindexar.
+- Curso fuera de allowlist no muestra Tutor.
 - Curso no publicado no se indexa.
+- Detener proveedor local produce error controlado.
+- Restaurar proveedor recupera chat.
+- Desktop y móvil no muestran overflow.
 
 ## Rollback
 
-En backend staging:
+En backend producción:
 
 ```env
 RAG_ENABLED=false
 ```
 
-O retirar curso de `RAG_COURSE_IDS`. Producción no debe usar `*` ni habilitar RAG
-hasta contar con gateway Redis y embedding remoto estable.
+Después del redeploy, Tutor desaparece y cursos continúan funcionando.
+Detener proveedores locales solo después de confirmar rollback.
+
+Este túnel local es válido para piloto autorizado, no para disponibilidad continua.
