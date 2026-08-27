@@ -13,6 +13,8 @@ import {
 const DEFAULT_CHUNK_SIZE = 900;
 const DEFAULT_CHUNK_OVERLAP = 120;
 const DEFAULT_RETRIEVAL_LIMIT = 5;
+const DEFAULT_INDEX_TRANSACTION_MAX_WAIT_MS = 10_000;
+const DEFAULT_INDEX_TRANSACTION_TIMEOUT_MS = 30_000;
 export const VECTOR_DIMENSIONS = 768;
 const chatRateLimiter = new ChatRateLimiter({
   perMinute: Math.max(1, Number(process.env.RAG_CHAT_RATE_LIMIT_PER_MINUTE) || 5),
@@ -401,6 +403,9 @@ export async function indexLesson(lessonId) {
       where: { id: nextDocument.id },
       data: { estado: 'LISTO', indexadoAt: new Date(), error: null },
     });
+  }, {
+    maxWait: Math.max(1000, Number(process.env.RAG_INDEX_TRANSACTION_MAX_WAIT_MS) || DEFAULT_INDEX_TRANSACTION_MAX_WAIT_MS),
+    timeout: Math.max(5000, Number(process.env.RAG_INDEX_TRANSACTION_TIMEOUT_MS) || DEFAULT_INDEX_TRANSACTION_TIMEOUT_MS),
   });
 
   return { status: 'INDEXED', documentId: document.id, lessonId, chunks: chunks.length };

@@ -14,7 +14,7 @@ import { indexLesson } from '../../src/services/rag.service.js';
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  for (const key of ['RAG_ENABLED', 'RAG_COURSE_IDS', 'EMBEDDING_API_URL', 'EMBEDDING_API_KEY', 'EMBEDDING_MODEL', 'EMBEDDING_PROVIDER', 'EMBEDDING_MAX_RETRIES']) {
+  for (const key of ['RAG_ENABLED', 'RAG_COURSE_IDS', 'EMBEDDING_API_URL', 'EMBEDDING_API_KEY', 'EMBEDDING_MODEL', 'EMBEDDING_PROVIDER', 'EMBEDDING_MAX_RETRIES', 'RAG_INDEX_TRANSACTION_MAX_WAIT_MS', 'RAG_INDEX_TRANSACTION_TIMEOUT_MS']) {
     delete process.env[key];
   }
 });
@@ -108,6 +108,7 @@ describe('RAG indexing feature flag', () => {
       chunks: 1,
     });
     expect(mocks.$transaction).toHaveBeenCalledOnce();
+    expect(mocks.$transaction).toHaveBeenCalledWith(expect.any(Function), { maxWait: 10000, timeout: 30000 });
     expect(tx.fragmentoRag.deleteMany).toHaveBeenCalledWith({ where: { documentoId: 'document-1' } });
     expect(tx.$executeRaw).toHaveBeenCalledOnce();
   });
