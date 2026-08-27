@@ -51,7 +51,7 @@ if (useMocks) {
   process.env.EMBEDDING_API_KEY = 'e2e-mock';
   process.env.EMBEDDING_MODEL = 'e2e-mock-768';
   process.env.EMBEDDING_DIMENSIONS = '768';
-  process.env.EMBEDDING_PROVIDER = 'openai';
+  process.env.EMBEDDING_PROVIDER = 'local';
   process.env.GROQ_API_URL = `http://127.0.0.1:${chatMock.address().port}/chat/completions`;
   process.env.GROQ_API_KEY = 'e2e-mock';
   process.env.GROQ_MODEL = 'e2e-mock-chat';

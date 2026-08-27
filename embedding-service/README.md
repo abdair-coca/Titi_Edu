@@ -46,26 +46,26 @@ POST http://127.0.0.1:8001/embeddings
 
 ## Contrato
 
-Consulta:
+El backend prepara el texto con el contrato oficial de retrieval antes de
+enviarlo al proveedor. El servicio local recibe ese texto ya preparado.
+
+Consulta preparada:
 
 ```json
 {
   "model": "google/embeddinggemma-300M",
-  "input": "¿Qué es una variable?",
-  "kind": "query"
+  "input": "task: search result | query: ¿Qué es una variable?"
 }
 ```
 
-Documento:
+Documento preparado:
 
 ```json
 {
   "model": "google/embeddinggemma-300M",
-  "input": "Una variable almacena un valor.",
-  "kind": "document",
-  "title": "Variables"
+  "input": "title: Variables | text: Una variable almacena un valor."
 }
 ```
 
-El endpoint devuelve formato OpenAI-compatible. La consulta usa el prompt de
-retrieval y el documento usa el título recomendado por EmbeddingGemma.
+El endpoint devuelve formato OpenAI-compatible. Los formatos siguen los prompts
+de retrieval recomendados por EmbeddingGemma.

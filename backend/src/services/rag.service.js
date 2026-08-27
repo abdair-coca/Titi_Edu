@@ -13,7 +13,7 @@ import {
 const DEFAULT_CHUNK_SIZE = 900;
 const DEFAULT_CHUNK_OVERLAP = 120;
 const DEFAULT_RETRIEVAL_LIMIT = 5;
-export const VECTOR_DIMENSIONS = Number(process.env.EMBEDDING_DIMENSIONS || 768);
+export const VECTOR_DIMENSIONS = 768;
 const chatRateLimiter = new ChatRateLimiter({
   perMinute: Math.max(1, Number(process.env.RAG_CHAT_RATE_LIMIT_PER_MINUTE) || 5),
   daily: Math.max(1, Number(process.env.RAG_CHAT_DAILY_QUOTA) || 30),
@@ -54,18 +54,31 @@ export function ragUserAllowed(usuario) {
 
 function embeddingModel() {
   const model = process.env.EMBEDDING_MODEL?.trim();
-  if (!model) throw new RagError(503, 'El proveedor de embeddings no está configurado');
-  return model;
+  if (model) return model;
+  return embeddingProvider() === 'cloudflare'
+    ? '@cf/google/embeddinggemma-300m'
+    : 'google/embeddinggemma-300M';
 }
 
 function embeddingProvider() {
-  return process.env.EMBEDDING_PROVIDER?.trim().toLowerCase() || 'local';
+  const provider = process.env.EMBEDDING_PROVIDER?.trim().toLowerCase() || 'local';
+  if (!['local', 'cloudflare'].includes(provider)) {
+    throw new RagError(503, 'El proveedor de embeddings configurado no es válido');
+  }
+  return provider;
 }
 
 function embeddingEndpoint() {
   const base = process.env.EMBEDDING_API_URL?.trim();
   if (!base) throw new RagError(503, 'El proveedor de embeddings no está configurado');
   return base.endsWith('/embeddings') ? base : `${base.replace(/\/$/, '')}/embeddings`;
+}
+
+function cloudflareEndpoint(model) {
+  const accountId = process.env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  if (!accountId) throw new RagError(503, 'Cloudflare Workers AI no está configurado');
+  const encodedModel = model.split('/').map((part) => encodeURIComponent(part).replace(/^%40/, '@')).join('/');
+  return `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${encodedModel}`;
 }
 
 function groqEndpoint() {
@@ -136,6 +149,14 @@ export function normalizeText(value) {
   return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
+export function prepareEmbeddingText(value, { kind = 'query', title = null } = {}) {
+  const text = normalizeText(value);
+  if (!text) throw new RagError(400, 'El texto para embedding no puede estar vacío');
+  if (kind === 'document') return `title: ${normalizeText(title) || 'none'} | text: ${text}`;
+  if (kind === 'query') return `task: search result | query: ${text}`;
+  throw new RagError(400, 'El tipo de embedding no es válido');
+}
+
 export function chunkText(value, chunkSize = DEFAULT_CHUNK_SIZE, overlap = DEFAULT_CHUNK_OVERLAP) {
   const text = normalizeText(value);
   if (!text) return [];
@@ -162,33 +183,68 @@ function hashContent(content) {
 }
 
 export function formatVector(vector) {
-  if (!Array.isArray(vector) || vector.length !== VECTOR_DIMENSIONS || vector.some((value) => !Number.isFinite(Number(value)))) {
-    throw new RagError(502, `El embedding debe tener ${VECTOR_DIMENSIONS} dimensiones`);
-  }
-  return `[${vector.map((value) => Number(value)).join(',')}]`;
+  const normalized = validateEmbedding(vector);
+  return `[${normalized.join(',')}]`;
 }
 
-async function createOpenAiEmbedding(input, apiKey, model, timeoutMs, metadata = {}) {
+function validateEmbedding(vector) {
+  if (!Array.isArray(vector) || vector.length !== VECTOR_DIMENSIONS) {
+    throw new RagError(502, `El embedding debe tener ${VECTOR_DIMENSIONS} dimensiones`);
+  }
+  if (vector.some((value) => typeof value !== 'number' || !Number.isFinite(value))) {
+    throw new RagError(502, 'El embedding contiene valores no numéricos o no finitos');
+  }
+  return vector;
+}
+
+function configuredDimensions() {
+  const configured = process.env.EMBEDDING_DIMENSIONS?.trim();
+  if (configured && Number(configured) !== VECTOR_DIMENSIONS) {
+    throw new RagError(500, `EMBEDDING_DIMENSIONS debe ser ${VECTOR_DIMENSIONS}`);
+  }
+}
+
+async function createLocalEmbedding(input, { apiKey, model, timeoutMs, kind, title }) {
   const response = await fetch(embeddingEndpoint(), {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, input, ...metadata }),
+    body: JSON.stringify({ model, input: prepareEmbeddingText(input, { kind, title }) }),
     signal: AbortSignal.timeout(timeoutMs),
   });
   const payload = await readJsonResponse(response, 'embeddings');
-  return payload?.data?.[0]?.embedding;
+  return validateEmbedding(payload?.data?.[0]?.embedding);
+}
+
+async function createCloudflareEmbedding(input, { token, model, timeoutMs, kind, title }) {
+  const response = await fetch(cloudflareEndpoint(model), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: [prepareEmbeddingText(input, { kind, title })] }),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  const payload = await readJsonResponse(response, 'embeddings');
+  const data = payload?.result?.data ?? payload?.data;
+  const vector = Array.isArray(data?.[0]) ? data[0] : data;
+  return validateEmbedding(vector);
 }
 
 export async function createEmbedding(input, { kind = 'query', title = null } = {}) {
-  const apiKey = process.env.EMBEDDING_API_KEY?.trim();
+  const provider = embeddingProvider();
   const model = embeddingModel();
-  if (!apiKey) throw new RagError(503, 'El proveedor de embeddings no está configurado');
+  configuredDimensions();
   const timeoutMs = Math.max(1000, Number(process.env.EMBEDDING_TIMEOUT_MS) || 120000);
   const maxRetries = Math.max(0, Number(process.env.EMBEDDING_MAX_RETRIES) || 1);
+  const credentials = provider === 'cloudflare'
+    ? process.env.CLOUDFLARE_AI_API_TOKEN?.trim()
+    : process.env.EMBEDDING_API_KEY?.trim();
+  if (!credentials) throw new RagError(503, 'El proveedor de embeddings no está configurado');
+
   for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
     try {
-      const metadata = embeddingProvider() === 'local' ? { kind, title } : {};
-      return await createOpenAiEmbedding(input, apiKey, model, timeoutMs, metadata);
+      const options = { apiKey: credentials, token: credentials, model, timeoutMs, kind, title };
+      return provider === 'cloudflare'
+        ? await createCloudflareEmbedding(input, options)
+        : await createLocalEmbedding(input, options);
     } catch (error) {
       const retryable = error.name === 'TimeoutError'
         || error.name === 'AbortError'

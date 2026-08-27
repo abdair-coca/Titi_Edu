@@ -1,6 +1,4 @@
 import os
-from typing import Literal
-
 import torch
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -20,19 +18,11 @@ app = FastAPI(title="Titi EmbeddingGemma Local", version="1.0.0")
 class EmbeddingRequest(BaseModel):
     model: str = MODEL_ID
     input: str | list[str] = Field(min_length=1)
-    kind: Literal["query", "document"] = "query"
-    title: str | None = None
 
 
 def require_api_key(authorization: str | None) -> None:
     if API_KEY and authorization != f"Bearer {API_KEY}":
         raise HTTPException(status_code=401, detail="Invalid embedding service credentials")
-
-
-def prepare_text(value: str, kind: str, title: str | None) -> str:
-    if kind == "document":
-        return f"title: {title or 'none'} | text: {value}"
-    return f"task: search result | query: {value}"
 
 
 @app.get("/health")
@@ -52,7 +42,7 @@ def embeddings(request: EmbeddingRequest, authorization: str | None = Header(def
     if not values or any(not isinstance(value, str) or not value.strip() for value in values):
         raise HTTPException(status_code=400, detail="input must contain non-empty strings")
 
-    texts = [prepare_text(value, request.kind, request.title) for value in values]
+    texts = [value.strip() for value in values]
     vectors = model.encode(
         texts,
         normalize_embeddings=True,
