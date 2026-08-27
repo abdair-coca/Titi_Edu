@@ -352,36 +352,58 @@ export async function indexLesson(lessonId) {
     return { status: 'UNCHANGED', documentId: existing.id, lessonId };
   }
 
-  await prisma.documentoRag.updateMany({ where: { leccionId: lessonId, activo: true }, data: { activo: false } });
-  const document = existing
-    ? await prisma.documentoRag.update({
-        where: { id: existing.id },
-        data: { estado: 'PENDIENTE', activo: true, hashContenido, modelo, error: null, indexadoAt: null },
-      })
-    : await prisma.documentoRag.create({ data: { leccionId: lessonId, version: lesson.version, hashContenido, modelo } });
-
+  const chunks = chunkText(content);
+  const preparedFragments = [];
   try {
-    const chunks = chunkText(content);
-    await prisma.fragmentoRag.deleteMany({ where: { documentoId: document.id } });
     for (let index = 0; index < chunks.length; index += 1) {
       const embedding = formatVector(await createEmbedding(chunks[index], { kind: 'document', title: lesson.titulo }));
-      await prisma.$executeRaw`
-        INSERT INTO "FragmentoRag" ("id", "documentoId", "orden", "contenido", "embedding")
-        VALUES (${randomUUID()}, ${document.id}, ${index}, ${chunks[index]}, ${embedding}::vector)
-      `;
+      preparedFragments.push({ index, content: chunks[index], embedding });
     }
-    await prisma.documentoRag.update({
-      where: { id: document.id },
-      data: { estado: 'LISTO', indexadoAt: new Date(), error: null },
-    });
-    return { status: 'INDEXED', documentId: document.id, lessonId, chunks: chunks.length };
   } catch (error) {
-    await prisma.documentoRag.update({
-      where: { id: document.id },
-      data: { estado: 'FALLIDO', error: error.message.slice(0, 500) },
-    }).catch((updateError) => console.error('RAG index failure status error', updateError));
+    if (existing) {
+      await prisma.documentoRag.update({
+        where: { id: existing.id },
+        data: { error: error.message.slice(0, 500) },
+      }).catch((updateError) => console.error('RAG index failure error update error', updateError));
+    } else {
+      await prisma.documentoRag.create({
+        data: {
+          leccionId: lessonId,
+          version: lesson.version,
+          hashContenido,
+          modelo,
+          estado: 'FALLIDO',
+          activo: false,
+          error: error.message.slice(0, 500),
+        },
+      }).catch((createError) => console.error('RAG index failure document error', createError));
+    }
     throw error;
   }
+
+  const document = await prisma.$transaction(async (tx) => {
+    await tx.documentoRag.updateMany({ where: { leccionId: lessonId, activo: true }, data: { activo: false } });
+    const nextDocument = existing
+      ? await tx.documentoRag.update({
+          where: { id: existing.id },
+          data: { estado: 'PENDIENTE', activo: true, hashContenido, modelo, error: null, indexadoAt: null },
+        })
+      : await tx.documentoRag.create({ data: { leccionId: lessonId, version: lesson.version, hashContenido, modelo } });
+
+    await tx.fragmentoRag.deleteMany({ where: { documentoId: nextDocument.id } });
+    for (const fragment of preparedFragments) {
+      await tx.$executeRaw`
+        INSERT INTO "FragmentoRag" ("id", "documentoId", "orden", "contenido", "embedding")
+        VALUES (${randomUUID()}, ${nextDocument.id}, ${fragment.index}, ${fragment.content}, ${fragment.embedding}::vector)
+      `;
+    }
+    return tx.documentoRag.update({
+      where: { id: nextDocument.id },
+      data: { estado: 'LISTO', indexadoAt: new Date(), error: null },
+    });
+  });
+
+  return { status: 'INDEXED', documentId: document.id, lessonId, chunks: chunks.length };
 }
 
 export async function indexCourse(courseId) {
