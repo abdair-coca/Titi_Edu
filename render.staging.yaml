@@ -42,12 +42,16 @@ services:
           type: web
           name: titi-embedding-staging
           envVarKey: EMBEDDING_API_KEY
+      - key: CLOUDFLARE_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_AI_API_TOKEN
+        sync: false
       - key: EMBEDDING_MODEL
-        value: google/embeddinggemma-300M
+        value: '@cf/google/embeddinggemma-300m'
       - key: EMBEDDING_DIMENSIONS
         value: "768"
       - key: EMBEDDING_PROVIDER
-        value: local
+        value: cloudflare
       - key: EMBEDDING_TIMEOUT_MS
         value: "120000"
       - key: EMBEDDING_MAX_RETRIES
@@ -62,6 +66,16 @@ services:
         value: "30000"
       - key: RAG_PRINCIPAL_SALT
         generateValue: true
+      - key: AI_PROVIDER_ROUTE
+        value: cloudflare_gateway
+      - key: CLOUDFLARE_AI_GATEWAY_ID
+        sync: false
+      - key: CLOUDFLARE_AI_GATEWAY_TOKEN
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
       - key: AI_GATEWAY_URL
         sync: false
       - key: AI_GATEWAY_TOKEN
