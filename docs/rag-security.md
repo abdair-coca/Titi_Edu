@@ -7,8 +7,9 @@ fragmentos publicados del curso solicitado. El LLM nunca recibe credenciales ni 
 directo a PostgreSQL/pgvector.
 
 En local/staging, el backend puede llamar directamente al proveedor usando
-`RAG_CHAT_MODE=direct`. En producción, el modo directo queda bloqueado: se requiere
-`RAG_CHAT_MODE=gateway`, `AI_GATEWAY_URL` y `AI_GATEWAY_TOKEN`.
+`AI_PROVIDER_ROUTE=legacy` y `RAG_CHAT_MODE=direct`. En producción, el modo directo
+queda bloqueado: se requiere el gateway propio (`RAG_CHAT_MODE=gateway`) o Cloudflare
+AI Gateway (`AI_PROVIDER_ROUTE=cloudflare_gateway`).
 
 Durante piloto productivo, `RAG_COURSE_IDS` debe contener únicamente el curso
 autorizado y `RAG_ALLOWED_USER_EMAIL` debe limitar status/chat a una sola cuenta.
@@ -41,6 +42,26 @@ El gateway:
 - aplica timeout y circuit breaker;
 - rechaza tools/function calling;
 - no registra prompts ni respuestas completas.
+
+### Cloudflare AI Gateway
+
+La ruta alternativa conserva Groq server-side y llama al endpoint oficial:
+`/v1/{account_id}/{gateway_id}/groq/chat/completions`. Requiere estas variables
+únicamente en el backend:
+
+```env
+AI_PROVIDER_ROUTE=cloudflare_gateway
+CLOUDFLARE_ACCOUNT_ID=<account-id>
+CLOUDFLARE_AI_GATEWAY_ID=<gateway-id>
+CLOUDFLARE_AI_GATEWAY_TOKEN=<secreto-del-gateway>
+GROQ_API_KEY=<secreto-del-proveedor>
+GROQ_MODEL=<modelo-activo>
+```
+
+El backend envía `Authorization` con `GROQ_API_KEY` y
+`cf-aig-authorization` con `CLOUDFLARE_AI_GATEWAY_TOKEN`. Ninguna de estas
+credenciales llega al frontend. `AI_PROVIDER_ROUTE=legacy` mantiene comportamiento
+actual y permite rollback cambiando una sola variable.
 
 ## Verificación local
 

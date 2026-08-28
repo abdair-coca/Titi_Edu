@@ -17,11 +17,13 @@ const chunk = {
 beforeEach(() => {
   vi.clearAllMocks();
   process.env.RAG_CHAT_MODE = 'direct';
+  process.env.AI_PROVIDER_ROUTE = 'legacy';
   process.env.EMBEDDING_API_URL = 'https://embeddings.example';
   process.env.EMBEDDING_API_KEY = 'embedding-key';
   process.env.EMBEDDING_MODEL = 'google/embeddinggemma-300M';
   process.env.GROQ_API_KEY = 'groq-key';
   process.env.GROQ_MODEL = 'test-chat';
+  process.env.CLOUDFLARE_AI_GATEWAY_TOKEN = 'gateway-token';
   process.env.NODE_ENV = 'test';
   prisma.$queryRaw.mockResolvedValue([chunk]);
   resetRagSecurityState();
@@ -29,7 +31,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  for (const key of ['RAG_CHAT_MODE', 'EMBEDDING_API_URL', 'EMBEDDING_API_KEY', 'EMBEDDING_MODEL', 'GROQ_API_KEY', 'GROQ_MODEL', 'NODE_ENV']) delete process.env[key];
+  for (const key of ['RAG_CHAT_MODE', 'AI_PROVIDER_ROUTE', 'EMBEDDING_API_URL', 'EMBEDDING_API_KEY', 'EMBEDDING_MODEL', 'GROQ_API_KEY', 'GROQ_MODEL', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_AI_GATEWAY_ID', 'CLOUDFLARE_AI_GATEWAY_TOKEN', 'NODE_ENV']) delete process.env[key];
 });
 
 function embeddingResponse() {
@@ -71,5 +73,32 @@ describe('RAG chat security', () => {
     await expect(chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?' }))
       .rejects.toEqual(expect.objectContaining({ status: 503 }));
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('routes chat through the official Cloudflare Groq gateway endpoint', async () => {
+    process.env.AI_PROVIDER_ROUTE = 'cloudflare_gateway';
+    process.env.CLOUDFLARE_ACCOUNT_ID = 'account-123';
+    process.env.CLOUDFLARE_AI_GATEWAY_ID = 'titi-rag';
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: 'Respuesta del gateway. [1]' } }] }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?' });
+
+    expect(result.answer).toBe('Respuesta del gateway. [1]');
+    expect(fetchMock).toHaveBeenNthCalledWith(2,
+      'https://gateway.ai.cloudflare.com/v1/account-123/titi-rag/groq/chat/completions',
+      expect.objectContaining({
+        headers: {
+          Authorization: 'Bearer groq-key',
+          'Content-Type': 'application/json',
+          'cf-aig-authorization': 'Bearer gateway-token',
+        },
+      }));
   });
 });
