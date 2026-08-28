@@ -1,107 +1,111 @@
-# Staging RAG — guía operativa
+# Piloto RAG en Render staging — guía operativa
 
 ## Objetivo
 
-Probar flujo RAG completo sin tocar producción:
+Probar flujo RAG sobre datos reales de staging con proveedores administrados:
 
 ```text
-frontend staging -> backend staging -> PostgreSQL/Neo4j staging
-                  -> EmbeddingGemma staging -> AI Gateway staging -> Groq
+frontend staging -> backend Render staging -> Neon main / Neo4j Aura
+                  -> Cloudflare Workers AI (embeddings)
+                  -> Cloudflare AI Gateway -> Groq
 ```
 
-## Ruta recomendada: híbrida
+El piloto no usa branch Neon separada. La branch `rag-staging` fue eliminada.
+Los servicios locales quedan disponibles únicamente como rollback controlado.
 
-Para primer piloto no desplegamos Render. Usamos DBs staging administradas y
-servicios de aplicación locales:
+## Alcance
 
 ```text
-Neon branch + Neo4j Aura existente
-              ↓
-backend + frontend + gateway + EmbeddingGemma locales
+Neon staging + Neo4j Aura staging
+               ↓
+backend Render staging
+               ↓
+Cloudflare Workers AI       Cloudflare AI Gateway
+                                 ↓
+                               Groq
 ```
 
-`render.staging.yaml` queda preparado para una etapa posterior. No es necesario
-para validar RAG E2E ahora.
-
-Neo4j queda compartido temporalmente porque no se creará otra instancia. Esto
-reduce setup, pero no aísla datos sociales. No ejecutar borrados, seed global ni
-scripts destructivos contra ese grafo.
+No se avanzan Fases RAG 2–5 hasta cerrar este piloto visual.
 
 ## Recursos necesarios
 
-- PostgreSQL staging con `pgvector`.
-- Credenciales de instancia Neo4j existente.
+- PostgreSQL Neon `main` con `pgvector`.
+- Neo4j Aura existente.
 - Cuenta docente/admin para reindexar.
-- Cuenta estudiante `student@gmail.com`.
-- Curso, módulo y lección publicados.
-- EmbeddingGemma local funcionando en `127.0.0.1:8001`.
-- AI Gateway local funcionando en `127.0.0.1:8080`.
-- Cuenta Groq y modelo habilitado.
-- Cuenta Hugging Face con licencia Gemma aceptada.
+- Una cuenta estudiante piloto autorizada.
+- Curso, módulo, lección e inscripción de staging/piloto.
+- Cuenta Cloudflare con Workers AI habilitado.
+- Gateway Cloudflare `titi-rag` con token de permiso `Run`.
+- API key Groq y modelo activo, actualmente `openai/gpt-oss-20b`.
 
 ## Configuración
 
-Usar plantillas híbridas:
+Usar Render staging para backend. No reemplazar su `DATABASE_URL`:
 
-- `backend/.env.staging.example`
-- `ai-gateway/.env.staging.example`
-- `embedding-service/.env.staging.example`
-- `render.staging.yaml`
+- `render.yaml`
+- `backend/.env.example`
+- `ai-gateway/` y `embedding-service/` quedan como rollback local/legacy
 
-Copiar cada plantilla como `.env.staging` solo para ejecución local. Nunca subir
-secretos al repo. Render se configura después, si el piloto local sale verde.
+Nunca subir secretos al repo ni compartirlos por chat.
 
-Backend staging debe usar:
+Backend staging debe usar valores cerrados:
 
 ```env
 RAG_ENABLED=true
-RAG_COURSE_IDS=*
-RAG_ALLOWED_USER_EMAIL=student@gmail.com
-RAG_CHAT_MODE=gateway
+RAG_COURSE_IDS=<STAGING_COURSE_ID>
+RAG_ALLOWED_USER_EMAIL=<PILOT_USER_EMAIL>
+EMBEDDING_PROVIDER=cloudflare
+EMBEDDING_MODEL=@cf/google/embeddinggemma-300m
+EMBEDDING_DIMENSIONS=768
+CLOUDFLARE_ACCOUNT_ID=<ACCOUNT_ID>
+CLOUDFLARE_AI_API_TOKEN=<secreto-workers-ai>
+AI_PROVIDER_ROUTE=cloudflare_gateway
+CLOUDFLARE_AI_GATEWAY_ID=titi-rag
+CLOUDFLARE_AI_GATEWAY_TOKEN=<secreto-gateway>
+GROQ_API_KEY=<secreto-groq>
+GROQ_MODEL=openai/gpt-oss-20b
 ```
 
-`RAG_COURSE_IDS=*` vuelve indexables todos cursos publicados. No indexa borradores.
-`student@gmail.com` debe existir en ambas DB y estar inscrito en curso.
+No usar `RAG_COURSE_IDS=*` fuera de un entorno staging aislado.
+El usuario piloto debe existir en Neo4j, Postgres y estar inscrito en curso.
 
 ## Orden de ejecución
 
-1. Crear DB PostgreSQL staging y aplicar `npx prisma migrate deploy`.
-2. Configurar credenciales de Neo4j existente y verificar conexión sin mutar datos.
-3. Verificar usuario docente/admin y `student@gmail.com` en ambas DB.
-4. Verificar curso, módulo, lección publicada e inscripción en Neon staging.
-5. Levantar EmbeddingGemma y verificar `GET /health` con dimensión `768`.
-6. Levantar AI Gateway y verificar `GET /health`.
-7. Levantar backend con `.env.staging`.
-8. Levantar frontend apuntando a backend local.
-9. Reindexar curso con usuario docente/admin; esto escribe solo documentos RAG en Neon.
-10. Confirmar documentos `LISTO` y fragmentos almacenados.
-11. Abrir lección con `student@gmail.com` y probar Tutor.
+1. Confirmar base de datos staging, curso piloto y usuario piloto autorizados.
+2. Verificar backend staging con `GET /api/health` sin cambiar producción.
+3. Cargar variables Cloudflare/Groq en Render staging, sin compartir secretos por chat.
+4. Mantener `autoDeploy=false` y desplegar staging manualmente después del gate.
+5. Aplicar migraciones con `npx prisma migrate deploy`.
+6. Verificar embeddings con dimensión `768` y health del backend.
+7. Reindexar curso desde `/api/admin/rag/courses/:courseId/reindex`.
+8. Confirmar documentos `LISTO` y fragmentos en la base staging.
+9. Abrir lección staging con usuario piloto.
 
-## E2E backend
+## Reindexado staging
 
-Desde `backend/`:
+Requiere token de usuario admin, propietario o profesor asignado:
 
-```powershell
-$env:RAG_E2E_ALLOW_DB_WRITE='true'
-$env:RAG_E2E_USE_MOCKS='false'
-$env:RAG_E2E_COURSE_ID='<STAGING_COURSE_ID>'
-$env:RAG_E2E_ADMIN_USERNAME='<STAGING_ADMIN_USERNAME>'
-$env:RAG_E2E_STUDENT_EMAIL='student@gmail.com'
-npm run test:e2e:rag
+```text
+POST /api/admin/rag/courses/<STAGING_COURSE_ID>/reindex
+Authorization: Bearer <ADMIN_OR_TEACHER_TOKEN>
 ```
 
-La prueba confirma reindexado, documentos listos, fragmentos, chat, citas y
-permisos del estudiante piloto.
+No ejecutar `backend/scripts/e2e-rag-phase1.mjs` contra datos compartidos sin revisar
+variables y consentimiento de escritura. El script reindexa y escribe datos.
 
 ## Validación manual
 
-- Usuario piloto ve Tutor.
+- Usuario piloto ve Tutor en curso piloto.
 - Usuario piloto recibe respuesta con fuentes.
 - Pregunta fuera del material devuelve fallback sin evidencia.
+- Solicitud para modificar notas/progreso recibe rechazo.
 - Otro estudiante recibe `403`.
 - Estudiante sin inscripción recibe `403`.
-- Admin/docente puede reindexar.
+- Curso fuera de allowlist no muestra Tutor.
 - Curso no publicado no se indexa.
+- Detener o invalidar proveedor produce error controlado.
+- Cambiar `AI_PROVIDER_ROUTE=legacy` y restaurar variables propias recupera chat legacy.
+- Desktop y móvil no muestran overflow.
 
 ## Rollback
 
@@ -111,5 +115,7 @@ En backend staging:
 RAG_ENABLED=false
 ```
 
-O retirar curso de `RAG_COURSE_IDS`. Producción no debe usar `*` ni habilitar RAG
-hasta contar con gateway Redis y embedding remoto estable.
+Después del redeploy, Tutor desaparece y cursos continúan funcionando.
+No detener servicios legacy hasta confirmar rollback.
+
+La configuración legacy sigue siendo rollback; no se elimina hasta cerrar validación.

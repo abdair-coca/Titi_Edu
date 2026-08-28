@@ -7,12 +7,13 @@ fragmentos publicados del curso solicitado. El LLM nunca recibe credenciales ni 
 directo a PostgreSQL/pgvector.
 
 En local/staging, el backend puede llamar directamente al proveedor usando
-`RAG_CHAT_MODE=direct`. En producción, el modo directo queda bloqueado: se requiere
-`RAG_CHAT_MODE=gateway`, `AI_GATEWAY_URL` y `AI_GATEWAY_TOKEN`.
+`AI_PROVIDER_ROUTE=legacy` y `RAG_CHAT_MODE=direct`. En producción, el modo directo
+queda bloqueado: se requiere el gateway propio (`RAG_CHAT_MODE=gateway`) o Cloudflare
+AI Gateway (`AI_PROVIDER_ROUTE=cloudflare_gateway`).
 
-Durante piloto staging, `RAG_COURSE_IDS=*` permite indexar cualquier curso publicado
-y `RAG_ALLOWED_USER_EMAIL` limita el consumo de status/chat a una sola cuenta. El
-reindexado sigue protegido para admin, propietario o profesor del curso.
+Durante piloto productivo, `RAG_COURSE_IDS` debe contener únicamente el curso
+autorizado y `RAG_ALLOWED_USER_EMAIL` debe limitar status/chat a una sola cuenta.
+El reindexado sigue protegido para admin, propietario o profesor del curso.
 
 ## Controles implementados
 
@@ -29,9 +30,9 @@ reindexado sigue protegido para admin, propietario o profesor del curso.
 ## Gateway IA
 
 `ai-gateway/` es un servicio Node sin dependencias externas que mantiene Groq server-side.
-En staging usa límites en memoria. En producción falla cerrado si
-`AI_GATEWAY_STATE_STORE` no es `redis`; todavía falta implementar el adaptador Redis
-compartido antes de desplegarlo públicamente.
+El piloto temporal puede usar límites en memoria desde una instancia local. En
+producción estable falla cerrado si `AI_GATEWAY_STATE_STORE` no es `redis`; todavía
+falta implementar el adaptador Redis compartido antes de desplegarlo públicamente.
 
 El gateway:
 
@@ -41,6 +42,26 @@ El gateway:
 - aplica timeout y circuit breaker;
 - rechaza tools/function calling;
 - no registra prompts ni respuestas completas.
+
+### Cloudflare AI Gateway
+
+La ruta alternativa conserva Groq server-side y llama al endpoint oficial:
+`/v1/{account_id}/{gateway_id}/groq/chat/completions`. Requiere estas variables
+únicamente en el backend:
+
+```env
+AI_PROVIDER_ROUTE=cloudflare_gateway
+CLOUDFLARE_ACCOUNT_ID=<account-id>
+CLOUDFLARE_AI_GATEWAY_ID=<gateway-id>
+CLOUDFLARE_AI_GATEWAY_TOKEN=<secreto-del-gateway>
+GROQ_API_KEY=<secreto-del-proveedor>
+GROQ_MODEL=<modelo-activo>
+```
+
+El backend envía `Authorization` con `GROQ_API_KEY` y
+`cf-aig-authorization` con `CLOUDFLARE_AI_GATEWAY_TOKEN`. Ninguna de estas
+credenciales llega al frontend. `AI_PROVIDER_ROUTE=legacy` mantiene comportamiento
+actual y permite rollback cambiando una sola variable.
 
 ## Verificación local
 
@@ -61,5 +82,6 @@ AI_GATEWAY_URL=http://127.0.0.1:8080
 AI_GATEWAY_TOKEN=gateway-local-token
 ```
 
-No habilitar `RAG_CHAT_MODE=gateway` en producción hasta contar con Redis y métricas
-compartidas. Sin gateway configurado, producción responde `503` deliberadamente.
+El piloto autorizado usa `RAG_CHAT_MODE=gateway` con AI Gateway local mediante túnel.
+Sin gateway configurado, producción responde `503` deliberadamente. No presentar
+esta topología temporal como disponibilidad productiva continua.

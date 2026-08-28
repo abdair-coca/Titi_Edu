@@ -6,6 +6,7 @@ import {
   htmlToText,
   lessonRagText,
   normalizeText,
+  prepareEmbeddingText,
   ragEnabledForCourse,
   ragUserAllowed,
 } from '../../src/services/rag.service.js';
@@ -16,6 +17,9 @@ afterEach(() => {
   delete process.env.EMBEDDING_API_KEY;
   delete process.env.EMBEDDING_MODEL;
   delete process.env.EMBEDDING_PROVIDER;
+  delete process.env.EMBEDDING_DIMENSIONS;
+  delete process.env.CLOUDFLARE_ACCOUNT_ID;
+  delete process.env.CLOUDFLARE_AI_API_TOKEN;
   delete process.env.RAG_ENABLED;
   delete process.env.RAG_COURSE_IDS;
   delete process.env.RAG_ALLOWED_USER_EMAIL;
@@ -54,6 +58,12 @@ describe('RAG text preparation', () => {
       .toBe('Título Contenido Actividad');
   });
 
+  it('uses one retrieval preprocessing contract for queries and documents', () => {
+    expect(prepareEmbeddingText('¿Qué es una variable?')).toBe('task: search result | query: ¿Qué es una variable?');
+    expect(prepareEmbeddingText('Una variable almacena un valor.', { kind: 'document', title: 'Variables' }))
+      .toBe('title: Variables | text: Una variable almacena un valor.');
+  });
+
   it('uses the EmbeddingGemma 768-dimensional local provider contract', async () => {
     process.env.EMBEDDING_API_URL = 'https://embeddings.example';
     process.env.EMBEDDING_API_KEY = 'test-key';
@@ -73,9 +83,7 @@ describe('RAG text preparation', () => {
       method: 'POST',
       body: JSON.stringify({
         model: 'google/embeddinggemma-300M',
-        input: 'Una variable almacena un valor.',
-        kind: 'document',
-        title: 'Variables',
+        input: 'title: Variables | text: Una variable almacena un valor.',
       }),
     }));
     expect(formatVector(embedding)).toContain('0.01');
@@ -101,10 +109,51 @@ describe('RAG text preparation', () => {
       method: 'POST',
       body: JSON.stringify({
         model: 'google/embeddinggemma-300M',
-        input: '¿Qué es una variable?',
-        kind: 'query',
-        title: null,
+        input: 'task: search result | query: ¿Qué es una variable?',
       }),
     }));
+  });
+
+  it('calls Cloudflare Workers AI with the official model and validates 768 finite values', async () => {
+    process.env.EMBEDDING_PROVIDER = 'cloudflare';
+    process.env.EMBEDDING_MODEL = '@cf/google/embeddinggemma-300m';
+    process.env.CLOUDFLARE_ACCOUNT_ID = 'account-123';
+    process.env.CLOUDFLARE_AI_API_TOKEN = 'cloudflare-token';
+    const embedding = Array.from({ length: 768 }, () => 0.03);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, result: { shape: [1, 768], data: [embedding] } }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(createEmbedding('¿Qué es una variable?')).resolves.toEqual(embedding);
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.cloudflare.com/client/v4/accounts/account-123/ai/run/@cf/google/embeddinggemma-300m',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { Authorization: 'Bearer cloudflare-token', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: ['task: search result | query: ¿Qué es una variable?'] }),
+      }),
+    );
+  });
+
+  it('rejects non-finite or incorrectly sized Cloudflare vectors', async () => {
+    process.env.EMBEDDING_PROVIDER = 'cloudflare';
+    process.env.EMBEDDING_MODEL = '@cf/google/embeddinggemma-300m';
+    process.env.CLOUDFLARE_ACCOUNT_ID = 'account-123';
+    process.env.CLOUDFLARE_AI_API_TOKEN = 'cloudflare-token';
+    const invalid = Array.from({ length: 768 }, () => 0.03);
+    invalid[10] = Number.NaN;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ result: { data: [invalid] } }),
+    }));
+
+    await expect(createEmbedding('consulta')).rejects.toMatchObject({
+      status: 502,
+      message: 'El embedding contiene valores no numéricos o no finitos',
+    });
   });
 });

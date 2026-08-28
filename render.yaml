@@ -39,6 +39,10 @@ services:
         sync: false
       - key: EMBEDDING_API_KEY
         sync: false
+      - key: CLOUDFLARE_ACCOUNT_ID
+        sync: false
+      - key: CLOUDFLARE_AI_API_TOKEN
+        sync: false
       - key: EMBEDDING_MODEL
         sync: false
       - key: EMBEDDING_DIMENSIONS
@@ -54,6 +58,12 @@ services:
       - key: GROQ_API_KEY
         sync: false
       - key: GROQ_MODEL
+        sync: false
+      - key: AI_PROVIDER_ROUTE
+        sync: false
+      - key: CLOUDFLARE_AI_GATEWAY_ID
+        sync: false
+      - key: CLOUDFLARE_AI_GATEWAY_TOKEN
         sync: false
       - key: RAG_CHAT_MODE
         sync: false
