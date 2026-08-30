@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => {
     revisionLeccion: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), count: vi.fn(), deleteMany: vi.fn() },
     intentoHtmlLeccion: { count: vi.fn(), deleteMany: vi.fn() },
     resultadoHtmlLeccion: { count: vi.fn(), deleteMany: vi.fn() },
-    recursoHtmlLeccion: { findMany: vi.fn(), upsert: vi.fn(), deleteMany: vi.fn() },
+    recursoHtmlLeccion: { findMany: vi.fn(), upsert: vi.fn(), update: vi.fn(), deleteMany: vi.fn() },
     material: { findUnique: vi.fn(), create: vi.fn(), delete: vi.fn(), deleteMany: vi.fn(), count: vi.fn() },
     evaluacion: { findUnique: vi.fn(), findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
     pregunta: { findMany: vi.fn(), create: vi.fn(), createMany: vi.fn(), createManyAndReturn: vi.fn(), deleteMany: vi.fn() },
@@ -729,5 +729,37 @@ describe('HTML lesson authoring', () => {
     expect(mocks.client.recursoHtmlLeccion.upsert).toHaveBeenLastCalledWith(expect.objectContaining({
       update: expect.objectContaining({ fechaLimite: null }),
     }));
+  });
+
+  it('actualiza solo la fecha de una presentación publicada sin re-subir HTML', async () => {
+    const lesson = {
+      id: 'l-live-html', titulo: 'Presentación publicada', contenido: 'Instrucciones', formatoContenido: 'HTML', videoUrl: null, orden: 1,
+      estado: 'PUBLICADA', publishedAt: new Date('2026-08-16T00:00:00.000Z'), archivedAt: null, version: 4,
+      recursoHtml: { id: 'html-live', html: '<html><body>ok</body></html>', evaluable: true, intentosMax: 2, fechaLimite: null },
+      modulo: { id: 'm-live-html', estado: 'PUBLICADO', version: 3, curso: { id: 'c-live-html', creadorId: author.id, version: 2, publicado: true } },
+    };
+    const expectedFingerprint = fingerprint({
+      moduleVersion: 3,
+      lesson: {
+        titulo: lesson.titulo, contenido: lesson.contenido, formatoContenido: lesson.formatoContenido,
+        videoUrl: null, orden: 1, estado: lesson.estado, publishedAt: lesson.publishedAt, archivedAt: null, version: 4,
+      },
+      htmlResource: { sha256: fingerprint(lesson.recursoHtml.html), evaluable: true, intentosMax: 2, fechaLimite: null },
+    });
+    const deadline = new Date('2030-01-01T00:00:00.000Z');
+    mocks.client.leccion.findUnique.mockResolvedValue(lesson);
+    mocks.client.recursoHtmlLeccion.update.mockResolvedValue({ ...lesson.recursoHtml, fechaLimite: deadline });
+
+    const response = await request(app).put('/api/authoring/lessons/l-live-html/html-deadline')
+      .set(auth).set('Idempotency-Key', 'html-deadline-update')
+      .send({ fechaLimite: deadline.toISOString(), expectedFingerprint });
+
+    expect(response.status).toBe(200);
+    expect(mocks.client.recursoHtmlLeccion.update).toHaveBeenCalledWith({
+      where: { leccionId: lesson.id }, data: { fechaLimite: deadline },
+    });
+    expect(mocks.client.leccion.updateMany).toHaveBeenCalledWith({
+      where: { id: lesson.id, version: lesson.version }, data: { version: { increment: 1 } },
+    });
   });
 });

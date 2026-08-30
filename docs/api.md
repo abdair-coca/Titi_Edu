@@ -158,11 +158,30 @@ Idempotency-Key: <key>
 }
 ```
 
-Solo `content:write`, creador/ADMIN y m�dulo en `BORRADOR`. Una lecci�n tiene un
+Requiere `content:write`, creador/ADMIN. Una leccion tiene un
 solo recurso HTML; este endpoint lo crea o reemplaza y conserva CAS + idempotencia.
 `intentosMax` es obligatorio entre `1` y `10` solo si `evaluable` es `true`.
 `fechaLimite` es opcional: acepta ISO UTC o `null` para quitar el plazo. Solo aplica
 a recursos HTML evaluables.
+
+
+Para cambiar solo la fecha limite de una presentacion HTML existente, sin volver a
+subir el archivo:
+
+```http
+PUT /api/authoring/lessons/:id/html-deadline
+Idempotency-Key: <key>
+
+{
+  "expectedFingerprint": "<fingerprint de la leccion>",
+  "fechaLimite": "2030-01-01T00:00:00.000Z"
+}
+```
+
+Este endpoint permite actualizar o quitar (`null`) el plazo de una presentacion
+publicada que ya tenga estudiantes y conserva revisiones, entregas e idempotencia.
+La leccion archivada debe restaurarse antes de editarla. Solo aplica a recursos HTML
+evaluables.
 
 `GET /api/lessons/:id/html` devuelve el HTML �nicamente a usuarios autorizados; no
 existe URL p�blica. El servidor exige documento autocontenido, recursos inline o
