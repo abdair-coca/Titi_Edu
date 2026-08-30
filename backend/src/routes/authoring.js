@@ -1132,6 +1132,40 @@ router.post('/lessons/:id/html', requireAuthoringPrincipal('content:write'), han
   if (updatedLessonId) scheduleLessonIndex(updatedLessonId);
 }));
 
+router.put('/lessons/:id/html-deadline', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  await executeIdempotent(req, res, { accion: 'lesson.html.deadline.update' }, async (tx) => {
+    const lesson = await tx.leccion.findUnique({
+      where: { id: req.params.id },
+      include: { recursoHtml: true, modulo: { include: { curso: true } } },
+    });
+    if (!lesson) throw new AuthoringError(404, 'Lección no encontrada');
+    assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
+    assertExpected(req, lessonFingerprint(lesson));
+    if (lesson.formatoContenido !== 'HTML' || !lesson.recursoHtml) {
+      throw new AuthoringError(409, 'La lección no tiene una presentación HTML');
+    }
+    if (!lesson.recursoHtml.evaluable) {
+      throw new AuthoringError(409, 'La fecha límite solo aplica a presentaciones evaluables');
+    }
+    if (lesson.estado === 'ARCHIVADA') {
+      throw new AuthoringError(409, 'Restaura la lección antes de editar su fecha límite');
+    }
+    if (!Object.hasOwn(req.body || {}, 'fechaLimite')) {
+      throw new AuthoringError(400, 'fechaLimite es requerido; usa null para quitar el plazo');
+    }
+    const parsedDeadline = parseOptionalDeadline(req.body.fechaLimite);
+    if (!parsedDeadline.ok) throw new AuthoringError(400, parsedDeadline.message);
+
+    await createLessonRevision(tx, lesson, req.authoringPrincipal);
+    await claimLessonMutation(tx, lesson);
+    const htmlResource = await tx.recursoHtmlLeccion.update({
+      where: { leccionId: lesson.id },
+      data: { fechaLimite: parsedDeadline.value },
+    });
+    return { data: { lessonId: lesson.id, htmlResource } };
+  });
+}));
+
 router.delete('/service-tokens/:id', requireAuthoringPrincipal(), requireAuthoringJwt, handle(async (req, res) => {
   await executeIdempotent(req, res, { accion: 'service-token.delete' }, async (tx) => {
     const tokenService = await tx.tokenServicio.findUnique({ where: { id: req.params.id } });
