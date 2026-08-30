@@ -8,6 +8,7 @@ import { checkLogrosLeccion } from '../services/achievement.service.js';
 import { otorgarGotas } from '../services/gotas.service.js';
 import { avanzarMisiones } from '../services/mision.service.js';
 import { normalizeLessonOrder } from '../services/content-deletion.service.js';
+import { isDeadlineExpired } from '../services/deadline.service.js';
 
 const router = Router();
 
@@ -181,16 +182,19 @@ router.get('/lessons/:id/html', requireAuth, async (req, res) => {
     const remainingAttempts = recursoHtml.evaluable
       ? Math.max(0, recursoHtml.intentosMax - usedAttempts)
       : null;
+    const deadlineExpired = isDeadlineExpired(recursoHtml.fechaLimite);
     res.json({
       success: true,
       data: {
         html: recursoHtml.html,
         evaluable: recursoHtml.evaluable,
         intentosMax: recursoHtml.intentosMax,
+        fechaLimite: recursoHtml.fechaLimite ?? null,
+        fechaLimiteExpirada: deadlineExpired,
         bestScore: resultado?.mejorPuntaje ?? null,
         remainingAttempts,
         attemptsExhausted: recursoHtml.evaluable ? remainingAttempts === 0 : false,
-        attemptToken: recursoHtml.evaluable && remainingAttempts > 0
+        attemptToken: recursoHtml.evaluable && remainingAttempts > 0 && !deadlineExpired
           ? issueHtmlAttemptToken({
               userId: loaded.access.usuario.id,
               lessonId: loaded.leccion.id,
@@ -212,6 +216,9 @@ router.post('/lessons/:id/html-attempts', requireAuth, async (req, res) => {
     if (!loaded) return;
     const { recursoHtml: resource } = loaded.leccion;
     if (!resource.evaluable) return res.status(409).json({ success: false, message: 'Este contenido HTML no es evaluable' });
+    if (isDeadlineExpired(resource.fechaLimite)) {
+      return res.status(409).json({ success: false, message: 'El plazo para entregar esta actividad ya venció' });
+    }
     const used = await prisma.intentoHtmlLeccion.count({
       where: { usuarioId: loaded.access.usuario.id, recursoHtmlId: resource.id, puntaje: { not: null } },
     });
@@ -243,7 +250,13 @@ router.post('/lessons/:id/html-results', requireAuth, async (req, res) => {
     if (!loaded) return;
     const { recursoHtml: resource } = loaded.leccion;
     if (!resource.evaluable) return res.status(409).json({ success: false, message: 'Este contenido HTML no es evaluable' });
+    if (isDeadlineExpired(resource.fechaLimite)) {
+      return res.status(409).json({ success: false, message: 'El plazo para entregar esta actividad ya venció' });
+    }
     const result = await runSerializable(async (tx) => {
+      if (isDeadlineExpired(resource.fechaLimite)) {
+        throw new HtmlLessonError(409, 'El plazo para entregar esta actividad ya venció');
+      }
       let attempt = await tx.intentoHtmlLeccion.findUnique({ where: { token: attemptToken } });
       if (attempt && (attempt.usuarioId !== loaded.access.usuario.id || attempt.recursoHtmlId !== resource.id)) {
         throw new HtmlLessonError(404, 'Intento HTML no encontrado');

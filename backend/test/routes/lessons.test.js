@@ -142,6 +142,32 @@ describe('HTML lesson access and attempts', () => {
     expect(prisma.progreso.upsert).toHaveBeenCalledTimes(1);
     expect(checkCursoCompletado).toHaveBeenCalledTimes(1);
   });
+
+  it('rejects expired HTML submissions before any write', async () => {
+    allowStudent();
+    const expiredLesson = {
+      ...htmlLesson,
+      recursoHtml: { ...htmlLesson.recursoHtml, fechaLimite: new Date(Date.now() - 1) },
+    };
+    prisma.leccion.findUnique.mockResolvedValue(expiredLesson);
+
+    const readable = await request(app).get('/api/lessons/l-html/html').set('Authorization', `Bearer ${token}`);
+    expect(readable.status).toBe(200);
+    expect(readable.body.data).toMatchObject({ html: htmlLesson.recursoHtml.html, fechaLimiteExpirada: true, attemptToken: null });
+
+    const started = await request(app).post('/api/lessons/l-html/html-attempts').set('Authorization', `Bearer ${token}`);
+    expect(started.status).toBe(409);
+
+    const response = await request(app).post('/api/lessons/l-html/html-results')
+      .set('Authorization', `Bearer ${token}`).send({ attemptToken: 'expired-token', score: 80 });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toEqual({ success: false, message: 'El plazo para entregar esta actividad ya venció' });
+    expect(prisma.intentoHtmlLeccion.create).not.toHaveBeenCalled();
+    expect(prisma.intentoHtmlLeccion.update).not.toHaveBeenCalled();
+    expect(prisma.resultadoHtmlLeccion.upsert).not.toHaveBeenCalled();
+    expect(prisma.progreso.upsert).not.toHaveBeenCalled();
+  });
 });
 
 import app from '../../src/app.js';

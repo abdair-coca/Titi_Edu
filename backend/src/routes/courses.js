@@ -4,6 +4,7 @@ import { runQuery, toNumber } from '../db.js';
 import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { ensureCourseContentAccess, loadCurrentUser, loadOptionalUser, requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
 import { syncInscripcion } from '../services/neo4j-sync.service.js';
+import { isDeadlineExpired } from '../services/deadline.service.js';
 
 const router = Router();
 
@@ -182,7 +183,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
               select: { id: true, titulo: true, orden: true, videoUrl: true, publishedAt: true, estado: true },
             },
             evaluacion: {
-              select: { id: true, titulo: true, esFinal: true, notaMinima: true },
+              select: { id: true, titulo: true, esFinal: true, notaMinima: true, fechaLimite: true },
             },
           },
         },
@@ -219,8 +220,11 @@ router.get('/:id', optionalAuth, async (req, res) => {
     // así que se resuelve con una query aparte.
     const evaluacionFinal = await prisma.evaluacion.findFirst({
       where: { cursoId: curso.id, esFinal: true },
-      select: { id: true, titulo: true, esFinal: true, notaMinima: true, intentosMax: true },
+      select: { id: true, titulo: true, esFinal: true, notaMinima: true, intentosMax: true, fechaLimite: true },
     });
+    const evaluacionFinalOut = evaluacionFinal
+      ? { ...evaluacionFinal, fechaLimiteExpirada: isDeadlineExpired(evaluacionFinal.fechaLimite) }
+      : null;
 
     // Sin acceso al contenido: se oculta el video de cada lección (solo queda el temario).
     const visibleCourse = isOwner || isAdmin
@@ -248,7 +252,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
     res.json({
       success: true,
       data: {
-        curso: { ...cursoOut, evaluacionFinal },
+        curso: { ...cursoOut, evaluacionFinal: evaluacionFinalOut },
         viewer: { enrolled, isOwner: isOwner || isAdmin },
       },
     });

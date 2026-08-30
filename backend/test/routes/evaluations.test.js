@@ -20,9 +20,19 @@ vi.mock('../../src/services/progress.service.js', () => ({
 vi.mock('../../src/services/achievement.service.js', () => ({
   checkLogrosEvaluacion: vi.fn().mockResolvedValue([]),
 }));
+vi.mock('../../src/services/tienda.service.js', () => ({
+  consumirItem: vi.fn(),
+}));
+vi.mock('../../src/services/gotas.service.js', () => ({
+  otorgarGotas: vi.fn().mockResolvedValue({ otorgadas: 0 }),
+}));
+vi.mock('../../src/services/mision.service.js', () => ({
+  avanzarMisiones: vi.fn().mockResolvedValue(undefined),
+}));
 
 import app from '../../src/app.js';
 import prisma from '../../src/prisma.js';
+import { consumirItem } from '../../src/services/tienda.service.js';
 
 const token = jwt.sign({ id: 'neo-1' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
@@ -94,6 +104,29 @@ describe('POST /api/evaluations/:id/attempt', () => {
       .set('Authorization', `Bearer ${token}`)
       .send({ respuestas: [{ preguntaId: 'q1', opcionId: 'op-ok' }] });
     expect(res.status).toBe(409);
+  });
+
+  it('409 por plazo vencido sin crear intento ni consumir extras', async () => {
+    prisma.evaluacion.findUnique.mockResolvedValue({
+      ...evalConUnaPregunta,
+      fechaLimite: new Date(Date.now() - 1),
+    });
+    prisma.curso.findUnique.mockResolvedValue({ id: 'c1', titulo: 'Curso', creadorId: 'otro', publicado: true, profesores: [] });
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
+
+    const readable = await request(app).get('/api/evaluations/ev1')
+      .set('Authorization', `Bearer ${token}`);
+    expect(readable.status).toBe(200);
+    expect(readable.body.data.evaluacion).toMatchObject({ fechaLimiteExpirada: true });
+
+    const res = await request(app).post('/api/evaluations/ev1/attempt')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ respuestas: [{ preguntaId: 'q1', opcionId: 'op-ok' }], usarIntentoExtra: true });
+
+    expect(res.status).toBe(409);
+    expect(res.body).toEqual({ success: false, message: 'El plazo para entregar esta actividad ya venció' });
+    expect(prisma.intento.create).not.toHaveBeenCalled();
+    expect(consumirItem).not.toHaveBeenCalled();
   });
   it('404 y no crea intento cuando el curso o modulo estan en borrador', async () => {
     prisma.evaluacion.findUnique.mockResolvedValue({

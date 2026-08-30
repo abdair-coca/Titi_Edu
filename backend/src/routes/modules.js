@@ -81,7 +81,7 @@ router.get('/courses/:courseId/modules', async (req, res) => {
       orderBy: { orden: 'asc' },
       include: {
         _count: { select: { lecciones: true } },
-        evaluacion: { select: { id: true, titulo: true } },
+        evaluacion: { select: { id: true, titulo: true, fechaLimite: true } },
       },
     });
     res.json({ success: true, data: { modulos } });

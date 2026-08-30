@@ -7,6 +7,7 @@ import { checkLogrosEvaluacion } from '../services/achievement.service.js';
 import { otorgarGotas } from '../services/gotas.service.js';
 import { avanzarMisiones } from '../services/mision.service.js';
 import { consumirItem } from '../services/tienda.service.js';
+import { isDeadlineExpired } from '../services/deadline.service.js';
 
 const router = Router();
 
@@ -140,6 +141,8 @@ function publicEvaluacion(ev) {
     esFinal: ev.esFinal,
     intentosMax: ev.intentosMax,
     notaMinima: ev.notaMinima,
+    fechaLimite: ev.fechaLimite ?? null,
+    fechaLimiteExpirada: isDeadlineExpired(ev.fechaLimite),
     moduloId: ev.moduloId,
     cursoId: ev.cursoId,
     modulo: ev.modulo ? { id: ev.modulo.id, titulo: ev.modulo.titulo } : null,
@@ -481,6 +484,10 @@ router.post('/evaluations/:id/attempt', requireAuth, async (req, res) => {
     });
     if (!access) return;
 
+    if (isDeadlineExpired(ev.fechaLimite)) {
+      return res.status(409).json({ success: false, message: 'El plazo para entregar esta actividad ya venció' });
+    }
+
     const inscripcion = await prisma.inscripcion.findUnique({
       where: { usuarioId_cursoId: { usuarioId: usuario.id, cursoId: curso.id } },
     });
@@ -652,6 +659,8 @@ router.get('/evaluations/:id/my-attempts', requireAuth, async (req, res) => {
         bloqueado: !aprobado && intentosRestantes === 0,
         intentosMax: ev.intentosMax,
         notaMinima: ev.notaMinima,
+        fechaLimite: ev.fechaLimite ?? null,
+        fechaLimiteExpirada: isDeadlineExpired(ev.fechaLimite),
       },
     });
   } catch (err) {
