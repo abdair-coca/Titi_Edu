@@ -22,6 +22,7 @@ import {
   validateVideoUrl,
   verifyPublicationConfirmation,
 } from '../services/authoring.service.js';
+import { parseOptionalDeadline } from '../services/deadline.service.js';
 import { executeIdempotent } from '../services/authoring-idempotency.service.js';
 import {
   cleanupDeletedCourseInNeo4j,
@@ -153,6 +154,7 @@ function lessonFingerprint(lesson, moduleVersion = lesson.modulo?.version) {
           sha256: fingerprint(lesson.recursoHtml.html),
           evaluable: lesson.recursoHtml.evaluable,
           intentosMax: lesson.recursoHtml.intentosMax,
+          fechaLimite: lesson.recursoHtml.fechaLimite,
         }
       : null,
   });
@@ -173,6 +175,7 @@ function lessonContentSnapshot(lesson) {
           html: lesson.recursoHtml.html,
           evaluable: lesson.recursoHtml.evaluable,
           intentosMax: lesson.recursoHtml.intentosMax,
+          fechaLimite: lesson.recursoHtml.fechaLimite,
         }
       : null,
   };
@@ -593,10 +596,12 @@ router.post('/lessons/:id/revisions/:revisionId/restore', requireAuthoringPrinci
       },
     });
     if (snapshot.htmlResource) {
+      const fechaLimite = parseOptionalDeadline(snapshot.htmlResource.fechaLimite);
+      if (!fechaLimite.ok) throw new AuthoringError(409, 'La revisión contiene una fecha límite inválida');
       await tx.recursoHtmlLeccion.upsert({
         where: { leccionId: lesson.id },
-        update: snapshot.htmlResource,
-        create: { ...snapshot.htmlResource, leccionId: lesson.id },
+        update: { ...snapshot.htmlResource, fechaLimite: fechaLimite.value ?? null },
+        create: { ...snapshot.htmlResource, fechaLimite: fechaLimite.value ?? null, leccionId: lesson.id },
       });
     }
     return { data: { lesson: restored, restoredRevision: revision.id } };
@@ -627,7 +632,9 @@ function quizConfig(body) {
   if (!Number.isFinite(notaMinima) || notaMinima < 0 || notaMinima > 100) {
     throw new AuthoringError(400, 'notaMinima debe estar entre 0 y 100');
   }
-  return { intentosMax, notaMinima };
+  const fechaLimite = parseOptionalDeadline(body?.fechaLimite);
+  if (!fechaLimite.ok) throw new AuthoringError(400, fechaLimite.message);
+  return { intentosMax, notaMinima, fechaLimite: fechaLimite.value ?? null };
 }
 
 async function upsertQuizQuestions(tx, evaluationId, questions) {

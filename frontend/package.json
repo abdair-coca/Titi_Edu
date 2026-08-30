@@ -10,6 +10,7 @@
     "test:markdown-url": "node scripts/check-markdown-url.mjs",
     "test:authoring-contract": "node scripts/check-authoring-contract.mjs",
     "test:html-lesson": "node scripts/check-html-lesson-player.mjs",
+    "test:deadline": "node scripts/check-deadline.mjs",
     "test:rag": "node scripts/check-rag-contract.mjs"
   },
   "dependencies": {

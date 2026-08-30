@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import client from '../api/client.js';
 import TitiMascot from './TitiMascot.jsx';
+import { formatDeadline, isDeadlineExpired } from '../lib/deadline.js';
 
 let mermaidPromise;
 let mermaidRenderId = 0;
@@ -106,7 +107,7 @@ function HtmlLessonLoading() {
   );
 }
 
-export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, onScoreRecorded }) {
+export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, onDeadlineChange, onScoreRecorded }) {
   const iframeRef = useRef(null);
   const [srcDoc, setSrcDoc] = useState(null);
   const [attemptToken, setAttemptToken] = useState(null);
@@ -115,6 +116,8 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
   const [attemptsExhausted, setAttemptsExhausted] = useState(false);
   const [remainingAttempts, setRemainingAttempts] = useState(null);
   const [maxAttempts, setMaxAttempts] = useState(null);
+  const [deadline, setDeadline] = useState(null);
+  const [deadlineExpired, setDeadlineExpired] = useState(false);
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState(null);
   const [score, setScore] = useState(null);
@@ -123,7 +126,7 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
 
   useEffect(() => {
     let cancelled = false;
-    setSrcDoc(null); setAttemptToken(null); setScore(null); setBestScore(null); setError(null); setViewOnly(false); setAttemptsExhausted(false); setRemainingAttempts(null); setMaxAttempts(null); setIsFullscreen(false); setStatus('loading');
+    setSrcDoc(null); setAttemptToken(null); setScore(null); setBestScore(null); setError(null); setViewOnly(false); setAttemptsExhausted(false); setRemainingAttempts(null); setMaxAttempts(null); setDeadline(null); setDeadlineExpired(false); setIsFullscreen(false); setStatus('loading');
     async function load() {
       try {
         const { data } = await client.get(`/api/lessons/${lessonId}/html`);
@@ -131,19 +134,24 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
         const resource = data.data;
         const token = resource.evaluable ? resource.attemptToken : null;
         const maxAttemptsReached = Boolean(resource.evaluable && resource.attemptsExhausted);
+        const expired = Boolean(resource.evaluable && (resource.fechaLimiteExpirada || isDeadlineExpired(resource.fechaLimite)));
         const remaining = resource.evaluable ? resource.remainingAttempts : null;
         if (cancelled) return;
         setEvaluable(Boolean(resource.evaluable));
         onEvaluableChange?.(Boolean(resource.evaluable));
         setViewOnly(maxAttemptsReached);
         setAttemptsExhausted(maxAttemptsReached);
+        setDeadline(resource.fechaLimite || null);
+        setDeadlineExpired(expired);
+        onDeadlineChange?.(expired);
         setAttemptToken(token);
         setMaxAttempts(resource.evaluable ? resource.intentosMax : null);
         setRemainingAttempts(remaining);
         setBestScore(resource.bestScore ?? null);
         const preparedHtml = await renderHtmlDiagrams(resource.html);
         if (cancelled) return;
-        setSrcDoc(withAttemptToken(preparedHtml, maxAttemptsReached ? null : token));
+        setViewOnly(maxAttemptsReached || expired);
+        setSrcDoc(withAttemptToken(preparedHtml, maxAttemptsReached || expired ? null : token));
         setStatus('ready');
       } catch (err) {
         if (!cancelled) {
@@ -154,11 +162,24 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
     }
     load();
     return () => { cancelled = true; };
-  }, [lessonId, onEvaluableChange]);
+  }, [lessonId, onDeadlineChange, onEvaluableChange]);
+
+  useEffect(() => {
+    if (!deadline) return undefined;
+    const refresh = () => {
+      const expired = isDeadlineExpired(deadline);
+      setDeadlineExpired(expired);
+      if (expired) setViewOnly(true);
+      onDeadlineChange?.(expired);
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 30_000);
+    return () => window.clearInterval(timer);
+  }, [deadline, onDeadlineChange]);
 
   useEffect(() => {
     async function receiveScore(event) {
-      if (!(evaluable && !viewOnly) || attemptsExhausted || !isTitiScoreMessage(event, iframeRef.current?.contentWindow, attemptToken) || status !== 'ready') return;
+       if (!(evaluable && !viewOnly) || deadlineExpired || attemptsExhausted || !isTitiScoreMessage(event, iframeRef.current?.contentWindow, attemptToken) || status !== 'ready') return;
       setStatus('submitting');
       try {
         const { data } = await client.post(`/api/lessons/${lessonId}/html-results`, {
@@ -185,7 +206,7 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
     }
     window.addEventListener('message', receiveScore);
     return () => window.removeEventListener('message', receiveScore);
-  }, [attemptToken, attemptsExhausted, evaluable, lessonId, onScoreRecorded, status, viewOnly]);
+  }, [attemptToken, attemptsExhausted, deadlineExpired, evaluable, lessonId, onScoreRecorded, status, viewOnly]);
 
   useEffect(() => {
     const syncFullscreenState = () => {
@@ -256,6 +277,12 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
           Intentos restantes: <span className="ml-1 tabular-nums">{remainingAttempts} de {maxAttempts}</span>
         </div>
       )}
+      {evaluable && deadline && (
+        <div className={`mt-3 rounded-xl border px-4 py-2 text-sm font-bold ${deadlineExpired ? 'border-red-200 bg-red-50 text-red-700' : 'border-gray-200 bg-titi-cream text-titi-dark'}`}>
+          {deadlineExpired ? 'Plazo vencido' : 'Entrega hasta'}: {formatDeadline(deadline)}
+        </div>
+      )}
+      {evaluable && deadlineExpired && <p className="mt-3 text-xs font-semibold text-gray-500">Podés revisar la presentación y tus notas, pero ya no se registrarán nuevos puntajes.</p>}
       {attemptsExhausted && <p className="mt-3 text-xs font-semibold text-gray-500">Agotaste tus intentos. Podés revisar la presentación, pero ya no se registrará una nota.</p>}
       {evaluable && (status === 'submitting' || score != null || bestScore != null) && (
         <div className="mt-3 flex flex-wrap items-center gap-3 bg-titi-cream border border-gray-200 rounded-xl px-4 py-3">

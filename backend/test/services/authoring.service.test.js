@@ -13,6 +13,7 @@ import {
   validateHtmlLessonResource,
   validateVideoUrl,
 } from '../../src/services/authoring.service.js';
+import { isDeadlineExpired, parseOptionalDeadline } from '../../src/services/deadline.service.js';
 
 describe('authoring service tokens', () => {
   it('genera formato estricto y valida solo el hash SHA-256', () => {
@@ -181,5 +182,23 @@ describe('HTML lesson resource validation', () => {
     ]) {
       expect(validateHtmlLessonResource({ html })).toMatchObject({ ok: false });
     }
+  });
+
+  it('valida fecha límite ISO, permite null y rechaza HTML no evaluable con plazo', () => {
+    const valid = validateHtmlLessonResource({
+      html: '<html><body>ok</body></html>', evaluable: true, intentosMax: 2,
+      fechaLimite: '2030-01-01T00:00:00.000Z',
+    });
+    expect(valid).toMatchObject({ ok: true, data: { fechaLimite: new Date('2030-01-01T00:00:00.000Z') } });
+    expect(validateHtmlLessonResource({ html: '<html><body>ok</body></html>', evaluable: true, intentosMax: 2, fechaLimite: null })).toMatchObject({ ok: true, data: { fechaLimite: null } });
+    expect(validateHtmlLessonResource({ html: '<html><body>ok</body></html>', evaluable: true, intentosMax: 2, fechaLimite: 'invalid' })).toMatchObject({ ok: false });
+    expect(validateHtmlLessonResource({ html: '<html><body>ok</body></html>', fechaLimite: '2030-01-01T00:00:00.000Z' })).toMatchObject({ ok: false });
+  });
+
+  it('define expiración estricta después del instante límite', () => {
+    const deadline = parseOptionalDeadline('2030-01-01T00:00:00.000Z').value;
+    expect(isDeadlineExpired(deadline, deadline.getTime())).toBe(false);
+    expect(isDeadlineExpired(deadline, deadline.getTime() + 1)).toBe(true);
+    expect(isDeadlineExpired(null, Number.MAX_SAFE_INTEGER)).toBe(false);
   });
 });

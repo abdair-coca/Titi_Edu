@@ -22,7 +22,7 @@ assert.match(player, /remainingAttempts/);
 assert.match(player, /setRemainingAttempts\(remaining\)/);
 assert.match(player, /Intentos restantes:/);
 assert.match(player, /renderHtmlDiagrams\(resource\.html\)/);
-assert.match(player, /withAttemptToken\(preparedHtml, maxAttemptsReached \? null : token\)/);
+assert.match(player, /withAttemptToken\(preparedHtml, maxAttemptsReached \|\| expired \? null : token\)/);
 assert.match(player, /import\('mermaid'\)/);
 assert.match(player, /querySelectorAll\('\.mermaid, \.flowchart\[data-flow\]'\)/);
 assert.match(player, /htmlLabels: false/);

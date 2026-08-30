@@ -54,12 +54,13 @@ router.get('/courses/:courseId/grades', requireAuth, async (req, res) => {
                   select: {
                     id: true,
                     evaluable: true,
+                    fechaLimite: true,
                   },
                 },
               },
             },
             evaluacion: {
-              select: { id: true, titulo: true, notaMinima: true, esFinal: true },
+              select: { id: true, titulo: true, notaMinima: true, esFinal: true, fechaLimite: true },
             },
           },
         },
@@ -71,7 +72,7 @@ router.get('/courses/:courseId/grades', requireAuth, async (req, res) => {
 
     const evaluacionFinal = await prisma.evaluacion.findFirst({
       where: { cursoId: curso.id, esFinal: true },
-      select: { id: true, titulo: true, notaMinima: true, esFinal: true },
+      select: { id: true, titulo: true, notaMinima: true, esFinal: true, fechaLimite: true },
     });
 
     const evaluaciones = curso.modulos
@@ -114,7 +115,7 @@ router.get('/courses/:courseId/grades', requireAuth, async (req, res) => {
 
     const leccionesPorModulo = curso.modulos.reduce((acc, m) => {
       m.lecciones.forEach((l) => {
-        acc[l.id] = { id: l.id, moduloId: m.id, moduloTitulo: m.titulo, titulo: l.titulo, recursoHtmlId: l.recursoHtml?.id ?? null, htmlEvaluable: l.recursoHtml?.evaluable ?? false };
+        acc[l.id] = { id: l.id, moduloId: m.id, moduloTitulo: m.titulo, titulo: l.titulo, recursoHtmlId: l.recursoHtml?.id ?? null, htmlEvaluable: l.recursoHtml?.evaluable ?? false, fechaLimite: l.recursoHtml?.fechaLimite ?? null };
       });
       return acc;
     }, {});
@@ -154,6 +155,7 @@ router.get('/courses/:courseId/grades', requireAuth, async (req, res) => {
           moduloId: e.moduloId ?? null,
           esFinal: Boolean(e.esFinal),
           notaMinima: e.notaMinima,
+          fechaLimite: e.fechaLimite ?? null,
           mejorNota: intento?.nota ?? null,
           aprobado: intento?.aprobado ?? false,
           intentosUsados: intento?.numero ?? 0,
@@ -166,6 +168,7 @@ router.get('/courses/:courseId/grades', requireAuth, async (req, res) => {
           titulo: l.titulo,
           moduloTitulo: l.moduloTitulo,
           mejorPuntaje: mejorHtml.get(`${uid}:${l.recursoHtmlId}`)?.mejorPuntaje ?? null,
+          fechaLimite: l.fechaLimite,
         }));
       return {
         usuario: { id: uid, username: ins.usuario.username, email: ins.usuario.email },

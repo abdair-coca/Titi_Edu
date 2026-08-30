@@ -26,6 +26,7 @@ const studentToken = jwt.sign({ id: 'neo-student' }, process.env.JWT_SECRET, { e
 const authTeacher = { Authorization: `Bearer ${teacherToken}` };
 const authAdmin = { Authorization: `Bearer ${adminToken}` };
 const authStudent = { Authorization: `Bearer ${studentToken}` };
+const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
 const teacher = { id: 'u-teacher', neoId: 'neo-teacher', rol: 'PROFESOR' };
 const admin = { id: 'u-admin', neoId: 'neo-admin', rol: 'ADMIN' };
@@ -44,11 +45,11 @@ const curso = {
         {
           id: 'l-1',
           titulo: 'Leccion 1',
-          recursoHtml: { id: 'r-1', evaluable: true },
+          recursoHtml: { id: 'r-1', evaluable: true, fechaLimite: deadline },
         },
         { id: 'l-2', titulo: 'Leccion 2', recursoHtml: null },
       ],
-      evaluacion: { id: 'e-1', titulo: 'Quiz M1', notaMinima: 70, esFinal: false },
+      evaluacion: { id: 'e-1', titulo: 'Quiz M1', notaMinima: 70, esFinal: false, fechaLimite: deadline },
     },
   ],
 };
@@ -92,7 +93,9 @@ describe('GET /api/courses/:courseId/grades', () => {
     const alumno1 = res.body.data.estudiantes.find((e) => e.usuario.id === 'u-s1');
     expect(alumno1.evaluaciones[0].mejorNota).toBe(92);
     expect(alumno1.evaluaciones[0].aprobado).toBe(true);
+    expect(alumno1.evaluaciones[0].fechaLimite).toBe(deadline.toISOString());
     expect(alumno1.html[0].mejorPuntaje).toBe(85);
+    expect(alumno1.html[0].fechaLimite).toBe(deadline.toISOString());
     expect(alumno1.progreso).toBe(50);
     expect(res.body.data.lecciones.find((l) => l.htmlEvaluable).id).toBeDefined();
     expect(res.body.data.estudiantes.find((e) => e.usuario.id === 'u-s2').progreso).toBe(100);

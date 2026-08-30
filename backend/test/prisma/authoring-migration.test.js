@@ -16,6 +16,10 @@ const htmlMigration = fs.readFileSync(
   path.join(dirname, '../../prisma/migrations/20260815190000_html_lessons/migration.sql'),
   'utf8',
 );
+const deadlineMigration = fs.readFileSync(
+  path.join(dirname, '../../prisma/migrations/20260829010000_submission_deadlines/migration.sql'),
+  'utf8',
+);
 
 describe('authoring migration', () => {
   it('es aditiva y publica los módulos legacy', () => {
@@ -50,5 +54,14 @@ describe('authoring migration', () => {
     expect(htmlMigration).toContain('CREATE TABLE "ResultadoHtmlLeccion"');
     expect(htmlMigration).not.toMatch(/DROP\s+(TABLE|COLUMN|TYPE)/i);
     expect(htmlMigration).not.toMatch(/DELETE\s+FROM/i);
+  });
+
+  it('agrega fechas límite opcionales de forma aditiva', () => {
+    expect(deadlineMigration).toMatch(/^--[^\n]*\nBEGIN;/);
+    expect(deadlineMigration).toContain('ALTER TABLE "RecursoHtmlLeccion" ADD COLUMN "fechaLimite" TIMESTAMP(3)');
+    expect(deadlineMigration).toContain('ALTER TABLE "Evaluacion" ADD COLUMN "fechaLimite" TIMESTAMP(3)');
+    expect(deadlineMigration.trimEnd()).toMatch(/COMMIT;$/);
+    expect(deadlineMigration).not.toMatch(/DROP\s+(TABLE|COLUMN|TYPE)/i);
+    expect(deadlineMigration).not.toMatch(/DELETE\s+FROM/i);
   });
 });

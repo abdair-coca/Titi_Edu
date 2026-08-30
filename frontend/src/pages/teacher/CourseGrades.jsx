@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import client from '../../api/client.js';
+import { formatDeadline, isDeadlineExpired } from '../../lib/deadline.js';
 
 export default function CourseGrades() {
   const { id: courseId } = useParams();
@@ -134,11 +135,19 @@ export default function CourseGrades() {
                     {e.titulo}
                     <span className="block text-xs font-medium text-gray-400">
                       {e.esFinal ? 'final' : 'módulo'} · mín {e.notaMinima}
+                      {e.fechaLimite && ` · ${isDeadlineExpired(e.fechaLimite) ? 'vencida' : `hasta ${formatDeadline(e.fechaLimite)}`}`}
                     </span>
                   </th>
                 ))}
                 {filtros.html.map((l) => (
-                  <th key={l.id} className="px-4 py-3 font-bold text-titi-dark">{l.titulo}</th>
+                  <th key={l.id} className="px-4 py-3 font-bold text-titi-dark">
+                    {l.titulo}
+                    {l.fechaLimite && (
+                      <span className="block text-xs font-medium text-gray-400">
+                        {isDeadlineExpired(l.fechaLimite) ? 'vencida' : `hasta ${formatDeadline(l.fechaLimite)}`}
+                      </span>
+                    )}
+                  </th>
                 ))}
               </tr>
             </thead>

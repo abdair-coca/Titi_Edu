@@ -340,6 +340,7 @@ model RecursoHtmlLeccion {
   html        String
   evaluable   Boolean                @default(false)
   intentosMax Int?
+  fechaLimite DateTime?
   createdAt   DateTime               @default(now())
   updatedAt   DateTime               @updatedAt
   leccion     Leccion                @relation(fields: [leccionId], references: [id], onDelete: Cascade)
@@ -437,6 +438,7 @@ model Evaluacion {
   esFinal     Boolean    @default(false)
   intentosMax Int        @default(3)
   notaMinima  Float      @default(70)
+  fechaLimite DateTime?
   preguntas   Pregunta[]
   intentos    Intento[]
 }

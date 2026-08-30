@@ -66,3 +66,22 @@ test('upsert_lesson_html requires intentosMax when evaluable and rejects it othe
   assert.equal(html.safeParse({ ...base, evaluable: true, intentosMax: 11 }).success, false);
   assert.equal(html.safeParse({ ...base, evaluable: false, intentosMax: 3 }).success, false);
 });
+
+test('deadline schemas accept UTC or null and reject invalid values', () => {
+  const definitions = createToolDefinitions({ request: async () => ({ data: {} }) });
+  const html = definitions.find((entry) => entry.name === 'upsert_lesson_html').inputSchema;
+  const quiz = definitions.find((entry) => entry.name === 'upsert_quiz_draft').inputSchema;
+  const validHtml = {
+    lessonId: 'lesson-1', expectedFingerprint: fingerprint, html: '<html><body>Hola</body></html>',
+    evaluable: true, intentosMax: 3,
+  };
+  assert.equal(html.safeParse({ ...validHtml, fechaLimite: '2030-01-01T00:00:00.000Z' }).success, true);
+  assert.equal(html.safeParse({ ...validHtml, fechaLimite: null }).success, true);
+  assert.equal(html.safeParse({ ...validHtml, fechaLimite: 'mañana' }).success, false);
+  assert.equal(html.safeParse({ ...validHtml, evaluable: false, intentosMax: undefined, fechaLimite: '2030-01-01T00:00:00.000Z' }).success, false);
+  assert.equal(quiz.safeParse({
+    moduleId: 'module-1', expectedFingerprint: fingerprint, titulo: 'Quiz',
+    questions: [{ texto: 'Q', tipo: 'OPCION_MULTIPLE', options: [{ texto: 'A', esCorrecta: true }] }],
+    fechaLimite: null,
+  }).success, true);
+});
