@@ -8,6 +8,7 @@ import {
   authoringMutation,
 } from '../../lib/authoring.js';
 import { readAuthoringEvaluation, readMutationEvaluation } from '../../lib/authoring-contract.js';
+import { isoToLocalDateTime, localDateTimeToIso } from '../../lib/deadline.js';
 
 const TIPOS = [
   { value: 'OPCION_MULTIPLE', label: 'Opción múltiple', Icon: ListIcon },
@@ -65,6 +66,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
   const [titulo, setTitulo] = useState('');
   const [intentosMax, setIntentosMax] = useState(3);
   const [notaMinima, setNotaMinima] = useState(70);
+  const [fechaLimite, setFechaLimite] = useState('');
   const [preguntas, setPreguntas] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -91,6 +93,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
           setTitulo('');
           setIntentosMax(3);
           setNotaMinima(70);
+          setFechaLimite('');
           setPreguntas([emptyQuestion('OPCION_MULTIPLE')]);
           return;
         }
@@ -98,6 +101,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
         setTitulo(ev.titulo || '');
         setIntentosMax(ev.intentosMax ?? 3);
         setNotaMinima(ev.notaMinima ?? 70);
+        setFechaLimite(isoToLocalDateTime(ev.fechaLimite));
         setPreguntas(
           (ev.preguntas || []).map((p) => ({
             texto: p.texto,
@@ -200,6 +204,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
         titulo: titulo.trim(),
         intentosMax: Number(intentosMax),
         notaMinima: Number(notaMinima),
+        fechaLimite: localDateTimeToIso(fechaLimite),
         preguntas: preguntas.map((p) => ({
           texto: p.texto.trim(),
           tipo: p.tipo,
@@ -217,6 +222,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
           titulo: payload.titulo,
           intentosMax: payload.intentosMax,
           notaMinima: payload.notaMinima,
+          fechaLimite: payload.fechaLimite,
           questions: payload.preguntas.map((question, index) => ({
             texto: question.texto,
             tipo: question.tipo,
@@ -233,6 +239,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
           titulo: payload.titulo,
           intentosMax: payload.intentosMax,
           notaMinima: payload.notaMinima,
+          fechaLimite: payload.fechaLimite,
           questions: payload.preguntas.map((question, index) => ({
             texto: question.texto,
             tipo: question.tipo,
@@ -355,6 +362,20 @@ export default function EvaluationEditor({ mode = 'module' }) {
             />
           </label>
         </div>
+
+        <label className="flex flex-col gap-1.5">
+          <span className="text-sm font-semibold text-titi-dark">Fecha límite de entrega</span>
+          <span className="flex items-center gap-2">
+            <input
+              type="datetime-local"
+              value={fechaLimite}
+              onChange={(e) => setFechaLimite(e.target.value)}
+              className="titi-input"
+            />
+            <button type="button" onClick={() => setFechaLimite('')} className="titi-btn-ghost shrink-0">Limpiar</button>
+          </span>
+          <span className="text-xs font-medium text-gray-500">Zona horaria local; se guarda en UTC.</span>
+        </label>
 
         <hr className="border-gray-100" />
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import TitiMascot from './TitiMascot.jsx';
+import { formatDeadline, isDeadlineExpired } from '../lib/deadline.js';
 
 /**
  * EvaluationQuiz — el estudiante rinde una evaluación.
@@ -27,6 +28,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
   const [result, setResult] = useState(null);
   const [intentoExtra, setIntentoExtra] = useState(0); // cuántos 'intento_extra' tengo en inventario
   const [usarExtra, setUsarExtra] = useState(false); // si el próximo submit debe consumir uno
+  const [, refreshDeadline] = useState(0);
 
   const fetchIntentoExtra = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -78,7 +80,14 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
     fetchIntentoExtra();
   }, [fetchAll, fetchIntentoExtra]);
 
+  useEffect(() => {
+    if (!evaluacion?.fechaLimite) return undefined;
+    const timer = window.setInterval(() => refreshDeadline((value) => value + 1), 30_000);
+    return () => window.clearInterval(timer);
+  }, [evaluacion?.fechaLimite]);
+
   function handleUseExtra() {
+    if (plazoVencido) return;
     setUsarExtra(true);
     setAnswers({});
     setResult(null);
@@ -103,7 +112,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
   const allAnswered = totalPreguntas > 0 && answeredCount === totalPreguntas;
 
   async function handleSubmit() {
-    if (!allAnswered || submitting) return;
+    if (!allAnswered || submitting || plazoVencido) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -191,6 +200,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
 
   const yaAprobado = attemptsInfo?.aprobado && phase !== 'result';
   const bloqueado = attemptsInfo?.bloqueado && phase !== 'result';
+  const plazoVencido = isDeadlineExpired(evaluacion.fechaLimite) || Boolean(attemptsInfo?.fechaLimiteExpirada);
 
   // --- Ya aprobada ---
   if (yaAprobado) {
@@ -219,7 +229,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
           <p className="mt-4 text-sm font-semibold text-gray-500">
             {attemptsInfo.intentos.length} de {attemptsInfo.intentosMax} intentos usados
           </p>
-          {intentoExtra > 0 && (
+          {intentoExtra > 0 && !plazoVencido && (
             <ExtraAttemptCta cantidad={intentoExtra} onUse={handleUseExtra} />
           )}
         </div>
@@ -250,9 +260,10 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
           <button
             type="button"
             onClick={() => setPhase('quiz')}
-            className="mt-6 bg-titi-yellow text-titi-dark font-bold text-base px-8 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
+            disabled={plazoVencido}
+            className="mt-6 bg-titi-yellow text-titi-dark font-bold text-base px-8 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Comenzar intento
+            {plazoVencido ? 'Plazo vencido' : 'Comenzar intento'}
           </button>
         </div>
       </QuizShell>
@@ -274,7 +285,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
                 message="Se acabaron los intentos. Hablá con tu profesor."
                 size="md"
               />
-              {intentoExtra > 0 && (
+              {intentoExtra > 0 && !plazoVencido && (
                 <ExtraAttemptCta cantidad={intentoExtra} onUse={handleUseExtra} />
               )}
             </>
@@ -296,7 +307,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
           <p className="text-sm font-semibold text-gray-500 mt-1">
             {result.correctas} de {result.total} correctas · nota mínima {evaluacion.notaMinima}%
           </p>
-          {!aprobado && !result.bloqueado && (
+          {!aprobado && !result.bloqueado && !plazoVencido && (
             <p className="text-xs font-bold text-gray-400 mt-1">
               Te {result.intentosRestantes === 1 ? 'queda' : 'quedan'} {result.intentosRestantes}{' '}
               {result.intentosRestantes === 1 ? 'intento' : 'intentos'}
@@ -330,7 +341,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
             })}
           </ul>
 
-          {!aprobado && !result.bloqueado && (
+          {!aprobado && !result.bloqueado && !plazoVencido && (
             <button
               type="button"
               onClick={handleRetry}
@@ -376,7 +387,7 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
           <button
             type="button"
             onClick={handleSubmit}
-            disabled={!allAnswered || submitting}
+            disabled={!allAnswered || submitting || plazoVencido}
             className="w-full sm:w-auto bg-titi-yellow text-titi-dark font-bold text-base px-6 sm:px-8 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {submitting ? 'Enviando…' : 'Enviar respuestas'}
@@ -407,6 +418,7 @@ function ExtraAttemptCta({ cantidad, onUse }) {
 
 // ---- Carcasa con título ----
 function QuizShell({ evaluacion, children }) {
+  const deadlineExpired = isDeadlineExpired(evaluacion.fechaLimite);
   return (
     <section className="bg-white border border-gray-100 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-6">
       <header className="mb-4 sm:mb-5">
@@ -416,6 +428,12 @@ function QuizShell({ evaluacion, children }) {
         <h2 className="text-lg sm:text-2xl font-bold text-titi-dark mt-0.5 leading-snug">
           {evaluacion.titulo}
         </h2>
+        {evaluacion.fechaLimite && (
+          <div className={`mt-3 rounded-xl border px-3 py-2 text-xs font-bold ${deadlineExpired ? 'border-red-200 bg-red-50 text-red-700' : 'border-gray-200 bg-titi-cream text-gray-600'}`}>
+            {deadlineExpired ? 'Plazo vencido' : 'Entrega hasta'}: {formatDeadline(evaluacion.fechaLimite)}
+            {deadlineExpired && <span className="block mt-1 font-semibold text-gray-500">Podés revisar contenido, notas y resúmenes, pero no enviar nuevos intentos.</span>}
+          </div>
+        )}
       </header>
       {children}
     </section>
