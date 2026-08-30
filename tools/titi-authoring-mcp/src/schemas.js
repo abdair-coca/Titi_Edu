@@ -96,10 +96,14 @@ export const upsertLessonHtmlSchema = z.object({
   html: z.string().trim().min(1).max(1_000_000),
   evaluable: z.boolean().optional(),
   intentosMax: z.number().int().min(1).max(10).optional(),
+  fechaLimite: z.string().datetime({ offset: true }).nullable().optional(),
   idempotencyKey,
 }).strict().refine(
   (value) => value.evaluable ? value.intentosMax !== undefined : value.intentosMax === undefined,
   { message: 'intentosMax is required for evaluable HTML and only allowed when evaluable is true' },
+).refine(
+  (value) => value.fechaLimite == null || value.evaluable === true,
+  { message: 'fechaLimite is only allowed for evaluable HTML' },
 );
 
 const quizOptionSchema = z.object({
@@ -122,6 +126,7 @@ export const upsertQuizSchema = z.object({
   titulo: title,
   intentosMax: z.number().int().min(1).max(10).optional(),
   notaMinima: z.number().min(0).max(100).optional(),
+  fechaLimite: z.string().datetime({ offset: true }).nullable().optional(),
   questions: z.array(quizQuestionSchema).min(1).max(200),
   idempotencyKey,
 }).strict();
