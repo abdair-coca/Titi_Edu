@@ -5,6 +5,7 @@ import {
   timingSafeEqual,
 } from 'crypto';
 import path from 'path';
+import { parseOptionalDeadline } from './deadline.service.js';
 
 export const AUTHORING_SCOPES = Object.freeze([
   'course:read',
@@ -192,6 +193,7 @@ function evaluationPublicationSummary(evaluation) {
         titulo: evaluation.titulo,
         intentosMax: evaluation.intentosMax,
         notaMinima: evaluation.notaMinima,
+        fechaLimite: evaluation.fechaLimite,
         questions: (evaluation.preguntas || []).map((question) => ({
           id: question.id,
           texto: question.texto,
@@ -228,6 +230,7 @@ export function modulePublicationSummary(module) {
             sha256: sha256(lesson.recursoHtml.html),
             evaluable: lesson.recursoHtml.evaluable,
             intentosMax: lesson.recursoHtml.intentosMax,
+            fechaLimite: lesson.recursoHtml.fechaLimite,
           }
         : null,
       materials: (lesson.materiales || []).map((material) => ({
@@ -318,7 +321,7 @@ function enforceHtmlLessonCsp(html) {
   return html.replace(/<html\b[^>]*>/i, (tag) => `${tag}<head>${cspMeta}</head>`);
 }
 
-export function validateHtmlLessonResource({ html, evaluable = false, intentosMax = null } = {}) {
+export function validateHtmlLessonResource({ html, evaluable = false, intentosMax = null, fechaLimite } = {}) {
   if (typeof html !== 'string' || !html.trim()) return { ok: false, message: 'html es requerido' };
   if (Buffer.byteLength(html, 'utf8') > 1_000_000) return { ok: false, message: 'El HTML no puede superar 1 MB' };
   if (typeof evaluable !== 'boolean') return { ok: false, message: 'evaluable debe ser booleano' };
@@ -346,12 +349,18 @@ export function validateHtmlLessonResource({ html, evaluable = false, intentosMa
   if (!evaluable && parsedAttempts !== null) {
     return { ok: false, message: 'intentosMax solo se permite para HTML evaluable' };
   }
+  const parsedDeadline = parseOptionalDeadline(fechaLimite);
+  if (!parsedDeadline.ok) return parsedDeadline;
+  if (!evaluable && parsedDeadline.value !== undefined && parsedDeadline.value !== null) {
+    return { ok: false, message: 'fechaLimite solo se permite para HTML evaluable' };
+  }
   return {
     ok: true,
     data: {
       html: enforceHtmlLessonCsp(html.trim()),
       evaluable,
       intentosMax: evaluable ? parsedAttempts : null,
+      fechaLimite: evaluable ? parsedDeadline.value ?? null : null,
     },
   };
 }

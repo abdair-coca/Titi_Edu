@@ -509,11 +509,25 @@ describe('evaluation authoring response contract', () => {
 
     const response = await request(app).put('/api/authoring/modules/m-contract/quiz')
       .set(auth).set('Idempotency-Key', 'quiz-module-contract')
-      .send({ ...quiz, expectedFingerprint: snapshot.body.data.fingerprint });
+      .send({ ...quiz, fechaLimite: '2030-01-01T00:00:00.000Z', expectedFingerprint: snapshot.body.data.fingerprint });
 
     expect(response.status).toBe(200);
     expect(response.body.data.evaluation).toMatchObject({ id: 'ev-module' });
     expect(response.body.data).not.toHaveProperty('evaluacion');
+    expect(mocks.client.evaluacion.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ fechaLimite: new Date('2030-01-01T00:00:00.000Z') }),
+    }));
+
+    mocks.client.modulo.findUnique.mockResolvedValue({ ...module, evaluacion: { id: 'ev-module' } });
+    mocks.client.pregunta.findMany.mockResolvedValue([]);
+    mocks.client.evaluacion.update.mockResolvedValue({ id: 'ev-module', titulo: quiz.titulo, fechaLimite: null });
+    const cleared = await request(app).put('/api/authoring/modules/m-contract/quiz')
+      .set(auth).set('Idempotency-Key', 'quiz-module-clear')
+      .send({ ...quiz, fechaLimite: null, expectedFingerprint: snapshot.body.data.fingerprint });
+    expect(cleared.status).toBe(200);
+    expect(mocks.client.evaluacion.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ fechaLimite: null }),
+    }));
   });
 
   it('guarda evaluacion final bajo data.evaluation', async () => {
@@ -681,7 +695,15 @@ describe('HTML lesson authoring', () => {
     mocks.client.recursoHtmlLeccion.upsert.mockResolvedValue({ id: 'html-1', leccionId: lesson.id, evaluable: true, intentosMax: 2, html: '<html><body></body></html>' });
     mocks.client.leccion.update.mockResolvedValue({ ...lesson, formatoContenido: 'HTML', videoUrl: null });
 
-    const body = { html: '<html><body><script>window.parent.postMessage({ source: "titi-html" }, "*")</script></body></html>', evaluable: true, intentosMax: 2, expectedFingerprint };
+    const invalid = await request(app).post('/api/authoring/lessons/l-html/html')
+      .set(auth).set('Idempotency-Key', 'html-upsert-invalid').send({
+        html: '<html><body></body></html>', evaluable: true, intentosMax: 2,
+        fechaLimite: 'not-a-date', expectedFingerprint,
+      });
+    expect(invalid.status).toBe(400);
+    expect(mocks.client.recursoHtmlLeccion.upsert).not.toHaveBeenCalled();
+
+    const body = { html: '<html><body><script>window.parent.postMessage({ source: "titi-html" }, "*")</script></body></html>', evaluable: true, intentosMax: 2, fechaLimite: '2030-01-01T00:00:00.000Z', expectedFingerprint };
     const response = await request(app).post('/api/authoring/lessons/l-html/html')
       .set(auth).set('Idempotency-Key', 'html-upsert-1').send(body);
 
@@ -689,7 +711,7 @@ describe('HTML lesson authoring', () => {
     expect(response.body.data.lesson.formatoContenido).toBe('HTML');
     expect(mocks.client.recursoHtmlLeccion.upsert).toHaveBeenCalledWith(expect.objectContaining({
       where: { leccionId: 'l-html' },
-      update: expect.objectContaining({ evaluable: true, intentosMax: 2 }),
+      update: expect.objectContaining({ evaluable: true, intentosMax: 2, fechaLimite: new Date('2030-01-01T00:00:00.000Z') }),
     }));
     expect(mocks.client.modulo.updateMany).toHaveBeenCalledWith({
       where: { id: 'm-html', version: 2 }, data: { version: { increment: 1 } },
@@ -700,5 +722,12 @@ describe('HTML lesson authoring', () => {
     expect(replay.status).toBe(200);
     expect(replay.headers['idempotency-replayed']).toBe('true');
     expect(mocks.client.recursoHtmlLeccion.upsert).toHaveBeenCalledTimes(1);
+
+    const cleared = await request(app).post('/api/authoring/lessons/l-html/html')
+      .set(auth).set('Idempotency-Key', 'html-upsert-clear').send({ ...body, fechaLimite: null });
+    expect(cleared.status).toBe(200);
+    expect(mocks.client.recursoHtmlLeccion.upsert).toHaveBeenLastCalledWith(expect.objectContaining({
+      update: expect.objectContaining({ fechaLimite: null }),
+    }));
   });
 });

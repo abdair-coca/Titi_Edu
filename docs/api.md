@@ -153,13 +153,16 @@ Idempotency-Key: <key>
   "expectedFingerprint": "<fingerprint de la lecci�n>",
   "html": "<!doctype html><html>...</html>",
   "evaluable": true,
-  "intentosMax": 2
+  "intentosMax": 2,
+  "fechaLimite": "2030-01-01T00:00:00.000Z"
 }
 ```
 
 Solo `content:write`, creador/ADMIN y m�dulo en `BORRADOR`. Una lecci�n tiene un
 solo recurso HTML; este endpoint lo crea o reemplaza y conserva CAS + idempotencia.
 `intentosMax` es obligatorio entre `1` y `10` solo si `evaluable` es `true`.
+`fechaLimite` es opcional: acepta ISO UTC o `null` para quitar el plazo. Solo aplica
+a recursos HTML evaluables.
 
 `GET /api/lessons/:id/html` devuelve el HTML �nicamente a usuarios autorizados; no
 existe URL p�blica. El servidor exige documento autocontenido, recursos inline o
@@ -186,6 +189,10 @@ conf�a en `event.origin`. Luego env�a `{ score, attemptToken }` a
 progreso en una sola transacción; reintentar mismo token es idempotente. Solo
 intentos con `puntaje` registrado consumen cupo. El puntaje es pr�ctica/autodeclarado,
 no nota oficial ni credencial.
+Cuando `fechaLimite` existe, respuestas incluyen `fechaLimite` y
+`fechaLimiteExpirada`; contenido y resultados previos siguen disponibles después
+del vencimiento, pero nuevas entregas son rechazadas por hora del servidor.
+Evaluaciones aceptan mismo campo `fechaLimite` en operaciones de autoría.
 
 
 ## Cursos vivos
