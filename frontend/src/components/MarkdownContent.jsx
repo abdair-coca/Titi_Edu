@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -16,8 +17,43 @@ import cpp from 'highlight.js/lib/languages/cpp';
 import java from 'highlight.js/lib/languages/java';
 import 'highlight.js/styles/github.css';
 import { isExternalMarkdownUrl, sanitizeMarkdownUrl } from '../lib/markdown.js';
+import { CopyIcon } from './icons.jsx';
 
 const HIGHLIGHT_LANGUAGES = { python, javascript, typescript, bash, json, xml, css, sql, markdown, yaml, c, cpp, java };
+
+// Bloque de código con botón "Copiar" (solo cuando `codeCopy` está activo).
+function CodeBlock({ children }) {
+  const preRef = useRef(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const text = preRef.current?.innerText || '';
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard no disponible — silencioso.
+    }
+  };
+
+  return (
+    <div className="relative my-4">
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="absolute top-2 right-2 z-10 inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2 py-1 text-xs font-bold text-gray-300 hover:bg-white/20 hover:text-white transition-colors"
+      >
+        <CopyIcon className="w-3.5 h-3.5" aria-hidden="true" />
+        {copied ? 'Copiado' : 'Copiar'}
+      </button>
+      <pre ref={preRef} className="bg-titi-dark text-white rounded-xl p-4 pt-10 overflow-x-auto text-sm">
+        {children}
+      </pre>
+    </div>
+  );
+}
 
 function SafeLink({ href, children, ...props }) {
   const safeHref = sanitizeMarkdownUrl(href);
@@ -42,13 +78,13 @@ function SafeImage({ src, alt = '' }) {
   return <img src={safeSrc} alt={alt} loading="lazy" referrerPolicy="no-referrer" className="max-w-full rounded-xl" />;
 }
 
-export default function MarkdownContent({ content, format = 'TEXTO', className = '' }) {
+export default function MarkdownContent({ content, format = 'TEXTO', className = '', compact = false, codeCopy = false }) {
   if (format !== 'MARKDOWN') {
     return <div className={`whitespace-pre-line ${className}`}>{content}</div>;
   }
 
   return (
-    <div className={`titi-markdown text-sm sm:text-base text-gray-600 leading-relaxed ${className}`}>
+    <div className={`titi-markdown ${compact ? 'text-sm' : 'text-sm sm:text-base'} text-gray-600 leading-relaxed ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { languages: HIGHLIGHT_LANGUAGES }]]}
@@ -69,7 +105,9 @@ export default function MarkdownContent({ content, format = 'TEXTO', className =
               {children}
             </code>
           ),
-          pre: ({ children }) => <pre className="bg-titi-dark text-white rounded-xl p-4 overflow-x-auto my-4 text-sm">{children}</pre>,
+          pre: codeCopy
+            ? (props) => <CodeBlock {...props} />
+            : ({ children }) => <pre className="bg-titi-dark text-white rounded-xl p-4 overflow-x-auto my-4 text-sm">{children}</pre>,
         }}
       >
         {content || ''}
