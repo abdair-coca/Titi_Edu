@@ -22,7 +22,13 @@ function handleRagError(res, error, fallback) {
 async function loadLessonAccess(req, res) {
   const lesson = await prisma.leccion.findUnique({
     where: { id: req.params.id },
-    select: { id: true, moduloId: true, modulo: { select: { cursoId: true, estado: true } }, estado: true },
+    select: {
+      id: true,
+      titulo: true,
+      moduloId: true,
+      modulo: { select: { titulo: true, cursoId: true, estado: true } },
+      estado: true,
+    },
   });
   if (!lesson) {
     res.status(404).json({ success: false, message: 'Lección no encontrada' });
@@ -77,6 +83,8 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
       lessonId: loaded.lesson.id,
       principalId: loaded.access.usuario.id,
       message,
+      lessonTitle: loaded.lesson.titulo || null,
+      moduleTitle: loaded.lesson.modulo.titulo || null,
     });
     return res.json({ success: true, data: result });
   } catch (error) {

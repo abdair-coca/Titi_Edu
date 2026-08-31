@@ -21,6 +21,7 @@ beforeEach(() => {
   process.env.EMBEDDING_API_URL = 'https://embeddings.example';
   process.env.EMBEDDING_API_KEY = 'embedding-key';
   process.env.EMBEDDING_MODEL = 'google/embeddinggemma-300M';
+  process.env.EMBEDDING_PROVIDER = 'local';
   process.env.GROQ_API_KEY = 'groq-key';
   process.env.GROQ_MODEL = 'test-chat';
   process.env.CLOUDFLARE_AI_GATEWAY_TOKEN = 'gateway-token';
@@ -31,7 +32,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  for (const key of ['RAG_CHAT_MODE', 'AI_PROVIDER_ROUTE', 'EMBEDDING_API_URL', 'EMBEDDING_API_KEY', 'EMBEDDING_MODEL', 'GROQ_API_KEY', 'GROQ_MODEL', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_AI_GATEWAY_ID', 'CLOUDFLARE_AI_GATEWAY_TOKEN', 'NODE_ENV']) delete process.env[key];
+  for (const key of ['RAG_CHAT_MODE', 'AI_PROVIDER_ROUTE', 'EMBEDDING_API_URL', 'EMBEDDING_API_KEY', 'EMBEDDING_MODEL', 'EMBEDDING_PROVIDER', 'GROQ_API_KEY', 'GROQ_MODEL', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_AI_GATEWAY_ID', 'CLOUDFLARE_AI_GATEWAY_TOKEN', 'NODE_ENV']) delete process.env[key];
 });
 
 function embeddingResponse() {
