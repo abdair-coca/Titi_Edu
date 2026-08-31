@@ -136,6 +136,24 @@
   animation: titi-backdrop-in 0.2s ease-out;
 }
 
+/* Bottom-sheet del Tutor IA en móvil: entra desde abajo con fade */
+@keyframes titi-sheet-in {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.titi-sheet-in {
+  animation: titi-sheet-in 0.3s ease-out;
+}
+
+/* Panel lateral del Tutor IA (md+): entra desde la derecha */
+@keyframes titi-sheet-right {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+.titi-sheet-right {
+  animation: titi-sheet-right 0.3s ease-out;
+}
+
 /* Reduced-motion: desactiva pop de cards, press de botones y fade del backdrop */
 @media (prefers-reduced-motion: reduce) {
   .titi-card-pop {
@@ -148,6 +166,12 @@
     transform: none;
   }
   .titi-backdrop-in {
+    animation: none;
+  }
+  .titi-sheet-in {
+    animation: none;
+  }
+  .titi-sheet-right {
     animation: none;
   }
 }

@@ -10,7 +10,7 @@ import AchievementToast from '../components/AchievementToast.jsx';
 import EvaluationQuiz from '../components/EvaluationQuiz.jsx';
 import MarkdownContent from '../components/MarkdownContent.jsx';
 import HtmlLessonPlayer from '../components/HtmlLessonPlayer.jsx';
-import RagTutorCard from '../components/RagTutorCard.jsx';
+import TutorPanel from '../components/TutorPanel.jsx';
 import { resolveMediaUrl } from '../lib/format.js';
 import { sanitizeMarkdownUrl } from '../lib/markdown.js';
 import { usePopIn, useStaggerReveal } from '../lib/motion.js';
@@ -21,6 +21,7 @@ import {
   CodeIcon,
   ClipIcon,
   AwardIcon,
+  SparklesIcon,
 } from '../components/icons.jsx';
 
 export default function LearnCourse() {
@@ -80,6 +81,21 @@ export default function LearnCourse() {
 
   // Conteo de comentarios de la lección activa (para "Comentarios (N)")
   const [commentCount, setCommentCount] = useState(0);
+
+  // Conversaciones del Tutor IA por lección (el backend es stateless: la
+  // conversación vive acá, keyed por lección para no mezclarlas).
+  const [tutorConvos, setTutorConvos] = useState({});
+
+  const appendTutorMessages = (lessonId, msgs) => {
+    setTutorConvos((prev) => ({
+      ...prev,
+      [lessonId]: [...(prev[lessonId] || []), ...msgs],
+    }));
+  };
+
+  const resetTutorConversation = (lessonId) => {
+    setTutorConvos((prev) => ({ ...prev, [lessonId]: [] }));
+  };
 
   // --- Fetch del curso + progreso en paralelo ---
   useEffect(() => {
@@ -652,6 +668,16 @@ export default function LearnCourse() {
             noteSaved={noteSaved}
             commentCount={commentCount}
             onCommentCount={setCommentCount}
+            tutor={{
+              cursoTitulo: curso.titulo,
+              moduloNumero: (curso.modulos?.findIndex((m) => m.id === activeModulo?.id) ?? -1) + 1,
+              moduloTitulo: activeModulo?.titulo,
+              leccionTitulo: activeLesson.titulo,
+              conversation: tutorConvos[activeLesson.id] || [],
+              onAppendMessages: (msgs) => appendTutorMessages(activeLesson.id, msgs),
+              onResetConversation: () => resetTutorConversation(activeLesson.id),
+              onNavigateToLesson: handleSelectLesson,
+            }}
           />
         )}
       </div>
@@ -749,7 +775,6 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
           onScoreRecorded={onHtmlScoreRecorded}
         />
       )}
-      <RagTutorCard lessonId={leccion.id} />
 
       {completeError && (
         <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-4">
@@ -811,6 +836,7 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
 
 // ---- Columna derecha: riel de íconos + panel desplegable ----
 const PANELS = [
+  { key: 'tutor', label: 'Tutor IA', Icon: SparklesIcon, title: 'Tutor IA' },
   { key: 'notas', label: 'Notas', Icon: NoteIcon, title: 'Notas' },
   { key: 'materiales', label: 'Archivos', Icon: FilesIcon, title: 'Materiales' },
   { key: 'comentarios', label: 'Comentarios', Icon: CommentIcon, title: 'Comentarios' },
@@ -828,16 +854,21 @@ function LessonSidePanels({
   noteSaved,
   commentCount,
   onCommentCount,
+  tutor,
 }) {
   const toggle = (key) => onChange(open === key ? null : key);
-  const expanded = Boolean(open);
+  const isTutor = open === 'tutor';
+  // El grid colapsable solo gobierna Notas/Materiales/Comentarios. El tutor
+  // vive en overlays propios (panel lateral md+, bottom-sheet móvil).
+  const gridOpen = open && !isTutor;
+  const expanded = Boolean(gridOpen);
   // Mantener el panel montado durante el cierre para que el colapso anime
   // (si desmontáramos al instante no habría qué animar). displayKey va detrás
-  // de `open` al cerrar y se limpia cuando termina la transición.
-  const [displayKey, setDisplayKey] = useState(open);
+  // de `gridOpen` al cerrar y se limpia cuando termina la transición.
+  const [displayKey, setDisplayKey] = useState(gridOpen);
   useEffect(() => {
-    if (open) setDisplayKey(open);
-  }, [open]);
+    if (gridOpen) setDisplayKey(gridOpen);
+  }, [gridOpen]);
   const active = PANELS.find((p) => p.key === displayKey);
   const title =
     active?.key === 'comentarios'
@@ -845,93 +876,124 @@ function LessonSidePanels({
       : active?.title;
 
   return (
-    <div className="flex flex-col-reverse lg:flex-row shrink-0 lg:h-full bg-white border border-gray-100 rounded-2xl overflow-hidden">
-      {/* Panel colapsable: alto en móvil, ancho en desktop (grid 0fr→1fr + fade),
-          ease neutro, no pop. Abre y cierra. Ver motion.md §3. */}
-      <div
-        onTransitionEnd={(e) => {
-          if (e.target === e.currentTarget && !expanded) setDisplayKey(null);
-        }}
-        className={`grid min-w-0 transition-[grid-template-rows,grid-template-columns] duration-300 ease-out motion-reduce:transition-none ${
-          expanded
-            ? 'grid-rows-[1fr] lg:grid-cols-[1fr]'
-            : 'grid-rows-[0fr] lg:grid-rows-[1fr] lg:grid-cols-[0fr]'
-        }`}
-      >
-        <div className="overflow-hidden min-w-0 min-h-0">
-          {active && (
-            <div
-              id={`lesson-panel-${displayKey}`}
-              role="tabpanel"
-              aria-labelledby={`lesson-tab-${displayKey}`}
-              className={`w-full lg:w-80 bg-white p-4 sm:p-5 lg:h-full lg:overflow-y-auto scrollbar-none transition-opacity duration-300 ease-out motion-reduce:transition-none ${
-                expanded ? 'opacity-100' : 'opacity-0'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2 mb-3">
-                <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
-                  <active.Icon className="w-4 h-4 text-titi-dark" />
-                  {title}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => onChange(null)}
-                  className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-                  aria-label="Cerrar panel"
-                >
-                  ✕
-                </button>
-              </div>
-
-              {displayKey === 'notas' && (
-                <NotesPanel
-                  value={noteText}
-                  onChange={onNoteChange}
-                  onSave={onNoteSave}
-                  saving={noteSaving}
-                  saved={noteSaved}
-                />
-              )}
-              {displayKey === 'materiales' && <MaterialsPanel materiales={materiales} />}
-              {displayKey === 'comentarios' && (
-                <LessonComments lessonId={lessonId} hideHeader onCount={onCommentCount} />
-              )}
-            </div>
-          )}
+    <>
+      {/* Tutor IA — panel lateral flotante (md+): no reorganiza el layout, el
+          contenido principal queda estable. Ancho adaptado (22rem) en tablet,
+          26rem en desktop. */}
+      {isTutor && (
+        <div
+          id="lesson-panel-tutor"
+          role="tabpanel"
+          aria-labelledby="lesson-tab-tutor"
+          className="fixed inset-y-0 right-0 z-50 hidden md:flex flex-col w-[22rem] lg:w-[26rem] bg-white border-l border-gray-100 shadow-[-8px_0_30px_rgba(0,0,0,0.12)] titi-sheet-right"
+        >
+          <TutorPanel {...tutor} onClose={() => onChange(null)} />
         </div>
-      </div>
+      )}
 
-      {/* Riel de íconos */}
-      <nav
-        role="tablist"
-        aria-label="Recursos de la lección"
-        className={`grid grid-cols-3 lg:flex lg:flex-col gap-1 p-2 bg-white lg:w-24 lg:h-full shrink-0 justify-center lg:justify-start ${expanded ? 'lg:border-l border-gray-100' : ''}`}
-      >
-        {PANELS.map(({ key, label, Icon }) => {
-          const isOpen = open === key;
-          return (
-            <button
-              key={key}
-              type="button"
-              onClick={() => toggle(key)}
-              id={`lesson-tab-${key}`}
-              role="tab"
-              aria-selected={isOpen}
-              aria-controls={`lesson-panel-${key}`}
-              className={[
-                'flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl transition-colors w-full',
-                isOpen
-                  ? 'bg-titi-yellow-light text-titi-dark border-b-2 border-titi-yellow lg:border-b-0'
-                  : 'text-gray-500 hover:bg-titi-cream hover:text-titi-dark',
-              ].join(' ')}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-xs font-semibold leading-none">{label}</span>
-            </button>
-          );
-        })}
-      </nav>
-    </div>
+      {/* Tutor IA — bottom-sheet a pantalla casi completa (móvil < md) */}
+      {isTutor && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div
+            aria-hidden="true"
+            onClick={() => onChange(null)}
+            className="absolute inset-0 bg-black/30 titi-backdrop-in"
+          />
+          <div className="absolute inset-x-0 bottom-0 h-[92vh] bg-white rounded-t-2xl flex flex-col overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.12)] titi-sheet-in">
+            <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mt-2 shrink-0" />
+            <TutorPanel {...tutor} onClose={() => onChange(null)} />
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-col-reverse lg:flex-row shrink-0 lg:h-full bg-white border border-gray-100 rounded-2xl overflow-hidden">
+        {/* Panel colapsable: alto en móvil, ancho en desktop (grid 0fr→1fr + fade),
+            ease neutro, no pop. Abre y cierra. Ver motion.md §3. */}
+        <div
+          onTransitionEnd={(e) => {
+            if (e.target === e.currentTarget && !expanded) setDisplayKey(null);
+          }}
+          className={`grid min-w-0 transition-[grid-template-rows,grid-template-columns] duration-300 ease-out motion-reduce:transition-none ${
+            expanded
+              ? 'grid-rows-[1fr] lg:grid-cols-[1fr]'
+              : 'grid-rows-[0fr] lg:grid-rows-[1fr] lg:grid-cols-[0fr]'
+          }`}
+        >
+          <div className="overflow-hidden min-w-0 min-h-0">
+            {active && (
+              <div
+                id={`lesson-panel-${displayKey}`}
+                role="tabpanel"
+                aria-labelledby={`lesson-tab-${displayKey}`}
+                className={`w-full lg:w-80 bg-white p-4 sm:p-5 lg:h-full lg:overflow-y-auto scrollbar-none transition-opacity duration-300 ease-out motion-reduce:transition-none ${
+                  expanded ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2 mb-3">
+                  <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
+                    <active.Icon className="w-4 h-4 text-titi-dark" />
+                    {title}
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => onChange(null)}
+                    className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    aria-label="Cerrar panel"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                {displayKey === 'notas' && (
+                  <NotesPanel
+                    value={noteText}
+                    onChange={onNoteChange}
+                    onSave={onNoteSave}
+                    saving={noteSaving}
+                    saved={noteSaved}
+                  />
+                )}
+                {displayKey === 'materiales' && <MaterialsPanel materiales={materiales} />}
+                {displayKey === 'comentarios' && (
+                  <LessonComments lessonId={lessonId} hideHeader onCount={onCommentCount} />
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Riel de íconos */}
+        <nav
+          role="tablist"
+          aria-label="Recursos de la lección"
+          className={`grid grid-cols-4 lg:flex lg:flex-col gap-1 p-2 bg-white lg:w-24 lg:h-full shrink-0 justify-center lg:justify-start ${expanded ? 'lg:border-l border-gray-100' : ''}`}
+        >
+          {PANELS.map(({ key, label, Icon }) => {
+            const isOpen = open === key;
+            return (
+              <button
+                key={key}
+                type="button"
+                onClick={() => toggle(key)}
+                id={`lesson-tab-${key}`}
+                role="tab"
+                aria-selected={isOpen}
+                aria-controls={`lesson-panel-${key}`}
+                className={[
+                  'flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl transition-colors w-full',
+                  isOpen
+                    ? 'bg-titi-yellow-light text-titi-dark border-b-2 border-titi-yellow lg:border-b-0'
+                    : 'text-gray-500 hover:bg-titi-cream hover:text-titi-dark',
+                ].join(' ')}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="text-xs font-semibold leading-none">{label}</span>
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+    </>
   );
 }
 
