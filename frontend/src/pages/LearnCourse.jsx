@@ -669,6 +669,7 @@ export default function LearnCourse() {
             commentCount={commentCount}
             onCommentCount={setCommentCount}
             tutor={{
+              lessonId: activeLesson.id,
               cursoTitulo: curso.titulo,
               moduloNumero: (curso.modulos?.findIndex((m) => m.id === activeModulo?.id) ?? -1) + 1,
               moduloTitulo: activeModulo?.titulo,
@@ -860,7 +861,7 @@ function LessonSidePanels({
   const isTutor = open === 'tutor';
   // El grid colapsable solo gobierna Notas/Materiales/Comentarios. El tutor
   // vive en overlays propios (panel lateral md+, bottom-sheet móvil).
-  const gridOpen = open && !isTutor;
+  const gridOpen = !isTutor ? open : null;
   const expanded = Boolean(gridOpen);
   // Mantener el panel montado durante el cierre para que el colapso anime
   // (si desmontáramos al instante no habría qué animar). displayKey va detrás
