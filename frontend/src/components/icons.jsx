@@ -410,6 +410,25 @@ export function GiftIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+// Reintento — intentos restantes de una actividad evaluable.
+export function RefreshIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M21 12a9 9 0 1 1-2.6-6.4" />
+      <path d="M21 3v5.5h-5.5" />
+    </NavSvg>
+  );
+}
+
+// Estrella — nota de una actividad evaluable.
+export function StarIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.9L12 3.5z" />
+    </NavSvg>
+  );
+}
+
 // Grupo de personas — estudiantes inscritos.
 export function UsersIcon({ className = 'w-5 h-5' }) {
   return (
