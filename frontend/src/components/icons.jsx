@@ -452,6 +452,88 @@ export function LogoutIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+// Destellos — Tutor IA.
+export function SparklesIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M12 4l1.8 4.4L18 10l-4.2 1.6L12 16l-1.8-4.4L6 10l4.2-1.6L12 4z" />
+      <path d="M18.5 15l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z" />
+      <path d="M6 16.5l.7 1.6 1.6.7-1.6.7-.7 1.6-.7-1.6-1.6-.7 1.6-.7.7-1.6z" />
+    </NavSvg>
+  );
+}
+
+// Enviar (avión de papel) — botón del input del chat.
+export function SendIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M22 2 11 13" />
+      <path d="M22 2 15 22l-4-9-9-4 20-7z" />
+    </NavSvg>
+  );
+}
+
+// Copiar — botón de bloques de código.
+export function CopyIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <rect x="9" y="9" width="12" height="12" rx="2" />
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+    </NavSvg>
+  );
+}
+
+// Chevron — expandir/colapsar (fuentes).
+export function ChevronDownIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <polyline points="6 9 12 15 18 9" />
+    </NavSvg>
+  );
+}
+
+// Más — nueva conversación.
+export function PlusIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <line x1="5" y1="12" x2="19" y2="12" />
+    </NavSvg>
+  );
+}
+
+// Link externo — "Ver material" de una fuente.
+export function ExternalLinkIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </NavSvg>
+  );
+}
+
+// Bombilla — "Hazme una pregunta" / idea.
+export function LightbulbIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M9 18h6" />
+      <path d="M10 21h4" />
+      <path d="M12 3a6 6 0 0 0-3.6 10.8c.5.4.9 1 .9 1.7V16h5.4v-.5c0-.7.4-1.3.9-1.7A6 6 0 0 0 12 3z" />
+    </NavSvg>
+  );
+}
+
+// Lápiz sobre burbuja — "Crea un ejercicio".
+export function PracticeIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+      <path d="M13.5 6.5a2.1 2.1 0 0 1 3 3l-5 5-4 1 1-4 5-5z" />
+    </NavSvg>
+  );
+}
+
 /**
  * Devuelve el componente de ícono de trazo que mejor representa a la categoría
  * de un curso (por su nombre). Fallback: BookIcon.
