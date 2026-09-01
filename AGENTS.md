@@ -29,14 +29,18 @@ Postgres por `neoId`. Social → Neo4j; educativo + gotas → Postgres. Detalle 
 
 | Doc | Cuándo |
 |---|---|
+| [docs/specs/README.md](docs/specs/README.md) | **Flujo SDD**: cómo se agrega/lee una feature (specs + tasks + historial) |
+| [docs/specs/changes/](docs/specs/changes/) | Changes activos (en curso) |
+| [docs/specs/changes/archive/](docs/specs/changes/archive/) | Historial inmutable de features cerradas |
 | [docs/architecture.md](docs/architecture.md) | Dual-DB, auth, modelos, sync, lógica de negocio |
 | [docs/api.md](docs/api.md) | Catálogo de endpoints REST |
 | [docs/conventions.md](docs/conventions.md) | Patrones de código, naming, versionado, glosario |
-| [docs/roadmap.md](docs/roadmap.md) | **Estado actual y qué falta** (etapas + Etapa 6) |
+| [docs/roadmap.md](docs/roadmap.md) | **Estado de etapas** y plan vivo |
+| [docs/rag-security.md](docs/rag-security.md) | Seguridad del tutor RAG (referencia viva) |
+| [docs/process/](docs/process/) | Guías operativas (runbooks, pilotos) |
 | `frontend/design.md` | Sistema visual (paleta, componentes, checklist §12) |
 | `frontend/motion.md` | Motion GSAP + animación de la mascota |
-| `frontend/agent.md` | Specs vivas del frontend (rediseño Learn) |
-| [docs/archive/](docs/archive/) | Specs ya implementadas (histórico) |
+| `frontend/agent.md` | Guía de trabajo frontend + links a rediseños archivados |
 
 **Skills locales** (`Skill` tool, más barato que leer docs enteros):
 `titi-orientation` (mapa), `titi-backend-patterns`, `titi-frontend-patterns`,
@@ -57,6 +61,49 @@ login/inscripción en contenido de cursos y endpoints sociales. Detalle en
 [docs/roadmap.md](docs/roadmap.md) → "Trabajo fuera del plan de etapa".
 
 App live: frontend `https://titiedu.vercel.app` · backend `https://titi-backend.onrender.com`.
+
+---
+
+## Flujo de trabajo — specs (SDD)
+
+Cada feature nueva (o corrección grande) sigue un **change** en
+`docs/specs/changes/{nombre}/`: `proposal.md` (qué+por qué) → `spec.md`
+(requisitos en español claro) → `tasks.md` (checklist de implementación) →
+`verify-report.md` (cómo se probó). Al cerrar, la carpeta se mueve a
+`docs/specs/changes/archive/YYYY-MM-DD-{nombre}/` — **historial inmutable**.
+
+Guía completa (ciclo, plantillas, convenciones): [docs/specs/README.md](docs/specs/README.md).
+
+**Reglas del flujo en Titi:**
+
+- **Root override:** las skills SDD escriben por defecto a `openspec/`; acá el
+  root es `docs/specs/changes/`. Todo subagente delegado recibe la ruta explícita
+  en el prompt.
+- **Idioma:** specs/tasks en español, neutral y legible por humano. El detalle
+  fino para LLMs vive en Engram (`titi_edu`).
+- **Naming:** `kebab-case` en español (ej. `centralizador-notas`).
+- **Archivo inmutable:** nunca editar un change en `archive/`.
+- **Cada change respeta las reglas de oro** de este doc (respuesta API, dual-DB,
+  UI plana, etc.) — ver `docs/specs/config.yaml`.
+
+### Índice de cambios
+
+**Activos** (en curso):
+
+| Change | Estado | Detalle |
+|---|---|---|
+| `centralizador-notas` | 🔲 Planificado | Notas de estudiantes por curso para teachers. [proposal](docs/specs/changes/centralizador-notas/proposal.md) · [spec](docs/specs/changes/centralizador-notas/spec.md) · [tasks](docs/specs/changes/centralizador-notas/tasks.md) |
+
+**Archivados** (historial):
+
+| Change | Fecha | Detalle |
+|---|---|---|
+| `2026-06-27-courses-redesign` | 2026-06-27 | Rediseño catálogo de Cursos v2/v2.1 |
+| `2026-08-25-rag-fase-1` | 2026-08-25 | Tutor RAG texto + HTML (pgvector, embeddings, Groq) |
+| `2026-08-30-learn-redesign` | 2026-08-30 | Sección Learn 3 columnas + Tutor IA panel lateral |
+
+> Historial de **etapas** (roadmap, tags) → [docs/roadmap.md](docs/roadmap.md).
+> Los cambios acá son features/rediseños puntuales, algunos fuera del plan de etapa.
 
 ---
 

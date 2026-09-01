@@ -80,6 +80,25 @@ if (data?.success) { /* ... */ }
 
 ---
 
+---
+
+## Flujo de trabajo — specs (SDD)
+
+Toda feature nueva o corrección grande se documenta como **change** en
+`docs/specs/changes/{nombre}/` (ver [docs/specs/README.md](specs/README.md)).
+
+| Aspecto | Regla |
+|---|---|
+| Naming | `kebab-case` en español (ej. `centralizador-notas`) |
+| Archivos | `proposal.md` → `spec.md` → `tasks.md` → `verify-report.md` |
+| Idioma | Español, neutral, legible por humano |
+| Cierre | Mover carpeta a `archive/YYYY-MM-DD-{nombre}/` — **inmutable** |
+| Config | `docs/specs/config.yaml` (rules + comandos de test/build) |
+| Root override | Skills SDD escriben a `openspec/` por defecto; en Titi root = `docs/specs/changes/` |
+| Engram | Detalle fino para LLMs en memoria (`titi_edu`); archivos = historial humano |
+
+---
+
 ## Versionado y releases
 
 SemVer alineado a etapas. Tag anotado sobre `main`, árbol limpio, smoke test pasado.

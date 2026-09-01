@@ -237,12 +237,13 @@ Como en la Etapa 6: cada subfase cierra con un **MINOR**; el cierre corta el **M
 ## Trabajo fuera del plan de etapa (side tracks)
 
 - **Rediseño catálogo de Cursos (v2 + v2.1):** ✅ implementado. Histórico en
-  [archive/courses-redesign.md](archive/courses-redesign.md). Pendiente opcional no
+  [specs/changes/archive/2026-06-27-courses-redesign](specs/changes/archive/2026-06-27-courses-redesign/spec.md).
+  Pendiente opcional no
   bloqueante: repaso responsive 375px + checklist `design.md` §12.
-- **Rediseño LearnCourse (3 columnas):** ✅ implementado. Layout 3 columnas,
-  riel Notas/Materiales/Comentarios, notas y card "Profundiza" (stub IA) en
-  `pages/LearnCourse.jsx`; QA responsive 375px/1440px OK. Pendiente solo la
-  integración real de la card "Profundiza" con Claude API (`POST /api/lessons/:id/ai`).
+- **Rediseño LearnCourse (3 columnas + Tutor IA):** ✅ implementado. Layout 3
+  columnas, riel Notas/Materiales/Comentarios, Tutor IA como panel lateral en
+  `pages/LearnCourse.jsx`. Histórico en
+  [specs/changes/archive/2026-08-30-learn-redesign](specs/changes/archive/2026-08-30-learn-redesign/spec.md).
 - **Catálogo guest + gate de acceso (sin tag):** ✅ implementado. Guests navegan
   `/` → catálogo público (`GuestShell.jsx`) y `CourseDetail` sin login; contenido
   real de curso (módulos/lecciones/evaluaciones) y endpoints sociales exigen
