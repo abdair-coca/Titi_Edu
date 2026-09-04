@@ -631,21 +631,17 @@ router.get('/lessons/:id/comments', requireAuth, async (req, res) => {
     const usuarios = usuarioIds.length
       ? await prisma.usuario.findMany({
           where: { id: { in: usuarioIds } },
-          select: { id: true, username: true, avatarUrl: true },
+          select: { id: true, username: true },
         })
       : [];
-    const userById = new Map(usuarios.map((u) => [u.id, u]));
-    const commentUserById = new Map(comentarios.map((c) => [c.id, userById.get(c.usuarioId)?.username]));
+    const usernameById = new Map(usuarios.map((u) => [u.id, u.username]));
+    const commentUserById = new Map(comentarios.map((c) => [c.id, usernameById.get(c.usuarioId)]));
 
-    const enriched = comentarios.map((c) => {
-      const author = userById.get(c.usuarioId);
-      return {
-        ...c,
-        username: author?.username || null,
-        avatarUrl: author?.avatarUrl || null,
-        replyToUsername: c.parentId ? commentUserById.get(c.parentId) || null : null,
-      };
-    });
+    const enriched = comentarios.map((c) => ({
+      ...c,
+      username: usernameById.get(c.usuarioId) || null,
+      replyToUsername: c.parentId ? commentUserById.get(c.parentId) || null : null,
+    }));
 
     res.json({ success: true, data: { comentarios: enriched } });
   } catch (err) {
@@ -753,7 +749,7 @@ router.post('/lessons/:id/comments', requireAuth, async (req, res) => {
     res.status(201).json({
       success: true,
       data: {
-        comentario: { ...comentario, username: usuario.username, avatarUrl: usuario.avatarUrl || null },
+        comentario: { ...comentario, username: usuario.username },
       },
     });
   } catch (err) {
