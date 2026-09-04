@@ -1,13 +1,64 @@
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { Router } from 'express';
 import { randomUUID } from 'crypto';
+import multer from 'multer';
 import { runQuery, toNumber } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import prisma from '../prisma.js';
+import { cloudinaryEnabled, uploadBuffer } from '../services/upload.service.js';
 import { checkLogroSocial } from '../services/achievement.service.js';
 import { otorgarGotasPorNeoId } from '../services/gotas.service.js';
 import { avanzarMisionesPorNeoId } from '../services/mision.service.js';
 
 const router = Router();
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const uploadsDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+const uploadAvatar = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = /image\/(jpeg|jpg|png|webp)/.test(file.mimetype);
+    if (!ok) return cb(new Error('Solo se permiten imágenes (jpeg, png, webp)'));
+    cb(null, true);
+  },
+});
+
+const uploadBanner = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 3 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = /image\/(jpeg|jpg|png|webp)/.test(file.mimetype);
+    if (!ok) return cb(new Error('Solo se permiten imágenes (jpeg, png, webp)'));
+    cb(null, true);
+  },
+});
+
+async function storeAvatarImage(file) {
+  if (cloudinaryEnabled) {
+    const { url, publicId } = await uploadBuffer(file.buffer, 'titi/avatars', 'image');
+    return { avatarUrl: url, publicId };
+  }
+  const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+  const filename = `avatar-${randomUUID()}${ext}`;
+  await fs.promises.writeFile(path.join(uploadsDir, filename), file.buffer);
+  return { avatarUrl: `/uploads/${filename}`, publicId: null };
+}
+
+async function storeBannerImage(file) {
+  if (cloudinaryEnabled) {
+    const { url, publicId } = await uploadBuffer(file.buffer, 'titi/banners', 'image');
+    return { bannerUrl: url, publicId };
+  }
+  const ext = path.extname(file.originalname).toLowerCase() || '.jpg';
+  const filename = `banner-${randomUUID()}${ext}`;
+  await fs.promises.writeFile(path.join(uploadsDir, filename), file.buffer);
+  return { bannerUrl: `/uploads/${filename}`, publicId: null };
+}
 
 function publicUser(node) {
   if (!node) return null;
@@ -17,6 +68,7 @@ function publicUser(node) {
     username: p.username,
     bio: p.bio,
     avatarUrl: p.avatarUrl,
+    bannerUrl: p.bannerUrl || null,
     createdAt: p.createdAt?.toString?.() ?? p.createdAt,
   };
 }
@@ -65,6 +117,145 @@ router.get('/me', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('GET /me error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo perfil' });
+  }
+});
+
+// ---- Actualizar perfil propio ----
+router.put('/me', requireAuth, async (req, res) => {
+  try {
+    const { bio, avatarUrl, bannerUrl } = req.body || {};
+
+    if (typeof bio === 'string' && bio.length > 280) {
+      return res.status(400).json({
+        success: false,
+        message: 'La biografía no puede superar los 280 caracteres',
+      });
+    }
+
+    const sets = [];
+    const params = { id: req.user.id };
+
+    if (bio !== undefined) {
+      sets.push('u.bio = $bio');
+      params.bio = typeof bio === 'string' ? bio.trim() : '';
+    }
+    if (avatarUrl !== undefined) {
+      sets.push('u.avatarUrl = $avatarUrl');
+      params.avatarUrl = avatarUrl;
+    }
+    if (bannerUrl !== undefined) {
+      if (bannerUrl === null || bannerUrl === '') {
+        sets.push('u.bannerUrl = null');
+      } else {
+        sets.push('u.bannerUrl = $bannerUrl');
+        params.bannerUrl = bannerUrl;
+      }
+    }
+
+    if (sets.length === 0) {
+      return res.status(400).json({ success: false, message: 'No se enviaron campos para actualizar' });
+    }
+
+    const query = `
+      MATCH (u:Usuario {id: $id})
+      SET ${sets.join(', ')}
+      RETURN u
+    `;
+    const records = await runQuery(query, params);
+    if (records.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+
+    const node = records[0].get('u');
+    res.json({
+      success: true,
+      data: {
+        user: { ...publicUser(node), email: node.properties.email },
+      },
+    });
+  } catch (err) {
+    console.error('PUT /me error', err);
+    res.status(500).json({ success: false, message: 'Error actualizando perfil' });
+  }
+});
+
+// ---- Subir avatar propio ----
+router.post('/me/avatar', requireAuth, (req, res, next) => {
+  uploadAvatar.single('file')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: 'El avatar no puede superar los 2MB' });
+      }
+      return res.status(400).json({ success: false, message: err.message || 'Error al procesar archivo' });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No se envió ningún archivo' });
+    }
+    const { avatarUrl } = await storeAvatarImage(req.file);
+    const records = await runQuery(
+      `MATCH (u:Usuario {id: $id})
+       SET u.avatarUrl = $avatarUrl
+       RETURN u`,
+      { id: req.user.id, avatarUrl }
+    );
+    if (records.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+    const node = records[0].get('u');
+    res.json({
+      success: true,
+      data: {
+        avatarUrl,
+        user: { ...publicUser(node), email: node.properties.email },
+      },
+    });
+  } catch (err) {
+    console.error('POST /me/avatar error', err);
+    res.status(500).json({ success: false, message: 'Error subiendo avatar' });
+  }
+});
+
+// ---- Subir portada/banner propio ----
+router.post('/me/banner', requireAuth, (req, res, next) => {
+  uploadBanner.single('file')(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({ success: false, message: 'La portada no puede superar los 3MB' });
+      }
+      return res.status(400).json({ success: false, message: err.message || 'Error al procesar archivo' });
+    }
+    next();
+  });
+}, async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No se envió ningún archivo' });
+    }
+    const { bannerUrl } = await storeBannerImage(req.file);
+    const records = await runQuery(
+      `MATCH (u:Usuario {id: $id})
+       SET u.bannerUrl = $bannerUrl
+       RETURN u`,
+      { id: req.user.id, bannerUrl }
+    );
+    if (records.length === 0) {
+      return res.status(404).json({ success: false, message: 'Usuario no encontrado' });
+    }
+    const node = records[0].get('u');
+    res.json({
+      success: true,
+      data: {
+        bannerUrl,
+        user: { ...publicUser(node), email: node.properties.email },
+      },
+    });
+  } catch (err) {
+    console.error('POST /me/banner error', err);
+    res.status(500).json({ success: false, message: 'Error subiendo portada' });
   }
 });
 

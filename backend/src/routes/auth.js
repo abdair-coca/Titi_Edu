@@ -23,6 +23,7 @@ function publicUser(node) {
     email: p.email,
     bio: p.bio,
     avatarUrl: p.avatarUrl,
+    bannerUrl: p.bannerUrl || null,
     createdAt: p.createdAt?.toString?.() ?? p.createdAt,
   };
 }
