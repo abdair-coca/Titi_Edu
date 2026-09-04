@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useGamification } from '../context/GamificationContext.jsx';
@@ -27,6 +27,9 @@ import {
 export default function LearnCourse() {
   const { id: courseId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const paramLessonId = searchParams.get('lessonId');
+  const paramComments = searchParams.get('comments');
   const { isAuthenticated, updateUser } = useAuth();
   const { pushGota } = useGamification();
 
@@ -122,9 +125,13 @@ export default function LearnCourse() {
         const c = d.data?.curso;
         setCurso(c);
 
-        // Activar la primera lección por defecto
-        const firstLeccion = c?.modulos?.[0]?.lecciones?.[0];
-        if (firstLeccion) setActiveId(firstLeccion.id);
+        // Activar la lección indicada en query param o la primera por defecto
+        const targetLessonId =
+          paramLessonId && c?.modulos?.some((m) => m.lecciones?.some((l) => l.id === paramLessonId))
+            ? paramLessonId
+            : c?.modulos?.[0]?.lecciones?.[0]?.id;
+        if (targetLessonId) setActiveId(targetLessonId);
+        if (paramComments === 'true') setSidePanel('comentarios');
 
         // Aplicar progreso (set de leccionIds completadas)
         const p = progRes?.data;
@@ -160,6 +167,16 @@ export default function LearnCourse() {
       cancelled = true;
     };
   }, [courseId, isAuthenticated]);
+
+  // Si cambia el query param (ej. navegando desde notificaciones)
+  useEffect(() => {
+    if (paramLessonId) {
+      setActiveId(paramLessonId);
+      if (paramComments === 'true') {
+        setSidePanel('comentarios');
+      }
+    }
+  }, [paramLessonId, paramComments]);
 
   // --- Módulo de la lección activa ---
   const activeModulo = useMemo(() => {

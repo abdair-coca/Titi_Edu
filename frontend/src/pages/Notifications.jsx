@@ -88,18 +88,28 @@ export default function Notifications() {
 }
 
 function NotificationItem({ notif, onClick }) {
+  const isLessonReply = notif.type === 'lesson_comment_reply';
+  const isNewLesson = notif.type === 'new_lesson';
+
   const verb =
     notif.type === 'like' ? 'le dio ❤️ a tu post'
     : notif.type === 'comment' ? 'comentó tu post'
     : notif.type === 'follow' ? 'empezó a seguirte'
     : notif.type === 'logro' ? `desbloqueó el logro ${notif.logroNombre ?? ''} 🏅`
+    : isLessonReply ? `respondió a tu comentario en la lección "${notif.leccionTitulo || 'del curso'}"`
+    : isNewLesson ? `publicó una nueva lección: "${notif.leccionTitulo || 'Nueva lección'}"`
     : 'interactuó contigo';
 
-  const linkTo = notif.user
-    ? `/profile/${notif.user.username}`
-    : notif.actor
-    ? `/profile/${notif.actor.username}`
-    : '#';
+  let linkTo = '#';
+  if (isLessonReply || isNewLesson) {
+    if (notif.cursoId) {
+      linkTo = `/courses/${notif.cursoId}/learn?lessonId=${notif.leccionId || ''}${isLessonReply ? '&comments=true' : ''}`;
+    }
+  } else if (notif.user) {
+    linkTo = `/profile/${notif.user.username}`;
+  } else if (notif.actor) {
+    linkTo = `/profile/${notif.actor.username}`;
+  }
 
   return (
     <li>
@@ -117,7 +127,7 @@ function NotificationItem({ notif, onClick }) {
             src={notif.actor.avatarUrl}
             alt=""
             loading="lazy"
-            className="w-11 h-11 rounded-full bg-titi-cream border-2 border-titi-yellow shrink-0"
+            className="w-11 h-11 rounded-full bg-titi-cream border-2 border-titi-yellow shrink-0 object-cover"
           />
         ) : (
           <div className="w-11 h-11 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold shrink-0">
@@ -129,6 +139,11 @@ function NotificationItem({ notif, onClick }) {
             <span className="font-extrabold">@{notif.actor?.username ?? 'alguien'}</span>{' '}
             <span className="font-semibold text-gray-500">{verb}</span>
           </p>
+          {notif.cursoTitulo && (
+            <p className="text-xs font-semibold text-titi-dark/70 mt-0.5">
+              Curso: {notif.cursoTitulo}
+            </p>
+          )}
           {notif.post?.content && (
             <p className="text-xs text-gray-500 mt-1 line-clamp-2 break-words italic">
               "{notif.post.content}"
