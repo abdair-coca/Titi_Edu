@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import client from '../api/client.js';
+import { resolveMediaUrl } from '../lib/format.js';
 import StreakBadge, { FlameIcon } from './StreakBadge.jsx';
 import useStreak from '../hooks/useStreak.js';
 import GotasCounter, { GotasValue } from './GotasCounter.jsx';
@@ -201,7 +202,7 @@ function Sidebar({ user, onLogout, unread, streak, desktopVisibility = 'md:flex'
           >
             {user.avatarUrl ? (
               <img
-                src={user.avatarUrl}
+                src={resolveMediaUrl(user.avatarUrl)}
                 alt={user.username}
                 className="w-9 h-9 rounded-full object-cover bg-titi-dark border-2 border-titi-yellow shrink-0"
               />

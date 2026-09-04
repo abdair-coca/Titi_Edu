@@ -8,6 +8,7 @@ import OptionsPosts from '../components/OptionsPosts.jsx';
 import PostCard from '../components/PostCard.jsx';
 import StreakBadge from '../components/StreakBadge.jsx';
 import AchievementsSection from '../components/AchievementsSection.jsx';
+import EditProfileModal from '../components/EditProfileModal.jsx';
 import useStreak from '../hooks/useStreak.js';
 
 export default function Profile() {
@@ -24,6 +25,7 @@ export default function Profile() {
   const [followerCount, setFollowerCount] = useState(0);
   const [followBusy, setFollowBusy] = useState(false);
   const [isSelf, setIsSelf] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
 
   const [tab, setTab] = useState('posts'); // 'posts' | 'saved' | 'liked'
 
@@ -237,23 +239,58 @@ export default function Profile() {
   return (
     <div>
       {/* Header del perfil */}
-      <div ref={headerRef} className="titi-card p-6 mb-6 border-t-4 border-t-titi-yellow">
-        <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left">
-          {user.avatarUrl ? (
+      <div ref={headerRef} className="titi-card mb-6 overflow-hidden">
+        {/* Portada / Banner */}
+        <div className="relative w-full h-32 sm:h-44 bg-titi-cream overflow-hidden border-b-2 border-gray-100">
+          {user.bannerUrl ? (
             <img
-              src={user.avatarUrl}
-              alt={user.username}
-              className="w-28 h-28 rounded-full bg-titi-cream border-4 border-titi-yellow shrink-0 shadow-[0_2px_8px_rgba(0,0,0,0.06)]"
+              src={resolveMediaUrl(user.bannerUrl)}
+              alt={`Portada de ${user.username}`}
+              className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-28 h-28 rounded-full bg-titi-yellow text-titi-dark grid place-items-center text-4xl font-extrabold shrink-0 border-4 border-titi-yellow shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-              {user.username?.[0]?.toUpperCase() ?? '?'}
+            <div className="w-full h-full bg-titi-yellow/20 flex items-center justify-center">
+              <span className="text-xs font-bold text-titi-dark/40 tracking-wider uppercase">Titi Educación</span>
             </div>
           )}
+        </div>
 
-          <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 mb-2">
-              <h1 className="text-2xl sm:text-3xl font-black text-titi-dark">@{user.username}</h1>
+        <div className="p-6 pt-0 relative">
+          {/* Fila superior: avatar superpuesto a la izquierda + acciones a la derecha */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-14 sm:-mt-16 mb-4">
+            {/* Avatar con relative z-10 para elevarlo sobre el banner */}
+            <div className="relative z-10 flex justify-center sm:justify-start">
+              {user.avatarUrl ? (
+                <img
+                  src={resolveMediaUrl(user.avatarUrl)}
+                  alt={user.username}
+                  className="w-28 h-28 rounded-full bg-titi-cream border-4 border-white shrink-0 shadow-md object-cover ring-2 ring-gray-100"
+                />
+              ) : (
+                <div className="w-28 h-28 rounded-full bg-titi-yellow text-titi-dark grid place-items-center text-4xl font-extrabold shrink-0 border-4 border-white shadow-md ring-2 ring-gray-100">
+                  {user.username?.[0]?.toUpperCase() ?? '?'}
+                </div>
+              )}
+            </div>
+
+            {/* Acciones a la derecha (Editar perfil / Seguir / Vos) */}
+            <div className="flex items-center justify-center sm:justify-end gap-2 shrink-0">
+              {isSelf && (
+                <>
+                  <span className="inline-block text-xs font-extrabold text-titi-dark bg-titi-yellow px-3 py-1 rounded-full">Vos</span>
+                  <button
+                    type="button"
+                    onClick={() => setEditModalOpen(true)}
+                    className="titi-btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5" aria-hidden="true">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+                    </svg>
+                    <span>Editar perfil</span>
+                  </button>
+                </>
+              )}
               {!isSelf && isAuthenticated && (
                 <button
                   type="button"
@@ -268,10 +305,12 @@ export default function Profile() {
                   {followBusy ? '…' : following ? 'Siguiendo' : 'Seguir'}
                 </button>
               )}
-              {isSelf && (
-                <span className="inline-block text-xs font-extrabold text-titi-dark bg-titi-yellow px-3 py-1 rounded-full">Vos</span>
-              )}
             </div>
+          </div>
+
+          {/* Datos del usuario debajo del avatar */}
+          <div className="text-center sm:text-left">
+            <h1 className="text-2xl sm:text-3xl font-black text-titi-dark mb-1">@{user.username}</h1>
 
             {user.bio ? (
               <p className="text-titi-dark whitespace-pre-wrap mb-2 font-semibold">{user.bio}</p>
@@ -295,26 +334,24 @@ export default function Profile() {
               </p>
             )}
           </div>
-        </div>
 
-        {/* Racha — solo para mi propio perfil */}
+          {/* Racha — solo para mi propio perfil */}
+          <div className="mt-6">
+            <StreakBadge
+              variant="hero"
+              racha={isSelf ? streak.racha : profileStreak?.racha}
+              estaActiva={isSelf ? streak.estaActiva : profileStreak?.estaActiva}
+              ultimaActividad={isSelf ? streak.ultimaActividad : profileStreak?.ultimaActividad}
+              isSelf={isSelf}
+            />
+          </div>
 
-        <div className="mt-6">
-          <StreakBadge
-            variant="hero"
-            racha={isSelf ? streak.racha : profileStreak?.racha}
-            estaActiva={isSelf ? streak.estaActiva : profileStreak?.estaActiva}
-            ultimaActividad={isSelf ? streak.ultimaActividad : profileStreak?.ultimaActividad}
-            isSelf={isSelf}
-          />
-        </div>
-
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-gray-100">
-          <Stat label="Posts" value={stats.postCount} color="text-titi-yellow" />
-          <Stat label="Seguidores" value={followerCount} color="text-blue-500" />
-          <Stat label="Seguidos" value={stats.followingCount} color="text-green-600" />
+          {/* Stats */}
+          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-gray-100">
+            <Stat label="Posts" value={stats.postCount} color="text-titi-yellow" />
+            <Stat label="Seguidores" value={followerCount} color="text-blue-500" />
+            <Stat label="Seguidos" value={stats.followingCount} color="text-green-600" />
+          </div>
         </div>
       </div>
 
@@ -401,6 +438,18 @@ export default function Profile() {
             onChange={handlePostChange}
           />
         </section>
+      )}
+
+      {/* Modal para editar perfil propio */}
+      {isSelf && (
+        <EditProfileModal
+          open={editModalOpen}
+          user={user}
+          onSaved={(updated) => {
+            setProfile((prev) => (prev ? { ...prev, user: { ...prev.user, ...updated } } : prev));
+          }}
+          onClose={() => setEditModalOpen(false)}
+        />
       )}
     </div>
   );
