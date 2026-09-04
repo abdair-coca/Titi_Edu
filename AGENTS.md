@@ -93,6 +93,7 @@ Guía completa (ciclo, plantillas, convenciones): [docs/specs/README.md](docs/sp
 | Change | Estado | Detalle |
 |---|---|---|
 | `centralizador-notas` | 🔲 Planificado | Notas de estudiantes por curso para teachers. [proposal](docs/specs/changes/centralizador-notas/proposal.md) · [spec](docs/specs/changes/centralizador-notas/spec.md) · [tasks](docs/specs/changes/centralizador-notas/tasks.md) |
+| `edicion-perfil` | 🔲 Planificado | Edición de perfil propio (avatar, banner, bio). [proposal](docs/specs/changes/edicion-perfil/proposal.md) · [spec](docs/specs/changes/edicion-perfil/spec.md) · [tasks](docs/specs/changes/edicion-perfil/tasks.md) |
 
 **Archivados** (historial):
 
