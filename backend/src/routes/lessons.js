@@ -1,5 +1,7 @@
 import { Router } from 'express';
+import { randomUUID } from 'crypto';
 import jwt from 'jsonwebtoken';
+import { runQuery } from '../db.js';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { loadCurrentUser, requireRole, isOwnerOrAdmin, ensureCourseContentAccess } from '../middleware/permissions.js';
@@ -621,24 +623,29 @@ router.get('/lessons/:id/comments', requireAuth, async (req, res) => {
 
     const comentarios = await prisma.comentarioLeccion.findMany({
       where: { leccionId: req.params.id },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: 'asc' },
     });
 
-    // ComentarioLeccion no tiene relación `usuario` definida en el schema,
-    // así que resolvemos los usernames en una segunda query.
+    // Resolver usernames de autores y de comentarios padre
     const usuarioIds = [...new Set(comentarios.map((c) => c.usuarioId))];
     const usuarios = usuarioIds.length
       ? await prisma.usuario.findMany({
           where: { id: { in: usuarioIds } },
-          select: { id: true, username: true },
+          select: { id: true, username: true, avatarUrl: true },
         })
       : [];
-    const usernameById = new Map(usuarios.map((u) => [u.id, u.username]));
+    const userById = new Map(usuarios.map((u) => [u.id, u]));
+    const commentUserById = new Map(comentarios.map((c) => [c.id, userById.get(c.usuarioId)?.username]));
 
-    const enriched = comentarios.map((c) => ({
-      ...c,
-      username: usernameById.get(c.usuarioId) || null,
-    }));
+    const enriched = comentarios.map((c) => {
+      const author = userById.get(c.usuarioId);
+      return {
+        ...c,
+        username: author?.username || null,
+        avatarUrl: author?.avatarUrl || null,
+        replyToUsername: c.parentId ? commentUserById.get(c.parentId) || null : null,
+      };
+    });
 
     res.json({ success: true, data: { comentarios: enriched } });
   } catch (err) {
@@ -647,13 +654,14 @@ router.get('/lessons/:id/comments', requireAuth, async (req, res) => {
   }
 });
 
-// ---- POST /api/lessons/:id/comments  — crear comentario ----
+// ---- POST /api/lessons/:id/comments  — crear comentario (root o reply) ----
 router.post('/lessons/:id/comments', requireAuth, async (req, res) => {
   try {
     const usuario = await loadCurrentUser(req, res);
     if (!usuario) return;
 
     const texto = (req.body?.texto ?? '').toString().trim();
+    const parentId = req.body?.parentId ? String(req.body.parentId).trim() : null;
     if (!texto) {
       return res.status(400).json({
         success: false,
@@ -663,7 +671,12 @@ router.post('/lessons/:id/comments', requireAuth, async (req, res) => {
 
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      select: { id: true, estado: true, modulo: { select: { cursoId: true, estado: true } } },
+      select: {
+        id: true,
+        titulo: true,
+        estado: true,
+        modulo: { select: { cursoId: true, estado: true, curso: { select: { id: true, titulo: true } } } },
+      },
     });
     if (!leccion) {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
@@ -674,18 +687,73 @@ router.post('/lessons/:id/comments', requireAuth, async (req, res) => {
     });
     if (!access) return;
 
+    let finalParentId = null;
+    let parentComment = null;
+    if (parentId) {
+      parentComment = await prisma.comentarioLeccion.findUnique({
+        where: { id: parentId },
+        select: { id: true, leccionId: true, usuarioId: true, parentId: true },
+      });
+      if (!parentComment || parentComment.leccionId !== leccion.id) {
+        return res.status(400).json({ success: false, message: 'Comentario padre inválido' });
+      }
+      // Regla de 1 solo nivel: si el padre ya es respuesta, anclar a la raíz
+      finalParentId = parentComment.parentId || parentComment.id;
+    }
+
     const comentario = await prisma.comentarioLeccion.create({
       data: {
         texto,
         usuarioId: usuario.id,
         leccionId: leccion.id,
+        parentId: finalParentId,
       },
     });
+
+    // Notificación en Neo4j al autor respondido (Regla de oro 2: no bloquea)
+    if (parentComment && parentComment.usuarioId !== usuario.id) {
+      try {
+        const targetUser = await prisma.usuario.findUnique({
+          where: { id: parentComment.usuarioId },
+          select: { neoId: true },
+        });
+        if (targetUser?.neoId) {
+          const notifId = randomUUID();
+          await runQuery(
+            `MATCH (target:Usuario {id: $targetNeoId}), (actor:Usuario {id: $actorNeoId})
+             CREATE (target)<-[:RECIBIO]-(n:Notificacion {
+               id: $notifId,
+               type: 'lesson_comment_reply',
+               read: false,
+               createdAt: datetime(),
+               actorId: $actorNeoId,
+               cursoId: $cursoId,
+               leccionId: $leccionId,
+               cursoTitulo: $cursoTitulo,
+               leccionTitulo: $leccionTitulo,
+               commentId: $commentId
+             })`,
+            {
+              targetNeoId: targetUser.neoId,
+              actorNeoId: req.user.id,
+              notifId,
+              cursoId: leccion.modulo.curso?.id || '',
+              leccionId: leccion.id,
+              cursoTitulo: leccion.modulo.curso?.titulo || '',
+              leccionTitulo: leccion.titulo || '',
+              commentId: comentario.id,
+            }
+          );
+        }
+      } catch (notifErr) {
+        console.error('Error enviando notificacion de respuesta en leccion:', notifErr);
+      }
+    }
 
     res.status(201).json({
       success: true,
       data: {
-        comentario: { ...comentario, username: usuario.username },
+        comentario: { ...comentario, username: usuario.username, avatarUrl: usuario.avatarUrl || null },
       },
     });
   } catch (err) {

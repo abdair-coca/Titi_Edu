@@ -24,7 +24,7 @@ const mocks = vi.hoisted(() => {
     notaLeccion: { count: vi.fn(), deleteMany: vi.fn() },
     comentarioLeccion: { count: vi.fn(), deleteMany: vi.fn() },
     cursoProfesor: { count: vi.fn(), deleteMany: vi.fn() },
-    inscripcion: { findUnique: vi.fn(), count: vi.fn(), deleteMany: vi.fn() },
+    inscripcion: { findUnique: vi.fn(), findMany: vi.fn(), count: vi.fn(), deleteMany: vi.fn() },
     certificado: { count: vi.fn(), updateMany: vi.fn() },
     tokenServicio: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
     operacionAutoria: {
@@ -51,6 +51,7 @@ vi.mock('../../src/prisma.js', () => ({ default: mocks.client }));
 vi.mock('../../src/db.js', () => ({ runQuery: vi.fn(), toNumber: (value) => Number(value || 0), default: {} }));
 
 import app from '../../src/app.js';
+import { runQuery } from '../../src/db.js';
 
 const jwtToken = jwt.sign({ id: 'neo-author' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 const auth = { Authorization: `Bearer ${jwtToken}` };
@@ -760,6 +761,124 @@ describe('HTML lesson authoring', () => {
     });
     expect(mocks.client.leccion.updateMany).toHaveBeenCalledWith({
       where: { id: lesson.id, version: lesson.version }, data: { version: { increment: 1 } },
+    });
+  });
+
+  describe('POST /api/authoring/lessons/:id/publish notifications', () => {
+    const draftLesson = {
+      id: 'l-draft-1',
+      titulo: 'Nueva Lección Importante',
+      contenido: 'Contenido lección',
+      formatoContenido: 'TEXTO',
+      videoUrl: null,
+      orden: 1,
+      estado: 'BORRADOR',
+      publishedAt: null,
+      archivedAt: null,
+      version: 1,
+      recursoHtml: null,
+      modulo: {
+        id: 'm-pub-1',
+        titulo: 'Módulo 1',
+        estado: 'PUBLICADO',
+        version: 1,
+        curso: {
+          id: 'c-pub-1',
+          titulo: 'Curso de Grafos',
+          creadorId: author.id,
+          version: 1,
+          publicado: true,
+          profesores: [],
+        },
+      },
+    };
+
+    it('notifica a estudiantes inscritos no completados en primera publicación', async () => {
+      const expectedFingerprint = fingerprint({
+        moduleVersion: 1,
+        lesson: {
+          titulo: draftLesson.titulo,
+          contenido: draftLesson.contenido,
+          formatoContenido: draftLesson.formatoContenido,
+          videoUrl: null,
+          orden: 1,
+          estado: 'BORRADOR',
+          publishedAt: null,
+          archivedAt: null,
+          version: 1,
+        },
+        htmlResource: null,
+      });
+
+      mocks.client.leccion.findUnique.mockResolvedValue(draftLesson);
+      mocks.client.leccion.updateMany.mockResolvedValue({ count: 1 });
+      mocks.client.inscripcion.findMany.mockResolvedValue([
+        { usuario: { neoId: 'student-neo-1' } },
+        { usuario: { neoId: 'student-neo-2' } },
+      ]);
+
+      const res = await request(app)
+        .post('/api/authoring/lessons/l-draft-1/publish')
+        .set(auth)
+        .set('Idempotency-Key', 'pub-lesson-notif-1')
+        .send({ expectedFingerprint });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(mocks.client.inscripcion.findMany).toHaveBeenCalledWith({
+        where: { cursoId: 'c-pub-1', completado: false },
+        select: { usuario: { select: { neoId: true } } },
+      });
+      expect(runQuery).toHaveBeenCalledWith(
+        expect.stringContaining("type: 'new_lesson'"),
+        expect.objectContaining({
+          students: ['student-neo-1', 'student-neo-2'],
+          cursoId: 'c-pub-1',
+          leccionId: 'l-draft-1',
+          cursoTitulo: 'Curso de Grafos',
+          leccionTitulo: 'Nueva Lección Importante',
+        })
+      );
+    });
+
+    it('no genera notificaciones si la lección ya había sido publicada antes (publishedAt !== null)', async () => {
+      const previouslyPublishedLesson = {
+        ...draftLesson,
+        id: 'l-repub-1',
+        publishedAt: new Date('2026-08-01T00:00:00.000Z'),
+      };
+      const expectedFingerprint = fingerprint({
+        moduleVersion: 1,
+        lesson: {
+          titulo: previouslyPublishedLesson.titulo,
+          contenido: previouslyPublishedLesson.contenido,
+          formatoContenido: previouslyPublishedLesson.formatoContenido,
+          videoUrl: null,
+          orden: 1,
+          estado: 'BORRADOR',
+          publishedAt: previouslyPublishedLesson.publishedAt,
+          archivedAt: null,
+          version: 1,
+        },
+        htmlResource: null,
+      });
+
+      mocks.client.leccion.findUnique.mockResolvedValue(previouslyPublishedLesson);
+      mocks.client.leccion.updateMany.mockResolvedValue({ count: 1 });
+
+      const res = await request(app)
+        .post('/api/authoring/lessons/l-repub-1/publish')
+        .set(auth)
+        .set('Idempotency-Key', 'pub-lesson-notif-2')
+        .send({ expectedFingerprint });
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(mocks.client.inscripcion.findMany).not.toHaveBeenCalled();
+      expect(runQuery).not.toHaveBeenCalledWith(
+        expect.stringContaining("type: 'new_lesson'"),
+        expect.anything()
+      );
     });
   });
 });

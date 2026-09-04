@@ -490,6 +490,9 @@ router.put('/lessons/:id', requireAuthoringPrincipal('content:write'), handle(as
 
 router.post('/lessons/:id/publish', requireAuthoringPrincipal('publish'), handle(async (req, res) => {
   let publishedLessonId = null;
+  let isFirstPublish = false;
+  let lessonNotificationData = null;
+
   await executeIdempotent(req, res, { accion: 'lesson.publish' }, async (tx) => {
     const lesson = await tx.leccion.findUnique({
       where: { id: req.params.id },
@@ -499,6 +502,17 @@ router.post('/lessons/:id/publish', requireAuthoringPrincipal('publish'), handle
     assertCourseAccess(req.authoringPrincipal, lesson.modulo.curso);
     assertExpected(req, lessonFingerprint(lesson));
     if (lesson.estado !== 'BORRADOR') throw new AuthoringError(409, 'Solo se puede publicar una leccion en borrador');
+
+    isFirstPublish = lesson.publishedAt === null;
+    if (isFirstPublish) {
+      lessonNotificationData = {
+        cursoId: lesson.modulo.curso.id,
+        cursoTitulo: lesson.modulo.curso.titulo,
+        leccionId: lesson.id,
+        leccionTitulo: lesson.titulo,
+      };
+    }
+
     await claimCourseVersion(tx, lesson.modulo.curso);
     await claimModuleVersion(tx, lesson.modulo);
     const claimed = await tx.leccion.updateMany({
@@ -513,7 +527,56 @@ router.post('/lessons/:id/publish', requireAuthoringPrincipal('publish'), handle
     publishedLessonId = publishedLesson.id;
     return { data: { lesson: publishedLesson, moduleActivated: lesson.modulo.estado === 'BORRADOR' } };
   });
+
   if (publishedLessonId) scheduleLessonIndex(publishedLessonId);
+
+  // Disparar notificaciones a alumnos inscritos (no completados) solo en primera publicación
+  if (isFirstPublish && lessonNotificationData) {
+    try {
+      const inscripciones = await prisma.inscripcion.findMany({
+        where: {
+          cursoId: lessonNotificationData.cursoId,
+          completado: false,
+        },
+        select: {
+          usuario: { select: { neoId: true } },
+        },
+      });
+
+      const studentNeoIds = inscripciones
+        .map((i) => i.usuario?.neoId)
+        .filter(Boolean);
+
+      if (studentNeoIds.length > 0) {
+        const actorNeoId = req.authoringPrincipal?.neoId || req.user?.id || null;
+        await runQuery(
+          `UNWIND $students AS studentNeoId
+           MATCH (u:Usuario {id: studentNeoId})
+           CREATE (u)<-[:RECIBIO]-(n:Notificacion {
+             id: randomUUID(),
+             type: 'new_lesson',
+             read: false,
+             createdAt: datetime(),
+             actorId: $actorNeoId,
+             cursoId: $cursoId,
+             leccionId: $leccionId,
+             cursoTitulo: $cursoTitulo,
+             leccionTitulo: $leccionTitulo
+           })`,
+          {
+            students: studentNeoIds,
+            actorNeoId,
+            cursoId: lessonNotificationData.cursoId,
+            leccionId: lessonNotificationData.leccionId,
+            cursoTitulo: lessonNotificationData.cursoTitulo,
+            leccionTitulo: lessonNotificationData.leccionTitulo,
+          }
+        );
+      }
+    } catch (notifErr) {
+      console.error('Error notificando nueva leccion a alumnos:', notifErr);
+    }
+  }
 }));
 
 router.post('/lessons/:id/archive', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {

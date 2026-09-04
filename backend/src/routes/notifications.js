@@ -36,6 +36,11 @@ router.get('/', requireAuth, async (req, res) => {
           : null,
         post: null,
         user: null,
+        cursoId: n.cursoId ?? null,
+        leccionId: n.leccionId ?? null,
+        cursoTitulo: n.cursoTitulo ?? null,
+        leccionTitulo: n.leccionTitulo ?? null,
+        commentId: n.commentId ?? null,
       };
       if (target && labels.includes('Post')) {
         const p = target.properties;

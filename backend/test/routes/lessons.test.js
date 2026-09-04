@@ -9,7 +9,7 @@ vi.mock('../../src/services/gotas.service.js', () => ({ otorgarGotas: vi.fn() })
 vi.mock('../../src/services/mision.service.js', () => ({ avanzarMisiones: vi.fn() }));
 vi.mock('../../src/prisma.js', () => {
   const client = {
-    usuario: { findUnique: vi.fn() },
+    usuario: { findUnique: vi.fn(), findMany: vi.fn() },
     leccion: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn() },
     modulo: { findUnique: vi.fn() },
     curso: { findUnique: vi.fn() },
@@ -17,6 +17,7 @@ vi.mock('../../src/prisma.js', () => {
     intentoHtmlLeccion: { count: vi.fn(), create: vi.fn(), findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
     resultadoHtmlLeccion: { findUnique: vi.fn(), upsert: vi.fn() },
     progreso: { findUnique: vi.fn(), upsert: vi.fn() },
+    comentarioLeccion: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
   };
   client.$transaction = vi.fn(async (callback) => callback(client));
   return { default: client };
@@ -176,6 +177,7 @@ import { actualizarRacha, checkCursoCompletado } from '../../src/services/progre
 import { checkLogrosLeccion } from '../../src/services/achievement.service.js';
 import { otorgarGotas } from '../../src/services/gotas.service.js';
 import { avanzarMisiones } from '../../src/services/mision.service.js';
+import { runQuery } from '../../src/db.js';
 
 const token = jwt.sign({ id: 'neo-1' }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
@@ -338,5 +340,123 @@ describe('POST /api/lessons/:id/complete (inscripción)', () => {
     expect(prisma.progreso.upsert).toHaveBeenCalledWith(expect.objectContaining({
       where: { usuarioId_leccionId: { usuarioId: 'u1', leccionId: 'l-normal' } },
     }));
+  });
+});
+
+describe('Lesson comments and replies', () => {
+  const lessonData = {
+    id: 'l-comm',
+    titulo: 'Introducción a Grafos',
+    estado: 'PUBLICADA',
+    modulo: { cursoId: 'c1', estado: 'PUBLICADO', curso: { id: 'c1', titulo: 'Bases de Datos' } },
+  };
+
+  function allowStudent() {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', username: 'estudiante1', rol: 'ESTUDIANTE' });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'prof1', publicado: true, profesores: [] });
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
+    prisma.leccion.findUnique.mockResolvedValue(lessonData);
+  }
+
+  it('GET /api/lessons/:id/comments devuelve comentarios ordenados con parentId y replyToUsername', async () => {
+    allowStudent();
+    prisma.comentarioLeccion.findMany.mockResolvedValue([
+      { id: 'c1', texto: 'Comentario raíz', usuarioId: 'u1', leccionId: 'l-comm', parentId: null, createdAt: new Date() },
+      { id: 'c2', texto: 'Respuesta al raíz', usuarioId: 'u2', leccionId: 'l-comm', parentId: 'c1', createdAt: new Date() },
+    ]);
+    prisma.usuario.findMany.mockResolvedValue([
+      { id: 'u1', username: 'estudiante1' },
+      { id: 'u2', username: 'profesor1' },
+    ]);
+
+    const res = await request(app).get('/api/lessons/l-comm/comments').set('Authorization', `Bearer ${token}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.comentarios).toHaveLength(2);
+    expect(res.body.data.comentarios[0].replyToUsername).toBeNull();
+    expect(res.body.data.comentarios[1].replyToUsername).toBe('estudiante1');
+  });
+
+  it('POST /api/lessons/:id/comments crea comentario raíz', async () => {
+    allowStudent();
+    prisma.comentarioLeccion.create.mockResolvedValue({
+      id: 'c-new',
+      texto: 'Nueva duda',
+      usuarioId: 'u1',
+      leccionId: 'l-comm',
+      parentId: null,
+      createdAt: new Date(),
+    });
+
+    const res = await request(app)
+      .post('/api/lessons/l-comm/comments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ texto: 'Nueva duda' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.comentario.texto).toBe('Nueva duda');
+    expect(res.body.data.comentario.parentId).toBeNull();
+  });
+
+  it('POST /api/lessons/:id/comments crea respuesta y dispara notificación a autor padre', async () => {
+    allowStudent();
+    // El comentario padre pertenece a u2 (otro usuario)
+    prisma.comentarioLeccion.findUnique.mockResolvedValue({
+      id: 'c1',
+      leccionId: 'l-comm',
+      usuarioId: 'u2',
+      parentId: null,
+    });
+    prisma.comentarioLeccion.create.mockResolvedValue({
+      id: 'c-reply',
+      texto: 'Esta es mi respuesta',
+      usuarioId: 'u1',
+      leccionId: 'l-comm',
+      parentId: 'c1',
+      createdAt: new Date(),
+    });
+    // u2 tiene neoId
+    prisma.usuario.findUnique.mockImplementation(async ({ where }) => {
+      if (where.id === 'u2') return { id: 'u2', neoId: 'neo-u2' };
+      return { id: 'u1', username: 'estudiante1', rol: 'ESTUDIANTE' };
+    });
+
+    const res = await request(app)
+      .post('/api/lessons/l-comm/comments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ texto: 'Esta es mi respuesta', parentId: 'c1' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.comentario.parentId).toBe('c1');
+    expect(runQuery).toHaveBeenCalledWith(
+      expect.stringContaining("type: 'lesson_comment_reply'"),
+      expect.objectContaining({
+        targetNeoId: 'neo-u2',
+        cursoId: 'c1',
+        leccionId: 'l-comm',
+      })
+    );
+  });
+
+  it('POST /api/lessons/:id/comments rechaza parentId de otra lección', async () => {
+    allowStudent();
+    prisma.comentarioLeccion.findUnique.mockResolvedValue({
+      id: 'c-other',
+      leccionId: 'different-lesson',
+      usuarioId: 'u2',
+      parentId: null,
+    });
+
+    const res = await request(app)
+      .post('/api/lessons/l-comm/comments')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ texto: 'Respuesta inválida', parentId: 'c-other' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.message).toContain('Comentario padre inválido');
   });
 });

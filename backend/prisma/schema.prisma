@@ -518,8 +518,12 @@ model ComentarioLeccion {
   texto     String
   usuarioId String
   leccionId String
+  parentId  String?
   createdAt DateTime @default(now())
-  leccion   Leccion  @relation(fields: [leccionId], references: [id])
+
+  leccion    Leccion             @relation(fields: [leccionId], references: [id])
+  parent     ComentarioLeccion?  @relation("RespuestasComentarioLeccion", fields: [parentId], references: [id], onDelete: Cascade)
+  respuestas ComentarioLeccion[] @relation("RespuestasComentarioLeccion")
 }
 
 model Logro {
