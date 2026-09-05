@@ -147,17 +147,13 @@ async function readJsonResponse(response, label) {
   return payload;
 }
 
-export function decodeHtmlEntities(value) {
-  return String(value || '')
-    .replace(/&#(\d+);/g, (_, code) => String.fromCodePoint(Number(code)))
-    .replace(/&#x([\da-f]+);/gi, (_, code) => String.fromCodePoint(Number.parseInt(code, 16)))
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;|&apos;/gi, "'");
-}
+import {
+  decodeHtmlEntities,
+  extractLessonHtmlContent,
+  normalizeText,
+} from './html-extractor.service.js';
+
+export { decodeHtmlEntities, extractLessonHtmlContent, normalizeText };
 
 export function htmlToText(html) {
   return decodeHtmlEntities(String(html || '')
@@ -169,10 +165,6 @@ export function htmlToText(html) {
     .replace(/<[^>]+>/g, ' '))
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-export function normalizeText(value) {
-  return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
 export function prepareEmbeddingText(value, { kind = 'query', title = null } = {}) {
@@ -200,7 +192,7 @@ export function chunkText(value, chunkSize = DEFAULT_CHUNK_SIZE, overlap = DEFAU
 
 export function lessonRagText(lesson) {
   const sections = [lesson.titulo, lesson.contenido];
-  if (lesson.recursoHtml?.html) sections.push(htmlToText(lesson.recursoHtml.html));
+  if (lesson.recursoHtml?.html) sections.push(extractLessonHtmlContent(lesson.recursoHtml.html));
   return normalizeText(sections.filter(Boolean).join('\n\n'));
 }
 

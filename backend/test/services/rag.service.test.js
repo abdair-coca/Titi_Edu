@@ -58,6 +58,21 @@ describe('RAG text preparation', () => {
       .toBe('Título Contenido Actividad');
   });
 
+  it('combines lesson text with interactive game HTML content', () => {
+    const gameHtml = `
+      <div id="game"></div>
+      <script>
+        const questions = [
+          { pregunta: '¿Qué es una variable?', respuesta: 'Un contenedor para almacenar valores.' }
+        ];
+      </script>
+    `;
+    const text = lessonRagText({ titulo: 'Lección 1', contenido: 'Fundamentos', recursoHtml: { html: gameHtml } });
+    expect(text).toContain('Lección 1 Fundamentos');
+    expect(text).toContain('Pregunta: ¿Qué es una variable?');
+    expect(text).toContain('Respuesta correcta: Un contenedor para almacenar valores.');
+  });
+
   it('uses one retrieval preprocessing contract for queries and documents', () => {
     expect(prepareEmbeddingText('¿Qué es una variable?')).toBe('task: search result | query: ¿Qué es una variable?');
     expect(prepareEmbeddingText('Una variable almacena un valor.', { kind: 'document', title: 'Variables' }))
