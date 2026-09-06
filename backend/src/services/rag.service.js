@@ -176,8 +176,102 @@ export function prepareEmbeddingText(value, { kind = 'query', title = null } = {
 }
 
 export function chunkText(value, chunkSize = DEFAULT_CHUNK_SIZE, overlap = DEFAULT_CHUNK_OVERLAP) {
-  const text = normalizeText(value);
+  if (value == null) return [];
+  const raw = String(value);
+  if (!raw.trim()) return [];
+
+  // 1) Si contiene separadores de párrafo (\n\n), respetar bloques semánticos (Pregunta|Concepto|Slide)
+  if (raw.includes('\n')) {
+    const sections = raw
+      .split(/\n\s*\n/)
+      .map((part) => normalizeText(part))
+      .filter(Boolean);
+
+    if (sections.length > 1) {
+      const chunks = [];
+      let current = '';
+      for (const section of sections) {
+        // Sección más grande que chunkSize → partir por oraciones y fallback a char slicing
+        if (section.length > chunkSize) {
+          if (current) {
+            chunks.push(current);
+            current = '';
+          }
+          // intentar split por oraciones
+          const sentences = section.split(/(?<=[.!?。！？])\s+/).map((s) => s.trim()).filter(Boolean);
+          if (sentences.length > 1 && sentences.every((s) => s.length <= chunkSize)) {
+            let buf = '';
+            for (const sentence of sentences) {
+              const sep = buf ? ' ' : '';
+              if (buf.length + sep.length + sentence.length <= chunkSize) {
+                buf += sep + sentence;
+              } else {
+                if (buf) chunks.push(buf);
+                buf = sentence;
+              }
+            }
+            if (buf) chunks.push(buf);
+          } else {
+            // fallback char slicing con overlap para esta sección larga
+            let start = 0;
+            while (start < section.length) {
+              const end = Math.min(section.length, start + chunkSize);
+              const chunk = section.slice(start, end).trim();
+              if (chunk) chunks.push(chunk);
+              if (end === section.length) break;
+              start = Math.max(start + 1, end - overlap);
+            }
+          }
+          continue;
+        }
+
+        const sep = current ? '\n\n' : '';
+        if (current.length + sep.length + section.length <= chunkSize) {
+          current += sep + section;
+        } else {
+          if (current) chunks.push(current);
+          // En modo semántico no arrastramos cola a mitad de bloque — cada Pregunta/Concepto queda intacta
+          current = section;
+        }
+      }
+      if (current) chunks.push(current);
+      return chunks.filter(Boolean);
+    }
+  }
+
+  // 2) Fallback genérico: texto plano sin bloques → normalizar y empaquetar
+  const text = normalizeText(raw);
   if (!text) return [];
+  if (text.length <= chunkSize) return [text];
+
+  // intentar empaquetado por oraciones si hay puntuación
+  const sentences = text.split(/(?<=[.!?。！？])\s+/).map((s) => s.trim()).filter(Boolean);
+  if (sentences.length > 1 && sentences.every((s) => s.length <= chunkSize)) {
+    const chunks = [];
+    let buf = '';
+    for (const sentence of sentences) {
+      const sep = buf ? ' ' : '';
+      if (buf.length + sep.length + sentence.length <= chunkSize) {
+        buf += sep + sentence;
+      } else {
+        if (buf) chunks.push(buf);
+        // overlap de 1 oración si cabe
+        if (overlap > 0 && buf) {
+          const words = buf.split(' ');
+          let tail = words.slice(-Math.ceil(overlap / 6)).join(' ');
+          if (tail.length > overlap) tail = tail.slice(-overlap);
+          const candidate = tail ? `${tail} ${sentence}` : sentence;
+          buf = candidate.length <= chunkSize ? candidate : sentence;
+        } else {
+          buf = sentence;
+        }
+      }
+    }
+    if (buf) chunks.push(buf);
+    return chunks;
+  }
+
+  // 3) Fallback final: slicing por caracteres con overlap (preserva contrato legacy para strings sin espacios)
   const chunks = [];
   let start = 0;
   while (start < text.length) {
@@ -191,9 +285,20 @@ export function chunkText(value, chunkSize = DEFAULT_CHUNK_SIZE, overlap = DEFAU
 }
 
 export function lessonRagText(lesson) {
-  const sections = [lesson.titulo, lesson.contenido];
-  if (lesson.recursoHtml?.html) sections.push(extractLessonHtmlContent(lesson.recursoHtml.html));
-  return normalizeText(sections.filter(Boolean).join('\n\n'));
+  const parts = [];
+  if (lesson.titulo) {
+    const t = normalizeText(lesson.titulo);
+    if (t) parts.push(t);
+  }
+  if (lesson.contenido) {
+    const c = normalizeText(lesson.contenido);
+    if (c) parts.push(c);
+  }
+  if (lesson.recursoHtml?.html) {
+    const htmlText = extractLessonHtmlContent(lesson.recursoHtml.html);
+    if (htmlText) parts.push(htmlText);
+  }
+  return parts.filter(Boolean).join('\n\n');
 }
 
 function hashContent(content) {

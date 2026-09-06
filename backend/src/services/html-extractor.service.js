@@ -102,6 +102,141 @@ const CODE_EXCLUDE_TOKENS = new Set([
   'source',
   'type',
   'score',
+  // --- ampliado: JS runtime / bundler / DOM / CSS / misc ---
+  'console',
+  'log',
+  'warn',
+  'error',
+  'debug',
+  'import',
+  'export',
+  'require',
+  'module',
+  'exports',
+  'default',
+  'async',
+  'await',
+  'promise',
+  'then',
+  'catch',
+  'finally',
+  'resolve',
+  'reject',
+  'setTimeout',
+  'setInterval',
+  'clearTimeout',
+  'clearInterval',
+  'requestAnimationFrame',
+  'cancelAnimationFrame',
+  'fetch',
+  'axios',
+  'json',
+  'parse',
+  'stringify',
+  'localStorage',
+  'sessionStorage',
+  'Math',
+  'random',
+  'floor',
+  'ceil',
+  'round',
+  'Date',
+  'Array',
+  'Object',
+  'JSON',
+  'window',
+  'document',
+  'body',
+  'head',
+  'container',
+  'wrapper',
+  'btn',
+  'button',
+  'svg',
+  'path',
+  'rect',
+  'circle',
+  'g',
+  'defs',
+  'linearGradient',
+  'radialGradient',
+  'stop',
+  'use',
+  'href',
+  'xlink',
+  'transform',
+  'translate',
+  'scale',
+  'rotate',
+  'opacity',
+  'background',
+  'backgroundColor',
+  'color',
+  'fontSize',
+  'fontFamily',
+  'textAlign',
+  'position',
+  'zIndex',
+  'overflow',
+  'cursor',
+  'transition',
+  'animation',
+  'keyframes',
+  'boxShadow',
+  'borderRadius',
+]);
+
+const UI_NOISE_TOKENS = new Set([
+  'siguiente',
+  'anterior',
+  'continuar',
+  'reiniciar',
+  'reintentar',
+  'cerrar',
+  'abrir',
+  'jugar',
+  'pausa',
+  'reanudar',
+  'intentar',
+  'intento',
+  'puntaje',
+  'puntos',
+  'tiempo',
+  'nivel',
+  'vidas',
+  'ganaste',
+  'perdiste',
+  'correcto',
+  'incorrecto',
+  'excelente',
+  // english UI fallbacks
+  'next',
+  'previous',
+  'close',
+  'open',
+  'play',
+  'pause',
+  'resume',
+  'retry',
+  'score',
+  'time',
+  'level',
+  'lives',
+  'win',
+  'lose',
+]);
+
+const UI_NOISE_PHRASES = new Set([
+  'siguiente',
+  'anterior',
+  'continuar',
+  'reiniciar',
+  'cerrar',
+  'jugar de nuevo',
+  'intentar de nuevo',
+  'volver a intentar',
+  'ver resultado',
+  'ver resultados',
 ]);
 
 const QUESTION_KEYS = ['pregunta', 'question', 'enunciado', 'prompt', 'q', 'consigna'];
@@ -128,9 +263,20 @@ function cleanString(value) {
   return decodeHtmlEntities(value).replace(/\s+/g, ' ').trim();
 }
 
+function isUiNoise(text) {
+  const lower = text.trim().toLowerCase();
+  if (UI_NOISE_TOKENS.has(lower)) return true;
+  if (UI_NOISE_PHRASES.has(lower)) return true;
+  // frases muy cortas compuestas solo de tokens UI (ej. "Siguiente >" o "Nivel 1")
+  if (/^(?:nivel|level|puntaje|score|tiempo|time)\s*\d+\s*$/i.test(text)) return true;
+  if (/^(?:puntaje|score|puntos|tiempo|time)\s*[:\-]?\s*\d+.*$/i.test(text)) return true;
+  if (/^[<>»«›‹]+\s*$/.test(text)) return true;
+  return false;
+}
+
 function isNaturalLanguageText(str) {
   const text = str.trim();
-  if (text.length < 3) return false;
+  if (text.length < 8) return false;
   if (text.length > 5000) return false; // descarta blobs masivos o scripts embebidos
 
   // Excluir URLs, base64 data URIs, selectores CSS y colores
@@ -140,21 +286,34 @@ function isNaturalLanguageText(str) {
   if (/^\d+(?:\.\d+)?(?:px|em|rem|%|vh|vw|s|ms|deg)$/i.test(text)) return false;
   if (/^[.#][a-zA-Z0-9_-]+$/.test(text)) return false;
   if (CODE_EXCLUDE_TOKENS.has(text) || CODE_EXCLUDE_TOKENS.has(text.toLowerCase())) return false;
+  if (isUiNoise(text)) return false;
 
   // Excluir código JS evidente (e.g. "function() {", "return false;")
-  if (/(?:function\s*\(|=>\s*\{|var\s+\w+\s*=|const\s+\w+\s*=|let\s+\w+\s*=|document\.|window\.)/.test(text)) {
+  if (/(?:function\s*\(|=>\s*\{|var\s+\w+\s*=|const\s+\w+\s*=|let\s+\w+\s*=|document\.|window\.|console\.|Math\.|import\s|export\s|require\s*\()/.test(text)) {
     return false;
   }
+  // Excluir plantillas con interpolación JS/CSS sin contenido educativo
+  if (/^\s*(?:\{[^}]*\}|\$\{[^}]+\})\s*$/.test(text)) return false;
 
   // Debe contener al menos una letra válida (incluyendo tildes y ñ)
   if (!/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(text)) return false;
 
-  // Es lenguaje natural si contiene espacios entre palabras, signos de interrogación/admiración o puntuación
-  if (/\b\p{L}+\s+\p{L}+\b/u.test(text)) return true;
-  if (/[¿?¡!.,:;]/.test(text)) return true;
+  // Señales de lenguaje natural más estrictas:
+  // - al menos 2 palabras con letras, O signo de pregunta/exclamación, O puntuación + longitud
+  const hasTwoWords = /\b\p{L}{2,}\s+\p{L}{2,}\b/u.test(text);
+  const hasQuestion = /[¿?¡!]/.test(text);
+  const hasPunctuatedPhrase = /[.,:;]/.test(text) && text.length >= 12;
+  const isLongPhrase = hasTwoWords && text.length >= 12;
 
-  // Si es una sola palabra, que empiece con mayúscula o tenga más de 3 letras sin guiones bajos
-  if (!text.includes('_') && text.length >= 4 && !/^[A-Z0-9_]+$/.test(text)) return true;
+  if (hasTwoWords || hasQuestion || hasPunctuatedPhrase) {
+    // descartar si es solo UI corta aun con 2 palabras (ej. "Siguiente Nivel")
+    if (text.length < 16 && isUiNoise(text)) return false;
+    return true;
+  }
+
+  // Long phrase con al menos 12 chars y 2 palabras ya pasó arriba
+  // Frase larga sin puntuación pero con verbos comunes educativos
+  if (isLongPhrase) return true;
 
   return false;
 }
@@ -311,6 +470,10 @@ function extractScriptContent(html, seenStrings) {
     let literalMatch;
     while ((literalMatch = stringLiteralRegex.exec(scriptBody)) !== null) {
       const rawString = literalMatch[1] ?? literalMatch[2] ?? literalMatch[3] ?? '';
+      if (rawString.length < 4) continue;
+      // descartar literales que son claramente selectores / rutas / código
+      if (/^[.#][\w-]+$/.test(rawString.trim())) continue;
+      if (/^(?:\/|\.\/|\.\.\/)/.test(rawString.trim())) continue;
       const unescaped = rawString
         .replace(/\\n/g, ' ')
         .replace(/\\t/g, ' ')
@@ -319,6 +482,8 @@ function extractScriptContent(html, seenStrings) {
         .replace(/\\u([0-9a-fA-F]{4})/g, (_, hex) => String.fromCharCode(Number.parseInt(hex, 16)));
 
       const cleaned = cleanString(unescaped);
+      if (cleaned.length < 8) continue;
+      if (isUiNoise(cleaned)) continue;
       if (isNaturalLanguageText(cleaned) && !seenStrings.has(cleaned)) {
         extracted.push(cleaned);
         seenStrings.add(cleaned);
@@ -365,9 +530,21 @@ function extractDomContent(html, seenStrings) {
 
   for (const line of domText) {
     const cleaned = cleanString(line);
-    if (cleaned && !seenStrings.has(cleaned)) {
+    if (!cleaned || seenStrings.has(cleaned)) continue;
+    if (isUiNoise(cleaned)) continue;
+    if (CODE_EXCLUDE_TOKENS.has(cleaned) || CODE_EXCLUDE_TOKENS.has(cleaned.toLowerCase())) continue;
+    if (isNaturalLanguageText(cleaned)) {
       extracted.push(cleaned);
       seenStrings.add(cleaned);
+      continue;
+    }
+    // Fallback para DOM visible: headings / párrafos cortos de una palabra capitalizada
+    // ej. "Actividad", "Variables", "Modelo OSI" corto pero válido
+    if (cleaned.length >= 4 && cleaned.length <= 40 && /^[A-ZÁÉÍÓÚÑa-záéíóúñ0-9][A-Za-zÁÉÍÓÚÑa-záéíóúñ0-9\s\-:]+$/.test(cleaned)) {
+      if (/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(cleaned) && !cleaned.includes('_') && !/^[A-Z0-9_]+$/.test(cleaned)) {
+        extracted.push(cleaned);
+        seenStrings.add(cleaned);
+      }
     }
   }
 
@@ -394,15 +571,14 @@ export function extractLessonHtmlContent(html) {
   const scriptParts = extractScriptContent(html, seenStrings);
 
   // 3. Unir de forma estructurada para mantener coherencia semántica en los chunks
-  const allParts = [];
+  // Preservamos \n\n entre bloques para que chunkText pueda mantener Pregunta+Opciones+Respuesta juntas
+  const domBlock = domParts.length > 0 ? normalizeText(domParts.join(' ')) : '';
+  const scriptBlock = scriptParts.length > 0
+    ? scriptParts.map((part) => normalizeText(part)).filter(Boolean).join('\n\n')
+    : '';
 
-  if (domParts.length > 0) {
-    allParts.push(domParts.join(' '));
-  }
-
-  if (scriptParts.length > 0) {
-    allParts.push(scriptParts.join('\n'));
-  }
-
-  return normalizeText(allParts.join('\n\n'));
+  const allParts = [domBlock, scriptBlock].filter(Boolean);
+  if (allParts.length === 0) return '';
+  // No colapsar \n\n finales — son delimitadores semánticos para chunkText
+  return allParts.join('\n\n');
 }

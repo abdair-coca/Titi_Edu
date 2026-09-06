@@ -55,7 +55,7 @@ describe('RAG text preparation', () => {
 
   it('combines lesson text with HTML visible content', () => {
     expect(lessonRagText({ titulo: 'Título', contenido: 'Contenido', recursoHtml: { html: '<p>Actividad</p>' } }))
-      .toBe('Título Contenido Actividad');
+      .toBe('Título\n\nContenido\n\nActividad');
   });
 
   it('combines lesson text with interactive game HTML content', () => {
@@ -68,7 +68,8 @@ describe('RAG text preparation', () => {
       </script>
     `;
     const text = lessonRagText({ titulo: 'Lección 1', contenido: 'Fundamentos', recursoHtml: { html: gameHtml } });
-    expect(text).toContain('Lección 1 Fundamentos');
+    expect(text).toContain('Lección 1');
+    expect(text).toContain('Fundamentos');
     expect(text).toContain('Pregunta: ¿Qué es una variable?');
     expect(text).toContain('Respuesta correcta: Un contenedor para almacenar valores.');
   });
