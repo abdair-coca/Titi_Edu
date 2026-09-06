@@ -27,7 +27,7 @@ import {
 export default function LearnCourse() {
   const { id: courseId } = useParams();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const paramLessonId = searchParams.get('lessonId');
   const paramComments = searchParams.get('comments');
   const { isAuthenticated, updateUser } = useAuth();
@@ -130,7 +130,14 @@ export default function LearnCourse() {
           paramLessonId && c?.modulos?.some((m) => m.lecciones?.some((l) => l.id === paramLessonId))
             ? paramLessonId
             : c?.modulos?.[0]?.lecciones?.[0]?.id;
-        if (targetLessonId) setActiveId(targetLessonId);
+        if (targetLessonId) {
+          setActiveId(targetLessonId);
+          if (paramLessonId !== targetLessonId) {
+            const nextParams = new URLSearchParams(searchParams);
+            nextParams.set('lessonId', targetLessonId);
+            setSearchParams(nextParams, { replace: true });
+          }
+        }
         if (paramComments === 'true') setSidePanel('comentarios');
 
         // Aplicar progreso (set de leccionIds completadas)
@@ -168,15 +175,24 @@ export default function LearnCourse() {
     };
   }, [courseId, isAuthenticated]);
 
-  // Si cambia el query param (ej. navegando desde notificaciones)
+  // Si cambia el query param (ej. navegando desde notificaciones o atrás/adelante)
   useEffect(() => {
-    if (paramLessonId) {
-      setActiveId(paramLessonId);
-      if (paramComments === 'true') {
-        setSidePanel('comentarios');
-      }
+    if (!curso) return;
+    const urlLesson = curso.modulos
+      ?.flatMap((modulo) => modulo.lecciones || [])
+      .find((lesson) => lesson.id === paramLessonId);
+    const targetLessonId = urlLesson?.id || curso.modulos?.[0]?.lecciones?.[0]?.id;
+    if (targetLessonId && targetLessonId !== activeId) {
+      setActiveId(targetLessonId);
+      setActiveEvalId(null);
+      setActiveHtmlEvaluable(null);
+      setActiveHtmlDeadlineExpired(false);
+      setCompleteError(null);
     }
-  }, [paramLessonId, paramComments]);
+    if (paramComments === 'true') {
+      setSidePanel('comentarios');
+    }
+  }, [curso, paramLessonId, paramComments, activeId]);
 
   // --- Módulo de la lección activa ---
   const activeModulo = useMemo(() => {
@@ -295,6 +311,7 @@ export default function LearnCourse() {
     [curso],
   );
   const currentIndex = orderedLessons.findIndex((l) => l.id === activeId);
+  const currentPosition = currentIndex >= 0 ? currentIndex + 1 : 0;
   const nextLesson =
     currentIndex >= 0 ? orderedLessons[currentIndex + 1] : null;
   const hasNext = Boolean(nextLesson || curso?.evaluacionFinal);
@@ -311,6 +328,9 @@ export default function LearnCourse() {
     setActiveHtmlDeadlineExpired(false);
     setCompleteError(null);
     setDrawerOpen(false);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('lessonId', lessonId);
+    setSearchParams(nextParams);
   };
 
   const handleSelectEval = (evalId) => {
@@ -497,8 +517,10 @@ export default function LearnCourse() {
             {curso.titulo}
           </h2>
           <p className="text-xs font-medium text-gray-400 mt-1">
-            {completedCount} de {totalLessons}{' '}
-            {totalLessons === 1 ? 'lección' : 'lecciones'}
+            Lección {currentPosition} de {totalLessons}
+            <span className="block text-[11px] font-medium text-gray-400 mt-0.5">
+              {completedCount} {completedCount === 1 ? 'completada' : 'completadas'}
+            </span>
           </p>
 
           {/* Progreso del curso */}
@@ -631,7 +653,7 @@ export default function LearnCourse() {
             >
               <span className="inline-flex items-center gap-2">
                 <span aria-hidden="true">☰</span>
-                <span>Lecciones · {completedCount}/{totalLessons}</span>
+                <span>Lección · {currentPosition}/{totalLessons}</span>
               </span>
               <span aria-hidden="true" className="text-base leading-none">⌄</span>
             </button>

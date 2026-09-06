@@ -37,5 +37,8 @@ assert.match(editor, /\/lessons\/\$\{lesson\.id\}\/html/);
 assert.match(learn, /const handleHtmlScoreRecorded = \(data\) => \{[\s\S]*setCompleted/);
 assert.match(learn, /<HtmlLessonPlayer[\s\S]*lessonId=\{leccion\.id\}[\s\S]*title=\{leccion\.titulo\}[\s\S]*onScoreRecorded=\{onHtmlScoreRecorded\}/);
 assert.doesNotMatch(learn, /onScoreRecorded=\{onComplete\}/);
+assert.match(learn, /const \[searchParams, setSearchParams\] = useSearchParams\(\)/);
+assert.match(learn, /nextParams\.set\('lessonId', lessonId\)/);
+assert.match(learn, /Lección \{currentPosition\} de \{totalLessons\}/u);
 
 console.log('HTML lesson player security contract: pass');
