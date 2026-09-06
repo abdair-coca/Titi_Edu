@@ -5,6 +5,7 @@ import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { ensureCourseContentAccess, loadCurrentUser, loadOptionalUser, requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
 import { syncInscripcion } from '../services/neo4j-sync.service.js';
 import { isDeadlineExpired } from '../services/deadline.service.js';
+import { checkCursoCompletado } from '../services/progress.service.js';
 
 const router = Router();
 
@@ -576,32 +577,31 @@ router.get('/:id/progress', requireAuth, async (req, res) => {
       progresos.filter((p) => p.completada).map((p) => p.leccionId),
     );
 
-    const enrolledAt = access.inscripcion?.fechaInscripcion || new Date(0);
-    const isBaseLesson = (lesson) => !lesson.publishedAt || new Date(lesson.publishedAt) <= new Date(enrolledAt);
+    if (access.inscripcion?.completado) {
+      await checkCursoCompletado(usuario.id, curso.id);
+    }
+
     const modulos = curso.modulos.map((m) => {
-      const baseLessons = m.lecciones.filter(isBaseLesson);
-      const newLessons = m.lecciones.filter((lesson) => !isBaseLesson(lesson));
-      const total = baseLessons.length;
-      const done = baseLessons.filter((l) => completadas.has(l.id)).length;
+      const total = m.lecciones.length;
+      const done = m.lecciones.filter((l) => completadas.has(l.id)).length;
       return {
         id: m.id,
         titulo: m.titulo,
         orden: m.orden,
         total,
         completadas: done,
-        nuevasPendientes: newLessons.filter((lesson) => !completadas.has(lesson.id)).length,
+        nuevasPendientes: 0,
+        nuevasTotal: 0,
         lecciones: m.lecciones.map((l) => ({
           ...l,
           completada: completadas.has(l.id),
-          esNueva: !isBaseLesson(l),
+          esNueva: false,
         })),
       };
     });
 
-    const baseLessons = curso.modulos.flatMap((module) => module.lecciones).filter(isBaseLesson);
-    const newLessons = curso.modulos.flatMap((module) => module.lecciones).filter((lesson) => !isBaseLesson(lesson));
-    const total = baseLessons.length;
-    const done = baseLessons.filter((lesson) => completadas.has(lesson.id)).length;
+    const total = leccionIds.length;
+    const done = leccionIds.filter((lessonId) => completadas.has(lessonId)).length;
     const porcentaje = total === 0 ? 0 : Math.round((done / total) * 100);
 
     res.json({
@@ -611,8 +611,8 @@ router.get('/:id/progress', requireAuth, async (req, res) => {
         total,
         completadas: done,
         porcentaje,
-        nuevasPendientes: newLessons.filter((lesson) => !completadas.has(lesson.id)).length,
-        nuevasTotal: newLessons.length,
+        nuevasPendientes: 0,
+        nuevasTotal: 0,
         modulos,
       },
     });

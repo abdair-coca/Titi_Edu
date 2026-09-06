@@ -166,6 +166,31 @@ describe('GET /api/courses/:id/progress visibility', () => {
       .set('Authorization', `Bearer ${token}`);
     expect(owner.status).toBe(200);
   });
+
+  it('cuenta todo el contenido publicado, aunque se haya publicado después de la inscripción', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
+    prisma.curso.findUnique.mockResolvedValue({
+      ...course,
+      modulos: [{
+        id: 'm1',
+        titulo: 'M1',
+        orden: 1,
+        lecciones: [
+          { id: 'l1', titulo: 'L1', orden: 1, publishedAt: new Date('2026-01-01') },
+          { id: 'l2', titulo: 'L2', orden: 2, publishedAt: new Date('2026-09-01') },
+        ],
+      }],
+    });
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1', fechaInscripcion: new Date('2026-01-15'), completado: false });
+    prisma.progreso.findMany.mockResolvedValue([{ leccionId: 'l1', completada: true }]);
+
+    const response = await request(app).get('/api/courses/c1/progress')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({ total: 2, completadas: 1, porcentaje: 50, nuevasTotal: 0 });
+    expect(response.body.data.modulos[0].lecciones.map((lesson) => lesson.esNueva)).toEqual([false, false]);
+  });
 });
 
 describe('legacy course authoring mutations', () => {

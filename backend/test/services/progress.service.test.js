@@ -94,6 +94,40 @@ describe('actualizarRacha', () => {
 });
 
 describe('checkCursoCompletado', () => {
+  it('considera lecciones publicadas después de la inscripción', async () => {
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1', completado: false, fechaInscripcion: new Date('2026-01-01') });
+    prisma.curso.findUnique.mockResolvedValue({ titulo: 'Curso en evolución', emiteCertificado: true });
+    prisma.modulo.findMany.mockResolvedValue([
+      { lecciones: [{ id: 'l1' }, { id: 'l2' }], evaluacion: null },
+    ]);
+    prisma.progreso.count.mockResolvedValue(1);
+
+    const result = await checkCursoCompletado('u1', 'c1');
+
+    expect(result).toMatchObject({ completado: false });
+    expect(prisma.inscripcion.updateMany).not.toHaveBeenCalled();
+    expect(prisma.certificado.upsert).not.toHaveBeenCalled();
+  });
+
+  it('reabre una inscripción completada cuando aparece una lección pendiente', async () => {
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1', completado: true, fechaInscripcion: new Date('2026-01-01') });
+    prisma.curso.findUnique.mockResolvedValue({ titulo: 'Curso en evolución', emiteCertificado: true });
+    prisma.modulo.findMany.mockResolvedValue([
+      { lecciones: [{ id: 'l1' }, { id: 'l2' }], evaluacion: null },
+    ]);
+    prisma.progreso.count.mockResolvedValue(1);
+    prisma.inscripcion.updateMany.mockResolvedValue({ count: 1 });
+
+    const result = await checkCursoCompletado('u1', 'c1');
+
+    expect(result).toMatchObject({ completado: false, reabierto: true });
+    expect(prisma.inscripcion.updateMany).toHaveBeenCalledWith({
+      where: { id: 'i1', completado: true },
+      data: { completado: false, fechaCompletado: null },
+    });
+    expect(prisma.certificado.upsert).not.toHaveBeenCalled();
+  });
+
   it('excluye borradores del denominador y no emite certificado cuando el curso lo desactiva', async () => {
     prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1', completado: false });
     prisma.curso.findUnique.mockResolvedValue({ titulo: 'Curso sin certificado', emiteCertificado: false });

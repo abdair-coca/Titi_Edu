@@ -144,6 +144,51 @@ describe('HTML lesson access and attempts', () => {
     expect(checkCursoCompletado).toHaveBeenCalledTimes(1);
   });
 
+  it('rejects invalid HTML scores before touching the lesson or persistence layer', async () => {
+    for (const score of [-1, 101, 'not-a-number']) {
+      const response = await request(app).post('/api/lessons/l-html/html-results')
+        .set('Authorization', `Bearer ${token}`).send({ attemptToken: 'attempt-1', score });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+    }
+    expect(prisma.leccion.findUnique).not.toHaveBeenCalled();
+    expect(prisma.intentoHtmlLeccion.create).not.toHaveBeenCalled();
+    expect(prisma.intentoHtmlLeccion.update).not.toHaveBeenCalled();
+    expect(prisma.progreso.upsert).not.toHaveBeenCalled();
+  });
+
+  it('rejects an HTML result with an invalid attempt token without writes', async () => {
+    allowStudent();
+    prisma.intentoHtmlLeccion.findUnique.mockResolvedValue(null);
+
+    const response = await request(app).post('/api/lessons/l-html/html-results')
+      .set('Authorization', `Bearer ${token}`).send({ attemptToken: 'not-a-signed-token', score: 80 });
+
+    expect(response.status).toBe(404);
+    expect(response.body.message).toContain('Intento HTML no encontrado');
+    expect(prisma.intentoHtmlLeccion.create).not.toHaveBeenCalled();
+    expect(prisma.intentoHtmlLeccion.update).not.toHaveBeenCalled();
+    expect(prisma.progreso.upsert).not.toHaveBeenCalled();
+  });
+
+  it('does not report course completion when HTML completes a lesson with pending lessons', async () => {
+    allowStudent();
+    checkCursoCompletado.mockResolvedValue({ completado: false, logros: [] });
+    prisma.intentoHtmlLeccion.findUnique.mockResolvedValue({ id: 'a1', token: 'attempt-1', usuarioId: 'u1', recursoHtmlId: 'rh-1', puntaje: null });
+    prisma.intentoHtmlLeccion.update.mockResolvedValue({ id: 'a1', puntaje: 80 });
+    prisma.resultadoHtmlLeccion.findUnique.mockResolvedValue(null);
+    prisma.resultadoHtmlLeccion.upsert.mockResolvedValue({ mejorPuntaje: 80 });
+    prisma.progreso.upsert.mockResolvedValue({ id: 'p1', usuarioId: 'u1', leccionId: 'l-html', completada: true });
+
+    const response = await request(app).post('/api/lessons/l-html/html-results')
+      .set('Authorization', `Bearer ${token}`).send({ attemptToken: 'attempt-1', score: 80 });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.cursoCompletado).toBeNull();
+    expect(checkCursoCompletado).toHaveBeenCalledWith('u1', 'c1');
+  });
+
   it('rejects expired HTML submissions before any write', async () => {
     allowStudent();
     const expiredLesson = {

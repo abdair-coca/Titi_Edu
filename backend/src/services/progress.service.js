@@ -106,25 +106,34 @@ export async function checkCursoCompletado(usuarioId, cursoId) {
       });
       if (!curso) return { completado: false };
 
-      if (inscripcion.completado) {
-        const certificado = curso.emiteCertificado
-          ? await tx.certificado.findUnique({ where: { usuarioId_cursoId: { usuarioId, cursoId } } })
-          : null;
-        return { completado: true, nuevo: false, certificado };
-      }
-
       const modulos = await tx.modulo.findMany({
         where: { cursoId, estado: 'PUBLICADO' },
-        select: { lecciones: { where: { estado: 'PUBLICADA', OR: [{ publishedAt: null }, { publishedAt: { lte: inscripcion.fechaInscripcion } }] }, select: { id: true } }, evaluacion: { select: { id: true } } },
+        select: { lecciones: { where: { estado: 'PUBLICADA' }, select: { id: true } }, evaluacion: { select: { id: true } } },
       });
       const modulosBase = modulos.filter((module) => module.lecciones.length > 0);
       const leccionIds = modulosBase.flatMap((module) => module.lecciones.map((lesson) => lesson.id));
-      if (leccionIds.length === 0) return { completado: false };
+      if (leccionIds.length === 0) {
+        if (inscripcion.completado) {
+          await tx.inscripcion.updateMany({
+            where: { id: inscripcion.id, completado: true },
+            data: { completado: false, fechaCompletado: null },
+          });
+        }
+        return { completado: false, reabierto: Boolean(inscripcion.completado) };
+      }
 
       const completadas = await tx.progreso.count({
         where: { usuarioId, leccionId: { in: leccionIds }, completada: true },
       });
-      if (completadas < leccionIds.length) return { completado: false };
+      if (completadas < leccionIds.length) {
+        if (inscripcion.completado) {
+          await tx.inscripcion.updateMany({
+            where: { id: inscripcion.id, completado: true },
+            data: { completado: false, fechaCompletado: null },
+          });
+        }
+        return { completado: false, reabierto: Boolean(inscripcion.completado) };
+      }
 
       const evalIds = modulosBase.map((module) => module.evaluacion?.id).filter(Boolean);
       const finales = await tx.evaluacion.findMany({ where: { cursoId, esFinal: true }, select: { id: true } });
@@ -134,7 +143,22 @@ export async function checkCursoCompletado(usuarioId, cursoId) {
           by: ['evaluacionId'],
           where: { usuarioId, evaluacionId: { in: evalIds }, aprobado: true },
         });
-        if (aprobadas.length < evalIds.length) return { completado: false };
+        if (aprobadas.length < evalIds.length) {
+          if (inscripcion.completado) {
+            await tx.inscripcion.updateMany({
+              where: { id: inscripcion.id, completado: true },
+              data: { completado: false, fechaCompletado: null },
+            });
+          }
+          return { completado: false, reabierto: Boolean(inscripcion.completado) };
+        }
+      }
+
+      if (inscripcion.completado) {
+        const certificado = curso.emiteCertificado
+          ? await tx.certificado.findUnique({ where: { usuarioId_cursoId: { usuarioId, cursoId } } })
+          : null;
+        return { completado: true, nuevo: false, certificado };
       }
 
       const won = await tx.inscripcion.updateMany({
