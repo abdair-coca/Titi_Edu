@@ -93,6 +93,7 @@ Guía completa (ciclo, plantillas, convenciones): [docs/specs/README.md](docs/sp
 | Change | Estado | Detalle |
 |---|---|---|
 | `centralizador-notas` | 🔲 Planificado | Notas de estudiantes por curso para teachers. [proposal](docs/specs/changes/centralizador-notas/proposal.md) · [spec](docs/specs/changes/centralizador-notas/spec.md) · [tasks](docs/specs/changes/centralizador-notas/tasks.md) |
+| `control-admin-rag` | 🔲 Planificado | Panel de control y monitoreo RAG para administradores. [proposal](docs/specs/changes/control-admin-rag/proposal.md) · [spec](docs/specs/changes/control-admin-rag/spec.md) · [tasks](docs/specs/changes/control-admin-rag/tasks.md) |
 | `edicion-perfil` | ✅ Completado | Edición de perfil propio (avatar, banner, bio). [proposal](docs/specs/changes/edicion-perfil/proposal.md) · [spec](docs/specs/changes/edicion-perfil/spec.md) · [tasks](docs/specs/changes/edicion-perfil/tasks.md) |
 | `interaccion-lecciones` | ✅ Completado | Hilos en comentarios de lecciones y notificación de nueva lección a inscritos. [proposal](docs/specs/changes/interaccion-lecciones/proposal.md) · [spec](docs/specs/changes/interaccion-lecciones/spec.md) · [tasks](docs/specs/changes/interaccion-lecciones/tasks.md) |
 
