@@ -11,6 +11,7 @@ import {
   deletionFingerprint,
   deleteDeletionDependencies,
 } from '../services/content-deletion.service.js';
+import { scheduleCourseIndex } from '../services/rag.service.js';
 
 const router = Router();
 
@@ -161,6 +162,7 @@ router.put('/courses/:id/approve', async (req, res) => {
       data: { publicado: true },
       select: { id: true, titulo: true, publicado: true },
     });
+    scheduleCourseIndex(actualizado.id);
     res.json({ success: true, data: { curso: actualizado } });
   } catch (err) {
     if (err.code === 'P2025') {

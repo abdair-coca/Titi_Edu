@@ -352,12 +352,12 @@ async function loadPublishedLesson(lessonId) {
   });
 }
 
-export async function indexLesson(lessonId) {
+export async function indexLesson(lessonId, { force = false } = {}) {
   const lesson = await loadPublishedLesson(lessonId);
   if (!lesson || lesson.estado !== 'PUBLICADA' || lesson.modulo.estado !== 'PUBLICADO' || !lesson.modulo.curso.publicado) {
     return { status: 'SKIPPED', lessonId };
   }
-  if (!ragEnabledForCourse(lesson.modulo.curso.id)) {
+  if (!force && !ragEnabledForCourse(lesson.modulo.curso.id)) {
     return { status: 'SKIPPED', lessonId, reason: 'feature_disabled' };
   }
 
@@ -429,7 +429,7 @@ export async function indexLesson(lessonId) {
   return { status: 'INDEXED', documentId: document.id, lessonId, chunks: chunks.length };
 }
 
-export async function indexCourse(courseId) {
+export async function indexCourse(courseId, { force = false } = {}) {
   const lessons = await prisma.leccion.findMany({
     where: {
       estado: 'PUBLICADA',
@@ -441,7 +441,7 @@ export async function indexCourse(courseId) {
   const results = [];
   for (const lesson of lessons) {
     try {
-      results.push(await indexLesson(lesson.id));
+      results.push(await indexLesson(lesson.id, { force }));
     } catch (error) {
       results.push({ status: 'FAILED', lessonId: lesson.id, error: error.message });
     }
@@ -576,6 +576,15 @@ export function scheduleLessonIndex(lessonId) {
   setImmediate(() => {
     indexLesson(lessonId).catch((error) => {
       console.error('RAG lesson index error', { lessonId, message: error.message });
+    });
+  });
+}
+
+export function scheduleCourseIndex(courseId, { force = false } = {}) {
+  if (process.env.RAG_ENABLED !== 'true') return;
+  setImmediate(() => {
+    indexCourse(courseId, { force }).catch((error) => {
+      console.error('RAG course index error', { courseId, message: error.message });
     });
   });
 }

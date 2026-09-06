@@ -32,7 +32,7 @@ import {
   normalizeLessonOrder,
 } from '../services/content-deletion.service.js';
 import { cloudinaryEnabled, destroyAsset, uploadBuffer } from '../services/upload.service.js';
-import { scheduleLessonIndex } from '../services/rag.service.js';
+import { scheduleCourseIndex, scheduleLessonIndex } from '../services/rag.service.js';
 
 const router = Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -1024,6 +1024,7 @@ router.post('/courses/:id/preview-unpublish', requireAuthoringPrincipal('publish
 router.post('/modules/:id/preview-unpublish', requireAuthoringPrincipal('publish'), handle((req, res) => previewPublication(req, res, 'module', 'unpublish')));
 
 async function publish(req, res, resourceType) {
+  let publishedCourseId = null;
   await executeIdempotent(req, res, { accion: `${resourceType}.publish` }, async (tx) => {
     const isCourse = resourceType === 'course';
     const resource = isCourse
@@ -1046,6 +1047,7 @@ async function publish(req, res, resourceType) {
       if (!resource.modulos.some((module) => module.estado === 'PUBLICADO')) throw new AuthoringError(422, 'El curso necesita al menos un módulo publicado');
       await claimCourseVersion(tx, resource, { publicado: false });
       const course = await tx.curso.update({ where: { id: resource.id }, data: { publicado: true } });
+      publishedCourseId = course.id;
       return { data: { course } };
     }
     await claimCourseVersion(tx, resource.curso);
@@ -1053,6 +1055,7 @@ async function publish(req, res, resourceType) {
     const module = await tx.modulo.update({ where: { id: resource.id }, data: { estado: 'PUBLICADO' } });
     return { data: { module } };
   });
+  if (publishedCourseId) scheduleCourseIndex(publishedCourseId);
 }
 
 router.post('/courses/:id/publish', requireAuthoringPrincipal('publish'), handle((req, res) => publish(req, res, 'course')));
