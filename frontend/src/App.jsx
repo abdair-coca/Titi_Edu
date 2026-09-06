@@ -39,6 +39,7 @@ const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard.jsx'));
 const AdminUsers = lazy(() => import('./pages/admin/AdminUsers.jsx'));
 const AdminCourses = lazy(() => import('./pages/admin/AdminCourses.jsx'));
 const AdminCategories = lazy(() => import('./pages/admin/AdminCategories.jsx'));
+const AdminRag = lazy(() => import('./pages/admin/AdminRag.jsx'));
 
 // ---- Layouts ----
 
@@ -211,6 +212,7 @@ export default function App() {
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/courses" element={<AdminCourses />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
+            <Route path="/admin/rag" element={<AdminRag />} />
           </Route>
         </Route>
 

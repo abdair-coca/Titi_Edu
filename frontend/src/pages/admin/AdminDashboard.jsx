@@ -2,12 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../../api/client.js';
 import { useStaggerReveal } from '../../lib/motion.js';
-import { UsersIcon, BooksIcon, TagIcon } from '../../components/icons.jsx';
+import { UsersIcon, BooksIcon, TagIcon, ChipIcon } from '../../components/icons.jsx';
 
 const PANELS = [
   { to: '/admin/users', titulo: 'Usuarios', desc: 'Verificar profesores y cambiar roles', Icon: UsersIcon, chip: 'bg-blue-500 text-white' },
   { to: '/admin/courses', titulo: 'Cursos', desc: 'Aprobar y moderar el catálogo', Icon: BooksIcon, chip: 'bg-titi-yellow text-titi-dark' },
   { to: '/admin/categories', titulo: 'Categorías', desc: 'Crear, editar y borrar categorías', Icon: TagIcon, chip: 'bg-titi-achievement text-white' },
+  { to: '/admin/rag', titulo: 'Control RAG', desc: 'Monitorear indexación y probar búsquedas', Icon: ChipIcon, chip: 'bg-titi-dark text-titi-yellow' },
 ];
 
 export default function AdminDashboard() {
@@ -78,7 +79,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      <div ref={panelsRef} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div ref={panelsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {PANELS.map((p) => (
           <Link
             key={p.to}
