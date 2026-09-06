@@ -267,10 +267,15 @@ function isUiNoise(text) {
   const lower = text.trim().toLowerCase();
   if (UI_NOISE_TOKENS.has(lower)) return true;
   if (UI_NOISE_PHRASES.has(lower)) return true;
+  // protocolos internos / eventos de juegos
+  if (/^juegoart:/i.test(text)) return true;
+  if (/^titi[-_]/i.test(text)) return true;
   // frases muy cortas compuestas solo de tokens UI (ej. "Siguiente >" o "Nivel 1")
   if (/^(?:nivel|level|puntaje|score|tiempo|time)\s*\d+\s*$/i.test(text)) return true;
   if (/^(?:puntaje|score|puntos|tiempo|time)\s*[:-]?\s*\d+.*$/i.test(text)) return true;
   if (/^[<>»«›‹]+\s*$/.test(text)) return true;
+  // tokens tipo "foo:bar" sin espacios (event names, handlers)
+  if (/^\w+:\w+$/ .test(text) && !text.includes(' ')) return true;
   return false;
 }
 
@@ -289,11 +294,26 @@ function isNaturalLanguageText(str) {
   if (isUiNoise(text)) return false;
 
   // Excluir código JS evidente (e.g. "function() {", "return false;")
-  if (/(?:function\s*\(|=>\s*\{|var\s+\w+\s*=|const\s+\w+\s*=|let\s+\w+\s*=|document\.|window\.|console\.|Math\.|import\s|export\s|require\s*\()/.test(text)) {
+  if (/(?:function\s*\(|=>\s*\{|=>|var\s+\w+\s*=|const\s+\w+\s*=|let\s+\w+\s*=|document\.|window\.|console\.|Math\.|import\s|export\s|require\s*\()/.test(text)) {
     return false;
   }
   // Excluir plantillas con interpolación JS/CSS sin contenido educativo
-  if (/^\s*(?:\{[^}]*\}|\$\{[^}]+\})\s*$/.test(text)) return false;
+  if (/\$\{[^}]+\}/.test(text)) return false;
+  if (/^\s*(?:\{[^}]*\})\s*$/.test(text)) return false;
+  // Excluir patrones de código de juegos (BackendTown, engine)
+  if (/(?:this\.|world\.|ui\.|renderer\.|ctx\.|asset\.|camera\.|challenge\.|lesson\.|spec\.|page\.|stats\.|escapeHtml|addEventListener|querySelector|getElementById|classList|innerHTML|innerText|textContent|setTimeout|setInterval|requestAnimation)/.test(text)) {
+    return false;
+  }
+  // Excluir líneas con alta densidad de símbolos de código
+  const codeSymbols = (text.match(/[{}();=<>$?:+.]/g) || []).length;
+  if (codeSymbols >= 3 && codeSymbols / text.length > 0.06) return false;
+  if (/[{}();=]{2,}/.test(text) && /\(.*\)/.test(text)) return false;
+  // Excluir líneas que son expresiones ternarias o comparaciones sueltas
+  if (/^\s*[+*/<>=!&|]+\s*\(/.test(text)) return false;
+  if (/\?\s*[^?]*:/.test(text) && /[()<>]/.test(text)) return false;
+  if (/^\s*\W*\(.*\)\s*$/.test(text) && /[.?]/.test(text)) return false;
+  // Excluir llamadas de método tipo foo.bar(
+  if (/\w+\.\w+\s*\(/.test(text) && /[;{}]/.test(text)) return false;
 
   // Debe contener al menos una letra válida (incluyendo tildes y ñ)
   if (!/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(text)) return false;
