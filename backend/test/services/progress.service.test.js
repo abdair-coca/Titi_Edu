@@ -11,7 +11,8 @@ vi.mock('../../src/prisma.js', () => ({
     inscripcion: { findUnique: vi.fn(), updateMany: vi.fn() },
     curso: { findUnique: vi.fn() },
     modulo: { findMany: vi.fn() },
-    progreso: { count: vi.fn() },
+    progreso: { count: vi.fn(), findMany: vi.fn(), upsert: vi.fn() },
+    resultadoHtmlLeccion: { findMany: vi.fn() },
     evaluacion: { findMany: vi.fn() },
     intento: { groupBy: vi.fn() },
     certificado: { findUnique: vi.fn(), upsert: vi.fn() },
@@ -23,7 +24,7 @@ vi.mock('../../src/services/neo4j-sync.service.js', () => ({ syncCursoCompletado
 import prisma from '../../src/prisma.js';
 import { otorgarLogro } from '../../src/services/achievement.service.js';
 import { syncCursoCompletado } from '../../src/services/neo4j-sync.service.js';
-import { actualizarRacha, checkCursoCompletado } from '../../src/services/progress.service.js';
+import { actualizarRacha, checkCursoCompletado, syncProgresoFromHtmlResults } from '../../src/services/progress.service.js';
 
 const startOfDay = (d) => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
 const DAY = 86_400_000;
@@ -172,3 +173,33 @@ describe('checkCursoCompletado', () => {
     expect(syncCursoCompletado).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('syncProgresoFromHtmlResults', () => {
+  it('no hace nada si el usuario no tiene resultados o usuarioId es falsy', async () => {
+    expect(await syncProgresoFromHtmlResults(null)).toEqual([]);
+    prisma.resultadoHtmlLeccion.findMany.mockResolvedValue([]);
+    const res = await syncProgresoFromHtmlResults('u1', 'c1');
+    expect(res).toEqual([]);
+    expect(prisma.progreso.upsert).not.toHaveBeenCalled();
+  });
+
+  it('hace upsert en Progreso solo para lecciones evaluables no completadas', async () => {
+    prisma.resultadoHtmlLeccion.findMany.mockResolvedValue([
+      { recursoHtml: { leccionId: 'l1' }, updatedAt: new Date('2026-09-01') },
+      { recursoHtml: { leccionId: 'l2' }, updatedAt: new Date('2026-09-02') },
+    ]);
+    prisma.progreso.findMany.mockResolvedValue([{ leccionId: 'l1' }]);
+    prisma.progreso.upsert.mockResolvedValue({ id: 'p2', leccionId: 'l2', completada: true });
+
+    const synced = await syncProgresoFromHtmlResults('u1', 'c1');
+
+    expect(synced).toEqual(['l2']);
+    expect(prisma.progreso.upsert).toHaveBeenCalledTimes(1);
+    expect(prisma.progreso.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { usuarioId_leccionId: { usuarioId: 'u1', leccionId: 'l2' } },
+      update: expect.objectContaining({ completada: true }),
+      create: expect.objectContaining({ usuarioId: 'u1', leccionId: 'l2', completada: true }),
+    }));
+  });
+});
+

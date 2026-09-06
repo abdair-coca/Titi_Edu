@@ -5,7 +5,7 @@ import { requireAuth, optionalAuth } from '../middleware/auth.js';
 import { ensureCourseContentAccess, loadCurrentUser, loadOptionalUser, requireRole, isOwnerOrAdmin } from '../middleware/permissions.js';
 import { syncInscripcion } from '../services/neo4j-sync.service.js';
 import { isDeadlineExpired } from '../services/deadline.service.js';
-import { checkCursoCompletado } from '../services/progress.service.js';
+import { checkCursoCompletado, syncProgresoFromHtmlResults } from '../services/progress.service.js';
 
 const router = Router();
 
@@ -566,16 +566,38 @@ router.get('/:id/progress', requireAuth, async (req, res) => {
     const access = await ensureCourseContentAccess(req, res, curso.id);
     if (!access) return;
 
+    if (typeof syncProgresoFromHtmlResults === 'function') {
+      await syncProgresoFromHtmlResults(usuario.id, curso.id).catch((err) => {
+        console.error('syncProgresoFromHtmlResults error in GET /courses/:id/progress', err);
+      });
+    }
+
     const leccionIds = curso.modulos.flatMap((m) => m.lecciones.map((l) => l.id));
 
-    const progresos = leccionIds.length
-      ? await prisma.progreso.findMany({
-          where: { usuarioId: usuario.id, leccionId: { in: leccionIds } },
-        })
-      : [];
+    const [progresos, resultadosHtml] = await Promise.all([
+      leccionIds.length
+        ? prisma.progreso.findMany({
+            where: { usuarioId: usuario.id, leccionId: { in: leccionIds } },
+          })
+        : [],
+      leccionIds.length && prisma.resultadoHtmlLeccion?.findMany
+        ? prisma.resultadoHtmlLeccion.findMany({
+            where: {
+              usuarioId: usuario.id,
+              recursoHtml: { leccionId: { in: leccionIds }, evaluable: true },
+            },
+            select: { recursoHtml: { select: { leccionId: true } } },
+          })
+        : [],
+    ]);
     const completadas = new Set(
       progresos.filter((p) => p.completada).map((p) => p.leccionId),
     );
+    for (const r of resultadosHtml || []) {
+      if (r.recursoHtml?.leccionId) {
+        completadas.add(r.recursoHtml.leccionId);
+      }
+    }
 
     if (access.inscripcion?.completado) {
       await checkCursoCompletado(usuario.id, curso.id);

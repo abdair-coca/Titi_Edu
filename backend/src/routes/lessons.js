@@ -185,6 +185,22 @@ router.get('/lessons/:id/html', requireAuth, async (req, res) => {
       ? Math.max(0, recursoHtml.intentosMax - usedAttempts)
       : null;
     const deadlineExpired = isDeadlineExpired(recursoHtml.fechaLimite);
+    if (recursoHtml.evaluable && resultado?.mejorPuntaje != null && prisma.progreso?.upsert) {
+      try {
+        await prisma.progreso.upsert({
+          where: { usuarioId_leccionId: { usuarioId: loaded.access.usuario.id, leccionId: loaded.leccion.id } },
+          update: { completada: true },
+          create: {
+            usuarioId: loaded.access.usuario.id,
+            leccionId: loaded.leccion.id,
+            completada: true,
+            fechaCompletado: new Date(),
+          },
+        });
+      } catch (err) {
+        console.error('Auto-sync progreso in GET /lessons/:id/html error', err);
+      }
+    }
     res.json({
       success: true,
       data: {

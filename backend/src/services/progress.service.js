@@ -82,6 +82,91 @@ export async function actualizarRacha(usuarioId) {
 }
 
 /**
+ * Sincroniza en la tabla Progreso cualquier lección evaluable que ya tenga
+ * calificación registrada en ResultadoHtmlLeccion pero que aún no esté
+ * marcada como completada.
+ *
+ * @param {string} usuarioId
+ * @param {string} [cursoId] - Opcional. Filtra por curso.
+ * @param {object} [tx=prisma] - Cliente de Prisma o transacción activa.
+ * @returns {Promise<string[]>} Lista de IDs de lecciones sincronizadas.
+ */
+export async function syncProgresoFromHtmlResults(usuarioId, cursoId = null, tx = prisma) {
+  if (!usuarioId || !tx?.resultadoHtmlLeccion?.findMany) return [];
+
+  const whereClause = {
+    usuarioId,
+    recursoHtml: {
+      evaluable: true,
+      ...(cursoId ? { leccion: { modulo: { cursoId } } } : {}),
+    },
+  };
+
+  const rawResultados = await tx.resultadoHtmlLeccion.findMany({
+    where: whereClause,
+    select: {
+      recursoHtml: {
+        select: { leccionId: true },
+      },
+      updatedAt: true,
+    },
+  });
+
+  const resultados = Array.isArray(rawResultados) ? rawResultados : [];
+
+  const leccionIds = resultados
+    .map((r) => r.recursoHtml?.leccionId)
+    .filter(Boolean);
+
+  if (leccionIds.length === 0) return [];
+
+  const rawProgresos = tx.progreso?.findMany
+    ? await tx.progreso.findMany({
+        where: {
+          usuarioId,
+          leccionId: { in: leccionIds },
+          completada: true,
+        },
+        select: { leccionId: true },
+      })
+    : [];
+
+  const progresos = Array.isArray(rawProgresos) ? rawProgresos : [];
+
+  const completadasSet = new Set(progresos.map((p) => p.leccionId));
+  const pendientes = resultados.filter(
+    (r) => r.recursoHtml?.leccionId && !completadasSet.has(r.recursoHtml.leccionId),
+  );
+
+  if (pendientes.length === 0 || !tx.progreso?.upsert) return [];
+
+  await Promise.all(
+    pendientes.map((r) =>
+      tx.progreso.upsert({
+        where: {
+          usuarioId_leccionId: {
+            usuarioId,
+            leccionId: r.recursoHtml.leccionId,
+          },
+        },
+        update: {
+          completada: true,
+          fechaCompletado: r.updatedAt || new Date(),
+        },
+        create: {
+          usuarioId,
+          leccionId: r.recursoHtml.leccionId,
+          completada: true,
+          fechaCompletado: r.updatedAt || new Date(),
+        },
+      }),
+    ),
+  );
+
+  return pendientes.map((r) => r.recursoHtml.leccionId);
+}
+
+/**
  * Verifica si el usuario completó el curso entero:
  *  - tiene Inscripcion activa,
  *  - todas las lecciones del curso con Progreso.completada,
@@ -121,6 +206,8 @@ export async function checkCursoCompletado(usuarioId, cursoId) {
         }
         return { completado: false, reabierto: Boolean(inscripcion.completado) };
       }
+
+      await syncProgresoFromHtmlResults(usuarioId, cursoId, tx);
 
       const completadas = await tx.progreso.count({
         where: { usuarioId, leccionId: { in: leccionIds }, completada: true },
