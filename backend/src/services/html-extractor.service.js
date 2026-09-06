@@ -269,7 +269,7 @@ function isUiNoise(text) {
   if (UI_NOISE_PHRASES.has(lower)) return true;
   // frases muy cortas compuestas solo de tokens UI (ej. "Siguiente >" o "Nivel 1")
   if (/^(?:nivel|level|puntaje|score|tiempo|time)\s*\d+\s*$/i.test(text)) return true;
-  if (/^(?:puntaje|score|puntos|tiempo|time)\s*[:\-]?\s*\d+.*$/i.test(text)) return true;
+  if (/^(?:puntaje|score|puntos|tiempo|time)\s*[:-]?\s*\d+.*$/i.test(text)) return true;
   if (/^[<>»«›‹]+\s*$/.test(text)) return true;
   return false;
 }
