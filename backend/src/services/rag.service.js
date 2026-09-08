@@ -50,9 +50,9 @@ export function ragEnabledForCourse(courseId) {
 }
 
 export function ragUserAllowed(usuario) {
-  const allowedEmail = process.env.RAG_ALLOWED_USER_EMAIL?.trim().toLowerCase();
-  if (!allowedEmail) return false;
-  return String(usuario?.email || '').trim().toLowerCase() === allowedEmail;
+  const allowedEmails = csvValues(process.env.RAG_ALLOWED_USER_EMAIL).map((email) => email.toLowerCase());
+  if (!allowedEmails.length) return false;
+  return allowedEmails.includes(String(usuario?.email || '').trim().toLowerCase());
 }
 
 function embeddingModel() {
