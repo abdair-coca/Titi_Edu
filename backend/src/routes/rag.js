@@ -72,6 +72,10 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
     if (!message || message.length > 1000) {
       return res.status(400).json({ success: false, message: 'message es requerido y debe tener hasta 1000 caracteres' });
     }
+    const history = req.body?.history;
+    if (history !== undefined && !Array.isArray(history)) {
+      return res.status(400).json({ success: false, message: 'history debe ser una lista de turnos' });
+    }
     const loaded = await loadLessonAccess(req, res);
     if (!loaded) return;
     if (!requirePilotUser(res, loaded.access.usuario)) return;
@@ -83,6 +87,7 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
       lessonId: loaded.lesson.id,
       principalId: loaded.access.usuario.id,
       message,
+      history,
       lessonTitle: loaded.lesson.titulo || null,
       moduleTitle: loaded.lesson.modulo.titulo || null,
     });

@@ -299,6 +299,8 @@ model FragmentoRag {
   orden       Int
   contenido   String
   embedding   Unsupported("vector(768)")
+  // Full-text derivado para búsqueda híbrida; se consulta con SQL (como embedding).
+  tsv         Unsupported("tsvector")
   documento   DocumentoRag                @relation(fields: [documentoId], references: [id], onDelete: Cascade)
 
   @@unique([documentoId, orden])
