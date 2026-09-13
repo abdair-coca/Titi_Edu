@@ -134,6 +134,16 @@ export default function TutorPanel({
     activeRef.current = true;
     setPending({ stage: 1 });
 
+    // Historial request-scoped: turnos previos (excluye la pregunta recién
+    // agregada). El backend lo trata como contexto no confiable.
+    const history = conversation
+      .filter((msg) => msg.role === 'user' || msg.role === 'tutor')
+      .slice(0, -1)
+      .map((msg) => ({
+        role: msg.role === 'tutor' ? 'assistant' : 'user',
+        content: String(msg.content || ''),
+      }));
+
     timersRef.current.push(
       setTimeout(() => {
         if (activeRef.current) setPending((p) => (p ? { ...p, stage: 2 } : p));
@@ -141,7 +151,7 @@ export default function TutorPanel({
     );
 
     client
-      .post(`/api/lessons/${lessonId}/chat`, { message: question })
+      .post(`/api/lessons/${lessonId}/chat`, { message: question, history })
       .then(({ data }) => {
         if (!activeRef.current) return;
         if (!data?.success) throw new Error(data?.message || 'No se pudo consultar al tutor');
