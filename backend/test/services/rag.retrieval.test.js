@@ -96,4 +96,28 @@ describe('RAG lesson-prioritized retrieval', () => {
     expect(result).toHaveLength(1);
     expect(result[0].lessonId).toBe('lesson-2');
   });
+
+  it('uses hybrid retrieval with full-text query terms', async () => {
+    prisma.$queryRaw.mockResolvedValueOnce([row({ id: 'f-hybrid', lessonId: 'lesson-1', similarity: 0.6 })]);
+
+    await searchCourseContext('course-1', '¿Qué es una variable?', 5);
+
+    const [sql] = prisma.$queryRaw.mock.calls[0];
+    const sqlText = Array.isArray(sql) ? sql.join('?') : String(sql?.text || sql);
+    expect(sqlText).toContain('plainto_tsquery(\'spanish\',');
+    expect(sqlText).toContain('ts_rank_cd');
+    expect(sqlText).toContain('"tsv"');
+  });
+
+  it('falls back to pure vector retrieval when the hybrid query fails', async () => {
+    prisma.$queryRaw
+      .mockRejectedValueOnce(new Error('column "tsv" does not exist'))
+      .mockResolvedValueOnce([row({ id: 'f-vector', lessonId: 'lesson-1', similarity: 0.8 })]);
+
+    const result = await searchCourseContext('course-1', '¿Qué es una variable?', 5);
+
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(2);
+    expect(result).toHaveLength(1);
+    expect(result[0].chunkId).toBe('f-vector');
+  });
 });

@@ -83,9 +83,39 @@ describe('RAG lesson routes', () => {
       lessonId: 'l-1',
       principalId: 'u-student',
       message: '¿Qué es una variable?',
+      history: undefined,
       lessonTitle: 'Variables',
       moduleTitle: 'Fundamentos',
     });
+  });
+
+  it('forwards recent history turns to the chat service', async () => {
+    allowStudent();
+    const response = await request(app).post('/api/lessons/l-1/chat')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({
+        message: '¿Y qué más?',
+        history: [
+          { role: 'user', content: '¿Qué es una variable?' },
+          { role: 'assistant', content: 'Un contenedor de valores.' },
+        ],
+      });
+    expect(response.status).toBe(200);
+    expect(mocks.chatWithCourseContext).toHaveBeenCalledWith(expect.objectContaining({
+      history: [
+        { role: 'user', content: '¿Qué es una variable?' },
+        { role: 'assistant', content: 'Un contenedor de valores.' },
+      ],
+    }));
+  });
+
+  it('rejects a non-array history field', async () => {
+    allowStudent();
+    const response = await request(app).post('/api/lessons/l-1/chat')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ message: '¿Qué es una variable?', history: 'chat' });
+    expect(response.status).toBe(400);
+    expect(mocks.chatWithCourseContext).not.toHaveBeenCalled();
   });
 
   it('blocks enrolled students outside pilot account', async () => {

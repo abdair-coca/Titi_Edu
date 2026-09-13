@@ -5,6 +5,7 @@ import {
   formatVector,
   htmlToText,
   lessonRagText,
+  normalizeChatHistory,
   normalizeText,
   prepareEmbeddingText,
   ragEnabledForCourse,
@@ -170,6 +171,45 @@ describe('RAG text preparation', () => {
     await expect(createEmbedding('consulta')).rejects.toMatchObject({
       status: 502,
       message: 'El embedding contiene valores no numéricos o no finitos',
+    });
+  });
+
+  describe('chat history normalization', () => {
+    it('keeps only the most recent allowed turns', () => {
+      const history = [
+        { role: 'user', content: 'uno' },
+        { role: 'assistant', content: 'dos' },
+        { role: 'user', content: 'tres' },
+        { role: 'assistant', content: 'cuatro' },
+      ];
+      expect(normalizeChatHistory(history, 2)).toEqual([
+        { role: 'user', content: 'tres' },
+        { role: 'assistant', content: 'cuatro' },
+      ]);
+    });
+
+    it('drops invalid roles and empty turns', () => {
+      const history = [
+        { role: 'system', content: 'no' },
+        { role: 'user', content: '' },
+        { role: 'tutor', content: 'tampoco' },
+        { role: 'assistant', content: 'válido' },
+      ];
+      expect(normalizeChatHistory(history)).toEqual([
+        { role: 'assistant', content: 'válido' },
+      ]);
+    });
+
+    it('returns empty array for non-array input', () => {
+      expect(normalizeChatHistory(null)).toEqual([]);
+      expect(normalizeChatHistory('chat')).toEqual([]);
+    });
+
+    it('trims and caps each turn content length', () => {
+      const long = 'x'.repeat(1500);
+      const [turn] = normalizeChatHistory([{ role: 'user', content: `  ${long}  ` }]);
+      expect(turn.content).toHaveLength(1000);
+      expect(turn.content.startsWith('x')).toBe(true);
     });
   });
 });
