@@ -18,11 +18,14 @@ El reindexado sigue protegido para admin, propietario o profesor del curso.
 ## Controles implementados
 
 - Contexto delimitado como datos no confiables.
-- Detección de señales de prompt injection en consulta y contenido recuperado.
+- Detección de señales de prompt injection en consulta, historial y contenido recuperado.
 - Bloqueo determinista de solicitudes para modificar notas, progreso, inscripciones o ejecutar SQL.
 - Sin herramientas ni llamadas a APIs de negocio desde el LLM.
 - Validación de citas: solo se aceptan números de fuentes recuperadas.
-- Respuesta fija cuando no hay evidencia o la respuesta no está grounded.
+- Grounding gradual: respuesta con matiz y citas válidas si la evidencia es parcial;
+  respuesta fija solo cuando no hay evidencia útil o la respuesta no está grounded.
+- Historial request-scoped: el backend es stateless y no persiste la conversación;
+  los turnos se tratan como contexto no confiable, nunca como instrucción.
 - Rate limit local: 5 mensajes/minuto y 30/día por estudiante, configurable.
 - Errores de proveedor convertidos a respuestas controladas.
 - Eventos de seguridad sin guardar el texto completo de la conversación.

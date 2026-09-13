@@ -96,13 +96,24 @@ El retrieval usa únicamente documentos activos y publicados del curso.
 
 ```
 GET  /api/lessons/:id/chat/status          Estado de flag e indexado (auth)
-POST /api/lessons/:id/chat                 { message } → { answer, citations, usage }
+POST /api/lessons/:id/chat                 { message, history? } → { answer, citations, usage }
 POST /api/admin/rag/courses/:courseId/reindex  Reindexar curso (autor/profesor/admin)
 ```
 
+El chat acepta `history` opcional: últimos N turnos `user`/`assistant` de la
+conversación de la lección. El backend es stateless — no persiste la conversación;
+el historial se envía al modelo como contexto no confiable. `history` debe ser una
+lista; turnos inválidos se descartan y se recorta a los más recientes
+(`RAG_CHAT_HISTORY_LIMIT`, default 8).
+
+La recuperación es híbrida: combina similitud vectorial (pgvector) con full-text
+(`tsvector`) de PostgreSQL para atrapar nombres y términos exactos. Si el full-text
+falla, se cae a recuperación vectorial pura.
+
 El chat devuelve `No encontré evidencia suficiente...` cuando no hay fragmentos
-recuperables. `citations` identifica lección, módulo y extracto; el tutor no tiene
-endpoints para modificar notas, progreso o inscripciones.
+recuperables. Con evidencia parcial responde lo respaldado y aclara qué parte no
+cubre el material. `citations` identifica lección, módulo y extracto; el tutor no
+tiene endpoints para modificar notas, progreso o inscripciones.
 
 ## Categorías — `/api/categories`
 ```
