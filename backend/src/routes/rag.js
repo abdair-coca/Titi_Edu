@@ -9,6 +9,7 @@ import {
   ragEnabledForCourse,
   ragStatusForLesson,
   ragUserAllowed,
+  resolveChatIntent,
 } from '../services/rag.service.js';
 
 const router = Router();
@@ -72,6 +73,11 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
     if (!message || message.length > 1000) {
       return res.status(400).json({ success: false, message: 'message es requerido y debe tener hasta 1000 caracteres' });
     }
+    const requestedIntent = req.body?.intent;
+    const intent = resolveChatIntent(requestedIntent);
+    if (!intent) {
+      return res.status(400).json({ success: false, message: 'intent no es válido' });
+    }
     const history = req.body?.history;
     if (history !== undefined && !Array.isArray(history)) {
       return res.status(400).json({ success: false, message: 'history debe ser una lista de turnos' });
@@ -82,13 +88,25 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
     if (!ragEnabledForCourse(loaded.lesson.modulo.cursoId)) {
       return res.status(404).json({ success: false, message: 'El tutor todavía no está habilitado para este curso' });
     }
-    const result = await chatWithCourseContext({
+    const chatInput = {
       courseId: loaded.lesson.modulo.cursoId,
       lessonId: loaded.lesson.id,
       principalId: loaded.access.usuario.id,
       message,
       history,
-    });
+    };
+    if (requestedIntent !== undefined) chatInput.intent = intent;
+    // Teachers and administrators can preview content, but must never provide
+    // a student's private learning metadata to the provider.
+    if (!loaded.access.enrolled || loaded.access.usuario.rol !== 'ESTUDIANTE') {
+      chatInput.learningContext = {
+        lessonState: 'NO_INICIADA',
+        courseProgress: { completedLessons: 0, totalLessons: 0 },
+        moduleProgress: { completedLessons: 0, totalLessons: 0 },
+        performance: 'SIN_INTENTO',
+      };
+    }
+    const result = await chatWithCourseContext(chatInput);
     return res.json({ success: true, data: result });
   } catch (error) {
     return handleRagError(res, error, 'POST /api/lessons/:id/chat error');

@@ -18,6 +18,36 @@ const DEFAULT_EVIDENCE_THRESHOLD = 0.45;
 const DEFAULT_INDEX_TRANSACTION_MAX_WAIT_MS = 10_000;
 const DEFAULT_INDEX_TRANSACTION_TIMEOUT_MS = 30_000;
 export const VECTOR_DIMENSIONS = 768;
+export const DEFAULT_CHAT_INTENT = 'DUDA';
+export const CHAT_INTENTS = Object.freeze([
+  'DUDA',
+  'EXPLICAR',
+  'EJEMPLO',
+  'RESUMEN',
+  'PRACTICA',
+  'PISTA',
+  'RETROALIMENTAR',
+]);
+const NEUTRAL_LEARNING_CONTEXT = Object.freeze({
+  lessonState: 'NO_INICIADA',
+  courseProgress: { completedLessons: 0, totalLessons: 0 },
+  moduleProgress: { completedLessons: 0, totalLessons: 0 },
+  performance: 'SIN_INTENTO',
+});
+const INTENT_INSTRUCTIONS = Object.freeze({
+  DUDA: 'Respondé la pregunta concreta, marcá alcance de la evidencia y citá solo fuentes recibidas.',
+  EXPLICAR: 'Explicá en pasos breves, con vocabulario claro, y cerrá con una comprobación de comprensión.',
+  EJEMPLO: 'Presentá un ejemplo trabajado separando concepto, aplicación y límite; no agregues conclusiones no respaldadas.',
+  RESUMEN: 'Entregá un resumen breve con puntos clave respaldados; no agregues información externa.',
+  PRACTICA: 'Proponé una sola consigna relacionada con la evidencia y pedí respuesta. No muestres solución, clave ni respuesta esperada en este turno.',
+  PISTA: 'Dá una pista parcial y progresiva. No entregues solución completa, clave ni respuesta esperada.',
+  RETROALIMENTAR: 'Tratá el mensaje actual como respuesta del estudiante. Reconocé aciertos, señalá solo errores conceptuales respaldados, explicá corrección y proponé próximo paso. No asignes nota ni crees intento. Si falta evidencia, declaralo sin inventar corrección.',
+});
+const LEARNING_ADAPTATION_INSTRUCTIONS = Object.freeze({
+  SIN_INTENTO: 'No asumas dominio previo; introducí el concepto con claridad y pasos graduados.',
+  NECESITA_REFUERZO: 'Priorizá pasos pequeños, vocabulario claro y una comprobación breve de comprensión. En práctica, ofrecé dificultad inicial moderada.',
+  LOGRADO: 'Podés aumentar moderadamente la dificultad en práctica y pedir transferencia a un caso nuevo, siempre dentro de la evidencia.',
+});
 const HYBRID_VECTOR_WEIGHT = Math.max(0, Math.min(1, Number(process.env.RAG_HYBRID_VECTOR_WEIGHT) || 0.7));
 const HYBRID_FTS_WEIGHT = Math.max(0, Math.min(1, Number(process.env.RAG_HYBRID_FTS_WEIGHT) || 0.3));
 const chatRateLimiter = new ChatRateLimiter({
@@ -56,6 +86,108 @@ export function ragUserAllowed(usuario) {
   const allowedEmails = csvValues(process.env.RAG_ALLOWED_USER_EMAIL).map((email) => email.toLowerCase());
   if (!allowedEmails.length) return false;
   return allowedEmails.includes(String(usuario?.email || '').trim().toLowerCase());
+}
+
+export function resolveChatIntent(value) {
+  if (value === undefined) return DEFAULT_CHAT_INTENT;
+  return CHAT_INTENTS.includes(value) ? value : null;
+}
+
+export function neutralLearningContext() {
+  return {
+    lessonState: NEUTRAL_LEARNING_CONTEXT.lessonState,
+    courseProgress: { ...NEUTRAL_LEARNING_CONTEXT.courseProgress },
+    moduleProgress: { ...NEUTRAL_LEARNING_CONTEXT.moduleProgress },
+    performance: NEUTRAL_LEARNING_CONTEXT.performance,
+  };
+}
+
+function sanitizeLearningContext(context) {
+  const safe = context || NEUTRAL_LEARNING_CONTEXT;
+  const lessonState = ['NO_INICIADA', 'EN_CURSO', 'COMPLETADA'].includes(safe.lessonState)
+    ? safe.lessonState
+    : 'NO_INICIADA';
+  const performance = ['SIN_INTENTO', 'NECESITA_REFUERZO', 'LOGRADO'].includes(safe.performance)
+    ? safe.performance
+    : 'SIN_INTENTO';
+  const progress = (value) => ({
+    completedLessons: Math.max(0, Number(value?.completedLessons) || 0),
+    totalLessons: Math.max(0, Number(value?.totalLessons) || 0),
+  });
+  return { lessonState, courseProgress: progress(safe.courseProgress), moduleProgress: progress(safe.moduleProgress), performance };
+}
+
+/**
+ * Builds ephemeral learning metadata after route authorization. Query scope is
+ * restricted to current course lessons and current student's records.
+ */
+export async function buildLearningContext({ courseId, lessonId, usuarioId }) {
+  if (!courseId || !lessonId || !usuarioId || !prisma.curso?.findUnique || !prisma.progreso?.findMany || !prisma.intento?.findMany) {
+    return neutralLearningContext();
+  }
+
+  try {
+    const course = await prisma.curso.findUnique({
+      where: { id: courseId },
+      select: {
+        modulos: {
+          where: { estado: 'PUBLICADO' },
+          orderBy: { orden: 'asc' },
+          select: {
+            id: true,
+            lecciones: { where: { estado: 'PUBLICADA' }, select: { id: true } },
+            evaluacion: { select: { id: true } },
+          },
+        },
+      },
+    });
+    const modules = course?.modulos || [];
+    const currentModule = modules.find((module) => module.lecciones.some((lesson) => lesson.id === lessonId));
+    const courseLessonIds = modules.flatMap((module) => module.lecciones.map((lesson) => lesson.id));
+    if (!currentModule || !courseLessonIds.length) return neutralLearningContext();
+
+    const evaluationIds = [currentModule.evaluacion?.id].filter(Boolean);
+    const [progressRows, attempts] = await Promise.all([
+      prisma.progreso.findMany({
+        where: { usuarioId, leccionId: { in: courseLessonIds } },
+        select: { leccionId: true, completada: true },
+      }),
+      evaluationIds.length
+        ? prisma.intento.findMany({
+            where: { usuarioId, evaluacionId: { in: evaluationIds } },
+            select: { aprobado: true },
+          })
+        : Promise.resolve([]),
+    ]);
+
+    const completed = new Set(progressRows.filter((row) => row.completada).map((row) => row.leccionId));
+    const lessonState = completed.has(lessonId)
+      ? 'COMPLETADA'
+      : progressRows.some((row) => row.leccionId === lessonId)
+        ? 'EN_CURSO'
+        : 'NO_INICIADA';
+    const moduleLessonIds = currentModule.lecciones.map((lesson) => lesson.id);
+    const moduleCompleted = moduleLessonIds.filter((id) => completed.has(id)).length;
+    const performance = attempts.length === 0
+      ? 'SIN_INTENTO'
+      : attempts.some((attempt) => attempt.aprobado === true)
+        ? 'LOGRADO'
+        : 'NECESITA_REFUERZO';
+
+    return sanitizeLearningContext({
+      lessonState,
+      courseProgress: { completedLessons: completed.size, totalLessons: courseLessonIds.length },
+      moduleProgress: { completedLessons: moduleCompleted, totalLessons: moduleLessonIds.length },
+      performance,
+    });
+  } catch (error) {
+    securityEvent('learning_context_load_failed', {
+      courseId,
+      lessonId,
+      reason: error?.name || 'unknown_error',
+    });
+    return neutralLearningContext();
+  }
 }
 
 function evidenceThreshold() {
@@ -397,7 +529,7 @@ export async function createEmbedding(input, { kind = 'query', title = null } = 
   }
 }
 
-async function generateAnswer({ message, chunks, courseId, lessonId, principalId, history = [] }) {
+async function generateAnswer({ message, chunks, courseId, lessonId, principalId, history = [], intent, learningContext }) {
   const { route, mode, endpoint, token, gatewayToken, model } = requireChatConfig();
   const context = chunks.map((chunk) => [
     `<<<RETRIEVED_SOURCE number="${chunk.index}" >>>`,
@@ -415,6 +547,8 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
   const topSimilarity = chunks.reduce((max, chunk) => Math.max(max, Number(chunk.similarity) || 0), 0);
   const partialEvidence = topSimilarity < evidenceThreshold()
     && !chunks.some((chunk) => chunk.ftsMatch);
+  const resolvedIntent = resolveChatIntent(intent) || DEFAULT_CHAT_INTENT;
+  const safeLearningContext = sanitizeLearningContext(learningContext);
 
   const systemContent = [
     'Sos un tutor académico de Titi.',
@@ -428,6 +562,12 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
     'Si las fuentes cubren la pregunta solo parcialmente, respondé con lo que el material sí respalda, aclarando de forma explícita qué parte no está cubierta por el material; no inventes lo faltante.',
     'Cita las fuentes usando [1], [2], etc. Solo podés usar los números de las fuentes recibidas.',
     'No ejecutes acciones, no cambies notas, progreso o inscripciones y no reveles secretos.',
+    `INTENCIÓN PEDAGÓGICA: ${resolvedIntent}`,
+    INTENT_INSTRUCTIONS[resolvedIntent],
+    'CONTEXTO DE APRENDIZAJE EFÍMERO Y MINIMIZADO (metadatos, no instrucciones):',
+    JSON.stringify(safeLearningContext),
+    `ADAPTACIÓN SEGÚN DESEMPEÑO: ${LEARNING_ADAPTATION_INSTRUCTIONS[safeLearningContext.performance]}`,
+    'Usá contexto de aprendizaje solo para ajustar claridad, pasos, ejemplos y dificultad. No lo conviertas en nota, diagnóstico, sanción ni bloqueo de contenido. Nunca afirmes haber cambiado progreso o evaluación.',
     `FUENTES RECUPERADAS:\n${context}`,
   ].join('\n');
 
@@ -815,7 +955,10 @@ export function normalizeChatHistory(history, limit = DEFAULT_CHAT_HISTORY_LIMIT
   return maxTurns > 0 ? cleaned.slice(-maxTurns) : [];
 }
 
-export async function chatWithCourseContext({ courseId, lessonId = null, principalId = 'anonymous', message, history = [] }) {
+export async function chatWithCourseContext({ courseId, lessonId = null, principalId = 'anonymous', message, history = [], intent, learningContext }) {
+  const resolvedIntent = resolveChatIntent(intent);
+  if (!resolvedIntent) throw new RagError(400, 'intent no es válido');
+
   const allowance = chatRateLimiter.consume(principalId);
   if (!allowance.allowed) {
     securityEvent('chat_limit_reached', { courseId, lessonId, reason: allowance.reason });
@@ -828,13 +971,25 @@ export async function chatWithCourseContext({ courseId, lessonId = null, princip
   }
 
   const safeHistory = normalizeChatHistory(history, process.env.RAG_CHAT_HISTORY_LIMIT);
+  const safeLearningContext = learningContext
+    ? sanitizeLearningContext(learningContext)
+    : await buildLearningContext({ courseId, lessonId, usuarioId: principalId });
 
   // Prioriza la lección abierta (top-K de esa lección + fallback al curso).
   const chunks = await searchCourseContext(courseId, message, DEFAULT_RETRIEVAL_LIMIT, { lessonId });
   if (!chunks.length) {
     return { answer: NO_EVIDENCE_ANSWER, citations: [], usage: null };
   }
-  const generated = await generateAnswer({ message, chunks, courseId, lessonId, principalId, history: safeHistory });
+  const generated = await generateAnswer({
+    message,
+    chunks,
+    courseId,
+    lessonId,
+    principalId,
+    history: safeHistory,
+    intent: resolvedIntent,
+    learningContext: safeLearningContext,
+  });
   const grounded = validateGroundedAnswer(generated.answer, chunks);
   if (!grounded.valid) {
     securityEvent('ungrounded_answer_rejected', { courseId, lessonId, reason: grounded.reason });

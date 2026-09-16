@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
   chatWithCourseContext: vi.fn(),
   indexCourse: vi.fn(),
   ragUserAllowed: vi.fn(),
+  resolveChatIntent: vi.fn(),
 }));
 
 vi.mock('../../src/prisma.js', () => ({ default: mocks.client }));
@@ -25,6 +26,7 @@ vi.mock('../../src/services/rag.service.js', () => ({
   chatWithCourseContext: mocks.chatWithCourseContext,
   indexCourse: mocks.indexCourse,
   ragUserAllowed: mocks.ragUserAllowed,
+  resolveChatIntent: mocks.resolveChatIntent,
 }));
 
 import app from '../../src/app.js';
@@ -47,6 +49,9 @@ describe('RAG lesson routes', () => {
     mocks.ragEnabledForCourse.mockReturnValue(true);
     mocks.ragStatusForLesson.mockResolvedValue({ enabled: true, indexed: true, status: 'LISTO' });
     mocks.ragUserAllowed.mockReturnValue(true);
+    mocks.resolveChatIntent.mockImplementation((intent) => intent === undefined ? 'DUDA' : [
+      'DUDA', 'EXPLICAR', 'EJEMPLO', 'RESUMEN', 'PRACTICA', 'PISTA', 'RETROALIMENTAR',
+    ].includes(intent) ? intent : null);
     mocks.chatWithCourseContext.mockResolvedValue({
       answer: 'Las variables guardan valores. [1]',
       citations: [{ number: 1, lessonId: 'l-1', title: 'Variables', excerpt: '...' }],
@@ -114,6 +119,44 @@ describe('RAG lesson routes', () => {
       .send({ message: '¿Qué es una variable?', history: 'chat' });
     expect(response.status).toBe(400);
     expect(mocks.chatWithCourseContext).not.toHaveBeenCalled();
+  });
+
+  it('rejects an unknown intent before invoking the chat service', async () => {
+    allowStudent();
+    const response = await request(app).post('/api/lessons/l-1/chat')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ message: '¿Qué es una variable?', intent: 'RESOLVER_EVALUACION' });
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ success: false, message: 'intent no es válido' });
+    expect(mocks.chatWithCourseContext).not.toHaveBeenCalled();
+  });
+
+  it('forwards explicit pedagogical intent while keeping omitted intent compatible', async () => {
+    allowStudent();
+    await request(app).post('/api/lessons/l-1/chat')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ message: 'Dame una pista', intent: 'PISTA' });
+    expect(mocks.chatWithCourseContext).toHaveBeenCalledWith(expect.objectContaining({ intent: 'PISTA' }));
+  });
+
+  it('sends neutral learning context for administrative preview', async () => {
+    mocks.client.usuario.findUnique.mockResolvedValue({ id: 'u-admin', email: 'admin@gmail.com', rol: 'ADMIN' });
+    mocks.client.leccion.findUnique.mockResolvedValue({
+      id: 'l-1', titulo: 'Variables', estado: 'PUBLICADA', modulo: { titulo: 'Fundamentos', cursoId: 'c-1', estado: 'PUBLICADO' },
+    });
+    mocks.client.curso.findUnique.mockResolvedValue({ creadorId: 'u-teacher', publicado: true, profesores: [] });
+    const response = await request(app).post('/api/lessons/l-1/chat')
+      .set('Authorization', `Bearer ${teacherToken}`)
+      .send({ message: 'Explicá la lección' });
+    expect(response.status).toBe(200);
+    expect(mocks.chatWithCourseContext).toHaveBeenCalledWith(expect.objectContaining({
+      learningContext: {
+        lessonState: 'NO_INICIADA',
+        courseProgress: { completedLessons: 0, totalLessons: 0 },
+        moduleProgress: { completedLessons: 0, totalLessons: 0 },
+        performance: 'SIN_INTENTO',
+      },
+    }));
   });
 
   it('blocks enrolled students outside pilot account', async () => {

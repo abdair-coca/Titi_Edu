@@ -31,28 +31,30 @@
 - [x] Ejecutar `npm --prefix backend run lint`.
 - [x] Informar cambios, evidencia y riesgos; pedir feedback explícito antes de Etapa 2.
 
-> Etapa 1 cerrada técnicamente; Etapa 2 permanece bloqueada hasta feedback explícito.
+> Etapa 1 cerrada técnicamente; feedback de avance recibido.
 
 ## Etapa 2 — Tutoría formativa y adaptación
 
 ### Backend
 
-- [ ] Definir `intent` permitido (`DUDA`, `EXPLICAR`, `EJEMPLO`, `RESUMEN`, `PRACTICA`, `PISTA`, `RETROALIMENTAR`) con default compatible `DUDA`.
-- [ ] Validar `intent` en `POST /api/lessons/:id/chat`, devolver `400` para valores desconocidos y conservar el contrato API.
-- [ ] Implementar carga request-scoped del contexto mínimo usando solo curso/lección actual, `Progreso`, `Inscripcion` e intentos relevantes.
-- [ ] Convertir progreso y desempeño a estados agregados sin enviar PII, notas, respuestas, claves ni datos de otros usuarios al proveedor.
-- [ ] Usar contexto neutral cuando la carga opcional falle y registrar únicamente evento técnico sin texto de conversación.
-- [ ] Extender prompt con reglas por intención, adaptación de dificultad y ciclo práctica → respuesta → feedback.
-- [ ] Asegurar que `PRACTICA` no revele solución antes del intento y que `PISTA` no entregue solución completa.
-- [ ] Asegurar que `RETROALIMENTAR` produzca feedback cualitativo con próximo paso, sin crear `Intento`, cambiar `Progreso` ni asignar nota oficial.
-- [ ] Mantener controles de seguridad y no ejecutar acciones desde el LLM.
+- [x] Definir `intent` permitido (`DUDA`, `EXPLICAR`, `EJEMPLO`, `RESUMEN`, `PRACTICA`, `PISTA`, `RETROALIMENTAR`) con default compatible `DUDA`.
+- [x] Validar `intent` en `POST /api/lessons/:id/chat`, devolver `400` para valores desconocidos y conservar el contrato API.
+- [x] Implementar carga request-scoped del contexto mínimo usando solo curso/lección actual, `Progreso`, `Inscripcion` e intentos relevantes.
+- [x] Convertir progreso y desempeño a estados agregados sin enviar PII, notas, respuestas, claves ni datos de otros usuarios al proveedor.
+- [x] Usar contexto neutral cuando la carga opcional falle y registrar únicamente evento técnico sin texto de conversación.
+- [x] Extender prompt con reglas por intención, adaptación de dificultad y ciclo práctica → respuesta → feedback.
+- [x] Asegurar que `PRACTICA` no revele solución antes del intento y que `PISTA` no entregue solución completa.
+- [x] Asegurar que `RETROALIMENTAR` produzca feedback cualitativo con próximo paso, sin crear `Intento`, cambiar `Progreso` ni asignar nota oficial.
+- [x] Mantener controles de seguridad y no ejecutar acciones desde el LLM.
 
 ### Pruebas y puerta
 
-- [ ] Agregar tests de validación de `intent`, contexto neutral, minimización de datos y adaptación por estados de aprendizaje.
-- [ ] Agregar tests de prompt/flujo para duda, explicación, práctica, pista y retroalimentación sin solución ni mutaciones.
-- [ ] Ejecutar tests backend y lint de etapa.
-- [ ] Informar cambios, evidencia y riesgos; pedir feedback explícito antes de Etapa 3.
+- [x] Agregar tests de validación de `intent`, contexto neutral, minimización de datos y adaptación por estados de aprendizaje.
+- [x] Agregar tests de prompt/flujo para duda, explicación, práctica, pista y retroalimentación sin solución ni mutaciones.
+- [x] Ejecutar tests backend y lint de etapa.
+- [x] Informar cambios, evidencia y riesgos; pedir feedback explícito antes de Etapa 3.
+
+> Etapa 2 cerrada técnicamente; Etapa 3 permanece bloqueada hasta feedback explícito.
 
 ## Etapa 3 — Experiencia de estudio y cierre
 
