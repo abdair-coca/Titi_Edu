@@ -50,6 +50,27 @@ describe('RAG chat security', () => {
     expect(result.citations).toEqual([]);
   });
 
+  it('returns no-evidence answer without invoking chat provider', async () => {
+    prisma.$queryRaw.mockReset();
+    prisma.$queryRaw.mockResolvedValue([]);
+    const fetchMock = vi.fn().mockResolvedValueOnce(embeddingResponse());
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await chatWithCourseContext({
+      courseId: 'course-1',
+      lessonId: 'lesson-1',
+      principalId: 'student-1',
+      message: 'Pregunta fuera del material',
+    });
+
+    expect(result).toEqual({
+      answer: 'No encontré evidencia suficiente en los materiales publicados de este curso.',
+      citations: [],
+      usage: null,
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it('does not call retrieval or the provider for state-changing requests', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);

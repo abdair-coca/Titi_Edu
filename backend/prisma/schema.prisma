@@ -274,18 +274,19 @@ model Leccion {
 // Documento indexado para el tutor RAG. Solo contiene material educativo
 // publicado; nunca almacena notas, progreso ni datos personales del usuario.
 model DocumentoRag {
-  id            String             @id @default(uuid())
-  leccionId     String
-  version       Int
-  estado        EstadoDocumentoRag @default(PENDIENTE)
-  activo        Boolean            @default(true)
-  hashContenido String
-  modelo        String
-  error         String?
-  indexadoAt    DateTime?
-  createdAt     DateTime           @default(now())
-  leccion       Leccion            @relation(fields: [leccionId], references: [id], onDelete: Cascade)
-  fragmentos    FragmentoRag[]
+  id             String             @id @default(uuid())
+  leccionId      String
+  version        Int
+  estado         EstadoDocumentoRag @default(PENDIENTE)
+  activo         Boolean            @default(true)
+  hashContenido  String
+  modelo         String
+  assessmentSafe Boolean            @default(false)
+  error          String?
+  indexadoAt     DateTime?
+  createdAt      DateTime           @default(now())
+  leccion        Leccion            @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+  fragmentos     FragmentoRag[]
 
   @@unique([leccionId, version])
   @@index([leccionId, activo, estado])
@@ -294,14 +295,14 @@ model DocumentoRag {
 // El embedding se escribe/consulta con SQL porque Prisma aún no expone
 // operaciones vectoriales portables para pgvector.
 model FragmentoRag {
-  id          String                      @id @default(uuid())
+  id          String                     @id @default(uuid())
   documentoId String
   orden       Int
   contenido   String
   embedding   Unsupported("vector(768)")
   // Full-text derivado para búsqueda híbrida; se consulta con SQL (como embedding).
   tsv         Unsupported("tsvector")
-  documento   DocumentoRag                @relation(fields: [documentoId], references: [id], onDelete: Cascade)
+  documento   DocumentoRag               @relation(fields: [documentoId], references: [id], onDelete: Cascade)
 
   @@unique([documentoId, orden])
   @@index([documentoId])

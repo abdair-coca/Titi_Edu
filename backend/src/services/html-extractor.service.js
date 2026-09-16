@@ -248,6 +248,134 @@ const DEFINITION_KEYS = ['definicion', 'definition', 'significado', 'meaning', '
 const TITLE_KEYS = ['titulo', 'title', 'slide', 'nombre', 'name', 'tema', 'topic'];
 const CONTENT_KEYS = ['contenido', 'content', 'texto', 'text', 'body', 'detalle', 'detail'];
 
+const ASSESSMENT_SECRET_KEYS = new Set([
+  ...CORRECT_KEYS,
+  ...EXPLANATION_KEYS,
+  'answerKey',
+  'claveRespuesta',
+  'correctOption',
+  'opcionCorrecta',
+  'selectedAnswer',
+  'expectedAnswer',
+  'chosenAnswer',
+  'submittedAnswer',
+  'userAnswer',
+  'studentAnswer',
+  'selectedOption',
+  'expectedOption',
+  'chosenOption',
+  'secret',
+  'secreto',
+  'private',
+  'privado',
+].map((key) => key.replace(/[-_\s]/g, '').toLowerCase()));
+
+const ASSESSMENT_SECRET_KEY_PATTERN = /^(?:(?:selected|expected|chosen|given|submitted|user|student|provided)?(?:answer|answers|respuesta|respuestas)|(?:selected|expected|chosen|given|submitted|user|student|provided|correct|right)?(?:option|options|choice|choices|opcion|opciones|alternativa|alternativas)|(?:is|es)?(?:correct|correcta|correcto|right)|solution|solucion|explicacion|explanation|feedback|pista|hint)(?:answer|answers|key|option|choice|value|text|index|id|respuesta|correcta|correcto|explicacion|explanation|feedback|pista|hint)*$/i;
+const ASSESSMENT_SECRET_TEXT_PATTERN = /\b(?:respuesta\s+(?:correcta|correcto|esperada|esperado)|(?:respuesta|answer|solution|soluci[oó]n)\s+(?:es|is)|(?:opci[oó]n|option)\s+(?:correcta|correct|seleccionada|selected)|correct\s+answer|expected\s+answer|(?:answer|respuesta|solution|soluci[oó]n)\s*[:=]|answer\s+(?:key|explanation)|clave\s+(?:de\s+)?respuesta|soluci[oó]n(?:\s+(?:correcta|answer|key))?|feedback|retroalimentaci[oó]n)\b/i;
+const HTML_VOID_ELEMENTS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
+
+function normalizeKey(value) {
+  return String(value || '').replace(/[-_\s]/g, '').toLowerCase();
+}
+
+function isAssessmentSecretKey(key) {
+  const normalized = normalizeKey(key);
+  const withoutDataPrefix = normalized.replace(/^data/, '');
+  return ASSESSMENT_SECRET_KEYS.has(normalized)
+    || ASSESSMENT_SECRET_KEYS.has(withoutDataPrefix)
+    || ASSESSMENT_SECRET_KEY_PATTERN.test(withoutDataPrefix);
+}
+
+const SAFE_STRUCTURED_TEXT_KEYS = new Set([
+  ...QUESTION_KEYS,
+  ...CONCEPT_KEYS,
+  ...DEFINITION_KEYS,
+  ...TITLE_KEYS,
+  ...CONTENT_KEYS,
+  'intro',
+  'introduccion',
+  'description',
+  'descripcion',
+  'instruction',
+  'instructions',
+  'instruccion',
+  'instrucciones',
+  'message',
+  'mensaje',
+  'dialogue',
+  'dialogo',
+  'visibleText',
+  'textoVisible',
+].map(normalizeKey));
+
+function isAssessmentSecretLiteral(value) {
+  return ASSESSMENT_SECRET_TEXT_PATTERN.test(value);
+}
+
+function hasHiddenDomState(attributes) {
+  if (/(?:^|\s)hidden(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?(?=\s|\/?>(?:$|\s))/i.test(attributes)) return true;
+
+  const ariaHidden = attributes.match(/\baria-hidden\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+  if (['true', '1', 'yes', 'on'].includes((ariaHidden?.[1] ?? ariaHidden?.[2] ?? ariaHidden?.[3] ?? '').trim().toLowerCase())) return true;
+
+  const style = attributes.match(/\bstyle\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+  const styleValue = style?.[1] ?? style?.[2] ?? style?.[3] ?? '';
+  if (/(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*hidden)(?:\s*!\s*important)?\s*(?:;|$)/i.test(styleValue)) return true;
+
+  const classAttr = attributes.match(/\bclass\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+  const classValue = classAttr?.[1] ?? classAttr?.[2] ?? classAttr?.[3] ?? '';
+  if (classValue.split(/\s+/).some((className) => /(?:hidden|ishidden|dnone|displaynone|invisible|visuallyhidden|sronly|opacity0|secret|answer|solution|feedback|correct)/i.test(normalizeKey(className)))) return true;
+
+  const dataHidden = attributes.match(/\bdata-hidden(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?(?=\s|\/?>(?:$|\s))/i);
+  const dataHiddenValue = dataHidden?.[1] ?? dataHidden?.[2] ?? dataHidden?.[3] ?? '';
+  if (dataHidden && (!dataHiddenValue || ['true', '1', 'yes', 'on', 'hidden', 'none'].includes(dataHiddenValue.trim().toLowerCase()))) return true;
+
+  const dataVisibility = attributes.match(/\bdata-(?:hidden|visible|visibility|show|display|state)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+  const dataName = dataVisibility?.[0]?.match(/\b(data-[\w-]+)/i)?.[1]?.toLowerCase() || '';
+  const dataValue = (dataVisibility?.[1] ?? dataVisibility?.[2] ?? dataVisibility?.[3] ?? '').trim().toLowerCase();
+  if (/data-(?:visible|visibility|show|state)/.test(dataName)) {
+    return ['false', '0', 'no', 'off', 'hidden', 'none', 'invisible'].includes(dataValue);
+  }
+  if (/data-hidden/.test(dataName)) return ['true', '1', 'yes', 'on', 'hidden', 'none'].includes(dataValue);
+  if (/data-display/.test(dataName)) return ['none', 'hidden', 'invisible'].includes(dataValue);
+  return false;
+}
+
+function maskUnsafeDomSubtrees(html) {
+  const tagRegex = /<\/?[a-z][^>]*>/gi;
+  const stack = [];
+  let cursor = 0;
+  let masked = '';
+  let match;
+
+  while ((match = tagRegex.exec(html)) !== null) {
+    const tag = match[0];
+    const closing = /^<\//.test(tag);
+    const name = tag.match(/^<\/?\s*([a-z0-9-]+)/i)?.[1]?.toLowerCase();
+    const parentHidden = stack.some((entry) => entry.hidden);
+
+    if (!parentHidden && !(closing === false && (name === 'template' || hasHiddenDomState(tag)))) {
+      masked += html.slice(cursor, match.index);
+    }
+
+    if (closing) {
+      if (!parentHidden) masked += tag;
+      const stackIndex = [...stack].reverse().findIndex((entry) => entry.name === name);
+      if (stackIndex !== -1) stack.splice(stack.length - 1 - stackIndex, 1);
+    } else {
+      const selfClosing = /\/\s*>$/.test(tag) || HTML_VOID_ELEMENTS.has(name);
+      const hidden = parentHidden || name === 'template' || hasHiddenDomState(tag);
+      if (!parentHidden && !hidden) masked += tag;
+      if (!selfClosing) stack.push({ name, hidden });
+    }
+
+    cursor = match.index + tag.length;
+  }
+
+  if (!stack.some((entry) => entry.hidden)) masked += html.slice(cursor);
+  return masked;
+}
+
 function findKeyCaseInsensitive(obj, candidateKeys) {
   if (!obj || typeof obj !== 'object') return null;
   const entries = Object.entries(obj);
@@ -256,6 +384,32 @@ function findKeyCaseInsensitive(obj, candidateKeys) {
     if (found) return found[1];
   }
   return null;
+}
+
+function isStructuredItemHidden(item) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) return false;
+
+  const hidden = findKeyCaseInsensitive(item, ['hidden', 'isHidden', 'oculto', 'oculta', 'aria-hidden', 'ariaHidden', 'data-hidden', 'dataHidden']);
+  if (['true', '1', 'yes', 'on', 'hidden', 'none'].includes(String(hidden ?? '').trim().toLowerCase())) return true;
+
+  const visible = findKeyCaseInsensitive(item, ['visible', 'isVisible', 'visibleEnPantalla', 'aria-visible', 'ariaVisible', 'data-visible', 'dataVisible']);
+  if (['false', '0', 'no', 'off', 'hidden', 'none', 'invisible'].includes(String(visible ?? '').trim().toLowerCase())) return true;
+
+  const show = findKeyCaseInsensitive(item, ['show', 'mostrar', 'data-show', 'dataShow']);
+  if (['false', '0', 'no', 'off', 'hidden', 'none', 'invisible'].includes(String(show ?? '').trim().toLowerCase())) return true;
+
+  const visibility = findKeyCaseInsensitive(item, ['visibility', 'data-visibility', 'dataVisibility', 'state', 'data-state', 'dataState']);
+  if (['false', '0', 'no', 'off', 'hidden', 'none', 'invisible'].includes(String(visibility ?? '').trim().toLowerCase())) return true;
+
+  const display = findKeyCaseInsensitive(item, ['display', 'data-display', 'dataDisplay']);
+  if (['none', 'hidden'].includes(String(display ?? '').trim().toLowerCase())) return true;
+
+  const style = findKeyCaseInsensitive(item, ['style']);
+  if (typeof style === 'string' && /(?:display\s*:\s*none|visibility\s*:\s*hidden)(?:\s*!\s*important)?/i.test(style)) return true;
+
+  const className = findKeyCaseInsensitive(item, ['class', 'className']);
+  return typeof className === 'string'
+    && className.split(/\s+/).some((token) => /(?:hidden|ishidden|dnone|displaynone|invisible|visuallyhidden|sronly|opacity0|secret|answer|solution|feedback|correct)/i.test(normalizeKey(token)));
 }
 
 function cleanString(value) {
@@ -369,7 +523,7 @@ function parseRelaxedJson(raw) {
   return null;
 }
 
-function formatStructuredItem(item) {
+function formatStructuredItem(item, { assessmentSafe = false } = {}) {
   if (!item || typeof item !== 'object') return null;
 
   // Caso 1: Pregunta / Quiz / Trivia
@@ -380,14 +534,20 @@ function formatStructuredItem(item) {
     const rawOptions = findKeyCaseInsensitive(item, OPTIONS_KEYS);
     if (Array.isArray(rawOptions)) {
       const optionsText = rawOptions
-        .map((opt) => (typeof opt === 'object' ? findKeyCaseInsensitive(opt, ['texto', 'text', 'label', 'valor', 'value']) || JSON.stringify(opt) : String(opt)))
+        .map((opt) => {
+          if (typeof opt !== 'object') return String(opt);
+          if (assessmentSafe && isStructuredItemHidden(opt)) return '';
+          const optionText = findKeyCaseInsensitive(opt, ['texto', 'text', 'label', 'valor', 'value']);
+          if (optionText) return optionText;
+          return assessmentSafe ? '' : JSON.stringify(opt);
+        })
         .map(cleanString)
         .filter(Boolean);
       if (optionsText.length > 0) parts.push(`Opciones: ${optionsText.join(', ')}`);
     }
 
     const rawCorrect = findKeyCaseInsensitive(item, CORRECT_KEYS);
-    if (rawCorrect !== null && rawCorrect !== undefined) {
+    if (!assessmentSafe && rawCorrect !== null && rawCorrect !== undefined) {
       const correctText = typeof rawCorrect === 'object'
         ? findKeyCaseInsensitive(rawCorrect, ['texto', 'text', 'label', 'valor', 'value'])
         : String(rawCorrect);
@@ -395,7 +555,7 @@ function formatStructuredItem(item) {
     }
 
     const explanation = findKeyCaseInsensitive(item, EXPLANATION_KEYS);
-    if (explanation && typeof explanation === 'string') {
+    if (!assessmentSafe && explanation && typeof explanation === 'string') {
       parts.push(`Explicación: ${cleanString(explanation)}`);
     }
 
@@ -419,28 +579,32 @@ function formatStructuredItem(item) {
   return null;
 }
 
-function extractStructuredData(data, results, seenStrings) {
+function extractStructuredData(data, results, seenStrings, options = {}) {
   if (!data) return;
 
   if (Array.isArray(data)) {
     for (const elem of data) {
-      extractStructuredData(elem, results, seenStrings);
+      extractStructuredData(elem, results, seenStrings, options);
     }
     return;
   }
 
   if (typeof data === 'object') {
-    const formatted = formatStructuredItem(data);
+    if (options.assessmentSafe && isStructuredItemHidden(data)) return;
+    const formatted = formatStructuredItem(data, options);
     if (formatted) {
       results.push(formatted);
       // Registrar las cadenas individuales como vistas para evitar duplicación
-      for (const val of Object.values(data)) {
+      for (const [key, val] of Object.entries(data)) {
+        if (options.assessmentSafe && isAssessmentSecretKey(key)) continue;
         if (typeof val === 'string') seenStrings.add(cleanString(val));
       }
       return;
     }
 
-    for (const val of Object.values(data)) {
+    for (const [key, val] of Object.entries(data)) {
+      if (options.assessmentSafe && isAssessmentSecretKey(key)) continue;
+      if (options.assessmentSafe && !SAFE_STRUCTURED_TEXT_KEYS.has(normalizeKey(key)) && typeof val === 'string') continue;
       if (typeof val === 'string') {
         const cleaned = cleanString(val);
         if (isNaturalLanguageText(cleaned) && !seenStrings.has(cleaned)) {
@@ -448,13 +612,13 @@ function extractStructuredData(data, results, seenStrings) {
           seenStrings.add(cleaned);
         }
       } else if (typeof val === 'object') {
-        extractStructuredData(val, results, seenStrings);
+        extractStructuredData(val, results, seenStrings, options);
       }
     }
   }
 }
 
-function extractScriptContent(html, seenStrings) {
+function extractScriptContent(html, seenStrings, { assessmentSafe = false } = {}) {
   const extracted = [];
   const scriptRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
   let match;
@@ -468,7 +632,7 @@ function extractScriptContent(html, seenStrings) {
     if (/type\s*=\s*["'](?:application\/json|text\/json)["']/i.test(scriptTag)) {
       const parsed = parseRelaxedJson(scriptBody);
       if (parsed) {
-        extractStructuredData(parsed, extracted, seenStrings);
+        extractStructuredData(parsed, extracted, seenStrings, { assessmentSafe });
         continue;
       }
     }
@@ -480,7 +644,7 @@ function extractScriptContent(html, seenStrings) {
       const literalCandidate = varMatch[1];
       const parsed = parseRelaxedJson(literalCandidate);
       if (parsed) {
-        extractStructuredData(parsed, extracted, seenStrings);
+        extractStructuredData(parsed, extracted, seenStrings, { assessmentSafe });
       }
     }
 
@@ -489,6 +653,9 @@ function extractScriptContent(html, seenStrings) {
     const stringLiteralRegex = /(?:"([^"\\]*(?:\\.[^"\\]*)*)"|'([^'\\]*(?:\\.[^'\\]*)*)'|`([^`\\]*(?:\\.[^`\\]*)*)`)/g;
     let literalMatch;
     while ((literalMatch = stringLiteralRegex.exec(scriptBody)) !== null) {
+      // Arbitrary JS strings can be answer values referenced by a later branch.
+      // Safe mode only trusts structured data and visible DOM text.
+      if (assessmentSafe) continue;
       const rawString = literalMatch[1] ?? literalMatch[2] ?? literalMatch[3] ?? '';
       if (rawString.length < 4) continue;
       // descartar literales que son claramente selectores / rutas / código
@@ -514,22 +681,24 @@ function extractScriptContent(html, seenStrings) {
   return extracted;
 }
 
-function extractDomContent(html, seenStrings) {
+function extractDomContent(html, seenStrings, { assessmentSafe = false } = {}) {
   const extracted = [];
 
   // Eliminar etiquetas que nunca aportan contenido educativo o rompen el flujo
-  const cleanedHtml = html
+  const cleanedHtml = (assessmentSafe ? maskUnsafeDomSubtrees(html) : html)
     .replace(/<!--[\s\S]*?-->/g, ' ')
     .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, ' ')
     .replace(/<svg\b[^>]*>[\s\S]*?<\/svg>/gi, ' ')
     .replace(/<noscript\b[^>]*>[\s\S]*?<\/noscript>/gi, ' ');
 
   // 1. Extraer atributos educativos relevantes: data-question, data-title, data-flow, alt, aria-label, title
-  const attributeRegex = /\b(?:data-[a-zA-Z0-9_-]+|alt|title|aria-label)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+  const attributeRegex = /\b(data-[a-zA-Z0-9_-]+|alt|title|aria-label)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi;
   let attrMatch;
   while ((attrMatch = attributeRegex.exec(cleanedHtml)) !== null) {
-    const rawValue = attrMatch[1] ?? attrMatch[2] ?? attrMatch[3] ?? '';
+    const attrName = attrMatch[1] || '';
+    const rawValue = attrMatch[2] ?? attrMatch[3] ?? attrMatch[4] ?? '';
     const cleaned = cleanString(rawValue);
+    if (assessmentSafe && (isAssessmentSecretKey(attrName) || isAssessmentSecretLiteral(cleaned))) continue;
     if (isNaturalLanguageText(cleaned) && !seenStrings.has(cleaned)) {
       extracted.push(cleaned);
       seenStrings.add(cleaned);
@@ -579,16 +748,17 @@ function extractDomContent(html, seenStrings) {
  * @param {string} html - Código HTML completo autocontenido de la lección
  * @returns {string} Texto educativo normalizado y estructurado, óptimo para embeddings RAG
  */
-export function extractLessonHtmlContent(html) {
+export function extractLessonHtmlContent(html, { assessmentSafe = false } = {}) {
   if (!html || typeof html !== 'string') return '';
 
   const seenStrings = new Set();
+  const scriptSource = assessmentSafe ? maskUnsafeDomSubtrees(html) : html;
 
   // 1. Extraer contenido visible y atributos educativos del DOM
-  const domParts = extractDomContent(html, seenStrings);
+  const domParts = extractDomContent(html, seenStrings, { assessmentSafe });
 
   // 2. Extraer contenido interactivo, preguntas, respuestas y datos de <script>
-  const scriptParts = extractScriptContent(html, seenStrings);
+  const scriptParts = extractScriptContent(scriptSource, seenStrings, { assessmentSafe });
 
   // 3. Unir de forma estructurada para mantener coherencia semántica en los chunks
   // Preservamos \n\n entre bloques para que chunkText pueda mantener Pregunta+Opciones+Respuesta juntas

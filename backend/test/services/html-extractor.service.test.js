@@ -58,6 +58,110 @@ describe('extractLessonHtmlContent', () => {
     expect(result).toContain('Respuesta correcta: Nucleus');
   });
 
+  it('omits answer keys and hidden feedback in assessment-safe mode', () => {
+    const html = `
+      <div data-question="¿Qué organelo produce ATP?" data-answer="La mitocondria" data-hint="Pensá en la respiración celular"></div>
+      <script>
+        const quiz = [{
+          pregunta: "¿Qué organelo produce ATP?",
+          opciones: ["La mitocondria", "El ribosoma"],
+          correcta: "La mitocondria",
+          explicacion: "La respuesta correcta es la mitocondria."
+        }];
+        const answerKey = "La mitocondria";
+        const feedback = "Revisá la función energética de la célula.";
+      </script>
+    `;
+
+    const result = extractLessonHtmlContent(html, { assessmentSafe: true });
+
+    expect(result).toContain('Pregunta: ¿Qué organelo produce ATP?');
+    expect(result).toContain('Opciones: La mitocondria, El ribosoma');
+    expect(result).not.toContain('Respuesta correcta:');
+    expect(result).not.toContain('La respuesta correcta es la mitocondria.');
+    expect(result).not.toContain('Revisá la función energética de la célula.');
+    expect(result).not.toContain('Pensá en la respiración celular');
+  });
+
+  it('removes hidden DOM, templates, nested secret objects, and unsafe JS fallbacks', () => {
+    const html = `
+      <div hidden><p>CLAVE OCULTA EN DOM</p></div>
+      <div hidden><script>const hiddenScript = "CLAVE SCRIPT OCULTA";</script></div>
+      <div aria-hidden="true"><p>CLAVE ARIA OCULTA</p></div>
+      <div aria-hidden="1"><p>CLAVE ARIA NUMERICA</p></div>
+      <div style="display: none"><p>CLAVE DISPLAY OCULTA</p></div>
+      <div style="display:none ! important"><p>CLAVE DISPLAY INVALIDA</p></div>
+      <div style="visibility:hidden"><p>CLAVE VISIBILITY OCULTA</p></div>
+      <div data-display="none"><p>CLAVE DATA DISPLAY</p></div>
+      <div data-show="off"><p>CLAVE DATA SHOW</p></div>
+      <div data-visible="invisible"><p>CLAVE DATA INVISIBLE</p></div>
+      <div data-visible="no"><p>CLAVE DATA NO</p></div>
+      <div data-hidden><p>CLAVE DATA BARE</p></div>
+      <div class="answer"><p>CLAVE CLASE GENERICA</p></div>
+      <template><p>CLAVE TEMPLATE OCULTA</p></template>
+      <section>
+        <p>¿Qué proceso transforma la energía celular?</p>
+        <p>La energía celular se estudia mediante conceptos observables.</p>
+        <ol><li>Respiración celular</li><li>Fotosíntesis</li></ol>
+      </section>
+      <script type="application/json">
+        {"actividad":{"pregunta":"¿Qué proceso transforma la energía celular?","opciones":["Respiración celular","Fotosíntesis"],"meta":{"correctAnswer":"CLAVE JSON ANIDADA"}}}
+      </script>
+      <script>
+        const answerKey = "CLAVE JS ASIGNADA";
+        const broken = { answer: { text: "CLAVE JS OBJETO ANIDADO" } invalid };
+        if (showSolution) { reveal("CLAVE JS CONDICIONAL"); }
+        if (selected === "a") { reveal("CLAVE JS CONDICIONAL SIN NOMBRE"); }
+      </script>
+    `;
+
+    const result = extractLessonHtmlContent(html, { assessmentSafe: true });
+
+    expect(result).toContain('¿Qué proceso transforma la energía celular?');
+    expect(result).toContain('Respiración celular');
+    expect(result).toContain('Fotosíntesis');
+    expect(result).toContain('La energía celular se estudia mediante conceptos observables.');
+    expect(result).not.toMatch(/CLAVE (?:OCULTA|TEMPLATE|JSON|JS|NUMERICA|INVALIDA|DATA|NO|CLASE)/);
+  });
+
+  it('fails closed for common hidden classes and selected answer keys', () => {
+    const html = `
+      <div class="answerKey"><p>CLAVE CSS</p></div>
+      <div aria-label="Respuesta correcta: CLAVE ARIA"></div>
+      <div data-visible="false"><p>CLAVE DATA</p></div>
+      <p>Texto educativo visible y permitido.</p>
+      <script type="application/json">
+        {"selectedAnswer":"CLAVE JSON SELECCIONADA","expectedOption":"CLAVE JSON ESPERADA","answerExplanation":"CLAVE JSON EXPLICACION","content":"Contenido educativo visible y permitido."}
+      </script>
+      <script>
+        const selectedOption = 'CLAVE JS SELECCIONADA';
+        const arbitraryValue = 'CLAVE JS ARBITRARIA';
+        if (showSolution && currentQuestion && selectedAttempt && learnerState && currentModule && currentLesson && attemptNumber > 0) {
+          const prompt = 'CLAVE JS DENTRO DE RAMA LARGA';
+        }
+      </script>
+    `;
+
+    const result = extractLessonHtmlContent(html, { assessmentSafe: true });
+
+    expect(result).toContain('Contenido educativo visible y permitido.');
+    expect(result).toContain('Texto educativo visible y permitido.');
+    expect(result).not.toMatch(/CLAVE (?:CSS|ARIA|DATA|JSON|JS)/);
+  });
+
+  it('does not keep structured options explicitly marked hidden', () => {
+    const html = `
+      <script type="application/json">
+        {"pregunta":"¿Qué proceso produce ATP?","opciones":[{"text":"CLAVE OPCION OCULTA","hidden":true},{"text":"CLAVE OPCION OFF","show":"off"},{"text":"CLAVE OPCION ARIA","ariaHidden":"on"},{"text":"CLAVE OPCION DISPLAY","data-display":"none"},{"text":"Respiración celular"}]}
+      </script>
+    `;
+
+    const result = extractLessonHtmlContent(html, { assessmentSafe: true });
+
+    expect(result).toContain('Respiración celular');
+    expect(result).not.toMatch(/CLAVE OPCION/);
+  });
+
   it('extracts concept and definition pairs (flashcards/memory cards)', () => {
     const html = `
       <html>

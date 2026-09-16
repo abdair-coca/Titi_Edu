@@ -21,8 +21,9 @@ afterEach(() => {
 
 describe('RAG indexing feature flag', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.documentoRag.update.mockResolvedValue({});
+      vi.clearAllMocks();
+      mocks.documentoRag.updateMany.mockResolvedValue({ count: 0 });
+      mocks.documentoRag.update.mockResolvedValue({});
     mocks.documentoRag.create.mockResolvedValue({});
     process.env.RAG_ENABLED = 'true';
     process.env.RAG_COURSE_IDS = 'course-pilot';
@@ -44,7 +45,7 @@ describe('RAG indexing feature flag', () => {
     expect(mocks.executeRaw).not.toHaveBeenCalled();
   });
 
-  it('does not delete previous fragments when embedding generation fails', async () => {
+  it('quarantines active documents without deleting previous fragments when embedding fails', async () => {
     mocks.leccion.findUnique.mockResolvedValue({
       id: 'lesson-1',
       estado: 'PUBLICADA',
@@ -67,9 +68,75 @@ describe('RAG indexing feature flag', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('provider unavailable')));
 
     await expect(indexLesson('lesson-1')).rejects.toMatchObject({ status: 502 });
-    expect(mocks.documentoRag.updateMany).not.toHaveBeenCalled();
+    expect(mocks.documentoRag.updateMany).toHaveBeenCalledWith({
+      where: { leccionId: 'lesson-1', activo: true },
+      data: expect.objectContaining({ estado: 'FALLIDO', activo: false, error: expect.any(String) }),
+    });
     expect(mocks.fragmentoRag.deleteMany).not.toHaveBeenCalled();
     expect(mocks.executeRaw).not.toHaveBeenCalled();
+  });
+
+  it('quarantines an active evaluable document when reindexing fails', async () => {
+    mocks.leccion.findUnique.mockResolvedValue({
+      id: 'lesson-1',
+      estado: 'PUBLICADA',
+      titulo: 'Evaluación',
+      contenido: 'Contenido evaluable',
+      recursoHtml: { html: '<p>Actividad visible</p>', evaluable: true },
+      modulo: { estado: 'PUBLICADO', curso: { id: 'course-pilot', publicado: true } },
+    });
+    mocks.documentoRag.findUnique.mockResolvedValue({
+      id: 'document-1',
+      activo: true,
+      estado: 'LISTO',
+      hashContenido: 'old-hash',
+      modelo: 'old-model',
+    });
+    process.env.EMBEDDING_API_URL = 'https://embeddings.example';
+    process.env.EMBEDDING_API_KEY = 'test-key';
+    process.env.EMBEDDING_MODEL = 'google/embeddinggemma-300M';
+    process.env.EMBEDDING_PROVIDER = 'local';
+    process.env.EMBEDDING_MAX_RETRIES = '0';
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('provider unavailable')));
+
+    await expect(indexLesson('lesson-1')).rejects.toMatchObject({ status: 502 });
+    expect(mocks.documentoRag.update).toHaveBeenCalledWith({
+      where: { id: 'document-1' },
+      data: expect.objectContaining({ estado: 'FALLIDO', activo: false, error: expect.any(String) }),
+    });
+    expect(mocks.documentoRag.updateMany).toHaveBeenCalledWith({
+      where: { leccionId: 'lesson-1', activo: true },
+      data: expect.objectContaining({ estado: 'FALLIDO', activo: false, error: expect.any(String) }),
+    });
+    expect(mocks.fragmentoRag.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('quarantines older active evaluable documents when the current version has no document', async () => {
+    mocks.leccion.findUnique.mockResolvedValue({
+      id: 'lesson-1',
+      version: 2,
+      estado: 'PUBLICADA',
+      titulo: 'Evaluación actualizada',
+      contenido: 'Contenido evaluable actualizado',
+      recursoHtml: { html: '<p>Actividad visible</p>', evaluable: true },
+      modulo: { estado: 'PUBLICADO', curso: { id: 'course-pilot', publicado: true } },
+    });
+    mocks.documentoRag.findUnique.mockResolvedValue(null);
+    process.env.EMBEDDING_API_URL = 'https://embeddings.example';
+    process.env.EMBEDDING_API_KEY = 'test-key';
+    process.env.EMBEDDING_MODEL = 'google/embeddinggemma-300M';
+    process.env.EMBEDDING_PROVIDER = 'local';
+    process.env.EMBEDDING_MAX_RETRIES = '0';
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('provider unavailable')));
+
+    await expect(indexLesson('lesson-1')).rejects.toMatchObject({ status: 502 });
+    expect(mocks.documentoRag.updateMany).toHaveBeenCalledWith({
+      where: { leccionId: 'lesson-1', activo: true },
+      data: expect.objectContaining({ estado: 'FALLIDO', activo: false, error: expect.any(String) }),
+    });
+    expect(mocks.documentoRag.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ leccionId: 'lesson-1', version: 2, estado: 'FALLIDO', activo: false }),
+    });
   });
 
   it('swaps fragments only inside a transaction after embeddings are ready', async () => {
@@ -111,5 +178,8 @@ describe('RAG indexing feature flag', () => {
     expect(mocks.$transaction).toHaveBeenCalledWith(expect.any(Function), { maxWait: 10000, timeout: 30000 });
     expect(tx.fragmentoRag.deleteMany).toHaveBeenCalledWith({ where: { documentoId: 'document-1' } });
     expect(tx.$executeRaw).toHaveBeenCalledOnce();
+    expect(tx.documentoRag.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ assessmentSafe: false }),
+    });
   });
 });

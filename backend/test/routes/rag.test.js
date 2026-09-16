@@ -84,8 +84,6 @@ describe('RAG lesson routes', () => {
       principalId: 'u-student',
       message: '¿Qué es una variable?',
       history: undefined,
-      lessonTitle: 'Variables',
-      moduleTitle: 'Fundamentos',
     });
   });
 

@@ -88,8 +88,6 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
       principalId: loaded.access.usuario.id,
       message,
       history,
-      lessonTitle: loaded.lesson.titulo || null,
-      moduleTitle: loaded.lesson.modulo.titulo || null,
     });
     return res.json({ success: true, data: result });
   } catch (error) {

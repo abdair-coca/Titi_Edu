@@ -75,6 +75,25 @@ describe('RAG text preparation', () => {
     expect(text).toContain('Respuesta correcta: Un contenedor para almacenar valores.');
   });
 
+  it('uses assessment-safe HTML content for evaluable lessons', () => {
+    const gameHtml = `
+      <script>
+        const questions = [
+          { pregunta: '¿Qué es una variable?', opciones: ['Un contenedor', 'Un color'], correcta: 'Un contenedor', explicacion: 'La respuesta es un contenedor.' }
+        ];
+      </script>
+    `;
+    const text = lessonRagText({
+      titulo: 'Lección 1',
+      contenido: 'Fundamentos',
+      recursoHtml: { html: gameHtml, evaluable: true },
+    });
+    expect(text).toContain('Pregunta: ¿Qué es una variable?');
+    expect(text).toContain('Opciones: Un contenedor, Un color');
+    expect(text).not.toContain('Respuesta correcta:');
+    expect(text).not.toContain('La respuesta es un contenedor.');
+  });
+
   it('uses one retrieval preprocessing contract for queries and documents', () => {
     expect(prepareEmbeddingText('¿Qué es una variable?')).toBe('task: search result | query: ¿Qué es una variable?');
     expect(prepareEmbeddingText('Una variable almacena un valor.', { kind: 'document', title: 'Variables' }))
