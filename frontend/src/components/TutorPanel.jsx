@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import client from '../api/client.js';
 import MarkdownContent from './MarkdownContent.jsx';
 import TitiMascot from './TitiMascot.jsx';
+import { buildTutorHistory } from '../lib/tutorHistory.js';
 import { usePopIn } from '../lib/motion.js';
 import {
   SparklesIcon,
@@ -74,6 +75,8 @@ export default function TutorPanel({
   const textareaRef = useRef(null);
   const lastMsgRef = useRef(null);
   const activeRef = useRef(false);
+  const requestIdRef = useRef(0);
+  const controllerRef = useRef(null);
   const timersRef = useRef([]);
 
   const clearTimers = () => {
@@ -81,12 +84,21 @@ export default function TutorPanel({
     timersRef.current = [];
   };
 
-  useEffect(() => () => { activeRef.current = false; clearTimers(); }, []);
+  useEffect(() => () => {
+    requestIdRef.current += 1;
+    activeRef.current = false;
+    controllerRef.current?.abort();
+    controllerRef.current = null;
+    clearTimers();
+  }, []);
 
   // Al cambiar de lección: cancelo request/estados en vuelo para no mezclar
   // loading ni respuestas entre conversaciones distintas.
   useEffect(() => {
+    requestIdRef.current += 1;
     activeRef.current = false;
+    controllerRef.current?.abort();
+    controllerRef.current = null;
     clearTimers();
     setPending(null);
     setError(null);
@@ -129,6 +141,13 @@ export default function TutorPanel({
   const ask = (prompt, { appendUser = true } = {}) => {
     const question = String(prompt || '').trim();
     if (!question || pending || !ready) return;
+    const requestId = requestIdRef.current + 1;
+    requestIdRef.current = requestId;
+    controllerRef.current?.abort();
+    clearTimers();
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    const isCurrentRequest = () => activeRef.current && requestIdRef.current === requestId;
     if (appendUser) onAppendMessages([{ role: 'user', content: question }]);
     setError(null);
     activeRef.current = true;
@@ -136,51 +155,49 @@ export default function TutorPanel({
 
     // Historial request-scoped: turnos previos (excluye la pregunta recién
     // agregada). El backend lo trata como contexto no confiable.
-    const history = conversation
-      .filter((msg) => msg.role === 'user' || msg.role === 'tutor')
-      .slice(0, -1)
-      .map((msg) => ({
-        role: msg.role === 'tutor' ? 'assistant' : 'user',
-        content: String(msg.content || ''),
-      }));
+    const history = buildTutorHistory(conversation, question);
 
     timersRef.current.push(
       setTimeout(() => {
-        if (activeRef.current) setPending((p) => (p ? { ...p, stage: 2 } : p));
+        if (isCurrentRequest()) setPending((p) => (p ? { ...p, stage: 2 } : p));
       }, 650),
     );
 
     client
-      .post(`/api/lessons/${lessonId}/chat`, { message: question, history })
+      .post(`/api/lessons/${lessonId}/chat`, { message: question, history }, { signal: controller.signal })
       .then(({ data }) => {
-        if (!activeRef.current) return;
+        if (!isCurrentRequest()) return;
         if (!data?.success) throw new Error(data?.message || 'No se pudo consultar al tutor');
         const citations = Array.isArray(data.data?.citations) ? data.data.citations : [];
         const answer = data.data?.answer || 'No encontré evidencia suficiente.';
 
         timersRef.current.push(
           setTimeout(() => {
-            if (activeRef.current) setPending((p) => (p ? { ...p, stage: 3, count: citations.length } : p));
+            if (isCurrentRequest()) setPending((p) => (p ? { ...p, stage: 3, count: citations.length } : p));
           }, 450),
         );
         timersRef.current.push(
           setTimeout(() => {
-            if (activeRef.current) setPending((p) => (p ? { ...p, stage: 4 } : p));
+            if (isCurrentRequest()) setPending((p) => (p ? { ...p, stage: 4 } : p));
           }, 1350),
         );
         timersRef.current.push(
           setTimeout(() => {
-            if (!activeRef.current) return;
+            if (!isCurrentRequest()) return;
             onAppendMessages([{ role: 'tutor', content: answer, citations }]);
             activeRef.current = false;
+            if (controllerRef.current === controller) controllerRef.current = null;
+            clearTimers();
             setPending(null);
           }, 2000),
         );
       })
       .catch((err) => {
-        if (!activeRef.current) return;
+        if (!isCurrentRequest()) return;
+        clearTimers();
         console.error('Tutor IA — error al consultar', err.response?.data?.message || err.message);
         activeRef.current = false;
+        if (controllerRef.current === controller) controllerRef.current = null;
         setPending(null);
         setError({ question });
       });
@@ -195,7 +212,10 @@ export default function TutorPanel({
   };
 
   const handleNewConversation = () => {
+    requestIdRef.current += 1;
     activeRef.current = false;
+    controllerRef.current?.abort();
+    controllerRef.current = null;
     clearTimers();
     setPending(null);
     setError(null);
@@ -493,7 +513,6 @@ function MessageBubble({ msg, showActions, onAsk, onNavigateToLesson }) {
 // ---- Fuente RAG expandible (datos reales del backend) ----
 function CitationCard({ citation, onNavigate }) {
   const [open, setOpen] = useState(false);
-  const relevance = Math.round((citation.similarity || 0) * 100);
 
   return (
     <div className="rounded-xl border border-gray-200 bg-titi-cream/60 overflow-hidden">
@@ -514,7 +533,7 @@ function CitationCard({ citation, onNavigate }) {
             {citation.moduleTitle}
           </span>
           <span className="inline-flex items-center gap-1 mt-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
-            Relevancia: {relevance}%
+            Fuente publicada del curso
           </span>
         </span>
         <ChevronDownIcon

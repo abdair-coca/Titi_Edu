@@ -11,7 +11,8 @@
     "test:authoring-contract": "node scripts/check-authoring-contract.mjs",
     "test:html-lesson": "node scripts/check-html-lesson-player.mjs",
     "test:deadline": "node scripts/check-deadline.mjs",
-    "test:rag": "node scripts/check-rag-contract.mjs"
+    "test:rag": "node scripts/check-rag-contract.mjs",
+    "test:tutor-history": "node scripts/check-tutor-history.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
