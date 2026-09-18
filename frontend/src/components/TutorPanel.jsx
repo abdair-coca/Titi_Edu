@@ -3,6 +3,11 @@ import client from '../api/client.js';
 import MarkdownContent from './MarkdownContent.jsx';
 import TitiMascot from './TitiMascot.jsx';
 import { buildTutorHistory } from '../lib/tutorHistory.js';
+import {
+  PRACTICE_AWAITING_ANSWER,
+  practiceStateAfterResponse,
+  resolveTutorIntent,
+} from '../lib/tutorPractice.js';
 import { usePopIn } from '../lib/motion.js';
 import {
   SparklesIcon,
@@ -30,30 +35,34 @@ const QUICK_ACTIONS = [
   {
     label: 'Explícame este tema',
     Icon: BookIcon,
+    intent: 'EXPLICAR',
     prompt: 'Explícame este tema de forma sencilla, usando los materiales de la lección.',
   },
   {
     label: 'Dame un ejemplo',
     Icon: CodeIcon,
+    intent: 'EJEMPLO',
     prompt: 'Dame un ejemplo práctico sobre este tema.',
   },
   {
     label: 'Hazme una pregunta',
     Icon: LightbulbIcon,
-    prompt: 'Hazme una pregunta de práctica sobre este tema y corregí mi respuesta.',
+    intent: 'PRACTICA',
+    prompt: 'Proponé una pregunta de práctica sobre este tema. No muestres la solución.',
   },
   {
     label: 'Crea un ejercicio',
     Icon: PracticeIcon,
+    intent: 'PRACTICA',
     prompt: 'Crea un ejercicio sobre este tema para practicar.',
   },
 ];
 
 const POST_ACTIONS = [
-  { label: 'Más simple', prompt: 'Explicámelo más simple, paso a paso, usando los materiales de la lección.' },
-  { label: 'Otro ejemplo', prompt: 'Dame otro ejemplo distinto sobre este tema.' },
-  { label: 'Ejercicio', prompt: 'Crea un ejercicio de práctica sobre este tema y corregilo.' },
-  { label: 'Resumir', prompt: 'Resumí los puntos clave de esta lección en una lista corta.' },
+  { label: 'Más simple', intent: 'EXPLICAR', prompt: 'Explicámelo más simple, paso a paso, usando los materiales de la lección.' },
+  { label: 'Otro ejemplo', intent: 'EJEMPLO', prompt: 'Dame otro ejemplo distinto sobre este tema.' },
+  { label: 'Ejercicio', intent: 'PRACTICA', prompt: 'Crea un ejercicio de práctica sobre este tema. No muestres la solución.' },
+  { label: 'Resumir', intent: 'RESUMEN', prompt: 'Resumí los puntos clave de esta lección en una lista corta.' },
 ];
 
 export default function TutorPanel({
@@ -63,15 +72,17 @@ export default function TutorPanel({
   moduloTitulo,
   leccionTitulo,
   conversation,
+  practiceState,
   onAppendMessages,
   onResetConversation,
+  onPracticeStateChange,
   onNavigateToLesson,
   onClose,
 }) {
   const [status, setStatus] = useState(null); // null | { enabled, indexed }
   const [input, setInput] = useState('');
   const [pending, setPending] = useState(null); // null | { stage, count }
-  const [error, setError] = useState(null); // null | { question }
+  const [error, setError] = useState(null); // null | { question, intent }
   const textareaRef = useRef(null);
   const lastMsgRef = useRef(null);
   const activeRef = useRef(false);
@@ -138,9 +149,10 @@ export default function TutorPanel({
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   };
 
-  const ask = (prompt, { appendUser = true } = {}) => {
+  const ask = (prompt, { appendUser = true, intent } = {}) => {
     const question = String(prompt || '').trim();
     if (!question || pending || !ready) return;
+    const requestIntent = resolveTutorIntent(intent, practiceState);
     const requestId = requestIdRef.current + 1;
     requestIdRef.current = requestId;
     controllerRef.current?.abort();
@@ -148,6 +160,7 @@ export default function TutorPanel({
     const controller = new AbortController();
     controllerRef.current = controller;
     const isCurrentRequest = () => activeRef.current && requestIdRef.current === requestId;
+    if (requestIntent !== 'RETROALIMENTAR' && requestIntent !== 'DUDA') onPracticeStateChange?.(null);
     if (appendUser) onAppendMessages([{ role: 'user', content: question }]);
     setError(null);
     activeRef.current = true;
@@ -164,7 +177,7 @@ export default function TutorPanel({
     );
 
     client
-      .post(`/api/lessons/${lessonId}/chat`, { message: question, history }, { signal: controller.signal })
+      .post(`/api/lessons/${lessonId}/chat`, { message: question, history, intent: requestIntent }, { signal: controller.signal })
       .then(({ data }) => {
         if (!isCurrentRequest()) return;
         if (!data?.success) throw new Error(data?.message || 'No se pudo consultar al tutor');
@@ -185,6 +198,8 @@ export default function TutorPanel({
           setTimeout(() => {
             if (!isCurrentRequest()) return;
             onAppendMessages([{ role: 'tutor', content: answer, citations }]);
+            const nextPracticeState = practiceStateAfterResponse(requestIntent, citations.length);
+            if (nextPracticeState !== undefined) onPracticeStateChange?.(nextPracticeState);
             activeRef.current = false;
             if (controllerRef.current === controller) controllerRef.current = null;
             clearTimers();
@@ -199,7 +214,7 @@ export default function TutorPanel({
         activeRef.current = false;
         if (controllerRef.current === controller) controllerRef.current = null;
         setPending(null);
-        setError({ question });
+        setError({ question, intent: requestIntent });
       });
   };
 
@@ -249,6 +264,7 @@ export default function TutorPanel({
           </span>
           <div className="min-w-0">
             <h2 className="text-sm font-bold text-titi-dark leading-none">Tutor IA</h2>
+            <p className="text-[11px] font-semibold text-gray-400 mt-1">Apoyo formativo · no califica</p>
             <div className="mt-1">
               {status && (status.enabled && status.indexed ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2 py-0.5 text-xs font-bold text-green-700">
@@ -304,6 +320,14 @@ export default function TutorPanel({
             </div>
           </div>
         </div>
+        {practiceState?.phase === PRACTICE_AWAITING_ANSWER && (
+          <div role="status" className="mt-2 rounded-xl border border-titi-yellow/50 bg-titi-yellow-light/40 px-3 py-2">
+            <p className="text-xs font-bold text-titi-dark">Práctica en curso</p>
+            <p className="text-xs font-medium text-gray-500 mt-0.5">
+              Respondé en el campo de abajo para recibir retroalimentación formativa. No es una calificación oficial.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Cuerpo: conversación / estados */}
@@ -323,7 +347,7 @@ export default function TutorPanel({
                 key={`${index}-${msg.role}`}
                 msg={msg}
                 showActions={index === conversation.length - 1 && msg.role === 'tutor'}
-                onAsk={(prompt) => ask(prompt)}
+                onAsk={(prompt, options) => ask(prompt, options)}
                 onNavigateToLesson={onNavigateToLesson}
               />
             ))}
@@ -356,7 +380,7 @@ export default function TutorPanel({
                   </p>
                   <button
                     type="button"
-                    onClick={() => ask(error.question, { appendUser: false })}
+                    onClick={() => ask(error.question, { appendUser: false, intent: error.intent })}
                     className="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-titi-dark bg-white border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 transition-colors"
                   >
                     Reintentar
@@ -383,8 +407,8 @@ export default function TutorPanel({
             onKeyDown={handleKeyDown}
             rows={1}
             maxLength={1000}
-            placeholder="Preguntá sobre esta lección…"
-            aria-label="Pregunta al tutor de la lección"
+            placeholder={practiceState?.phase === PRACTICE_AWAITING_ANSWER ? 'Escribí tu respuesta para recibir feedback…' : 'Preguntá sobre esta lección…'}
+            aria-label={practiceState?.phase === PRACTICE_AWAITING_ANSWER ? 'Respuesta para la práctica del tutor' : 'Pregunta al tutor de la lección'}
             className="w-full min-w-0 resize-none bg-titi-cream border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm font-medium text-titi-dark placeholder:text-gray-300 focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150 max-h-[120px]"
           />
           <button
@@ -401,7 +425,7 @@ export default function TutorPanel({
           </button>
         </form>
         <p className="mt-1.5 text-xs font-medium text-gray-400">
-          Enter para enviar · Shift+Enter para nueva línea
+          {practiceState?.phase === PRACTICE_AWAITING_ANSWER ? 'Al enviar recibirás feedback formativo · no modifica notas' : 'Enter para enviar · Shift+Enter para nueva línea'}
         </p>
       </div>
     </div>
@@ -416,14 +440,14 @@ function EmptyState({ onAsk }) {
       <TitiMascot state="saludo" size="sm" message="" className="mb-3" />
       <h3 className="text-base font-bold text-titi-dark mb-1.5">¡Hola! Soy tu Tutor IA.</h3>
       <p className="text-sm text-gray-500 font-medium leading-relaxed mb-5 max-w-xs">
-        Puedo ayudarte a comprender esta lección, darte ejemplos, generar ejercicios y resolver tus dudas usando los materiales del curso.
+        Puedo ayudarte a comprender esta lección, darte ejemplos, generar ejercicios y resolver tus dudas usando los materiales del curso. No pongo notas ni cambio tu progreso.
       </p>
       <div className="w-full grid grid-cols-2 gap-2">
-        {QUICK_ACTIONS.map(({ label, Icon, prompt }) => (
+        {QUICK_ACTIONS.map(({ label, Icon, prompt, intent }) => (
           <button
             key={label}
             type="button"
-            onClick={() => onAsk(prompt)}
+            onClick={() => onAsk(prompt, { intent })}
             className="flex items-center gap-2 rounded-xl border-2 border-gray-200 bg-white px-3 py-2.5 text-left text-xs font-bold text-titi-dark hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_3px_0px_#E5E7EB] active:translate-y-0 active:shadow-none transition-all duration-150"
           >
             <Icon className="w-4 h-4 text-titi-yellow-dark shrink-0" aria-hidden="true" />
@@ -493,11 +517,11 @@ function MessageBubble({ msg, showActions, onAsk, onNavigateToLesson }) {
         )}
         {showActions && (
           <div className="mt-3 flex flex-wrap gap-1.5 border-t border-gray-100 pt-3">
-            {POST_ACTIONS.map(({ label, prompt }) => (
+            {POST_ACTIONS.map(({ label, prompt, intent }) => (
               <button
                 key={label}
                 type="button"
-                onClick={() => onAsk(prompt)}
+                onClick={() => onAsk(prompt, { intent })}
                 className="rounded-full border border-gray-200 bg-titi-cream px-2.5 py-1 text-xs font-bold text-titi-dark hover:border-titi-yellow hover:bg-titi-yellow-light transition-colors active:scale-95"
               >
                 {label}

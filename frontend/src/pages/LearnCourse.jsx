@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -88,6 +88,9 @@ export default function LearnCourse() {
   // Conversaciones del Tutor IA por lección (el backend es stateless: la
   // conversación vive acá, keyed por lección para no mezclarlas).
   const [tutorConvos, setTutorConvos] = useState({});
+  // Estado efímero del ciclo práctica → respuesta → feedback, keyed por lección.
+  const [tutorPractice, setTutorPractice] = useState({});
+  const previousTutorLessonRef = useRef(null);
 
   const appendTutorMessages = (lessonId, msgs) => {
     setTutorConvos((prev) => ({
@@ -98,7 +101,35 @@ export default function LearnCourse() {
 
   const resetTutorConversation = (lessonId) => {
     setTutorConvos((prev) => ({ ...prev, [lessonId]: [] }));
+    setTutorPractice((prev) => {
+      if (!prev[lessonId]) return prev;
+      const next = { ...prev };
+      delete next[lessonId];
+      return next;
+    });
   };
+
+  const setTutorPracticeForLesson = (lessonId, state) => {
+    setTutorPractice((prev) => {
+      const next = { ...prev };
+      if (state) next[lessonId] = state;
+      else delete next[lessonId];
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const previousLessonId = previousTutorLessonRef.current;
+    if (previousLessonId && previousLessonId !== activeId) {
+      setTutorPractice((prev) => {
+        if (!prev[previousLessonId]) return prev;
+        const next = { ...prev };
+        delete next[previousLessonId];
+        return next;
+      });
+    }
+    previousTutorLessonRef.current = activeId;
+  }, [activeId]);
 
   // --- Fetch del curso + progreso en paralelo ---
   useEffect(() => {
@@ -714,8 +745,10 @@ export default function LearnCourse() {
               moduloTitulo: activeModulo?.titulo,
               leccionTitulo: activeLesson.titulo,
               conversation: tutorConvos[activeLesson.id] || [],
+              practiceState: tutorPractice[activeLesson.id] || null,
               onAppendMessages: (msgs) => appendTutorMessages(activeLesson.id, msgs),
               onResetConversation: () => resetTutorConversation(activeLesson.id),
+              onPracticeStateChange: (state) => setTutorPracticeForLesson(activeLesson.id, state),
               onNavigateToLesson: handleSelectLesson,
             }}
           />
