@@ -96,9 +96,16 @@ El retrieval usa únicamente documentos activos y publicados del curso.
 
 ```
 GET  /api/lessons/:id/chat/status          Estado de flag e indexado (auth)
-POST /api/lessons/:id/chat                 { message, history? } → { answer, citations, usage }
+POST /api/lessons/:id/chat                 { message, intent?, history? } → { answer, citations, usage }
 POST /api/admin/rag/courses/:courseId/reindex  Reindexar curso (autor/profesor/admin)
 ```
+
+`intent` es opcional y acepta `DUDA`, `EXPLICAR`, `EJEMPLO`, `RESUMEN`, `PRACTICA`,
+`PISTA` o `RETROALIMENTAR`; si se omite usa `DUDA`. Un valor desconocido responde
+`400`. Las intenciones formativas no modifican notas, progreso ni inscripciones.
+`PRACTICA` entrega una sola consigna sin solución; el siguiente turno puede enviar
+`RETROALIMENTAR` con la respuesta del estudiante para recibir feedback cualitativo y
+un próximo paso, sin crear un `Intento` oficial.
 
 El chat acepta `history` opcional: últimos N turnos `user`/`assistant` de la
 conversación de la lección. El backend es stateless — no persiste la conversación;
@@ -112,7 +119,11 @@ falla, se cae a recuperación vectorial pura.
 
 El chat devuelve `No encontré evidencia suficiente...` cuando no hay fragmentos
 recuperables. Con evidencia parcial responde lo respaldado y aclara qué parte no
-cubre el material. `citations` identifica lección, módulo y extracto; el tutor no
+cubre el material. `citations` identifica `number`, `lessonId`, `title`, `moduleTitle`,
+`excerpt` y score técnico no calibrado; la interfaz muestra la fuente publicada y no
+lo presenta como porcentaje de relevancia. El contexto de aprendizaje enviado al
+modelo es efímero y agregado: estado de lección, avance de curso/módulo y banda de
+desempeño, sin PII, notas, respuestas ni datos de otros estudiantes. El tutor no
 tiene endpoints para modificar notas, progreso o inscripciones.
 
 ## Categorías — `/api/categories`

@@ -136,7 +136,7 @@ Full model, constraints, invariants and sync matrix → [`docs/architecture.md`]
 
 ## 🧠 RAG System — Grounded AI Tutor
 
-Titi's tutor is **retrieval-first, citation-enforced, action-blocked**. It never answers outside your course.
+Titi's tutor is **retrieval-first, citation-enforced, action-blocked**. It never answers outside your course. Its formative flow explains, gives examples, proposes practice without revealing solutions, and provides qualitative feedback without assigning official grades or changing progress.
 
 ![Tutor Panel](docs/screenshots/tutor.png)
 *Tutor IA — side panel (desktop) & bottom sheet (mobile), grounded citations. Replace `docs/screenshots/tutor.png` with your capture.*

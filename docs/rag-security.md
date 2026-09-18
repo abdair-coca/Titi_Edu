@@ -21,6 +21,14 @@ El reindexado sigue protegido para admin, propietario o profesor del curso.
 - Detección de señales de prompt injection en consulta, historial y contenido recuperado.
 - Bloqueo determinista de solicitudes para modificar notas, progreso, inscripciones o ejecutar SQL.
 - Sin herramientas ni llamadas a APIs de negocio desde el LLM.
+- Contexto de aprendizaje efímero y minimizado por estudiante, curso y lección: solo
+  estados agregados de avance/desempeño; nunca PII, notas, respuestas o actividad de
+  otros estudiantes.
+- El ciclo `PRACTICA` → `RETROALIMENTAR` es formativo: no crea `Intento`, no asigna
+  nota oficial y no modifica `Progreso`.
+- En HTML evaluable, el extractor genera corpus `assessmentSafe` y excluye claves o
+  campos ocultos de respuesta antes de crear `FragmentoRag`; las citas estudiantiles
+  solo apuntan a ese corpus seguro.
 - Validación de citas: solo se aceptan números de fuentes recuperadas.
 - Grounding gradual: respuesta con matiz y citas válidas si la evidencia es parcial;
   respuesta fija solo cuando no hay evidencia útil o la respuesta no está grounded.

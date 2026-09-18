@@ -60,19 +60,21 @@
 
 ### Frontend
 
-- [ ] Asociar intención pedagógica a acciones rápidas y acciones posteriores de `TutorPanel.jsx`.
-- [ ] Mantener estado de práctica por `lessonId`, limpiar al cambiar de lección o iniciar conversación nueva y enviar `RETROALIMENTAR` al responder.
-- [ ] Retirar etiqueta `Relevancia: X%` o reemplazarla por una descripción honesta de fuente/score técnico no calibrado.
-- [ ] Ajustar textos de interfaz para distinguir tutoría formativa de calificación oficial.
+- [x] Asociar intención pedagógica a acciones rápidas y acciones posteriores de `TutorPanel.jsx`.
+- [x] Mantener estado de práctica por `lessonId`, limpiar al cambiar de lección o iniciar conversación nueva y enviar `RETROALIMENTAR` al responder.
+- [x] Retirar etiqueta `Relevancia: X%` o reemplazarla por una descripción honesta de fuente/score técnico no calibrado.
+- [x] Ajustar textos de interfaz para distinguir tutoría formativa de calificación oficial.
 
 ### Pruebas, documentación y cierre
 
-- [ ] Agregar regresiones de interacción frontend para acciones, estado de práctica y citas.
-- [ ] Ejecutar `npm --prefix frontend run test:rag`.
-- [ ] Ejecutar `npm --prefix frontend run build`.
-- [ ] Actualizar `docs/api.md` con `intent`, contexto formativo, reglas de práctica y campos de citas.
-- [ ] Actualizar `docs/rag-security.md` con protección de claves evaluables y límites de contexto del estudiante.
-- [ ] Actualizar `README.md` si cambia la descripción pública del Tutor RAG.
-- [ ] Ejecutar `npm --prefix backend test` y `npm --prefix backend run lint` como regresión final.
-- [ ] Generar `docs/specs/changes/tutor-rag-aprendizaje/verify-report.md` con evidencia de tests y matriz de aprendizaje.
-- [ ] Marcar tareas completadas y preparar micro-commits convencionales en español, sin `Co-Authored-By`.
+- [x] Agregar regresiones de interacción frontend para acciones, estado de práctica y citas.
+- [x] Ejecutar `npm --prefix frontend run test:rag`.
+- [x] Ejecutar `npm --prefix frontend run build`.
+- [x] Actualizar `docs/api.md` con `intent`, contexto formativo, reglas de práctica y campos de citas.
+- [x] Actualizar `docs/rag-security.md` con protección de claves evaluables y límites de contexto del estudiante.
+- [x] Actualizar `README.md` si cambia la descripción pública del Tutor RAG.
+- [x] Ejecutar `npm --prefix backend test` y `npm --prefix backend run lint` como regresión final.
+- [x] Generar `docs/specs/changes/tutor-rag-aprendizaje/verify-report.md` con evidencia de tests y matriz de aprendizaje.
+- [x] Marcar tareas completadas y preparar micro-commits convencionales en español, sin `Co-Authored-By`.
+
+> Etapa 3 cerrada técnicamente; queda feedback del usuario antes de archivar el change.
