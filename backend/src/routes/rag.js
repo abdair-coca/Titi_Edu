@@ -91,6 +91,7 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
     const chatInput = {
       courseId: loaded.lesson.modulo.cursoId,
       lessonId: loaded.lesson.id,
+      lessonTitle: loaded.lesson.titulo,
       principalId: loaded.access.usuario.id,
       message,
       history,

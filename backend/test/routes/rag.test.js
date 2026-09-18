@@ -86,6 +86,7 @@ describe('RAG lesson routes', () => {
     expect(mocks.chatWithCourseContext).toHaveBeenCalledWith({
       courseId: 'c-1',
       lessonId: 'l-1',
+      lessonTitle: 'Variables',
       principalId: 'u-student',
       message: '¿Qué es una variable?',
       history: undefined,

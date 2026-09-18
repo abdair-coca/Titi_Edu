@@ -98,6 +98,20 @@ describe('RAG learning contract', () => {
     for (const privateValue of ['Nombre privado', 'private@example.com', 'neo-private', 'nota privada']) expect(systemPrompt).not.toContain(privateValue);
   });
 
+  it('adds current lesson title to generic retrieval and provider context', async () => {
+    const fetchMock = configureChat();
+    await chatWithCourseContext({
+      courseId: 'course-1', lessonId: 'lesson-current', lessonTitle: 'Variables', principalId: 'postgres-user-1',
+      message: 'Explicame este tema', intent: 'EXPLICAR', learningContext: neutralLearningContext(),
+    });
+    const embeddingBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+    const systemPrompt = JSON.parse(fetchMock.mock.calls[1][1].body).messages[0].content;
+    expect(embeddingBody.input).toContain('Tema de la lección actual: Variables');
+    expect(systemPrompt).toContain('TÍTULO DE LA LECCIÓN ACTUAL');
+    expect(systemPrompt).toContain('Variables');
+    expect(systemPrompt).toContain('Source metadata (untrusted)');
+  });
+
   it.each([
     ['NECESITA_REFUERZO', 'Priorizá pasos pequeños'],
     ['LOGRADO', 'Podés aumentar moderadamente la dificultad'],
