@@ -65,7 +65,7 @@ router.get('/lessons', async (req, res) => {
     if (status === 'LISTO') {
       statusCondition = { documentosRag: { some: { activo: true, estado: 'LISTO' } } };
     } else if (status === 'FALLIDO') {
-      statusCondition = { documentosRag: { some: { activo: true, estado: 'FALLIDO' } } };
+      statusCondition = { documentosRag: { some: { estado: 'FALLIDO' } } };
     } else if (status === 'PENDIENTE') {
       statusCondition = { documentosRag: { some: { activo: true, estado: 'PENDIENTE' } } };
     } else if (status === 'SIN_INDEXAR') {
@@ -93,8 +93,9 @@ router.get('/lessons', async (req, res) => {
           id: true,
           titulo: true,
           orden: true,
-          estado: true,
-          recursoHtml: { select: { id: true, evaluable: true } },
+           estado: true,
+           recursoHtml: { select: { id: true, evaluable: true } },
+           contextoRag: true,
           modulo: {
             select: {
               id: true,
@@ -104,8 +105,7 @@ router.get('/lessons', async (req, res) => {
               },
             },
           },
-          documentosRag: {
-            where: { activo: true },
+           documentosRag: {
             take: 1,
             orderBy: { version: 'desc' },
             select: {
@@ -114,6 +114,7 @@ router.get('/lessons', async (req, res) => {
               estado: true,
               activo: true,
               modelo: true,
+              origen: true,
               error: true,
               indexadoAt: true,
               hashContenido: true,
@@ -174,9 +175,11 @@ router.get('/lessons', async (req, res) => {
           id: activeDoc.id,
           version: activeDoc.version,
           estado: activeDoc.estado,
-          activo: activeDoc.activo,
-          modelo: activeDoc.modelo,
-          error: activeDoc.error,
+           activo: activeDoc.activo,
+           modelo: activeDoc.modelo,
+           origen: activeDoc.origen || (lesson.contextoRag ? 'AUTOR' : 'HTML_FALLBACK'),
+           fuenteAutoral: Boolean(lesson.contextoRag),
+           error: activeDoc.error,
           indexadoAt: activeDoc.indexadoAt,
           hashContenido: activeDoc.hashContenido,
           fragmentosCount: activeDoc._count?.fragmentos ?? 0,
@@ -215,6 +218,7 @@ router.get('/lessons/:lessonId/fragments', async (req, res) => {
       select: {
         id: true,
         titulo: true,
+        contextoRag: true,
         modulo: {
           select: {
             id: true,
@@ -222,15 +226,15 @@ router.get('/lessons/:lessonId/fragments', async (req, res) => {
             curso: { select: { id: true, titulo: true } },
           },
         },
-        documentosRag: {
-          where: { activo: true },
+         documentosRag: {
           take: 1,
           orderBy: { version: 'desc' },
           select: {
             id: true,
             version: true,
             estado: true,
-            modelo: true,
+             modelo: true,
+             origen: true,
             indexadoAt: true,
             hashContenido: true,
             error: true,
@@ -240,6 +244,7 @@ router.get('/lessons/:lessonId/fragments', async (req, res) => {
                 id: true,
                 orden: true,
                 contenido: true,
+                seccion: true,
               },
             },
           },
@@ -256,6 +261,7 @@ router.get('/lessons/:lessonId/fragments', async (req, res) => {
       id: f.id,
       orden: f.orden,
       contenido: f.contenido,
+      seccion: f.seccion,
       longitud: f.contenido.length,
     })) : [];
 
@@ -277,6 +283,7 @@ router.get('/lessons/:lessonId/fragments', async (req, res) => {
           indexadoAt: document.indexadoAt,
           hashContenido: document.hashContenido,
           error: document.error,
+          origen: document.origen || (lesson.contextoRag ? 'AUTOR' : 'HTML_FALLBACK'),
         } : null,
         fragments,
       },

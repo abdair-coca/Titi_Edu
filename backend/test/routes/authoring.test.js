@@ -680,6 +680,68 @@ describe('lesson creation modes', () => {
   });
 });
 
+describe('authorial RAG context', () => {
+  const lesson = {
+    id: 'l-authorial', titulo: 'Variables', contenido: 'No usar este contenido', formatoContenido: 'MARKDOWN', videoUrl: null,
+    orden: 1, estado: 'PUBLICADA', publishedAt: new Date('2026-08-16T00:00:00.000Z'), archivedAt: null, version: 4,
+    contextoRag: null, contextoRagNombre: null, recursoHtml: { html: '<p>No usar este HTML</p>', evaluable: true },
+    modulo: { id: 'm-authorial', estado: 'PUBLICADO', version: 3, curso: { id: 'c-authorial', creadorId: author.id, version: 2, publicado: true } },
+  };
+
+  it('guarda contexto JSON, lo incluye en fingerprint/revisión y programa indexación sin Material', async () => {
+    mocks.client.leccion.findUnique.mockResolvedValue(lesson);
+    mocks.client.leccion.update.mockImplementation(({ data }) => Promise.resolve({ ...lesson, ...data, version: lesson.version + 1 }));
+    const expectedFingerprint = fingerprint({
+      moduleVersion: 3,
+      lesson: {
+        titulo: lesson.titulo, contenido: lesson.contenido, formatoContenido: lesson.formatoContenido, videoUrl: null,
+        orden: 1, estado: lesson.estado, publishedAt: lesson.publishedAt, archivedAt: null, version: 4,
+        contextoRag: null, contextoRagNombre: null,
+      },
+      htmlResource: { sha256: fingerprint(lesson.recursoHtml.html), evaluable: true, intentosMax: undefined, fechaLimite: undefined },
+    });
+
+    const response = await request(app).put('/api/authoring/lessons/l-authorial')
+      .set(auth).set('Idempotency-Key', 'authorial-context-save')
+      .send({
+        expectedFingerprint,
+        contextoRag: { texto: '# Variables\nUna variable almacena valores.', nombreOrigen: 'guia.md' },
+      });
+
+    expect(response.status).toBe(200);
+    expect(mocks.client.revisionLeccion.create).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ snapshot: expect.objectContaining({ contextoRag: null }) }),
+    }));
+    expect(mocks.client.leccion.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: { formatoContenido: 'MARKDOWN', contextoRag: '# Variables\nUna variable almacena valores.', contextoRagNombre: 'guia.md' },
+    }));
+    expect(mocks.client.material.create).not.toHaveBeenCalled();
+  });
+
+  it('rechaza extensión y contenido no publicable antes de revisar o versionar', async () => {
+    mocks.client.leccion.findUnique.mockResolvedValue(lesson);
+    const expectedFingerprint = fingerprint({
+      moduleVersion: 3,
+      lesson: {
+        titulo: lesson.titulo, contenido: lesson.contenido, formatoContenido: lesson.formatoContenido, videoUrl: null,
+        orden: 1, estado: lesson.estado, publishedAt: lesson.publishedAt, archivedAt: null, version: 4,
+        contextoRag: null, contextoRagNombre: null,
+      },
+      htmlResource: { sha256: fingerprint(lesson.recursoHtml.html), evaluable: true, intentosMax: undefined, fechaLimite: undefined },
+    });
+
+    for (const [name, texto] of [['guia.pdf', 'Contenido pedagógico válido.'], ['guia.md', 'Respuesta correcta: secreto']]) {
+      const response = await request(app).put('/api/authoring/lessons/l-authorial')
+        .set(auth).set('Idempotency-Key', `authorial-context-invalid-${name}`)
+        .send({ expectedFingerprint, contextoRag: { texto, nombreOrigen: name } });
+      expect(response.status).toBe(400);
+    }
+    expect(mocks.client.revisionLeccion.create).not.toHaveBeenCalled();
+    expect(mocks.client.leccion.update).not.toHaveBeenCalled();
+    expect(mocks.client.material.create).not.toHaveBeenCalled();
+  });
+});
+
 describe('HTML lesson authoring', () => {
   it('uses lesson CAS, idempotency and draft-only mutation', async () => {
     const lesson = {

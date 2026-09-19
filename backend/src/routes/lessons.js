@@ -143,7 +143,17 @@ router.get('/lessons/:id', requireAuth, async (req, res) => {
   try {
     const leccion = await prisma.leccion.findUnique({
       where: { id: req.params.id },
-      include: {
+      select: {
+        id: true,
+        titulo: true,
+        contenido: true,
+        formatoContenido: true,
+        videoUrl: true,
+        orden: true,
+        estado: true,
+        publishedAt: true,
+        archivedAt: true,
+        version: true,
         materiales: { orderBy: { nombre: 'asc' } },
         modulo: { select: { id: true, titulo: true, cursoId: true, estado: true } },
       },
@@ -157,7 +167,10 @@ router.get('/lessons/:id', requireAuth, async (req, res) => {
     });
     if (!access) return;
 
-    res.json({ success: true, data: { leccion } });
+    const publicLesson = { ...leccion };
+    delete publicLesson.contextoRag;
+    delete publicLesson.contextoRagNombre;
+    res.json({ success: true, data: { leccion: publicLesson } });
   } catch (err) {
     console.error('GET /api/lessons/:id error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo lección' });

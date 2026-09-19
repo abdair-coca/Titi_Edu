@@ -10,6 +10,7 @@ import {
   prepareEmbeddingText,
   ragEnabledForCourse,
   ragUserAllowed,
+  validateAuthorialContext,
 } from '../../src/services/rag.service.js';
 
 afterEach(() => {
@@ -27,6 +28,17 @@ afterEach(() => {
 });
 
 describe('RAG text preparation', () => {
+  it('validates public authorial context and rejects restricted content', () => {
+    expect(validateAuthorialContext({ texto: '# Variables\nUna variable almacena valores.', nombreOrigen: 'guia.md' })).toEqual({
+      ok: true,
+      value: { texto: '# Variables\nUna variable almacena valores.', nombreOrigen: 'guia.md' },
+    });
+    expect(validateAuthorialContext({ texto: 'Respuesta correcta: secreto', nombreOrigen: 'guia.md' }).ok).toBe(false);
+    expect(validateAuthorialContext({ texto: 'Contacto: estudiante@example.com', nombreOrigen: null }).ok).toBe(false);
+    expect(validateAuthorialContext({ texto: 'Contenido pedagógico', nombreOrigen: 'guia.pdf' }).ok).toBe(false);
+    expect(validateAuthorialContext({ texto: '   ', nombreOrigen: null }).ok).toBe(false);
+  });
+
   it('allows explicit wildcard course scope without enabling empty scope', () => {
     process.env.RAG_ENABLED = 'true';
     process.env.RAG_COURSE_IDS = '*';

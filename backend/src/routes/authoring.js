@@ -32,7 +32,7 @@ import {
   normalizeLessonOrder,
 } from '../services/content-deletion.service.js';
 import { cloudinaryEnabled, destroyAsset, uploadBuffer } from '../services/upload.service.js';
-import { scheduleCourseIndex, scheduleLessonIndex } from '../services/rag.service.js';
+import { scheduleCourseIndex, scheduleLessonIndex, validateAuthorialContext } from '../services/rag.service.js';
 
 const router = Router();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -62,7 +62,12 @@ const MODULE_SNAPSHOT_INCLUDE = {
   curso: { select: { id: true, creadorId: true, publicado: true, version: true } },
   lecciones: {
     orderBy: { orden: 'asc' },
-    include: { materiales: { orderBy: { nombre: 'asc' } }, recursoHtml: true },
+    include: {
+      materiales: { orderBy: { nombre: 'asc' } },
+      recursoHtml: true,
+      documentosRag: { orderBy: { version: 'desc' }, take: 1,
+        select: { id: true, version: true, estado: true, origen: true, error: true, indexadoAt: true } },
+    },
   },
   evaluacion: {
     include: {
@@ -79,7 +84,12 @@ const COURSE_SNAPSHOT_INCLUDE = {
     include: {
       lecciones: {
         orderBy: { orden: 'asc' },
-        include: { materiales: { orderBy: { nombre: 'asc' } }, recursoHtml: true },
+        include: {
+          materiales: { orderBy: { nombre: 'asc' } },
+          recursoHtml: true,
+          documentosRag: { orderBy: { version: 'desc' }, take: 1,
+            select: { id: true, version: true, estado: true, origen: true, error: true, indexadoAt: true } },
+        },
       },
       evaluacion: {
         include: {
@@ -148,7 +158,7 @@ function moduleResourceFingerprints(module) {
 function lessonFingerprint(lesson, moduleVersion = lesson.modulo?.version) {
   return fingerprint({
     moduleVersion,
-    lesson: Object.fromEntries(['titulo', 'contenido', 'formatoContenido', 'videoUrl', 'orden', 'estado', 'publishedAt', 'archivedAt', 'version'].map((field) => [field, lesson[field]])),
+    lesson: Object.fromEntries(['titulo', 'contenido', 'formatoContenido', 'videoUrl', 'orden', 'estado', 'publishedAt', 'archivedAt', 'version', 'contextoRag', 'contextoRagNombre'].map((field) => [field, lesson[field]])),
     htmlResource: lesson.recursoHtml
       ? {
           sha256: fingerprint(lesson.recursoHtml.html),
@@ -170,6 +180,8 @@ function lessonContentSnapshot(lesson) {
     estado: lesson.estado,
     publishedAt: lesson.publishedAt,
     archivedAt: lesson.archivedAt,
+    contextoRag: lesson.contextoRag,
+    contextoRagNombre: lesson.contextoRagNombre,
     htmlResource: lesson.recursoHtml
       ? {
           html: lesson.recursoHtml.html,
@@ -178,6 +190,16 @@ function lessonContentSnapshot(lesson) {
           fechaLimite: lesson.recursoHtml.fechaLimite,
         }
       : null,
+  };
+}
+
+function parseContextData(body) {
+  if (!Object.hasOwn(body || {}, 'contextoRag')) return {};
+  const checked = validateAuthorialContext(body.contextoRag);
+  if (!checked.ok) throw new AuthoringError(400, checked.message);
+  return {
+    contextoRag: checked.value?.texto || null,
+    contextoRagNombre: checked.value?.nombreOrigen || null,
   };
 }
 
@@ -418,6 +440,7 @@ router.put('/modules/:id', requireAuthoringPrincipal('content:write'), handle(as
 }));
 
 router.post('/modules/:moduleId/lessons', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  const contextData = parseContextData(req.body);
   await executeIdempotent(req, res, { accion: 'lesson.create' }, async (tx) => {
     const module = await tx.modulo.findUnique({ where: { id: req.params.moduleId }, include: { curso: true } });
     if (!module) throw new AuthoringError(404, 'Módulo no encontrado');
@@ -443,6 +466,7 @@ router.post('/modules/:moduleId/lessons', requireAuthoringPrincipal('content:wri
         contenido: String(req.body.contenido),
         formatoContenido,
         videoUrl: video?.value || null,
+        ...contextData,
         orden: parseOrder(req.body.orden),
         moduloId: module.id,
         estado: 'BORRADOR',
@@ -454,6 +478,7 @@ router.post('/modules/:moduleId/lessons', requireAuthoringPrincipal('content:wri
 
 router.put('/lessons/:id', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
   let updatedLessonId = null;
+  const contextData = parseContextData(req.body);
   await executeIdempotent(req, res, { accion: 'lesson.update' }, async (tx) => {
     const lesson = await tx.leccion.findUnique({
       where: { id: req.params.id },
@@ -479,6 +504,7 @@ router.put('/lessons/:id', requireAuthoringPrincipal('content:write'), handle(as
       if (video && !video.ok) throw new AuthoringError(400, video.message);
       data.videoUrl = video?.value || null;
     }
+    Object.assign(data, contextData);
     await createLessonRevision(tx, lesson, req.authoringPrincipal);
     await claimLessonMutation(tx, lesson);
     const updated = await tx.leccion.update({ where: { id: lesson.id }, data });
@@ -599,6 +625,7 @@ router.post('/lessons/:id/archive', requireAuthoringPrincipal('content:write'), 
 }));
 
 router.post('/lessons/:id/restore', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  let restoredLessonId = null;
   await executeIdempotent(req, res, { accion: 'lesson.restore' }, async (tx) => {
     const lesson = await tx.leccion.findUnique({
       where: { id: req.params.id },
@@ -613,8 +640,10 @@ router.post('/lessons/:id/restore', requireAuthoringPrincipal('content:write'), 
       where: { id: lesson.id },
       data: { estado: lesson.publishedAt ? 'PUBLICADA' : 'BORRADOR', archivedAt: null },
     });
+    restoredLessonId = restoredLesson.id;
     return { data: { lesson: restoredLesson } };
   });
+  if (restoredLessonId) scheduleLessonIndex(restoredLessonId);
 }));
 
 router.get('/lessons/:id/revisions', requireAuthoringPrincipal('course:read'), handle(async (req, res) => {
@@ -633,6 +662,7 @@ router.get('/lessons/:id/revisions', requireAuthoringPrincipal('course:read'), h
 }));
 
 router.post('/lessons/:id/revisions/:revisionId/restore', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  let restoredLessonId = null;
   await executeIdempotent(req, res, { accion: 'lesson.revision.restore' }, async (tx) => {
     const lesson = await tx.leccion.findUnique({
       where: { id: req.params.id },
@@ -656,8 +686,11 @@ router.post('/lessons/:id/revisions/:revisionId/restore', requireAuthoringPrinci
         contenido: snapshot.contenido,
         formatoContenido: snapshot.formatoContenido,
         videoUrl: snapshot.formatoContenido === 'HTML' ? null : snapshot.videoUrl,
+        contextoRag: snapshot.contextoRag || null,
+        contextoRagNombre: snapshot.contextoRagNombre || null,
       },
     });
+    restoredLessonId = restored.id;
     if (snapshot.htmlResource) {
       const fechaLimite = parseOptionalDeadline(snapshot.htmlResource.fechaLimite);
       if (!fechaLimite.ok) throw new AuthoringError(409, 'La revisión contiene una fecha límite inválida');
@@ -669,6 +702,7 @@ router.post('/lessons/:id/revisions/:revisionId/restore', requireAuthoringPrinci
     }
     return { data: { lesson: restored, restoredRevision: revision.id } };
   });
+  if (restoredLessonId) scheduleLessonIndex(restoredLessonId);
 }));
 
 function validateQuiz(body) {

@@ -53,6 +53,11 @@ enum EstadoDocumentoRag {
   FALLIDO
 }
 
+enum OrigenDocumentoRag {
+  AUTOR
+  HTML_FALLBACK
+}
+
 model Usuario {
   id       String @id @default(uuid())
   neoId    String @unique
@@ -248,25 +253,27 @@ model Modulo {
 }
 
 model Leccion {
-  id               String              @id @default(uuid())
-  titulo           String
-  contenido        String // texto/descripción
-  formatoContenido FormatoContenido    @default(TEXTO)
-  videoUrl         String? // YouTube embed URL
-  orden            Int
-  estado           EstadoLeccion       @default(BORRADOR)
-  publishedAt      DateTime?
-  archivedAt       DateTime?
-  version          Int                 @default(1)
-  moduloId         String
-  modulo           Modulo              @relation(fields: [moduloId], references: [id])
-  materiales       Material[]
-  progresos        Progreso[]
-  comentarios      ComentarioLeccion[]
-  notas            NotaLeccion[]
-  recursoHtml      RecursoHtmlLeccion?
-  revisiones       RevisionLeccion[]
-  documentosRag    DocumentoRag[]
+  id                String              @id @default(uuid())
+  titulo            String
+  contenido         String // texto/descripción
+  formatoContenido  FormatoContenido    @default(TEXTO)
+  videoUrl          String? // YouTube embed URL
+  orden             Int
+  estado            EstadoLeccion       @default(BORRADOR)
+  publishedAt       DateTime?
+  archivedAt        DateTime?
+  version           Int                 @default(1)
+  contextoRag       String?
+  contextoRagNombre String?
+  moduloId          String
+  modulo            Modulo              @relation(fields: [moduloId], references: [id])
+  materiales        Material[]
+  progresos         Progreso[]
+  comentarios       ComentarioLeccion[]
+  notas             NotaLeccion[]
+  recursoHtml       RecursoHtmlLeccion?
+  revisiones        RevisionLeccion[]
+  documentosRag     DocumentoRag[]
 
   @@index([moduloId, estado, orden])
 }
@@ -281,6 +288,7 @@ model DocumentoRag {
   activo         Boolean            @default(true)
   hashContenido  String
   modelo         String
+  origen         OrigenDocumentoRag @default(HTML_FALLBACK)
   assessmentSafe Boolean            @default(false)
   error          String?
   indexadoAt     DateTime?
@@ -299,6 +307,7 @@ model FragmentoRag {
   documentoId String
   orden       Int
   contenido   String
+  seccion     String?
   embedding   Unsupported("vector(768)")
   // Full-text derivado para búsqueda híbrida; se consulta con SQL (como embedding).
   tsv         Unsupported("tsvector")

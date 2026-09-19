@@ -161,6 +161,16 @@ describe('RAG lesson-prioritized retrieval', () => {
     expect(result[0].ftsMatch).toBe(true);
   });
 
+  it('returns source, section, and exact excerpt metadata in retrieval results', async () => {
+    prisma.$queryRaw.mockResolvedValueOnce([row({
+      id: 'f-author', contenido: 'Una variable almacena valores.', origen: 'AUTOR', seccion: 'Variables',
+    })]);
+
+    const result = await searchCourseContext('course-1', '¿Qué almacena una variable?');
+
+    expect(result[0]).toMatchObject({ origen: 'AUTOR', seccion: 'Variables', content: 'Una variable almacena valores.' });
+  });
+
   it('fills requested evidence after removing duplicates across lesson priority and course fallback', async () => {
     prisma.$queryRaw
       .mockResolvedValueOnce([row({ id: 'f-l1', lessonId: 'lesson-1', contenido: 'Contenido compartido', similarity: 0.9 })])

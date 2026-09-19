@@ -18,3 +18,19 @@ describe('RAG assessment-safe migration', () => {
     expect(migration).not.toMatch(/DROP\s+(TABLE|COLUMN|TYPE)/i);
   });
 });
+
+describe('RAG authorial context migration', () => {
+  it('is additive and adds provenance fields without Material or destructive SQL', async () => {
+    const migration = await import('node:fs').then(({ readFileSync }) => readFileSync(
+      new URL('../../prisma/migrations/20260918010000_rag_authorial_context/migration.sql', import.meta.url),
+      'utf8',
+    ));
+    expect(migration).toContain('ADD COLUMN "contextoRag" TEXT');
+    expect(migration).toContain('ADD COLUMN "contextoRagNombre" TEXT');
+    expect(migration).toContain('CREATE TYPE "OrigenDocumentoRag"');
+    expect(migration).toContain('ADD COLUMN "origen"');
+    expect(migration).toContain('ADD COLUMN "seccion" TEXT');
+    expect(migration).not.toMatch(/DROP\s+(TABLE|COLUMN|TYPE)/i);
+    expect(migration).not.toContain('Material');
+  });
+});

@@ -28,6 +28,20 @@ export const CHAT_INTENTS = Object.freeze([
   'PISTA',
   'RETROALIMENTAR',
 ]);
+export const MAX_AUTHORIAL_CONTEXT_CHARS = 100_000;
+const AUTHORIAL_CONTEXT_EXTENSION = /\.(?:txt|md)$/i;
+const AUTHORIAL_FORBIDDEN_PATTERNS = Object.freeze([
+  /(?:respuesta\s+(?:correcta|correcto|esperada|esperado)|correct\s+answer|answer|solution|soluci[oó]n)\s*(?:es|is|correcta|correct|key|clave)?\s*[:=]/i,
+  /\b(?:respuesta\s+(?:correcta|correcto|esperada|esperado)|correct\s+answer|soluci[oó]n|solution)\s+(?:es|is)\b/i,
+  /\b(?:answerKey|correctAnswer|expectedAnswer|selectedAnswer|respuestaCorrecta|claveRespuesta)\b/i,
+  /\b(?:feedback|retroalimentaci[oó]n)\s*(?:privad[oa]|intern[oa])\b/i,
+  /\b[\w.+-]+@[\w.-]+\.[a-z]{2,}\b/i,
+  /\b(?:email|e-mail|correo|tel[eé]fono|phone|celular|direcci[oó]n|address|carnet|ci|documento de identidad|fecha de nacimiento)\s*[:=]/i,
+  /\b(?:nota|calificaci[oó]n|grade|progreso|progress|puntaje|score)\s*[:=]/i,
+  /\b(?:nota|calificaci[oó]n|progreso|puntaje)\s+(?:del estudiante|final|actual|obtenid[oa])\b/i,
+  /\b(?:rol|role|permiso|permisos|permission|permissions|acci[oó]n|action)\s*[:=]/i,
+  /\b(?:inscribir|desinscribir|cambiar nota|eliminar usuario|crear usuario|actualizar permiso)\b/i,
+]);
 const NEUTRAL_LEARNING_CONTEXT = Object.freeze({
   lessonState: 'NO_INICIADA',
   courseProgress: { completedLessons: 0, totalLessons: 0 },
@@ -91,6 +105,31 @@ export function ragUserAllowed(usuario) {
 export function resolveChatIntent(value) {
   if (value === undefined) return DEFAULT_CHAT_INTENT;
   return CHAT_INTENTS.includes(value) ? value : null;
+}
+
+function normalizeAuthorialText(value) {
+  return String(value || '').replace(/\r\n?/g, '\n').trim();
+}
+
+export function validateAuthorialContext(input) {
+  if (input === null) return { ok: true, value: null };
+  if (!input || typeof input !== 'object' || Array.isArray(input)) {
+    return { ok: false, message: 'contextoRag debe ser null o un objeto con texto y nombreOrigen' };
+  }
+  const texto = normalizeAuthorialText(input.texto);
+  if (!texto) return { ok: false, message: 'El contexto autoral no puede estar vacío' };
+  if (texto.length > MAX_AUTHORIAL_CONTEXT_CHARS) {
+    return { ok: false, message: `El contexto autoral no puede superar ${MAX_AUTHORIAL_CONTEXT_CHARS} caracteres` };
+  }
+  const nombreOrigen = input.nombreOrigen == null ? null : String(input.nombreOrigen).trim();
+  if (nombreOrigen && (/[\\/]/.test(nombreOrigen) || !AUTHORIAL_CONTEXT_EXTENSION.test(nombreOrigen))) {
+    return { ok: false, message: 'El archivo de contexto debe tener extensión .txt o .md' };
+  }
+  const forbidden = AUTHORIAL_FORBIDDEN_PATTERNS.find((pattern) => pattern.test(texto));
+  if (forbidden) {
+    return { ok: false, message: 'El contexto autoral contiene información no publicable para estudiantes' };
+  }
+  return { ok: true, value: { texto, nombreOrigen: nombreOrigen || null } };
 }
 
 export function neutralLearningContext() {
@@ -427,6 +466,35 @@ export function chunkText(value, chunkSize = DEFAULT_CHUNK_SIZE, overlap = DEFAU
   return chunks;
 }
 
+export function chunkStructuredText(value, chunkSize = DEFAULT_CHUNK_SIZE, overlap = DEFAULT_CHUNK_OVERLAP) {
+  const raw = String(value || '').replace(/\r\n?/g, '\n').trim();
+  if (!raw) return [];
+
+  const sections = [];
+  let section = null;
+  let lines = [];
+  const flush = () => {
+    const body = lines.join('\n').trim();
+    if (body) sections.push({ section, text: body });
+    lines = [];
+  };
+
+  for (const line of raw.split('\n')) {
+    const heading = line.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/);
+    if (heading) {
+      flush();
+      section = normalizeText(heading[1]);
+      lines.push(section);
+    } else {
+      lines.push(line);
+    }
+  }
+  flush();
+  const blocks = sections.length ? sections : [{ section: null, text: raw }];
+  return blocks.flatMap(({ section: sectionName, text }) => chunkText(text, chunkSize, overlap)
+    .map((content) => ({ content, section: sectionName })));
+}
+
 export function lessonRagText(lesson) {
   const parts = [];
   if (lesson.titulo) {
@@ -444,6 +512,29 @@ export function lessonRagText(lesson) {
     if (htmlText) parts.push(htmlText);
   }
   return parts.filter(Boolean).join('\n\n');
+}
+
+function lessonRagSource(lesson) {
+  if (lesson.contextoRag && String(lesson.contextoRag).trim()) {
+    const validated = validateAuthorialContext({ texto: lesson.contextoRag, nombreOrigen: lesson.contextoRagNombre });
+    if (!validated.ok) throw new RagError(422, validated.message);
+    return { text: validated.value.texto, origin: 'AUTOR', assessmentSafe: true };
+  }
+  return {
+    text: lessonRagText(lesson),
+    origin: 'HTML_FALLBACK',
+    assessmentSafe: lesson.recursoHtml?.evaluable === true,
+  };
+}
+
+function deduplicatePreparedFragments(fragments) {
+  const seen = new Set();
+  return fragments.filter((fragment) => {
+    const key = fragmentContentKey(fragment.content);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).map((fragment, index) => ({ ...fragment, index }));
 }
 
 function hashContent(content) {
@@ -631,7 +722,7 @@ async function quarantineActiveDocuments(lessonId, errorMessage) {
   });
 }
 
-async function recordIndexFailure({ existing, lessonId, version, hashContenido, modelo, assessmentSafe, error }) {
+async function recordIndexFailure({ existing, lessonId, version, hashContenido, modelo, origin, assessmentSafe, error }) {
   const errorMessage = String(error?.message || error).slice(0, 500);
   await quarantineActiveDocuments(lessonId, errorMessage);
 
@@ -642,6 +733,7 @@ async function recordIndexFailure({ existing, lessonId, version, hashContenido, 
         estado: 'FALLIDO',
         activo: false,
         error: errorMessage,
+        origen: origin,
       },
     });
     return;
@@ -653,6 +745,7 @@ async function recordIndexFailure({ existing, lessonId, version, hashContenido, 
       version,
       hashContenido,
       modelo,
+      origen: origin,
       estado: 'FALLIDO',
       activo: false,
       assessmentSafe,
@@ -670,8 +763,24 @@ export async function indexLesson(lessonId, { force = false } = {}) {
     return { status: 'SKIPPED', lessonId, reason: 'feature_disabled' };
   }
 
-  const assessmentSafe = lesson.recursoHtml?.evaluable === true;
-  const content = lessonRagText(lesson);
+  let source;
+  try {
+    source = lessonRagSource(lesson);
+  } catch (error) {
+    const modelo = embeddingModel();
+    await recordIndexFailure({
+      existing: null,
+      lessonId,
+      version: lesson.version,
+      hashContenido: hashContent(String(lesson.contextoRag || '')),
+      modelo,
+      origin: 'AUTOR',
+      assessmentSafe: true,
+      error,
+    });
+    throw error;
+  }
+  const { text: content, origin, assessmentSafe } = source;
   if (!content) {
     await quarantineActiveDocuments(lessonId, 'No se encontró contenido seguro para indexar');
     return { status: 'SKIPPED', lessonId, reason: 'empty' };
@@ -685,19 +794,20 @@ export async function indexLesson(lessonId, { force = false } = {}) {
     && existing.estado === 'LISTO'
     && existing.hashContenido === hashContenido
     && existing.modelo === modelo
-    && existing.assessmentSafe === assessmentSafe) {
+    && existing.assessmentSafe === assessmentSafe
+    && (existing.origen || 'HTML_FALLBACK') === origin) {
     return { status: 'UNCHANGED', documentId: existing.id, lessonId };
   }
 
-  const chunks = chunkText(content);
+  const chunks = deduplicatePreparedFragments(chunkStructuredText(content));
   const preparedFragments = [];
   try {
     for (let index = 0; index < chunks.length; index += 1) {
-      const embedding = formatVector(await createEmbedding(chunks[index], { kind: 'document', title: lesson.titulo }));
-      preparedFragments.push({ index, content: chunks[index], embedding });
+      const embedding = formatVector(await createEmbedding(chunks[index].content, { kind: 'document', title: lesson.titulo }));
+      preparedFragments.push({ index, content: chunks[index].content, section: chunks[index].section, embedding });
     }
   } catch (error) {
-    await recordIndexFailure({ existing, lessonId, version: lesson.version, hashContenido, modelo, assessmentSafe, error });
+    await recordIndexFailure({ existing, lessonId, version: lesson.version, hashContenido, modelo, origin, assessmentSafe, error });
     throw error;
   }
 
@@ -708,15 +818,15 @@ export async function indexLesson(lessonId, { force = false } = {}) {
       const nextDocument = existing
         ? await tx.documentoRag.update({
             where: { id: existing.id },
-            data: { estado: 'PENDIENTE', activo: true, hashContenido, modelo, assessmentSafe, error: null, indexadoAt: null },
+            data: { estado: 'PENDIENTE', activo: true, hashContenido, modelo, origen: origin, assessmentSafe, error: null, indexadoAt: null },
           })
-        : await tx.documentoRag.create({ data: { leccionId: lessonId, version: lesson.version, hashContenido, modelo, assessmentSafe } });
+        : await tx.documentoRag.create({ data: { leccionId: lessonId, version: lesson.version, hashContenido, modelo, origen: origin, assessmentSafe } });
 
       await tx.fragmentoRag.deleteMany({ where: { documentoId: nextDocument.id } });
       for (const fragment of preparedFragments) {
         await tx.$executeRaw`
-          INSERT INTO "FragmentoRag" ("id", "documentoId", "orden", "contenido", "embedding")
-          VALUES (${randomUUID()}, ${nextDocument.id}, ${fragment.index}, ${fragment.content}, ${fragment.embedding}::vector)
+          INSERT INTO "FragmentoRag" ("id", "documentoId", "orden", "contenido", "seccion", "embedding")
+          VALUES (${randomUUID()}, ${nextDocument.id}, ${fragment.index}, ${fragment.content}, ${fragment.section}, ${fragment.embedding}::vector)
         `;
       }
       return tx.documentoRag.update({
@@ -728,7 +838,7 @@ export async function indexLesson(lessonId, { force = false } = {}) {
       timeout: Math.max(5000, Number(process.env.RAG_INDEX_TRANSACTION_TIMEOUT_MS) || DEFAULT_INDEX_TRANSACTION_TIMEOUT_MS),
     });
   } catch (error) {
-    await recordIndexFailure({ existing, lessonId, version: lesson.version, hashContenido, modelo, assessmentSafe, error });
+    await recordIndexFailure({ existing, lessonId, version: lesson.version, hashContenido, modelo, origin, assessmentSafe, error });
     throw error;
   }
 
@@ -772,10 +882,12 @@ async function searchFragmentsVector(courseId, embedding, limit, lessonId = null
       SELECT
         f."id",
         f."contenido",
-        l."id" AS "lessonId",
-        l."titulo" AS "lessonTitle",
-        m."titulo" AS "moduleTitle",
-        1 - (f."embedding" <=> ${embedding}::vector) AS "similarity",
+         l."id" AS "lessonId",
+         l."titulo" AS "lessonTitle",
+         m."titulo" AS "moduleTitle",
+         d."origen" AS "origen",
+         f."seccion" AS "seccion",
+         1 - (f."embedding" <=> ${embedding}::vector) AS "similarity",
         false AS "ftsMatch"
       FROM "FragmentoRag" f
        JOIN "DocumentoRag" d ON d."id" = f."documentoId"
@@ -810,10 +922,12 @@ async function searchFragmentsHybrid(courseId, embedding, query, limit, lessonId
      SELECT
         f."id",
         f."contenido",
-        l."id" AS "lessonId",
+         l."id" AS "lessonId",
          l."titulo" AS "lessonTitle",
          m."titulo" AS "moduleTitle",
-         1 - (f."embedding" <=> ${embedding}::vector) AS "similarity",
+          d."origen" AS "origen",
+          f."seccion" AS "seccion",
+          1 - (f."embedding" <=> ${embedding}::vector) AS "similarity",
          ts_rank_cd(f."tsv", plainto_tsquery('spanish', ${query})) AS "ftsRank"
       FROM "FragmentoRag" f
       JOIN "DocumentoRag" d ON d."id" = f."documentoId"
@@ -849,10 +963,12 @@ async function searchFragmentsHybrid(courseId, embedding, query, limit, lessonId
     SELECT
       "id",
        "contenido",
-       "lessonId",
-       "lessonTitle",
-       "moduleTitle",
-       "similarity",
+        "lessonId",
+        "lessonTitle",
+        "moduleTitle",
+        "origen",
+        "seccion",
+        "similarity",
        ("ftsRank" > 0) AS "ftsMatch",
        (
         ${HYBRID_VECTOR_WEIGHT}::float8 / (60 + "vectorRank")
@@ -935,6 +1051,8 @@ export async function searchCourseContext(courseId, query, limit = DEFAULT_RETRI
     lessonId: row.lessonId,
     lessonTitle: row.lessonTitle,
     moduleTitle: row.moduleTitle,
+    origen: row.origen || 'HTML_FALLBACK',
+    seccion: row.seccion || null,
     content: row.contenido,
     similarity: Number(row.similarity),
     ftsMatch: Boolean(row.ftsMatch),
@@ -1016,6 +1134,8 @@ export async function chatWithCourseContext({ courseId, lessonId = null, princip
       lessonId: chunk.lessonId,
       title: chunk.lessonTitle,
       moduleTitle: chunk.moduleTitle,
+      origen: chunk.origen,
+      seccion: chunk.seccion,
       excerpt: chunk.content.slice(0, 280),
       similarity: Number(chunk.similarity.toFixed(4)),
     })).filter((citation) => cited.has(citation.number)),
@@ -1032,6 +1152,7 @@ export async function ragStatusForLesson(lessonId) {
     select: {
       id: true,
       version: true,
+      contextoRag: true,
       recursoHtml: { select: { evaluable: true } },
       modulo: { select: { cursoId: true } },
     },
@@ -1039,15 +1160,22 @@ export async function ragStatusForLesson(lessonId) {
   if (!lesson) return null;
   const enabled = ragEnabledForCourse(lesson.modulo.cursoId);
   const documents = await prisma.documentoRag.findMany({
-    where: { leccionId: lessonId, version: lesson.version, activo: true },
-    select: { estado: true, indexadoAt: true, assessmentSafe: true },
+    where: { leccionId: lessonId, version: lesson.version },
+    select: { estado: true, indexadoAt: true, assessmentSafe: true, origen: true, error: true },
     orderBy: { version: 'desc' },
     take: 1,
   });
   const document = documents[0];
   const indexed = document?.estado === 'LISTO'
     && (!lesson.recursoHtml?.evaluable || document.assessmentSafe);
-  return { enabled, indexed, status: indexed ? document.estado : document ? 'PENDIENTE' : null };
+  return {
+    enabled,
+    indexed,
+    status: indexed ? document.estado : document ? document.estado : null,
+    origen: document?.origen || (lesson.contextoRag ? 'AUTOR' : 'HTML_FALLBACK'),
+    error: document?.error || null,
+    version: lesson.version,
+  };
 }
 
 export function scheduleLessonIndex(lessonId) {

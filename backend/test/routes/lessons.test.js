@@ -283,6 +283,20 @@ describe('GET /api/lessons/:id (login + inscripción)', () => {
     expect(res.body.data.leccion.id).toBe('l1');
   });
 
+  it('no expone contexto RAG autoral a estudiantes', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
+    prisma.leccion.findUnique.mockResolvedValue({
+      id: 'l1', titulo: 'Lección', contextoRag: 'Contexto privado del autor', contextoRagNombre: 'guia.md', materiales: [],
+      modulo: { id: 'm1', titulo: 'M1', cursoId: 'c1', estado: 'PUBLICADO' },
+    });
+    prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', publicado: true, profesores: [] });
+    prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
+    const res = await request(app).get('/api/lessons/l1').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.leccion).not.toHaveProperty('contextoRag');
+    expect(res.body.data.leccion).not.toHaveProperty('contextoRagNombre');
+  });
+
   it('200 si es el dueño del curso, sin necesitar inscripción', async () => {
     prisma.usuario.findUnique.mockResolvedValue({ id: 'prof-1', rol: 'PROFESOR' });
     prisma.leccion.findUnique.mockResolvedValue({

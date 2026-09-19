@@ -182,4 +182,59 @@ describe('RAG indexing feature flag', () => {
       data: expect.objectContaining({ assessmentSafe: false }),
     });
   });
+
+  it('uses authorial context exclusively and stores source/section metadata', async () => {
+    mocks.leccion.findUnique.mockResolvedValue({
+      id: 'lesson-1', version: 3, estado: 'PUBLICADA', titulo: 'Lesson', contenido: 'LEGACY CONTENT',
+      contextoRag: '# Variables\nUna variable almacena valores.', contextoRagNombre: 'guia.md',
+      recursoHtml: { html: '<p>HTML MUST NOT ENTER</p>', evaluable: true },
+      modulo: { estado: 'PUBLICADO', curso: { id: 'course-pilot', publicado: true } },
+    });
+    mocks.documentoRag.findUnique.mockResolvedValue(null);
+    process.env.EMBEDDING_API_URL = 'https://embeddings.example';
+    process.env.EMBEDDING_API_KEY = 'test-key';
+    process.env.EMBEDDING_MODEL = 'google/embeddinggemma-300M';
+    process.env.EMBEDDING_PROVIDER = 'local';
+    process.env.EMBEDDING_MAX_RETRIES = '0';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: async () => ({ data: [{ embedding: Array.from({ length: 768 }, () => 0.01) }] }),
+    }));
+    const tx = {
+      documentoRag: { updateMany: vi.fn(), create: vi.fn().mockResolvedValue({ id: 'document-1' }), update: vi.fn().mockResolvedValue({ id: 'document-1' }) },
+      fragmentoRag: { deleteMany: vi.fn() }, $executeRaw: vi.fn(),
+    };
+    mocks.$transaction.mockImplementation((callback) => callback(tx));
+
+    await expect(indexLesson('lesson-1')).resolves.toMatchObject({ status: 'INDEXED' });
+    expect(tx.documentoRag.create).toHaveBeenCalledWith({ data: expect.objectContaining({ origen: 'AUTOR', version: 3 }) });
+    expect(tx.$executeRaw).toHaveBeenCalledOnce();
+    const [sql] = tx.$executeRaw.mock.calls[0];
+    expect(sql.join('?')).toContain('"seccion"');
+    expect(sql.join('?')).not.toContain('HTML MUST NOT ENTER');
+  });
+
+  it('keeps legacy lessons on HTML_FALLBACK source', async () => {
+    mocks.leccion.findUnique.mockResolvedValue({
+      id: 'lesson-1', version: 1, estado: 'PUBLICADA', titulo: 'Lesson', contenido: 'Contenido legacy',
+      contextoRag: null, contextoRagNombre: null, recursoHtml: { html: '<h1>Sección</h1><p>Visible</p>', evaluable: false },
+      modulo: { estado: 'PUBLICADO', curso: { id: 'course-pilot', publicado: true } },
+    });
+    mocks.documentoRag.findUnique.mockResolvedValue(null);
+    process.env.EMBEDDING_API_URL = 'https://embeddings.example';
+    process.env.EMBEDDING_API_KEY = 'test-key';
+    process.env.EMBEDDING_MODEL = 'google/embeddinggemma-300M';
+    process.env.EMBEDDING_PROVIDER = 'local';
+    process.env.EMBEDDING_MAX_RETRIES = '0';
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: async () => ({ data: [{ embedding: Array.from({ length: 768 }, () => 0.01) }] }),
+    }));
+    const tx = {
+      documentoRag: { updateMany: vi.fn(), create: vi.fn().mockResolvedValue({ id: 'document-1' }), update: vi.fn().mockResolvedValue({ id: 'document-1' }) },
+      fragmentoRag: { deleteMany: vi.fn() }, $executeRaw: vi.fn(),
+    };
+    mocks.$transaction.mockImplementation((callback) => callback(tx));
+
+    await expect(indexLesson('lesson-1')).resolves.toMatchObject({ status: 'INDEXED' });
+    expect(tx.documentoRag.create).toHaveBeenCalledWith({ data: expect.objectContaining({ origen: 'HTML_FALLBACK' }) });
+  });
 });
