@@ -189,6 +189,9 @@ function ModuleNode({ module, activeLessonId, busy, onSelect, onSave, onAddLesso
 function LessonEditor({ lesson, readOnly, busy, onSave, onUpload, onUploadHtml, onSaveDeadline, onDeleteMaterial, onPublish, onArchive, onRestore, onRestoreRevision }) {
   const [title, setTitle] = useState(lesson.titulo || '');
   const [content, setContent] = useState(lesson.contenido || '');
+  const [contextText, setContextText] = useState(lesson.contextoRag || '');
+  const [contextName, setContextName] = useState(lesson.contextoRagNombre || '');
+  const [contextError, setContextError] = useState(null);
   const [videoUrl, setVideoUrl] = useState(lesson.videoUrl || '');
   const [preview, setPreview] = useState(false);
   const [status, setStatus] = useState(null);
@@ -197,16 +200,33 @@ function LessonEditor({ lesson, readOnly, busy, onSave, onUpload, onUploadHtml, 
   const [maxAttempts, setMaxAttempts] = useState(lesson.recursoHtml?.intentosMax || 1);
   const [fechaLimite, setFechaLimite] = useState(isoToLocalDateTime(lesson.recursoHtml?.fechaLimite));
   const isHtml = lesson.formatoContenido === 'HTML';
-  useEffect(() => { setTitle(lesson.titulo || ''); setContent(lesson.contenido || ''); setVideoUrl(lesson.videoUrl || ''); setHtmlFile(null); setEvaluable(Boolean(lesson.recursoHtml?.evaluable)); setMaxAttempts(lesson.recursoHtml?.intentosMax || 1); setFechaLimite(isoToLocalDateTime(lesson.recursoHtml?.fechaLimite)); }, [lesson]);
+  useEffect(() => { setTitle(lesson.titulo || ''); setContent(lesson.contenido || ''); setContextText(lesson.contextoRag || ''); setContextName(lesson.contextoRagNombre || ''); setContextError(null); setVideoUrl(lesson.videoUrl || ''); setHtmlFile(null); setEvaluable(Boolean(lesson.recursoHtml?.evaluable)); setMaxAttempts(lesson.recursoHtml?.intentosMax || 1); setFechaLimite(isoToLocalDateTime(lesson.recursoHtml?.fechaLimite)); }, [lesson]);
   const insertPython = () => setContent((current) => `${current}${current && !current.endsWith('\n') ? '\n' : ''}\n\`\`\`python\n# Escribí tu ejemplo\n\`\`\`\n`);
-  async function save() { setStatus(null); const saved = await onSave({ titulo: title.trim(), contenido: content, ...(isHtml ? {} : { videoUrl: videoUrl.trim() || null }) }); if (saved) setStatus('Guardado como nueva versión'); }
+  async function loadContextFile(file) {
+    if (!file) return;
+    if (!/\.(?:txt|md)$/i.test(file.name)) { setContextError('Solo se aceptan archivos .txt o .md'); return; }
+    try {
+      setContextError(null);
+      setContextText(await file.text());
+      setContextName(file.name);
+    } catch {
+      setContextError('No se pudo leer el archivo de contexto');
+    }
+  }
+  async function save() {
+    setStatus(null); setContextError(null);
+    const normalizedContext = contextText.trim() ? { texto: contextText, nombreOrigen: contextName.trim() || null } : null;
+    const saved = await onSave({ titulo: title.trim(), contenido: content, contextoRag: normalizedContext, ...(isHtml ? {} : { videoUrl: videoUrl.trim() || null }) });
+    if (saved) setStatus('Guardado como nueva versión; reindexación programada');
+  }
   async function uploadHtml() { if (!htmlFile) return; setStatus(null); const uploaded = await onUploadHtml(htmlFile, evaluable, maxAttempts, fechaLimite); if (uploaded) setStatus('HTML guardado como nueva versión'); }
   async function saveDeadline() { setStatus(null); const saved = await onSaveDeadline(fechaLimite); if (saved) setStatus('Fecha límite actualizada'); }
-  return <div className="flex flex-col gap-4">
+    return <div className="flex flex-col gap-4">
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"><div><h2 className="text-lg font-bold text-titi-dark">{isHtml ? 'Presentación' : 'Lección'}</h2><p className="text-xs text-gray-500">{readOnly ? 'Lección archivada: restaurala antes de editar.' : lesson.estado === 'PUBLICADA' ? 'Edición segura: cada guardado crea una revisión.' : isHtml ? 'Archivo autocontenido, ejecutado en un iframe aislado.' : 'Markdown seguro: HTML crudo no se interpreta.'}</p></div><div className="flex flex-wrap gap-2"><StatusBadge lesson={lesson} />{!readOnly && !isHtml && <button type="button" onClick={() => setPreview((current) => !current)} className="titi-btn-ghost">{preview ? 'Editar' : 'Vista previa'}</button>}{lesson.estado === 'BORRADOR' && <button type="button" onClick={onPublish} disabled={busy} className="titi-btn-primary">Publicar lección</button>}{lesson.estado === 'ARCHIVADA' && <button type="button" onClick={onRestore} disabled={busy} className="titi-btn-primary">Restaurar</button>}{lesson.estado !== 'ARCHIVADA' && <button type="button" onClick={onArchive} disabled={busy} className="titi-btn-ghost text-red-600">Archivar</button>}</div></div>
     <p className="text-xs text-gray-500">Versión {lesson.version || 1} · publicada: {formatDate(lesson.publishedAt)} · archivada: {formatDate(lesson.archivedAt)}</p>
     {preview ? <MarkdownContent content={content} format="MARKDOWN" className="min-h-56 border border-gray-100 rounded-xl p-4" /> : <><label className="flex flex-col gap-1.5"><span className="text-sm font-semibold text-titi-dark">Título</span><input value={title} onChange={(event) => setTitle(event.target.value)} disabled={readOnly} maxLength={120} className="titi-input disabled:opacity-60" /></label>{!isHtml && <label className="flex flex-col gap-1.5"><span className="text-sm font-semibold text-titi-dark">Video (opcional)</span><input value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} disabled={readOnly} className="titi-input disabled:opacity-60" /></label>}<label className="flex flex-col gap-1.5"><span className="text-sm font-semibold text-titi-dark">{isHtml ? 'Descripción Markdown' : 'Contenido Markdown'}</span><textarea value={content} onChange={(event) => setContent(event.target.value)} disabled={readOnly} rows={isHtml ? 6 : 14} className="titi-input resize-y font-mono disabled:opacity-60" /></label>{!readOnly && !isHtml && <button type="button" onClick={insertPython} className="self-start text-sm font-bold text-titi-dark bg-titi-cream border border-titi-yellow rounded-xl px-3 py-2">Insertar bloque Python</button>}</>}
-    {!readOnly && <div className="flex items-center gap-3"><button type="button" onClick={save} disabled={busy || !title.trim()} className="titi-btn-primary">{busy ? 'Guardando...' : isHtml ? 'Guardar presentación' : 'Guardar lección'}</button>{status && <span className="text-xs font-bold text-green-700">{status}</span>}</div>}
+    <section className="border border-titi-yellow/40 rounded-xl p-4 bg-titi-cream/40" aria-labelledby="contexto-rag-title"><h3 id="contexto-rag-title" className="text-sm font-bold text-titi-dark">Contexto pedagógico para Tutor IA</h3><p className="text-xs text-gray-500 mt-1">Opcional. Tiene prioridad sobre Markdown y HTML, y solo se usa para citas del tutor.</p>{!readOnly && <><textarea value={contextText} onChange={(event) => { setContextText(event.target.value); setContextName(''); setContextError(null); }} rows={6} placeholder="Pegá guía, conceptos o explicaciones públicas..." className="titi-input mt-3 resize-y" aria-label="Contexto autoral" /><div className="flex flex-wrap items-center gap-3 mt-3"><label className="titi-btn-ghost cursor-pointer">Cargar .txt/.md<input type="file" accept=".txt,.md,text/plain,text/markdown" className="hidden" onChange={(event) => { loadContextFile(event.target.files?.[0]); event.target.value = ''; }} /></label>{contextName && <span className="text-xs font-semibold text-titi-dark">{contextName}</span>}</div></>}{contextError && <p role="alert" className="text-xs font-semibold text-red-600 mt-2">{contextError}</p>}{lesson.documentosRag?.[0] && <p className="text-xs font-semibold text-gray-600 mt-3" aria-live="polite">Índice RAG: {lesson.documentosRag[0].origen || (lesson.contextoRag ? 'AUTOR' : 'HTML_FALLBACK')} · {lesson.documentosRag[0].estado}{lesson.documentosRag[0].error ? ` · ${lesson.documentosRag[0].error}` : ''}</p>}</section>
+    {!readOnly && <div className="flex items-center gap-3"><button type="button" onClick={save} disabled={busy || !title.trim() || Boolean(contextError)} className="titi-btn-primary">{busy ? 'Guardando...' : isHtml ? 'Guardar presentación' : 'Guardar lección'}</button>{status && <span className="text-xs font-bold text-green-700" role="status" aria-live="polite">{status}</span>}</div>}
     {isHtml && <HtmlResource lesson={lesson} readOnly={readOnly} busy={busy} htmlFile={htmlFile} setHtmlFile={setHtmlFile} evaluable={evaluable} setEvaluable={setEvaluable} maxAttempts={maxAttempts} setMaxAttempts={setMaxAttempts} fechaLimite={fechaLimite} setFechaLimite={setFechaLimite} uploadHtml={uploadHtml} saveDeadline={saveDeadline} />}
     {!isHtml && <Materials lesson={lesson} readOnly={readOnly} onUpload={onUpload} onDeleteMaterial={onDeleteMaterial} />}
     <RevisionHistory lesson={lesson} disabled={busy} onRestore={onRestoreRevision} />

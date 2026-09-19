@@ -8,6 +8,7 @@ import {
 
 const learn = fs.readFileSync('src/pages/LearnCourse.jsx', 'utf8');
 const panel = fs.readFileSync('src/components/TutorPanel.jsx', 'utf8');
+const editor = fs.readFileSync('src/pages/teacher/ModulesEditor.jsx', 'utf8');
 const required = [
   'TutorPanel',
   '/api/lessons/${lessonId}/chat/status',
@@ -28,6 +29,12 @@ assert.match(panel, /practiceStateAfterResponse\(requestIntent, citations\.lengt
 assert.match(panel, /Fuente publicada del curso/);
 assert.doesNotMatch(panel, /Relevancia\s*:/i);
 assert.doesNotMatch(panel, /citation\.similarity|similarity.*%/i);
+
+assert.match(editor, /setContextText\(await file\.text\(\)\)/);
+assert.match(editor, /contextoRag/);
+assert.match(editor, /\.txt,\.md/);
+assert.match(editor, /RAG|Tutor|indexad/i);
+assert.doesNotMatch(editor, /materials.*contextoRag|contextoRag.*Material/i);
 
 assert.match(learn, /const \[tutorPractice, setTutorPractice\] = useState\(\{\}\)/);
 assert.match(learn, /delete next\[previousLessonId\]/);
