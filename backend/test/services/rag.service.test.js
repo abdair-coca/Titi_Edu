@@ -231,9 +231,28 @@ describe('RAG text preparation', () => {
       ]);
     });
 
+    it('drops citation metadata not cited by the assistant turn', () => {
+      expect(normalizeChatHistory([{
+        role: 'assistant',
+        content: 'Respuesta sin referencia.',
+        citations: [{ number: 1, chunkId: 'chunk-1' }],
+      }])).toEqual([{ role: 'assistant', content: 'Respuesta sin referencia.' }]);
+    });
+
     it('returns empty array for non-array input', () => {
       expect(normalizeChatHistory(null)).toEqual([]);
       expect(normalizeChatHistory('chat')).toEqual([]);
+    });
+
+    it('drops a client-duplicated current question from the history tail', () => {
+      expect(normalizeChatHistory([
+        { role: 'user', content: 'Pregunta anterior' },
+        { role: 'assistant', content: 'Respuesta anterior' },
+        { role: 'user', content: 'Pregunta actual' },
+      ], 8, 'Pregunta actual')).toEqual([
+        { role: 'user', content: 'Pregunta anterior' },
+        { role: 'assistant', content: 'Respuesta anterior' },
+      ]);
     });
 
     it('trims and caps each turn content length', () => {

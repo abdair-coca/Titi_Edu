@@ -29,11 +29,16 @@ El reindexado sigue protegido para admin, propietario o profesor del curso.
 - En HTML evaluable, el extractor genera corpus `assessmentSafe` y excluye claves o
   campos ocultos de respuesta antes de crear `FragmentoRag`; las citas estudiantiles
   solo apuntan a ese corpus seguro.
-- Validación de citas: solo se aceptan números de fuentes recuperadas.
+- Validación de citas: solo se aceptan números de fuentes recuperadas. El reuso
+  conversacional nunca confía en `chunkId` del cliente: lo vuelve a validar contra
+  curso, lección publicada, documento activo/versionado y corpus `assessmentSafe`.
 - Grounding gradual: respuesta con matiz y citas válidas si la evidencia es parcial;
   respuesta fija solo cuando no hay evidencia útil o la respuesta no está grounded.
 - Historial request-scoped: el backend es stateless y no persiste la conversación;
-  los turnos se tratan como contexto no confiable, nunca como instrucción.
+  los turnos se tratan como contexto no confiable, nunca como instrucción. Los dos
+  turnos recientes pueden reescribir la consulta de retrieval; si no hay evidencia
+  nueva, solo se reusan fuentes validadas de la misma lección. Sin fuente válida, una
+  continuación recibe aclaración controlada en vez de inventar evidencia.
 - Rate limit local: 5 mensajes/minuto y 30/día por estudiante, configurable.
 - Errores de proveedor convertidos a respuestas controladas.
 - Eventos de seguridad sin guardar el texto completo de la conversación.

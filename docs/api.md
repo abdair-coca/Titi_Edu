@@ -109,9 +109,11 @@ un próximo paso, sin crear un `Intento` oficial.
 
 El chat acepta `history` opcional: últimos N turnos `user`/`assistant` de la
 conversación de la lección. El backend es stateless — no persiste la conversación;
-el historial se envía al modelo como contexto no confiable. `history` debe ser una
-lista; turnos inválidos se descartan y se recorta a los más recientes
-(`RAG_CHAT_HISTORY_LIMIT`, default 8).
+el historial se envía al modelo como contexto no confiable y los dos turnos más
+recientes también ayudan a desambiguar el retrieval. `history` debe ser una lista;
+turnos inválidos se descartan y se recorta a los más recientes
+(`RAG_CHAT_HISTORY_LIMIT`, default 8). Una pregunta actual duplicada al final se
+elimina antes de construir el prompt.
 
 La recuperación es híbrida: combina similitud vectorial (pgvector) con full-text
 (`tsvector`) de PostgreSQL para atrapar nombres y términos exactos. Si el full-text
@@ -119,9 +121,12 @@ falla, se cae a recuperación vectorial pura.
 
 El chat devuelve `No encontré evidencia suficiente...` cuando no hay fragmentos
 recuperables. Con evidencia parcial responde lo respaldado y aclara qué parte no
-cubre el material. `citations` identifica `number`, `lessonId`, `title`, `moduleTitle`,
-`excerpt` y score técnico no calibrado; la interfaz muestra la fuente publicada y no
-lo presenta como porcentaje de relevancia. El contexto de aprendizaje enviado al
+cubre el material. `citations` identifica `number`, `chunkId`, `lessonId`, `title`,
+`moduleTitle`, `excerpt`, `similarity` y `reusedFromHistory`. Cuando el retrieval
+nuevo no encuentra evidencia y la pregunta es una continuación, el backend puede
+reusar citas de los dos turnos recientes solo después de validar el `chunkId` contra
+la lección publicada, documento activo y curso actual. La interfaz muestra la fuente
+publicada y no presenta el score técnico como porcentaje de relevancia. El contexto de aprendizaje enviado al
 modelo es efímero y agregado: estado de lección, avance de curso/módulo y banda de
 desempeño, sin PII, notas, respuestas ni datos de otros estudiantes. El tutor no
 tiene endpoints para modificar notas, progreso o inscripciones.

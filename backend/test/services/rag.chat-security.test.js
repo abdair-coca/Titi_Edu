@@ -155,6 +155,70 @@ describe('RAG chat security', () => {
     expect(messages.some((m) => m.content === 'No debe llegar al modelo.')).toBe(false);
   });
 
+  it('uses recent conversation context to retrieve evidence for a follow-up', async () => {
+    const fetchMock = vi.fn().mockImplementation(async (url) => {
+      if (url.includes('embeddings.example')) return embeddingResponse();
+      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Aplicalo con extends. [1]' } }] }) };
+    });
+    prisma.$queryRaw.mockImplementation(async () => {
+      const embeddingInput = JSON.parse(fetchMock.mock.calls[0][1].body).input;
+      return embeddingInput.includes('¿Cómo hereda una clase de otra?') ? [chunk] : [];
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await chatWithCourseContext({
+      courseId: 'course-1',
+      lessonId: 'lesson-1',
+      principalId: 'student-1',
+      message: '¿Y cómo lo aplico de vehículo a auto?',
+      lessonTitle: 'Herencia',
+      history: [
+        { role: 'user', content: '¿Cómo hereda una clase de otra?' },
+        { role: 'assistant', content: 'Una clase puede heredar de otra con extends. [1]' },
+      ],
+    });
+
+    expect(result.answer).toBe('Aplicalo con extends. [1]');
+  });
+
+  it('reuses only server-validated historical citations when retrieval misses', async () => {
+    const fetchMock = vi.fn().mockImplementation(async (url) => {
+      if (url.includes('embeddings.example')) return embeddingResponse();
+      return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Aplicalo con extends. [1]' } }] }) };
+    });
+    let retrievalCalls = 0;
+    prisma.$queryRaw.mockImplementation(async () => {
+      retrievalCalls += 1;
+      return retrievalCalls <= 2 ? [] : [chunk];
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await chatWithCourseContext({
+      courseId: 'course-1',
+      lessonId: 'lesson-1',
+      principalId: 'student-1',
+      message: '¿Y cómo lo aplico de vehículo a auto?',
+      history: [
+        { role: 'user', content: '¿Cómo hereda una clase de otra?' },
+        {
+          role: 'assistant',
+          content: 'Una clase puede heredar de otra con extends. [1]',
+          citations: [{ number: 1, chunkId: 'chunk-1' }],
+        },
+      ],
+    });
+
+    expect(result.citations).toMatchObject([{ number: 1, chunkId: 'chunk-1', reusedFromHistory: true }]);
+    expect(retrievalCalls).toBe(3);
+    const [historicalSql] = prisma.$queryRaw.mock.calls[2];
+    const historicalSqlText = Array.isArray(historicalSql)
+      ? historicalSql.join('?')
+      : String(historicalSql?.text || historicalSql);
+    expect(historicalSqlText).toContain('AND (COALESCE(rh."evaluable", false) = false OR d."assessmentSafe" = true)');
+    expect(JSON.stringify(prisma.$queryRaw.mock.calls[2])).toContain('AND l.\\"id\\" = ');
+    expect(JSON.stringify(prisma.$queryRaw.mock.calls[2])).toContain('lesson-1');
+  });
+
   it('does not send history for state-changing requests', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
