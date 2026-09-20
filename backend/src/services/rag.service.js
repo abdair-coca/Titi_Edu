@@ -1163,7 +1163,7 @@ function historicalChunkIds(history) {
   return ids;
 }
 
-async function loadHistoricalChunks(courseId, lessonId, history) {
+async function loadHistoricalChunks(courseId, history) {
   const chunkIds = historicalChunkIds(history);
   if (!chunkIds.length) return [];
 
@@ -1194,7 +1194,6 @@ async function loadHistoricalChunks(courseId, lessonId, history) {
         AND d."activo" = true
         AND d."estado" = 'LISTO'
         AND (COALESCE(rh."evaluable", false) = false OR d."assessmentSafe" = true)
-        ${lessonId ? Prisma.sql`AND l."id" = ${lessonId}` : Prisma.empty}
     `;
     const rowsById = new Map((rows || []).map((row) => [row.id, { ...row, reusedFromHistory: true }]));
     return mapContextRows(chunkIds.map((id) => rowsById.get(id)).filter(Boolean), MAX_HISTORICAL_CITATIONS);
@@ -1231,7 +1230,7 @@ export async function chatWithCourseContext({ courseId, lessonId = null, princip
   let chunks = await searchCourseContext(courseId, retrievalQuery, DEFAULT_RETRIEVAL_LIMIT, { lessonId });
   if (!chunks.length) {
     chunks = isConversationContinuation(message)
-      ? await loadHistoricalChunks(courseId, lessonId, safeHistory)
+      ? await loadHistoricalChunks(courseId, safeHistory)
       : [];
   }
   if (!chunks.length) {

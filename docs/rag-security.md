@@ -40,7 +40,8 @@ El reindexado sigue protegido para admin, propietario o profesor del curso.
 - Historial request-scoped: el backend es stateless y no persiste la conversación;
   los turnos se tratan como contexto no confiable, nunca como instrucción. Los dos
   turnos recientes pueden reescribir la consulta de retrieval; si no hay evidencia
-  nueva, solo se reusan fuentes validadas de la misma lección. Sin fuente válida, una
+  nueva, se reusan únicamente citas validadas del curso actual, incluso si la fuente
+  pertenece a otra lección publicada del mismo curso. Sin fuente válida, una
   continuación recibe aclaración controlada en vez de inventar evidencia.
 - Rate limit local: 5 mensajes/minuto y 30/día por estudiante, configurable.
 - Errores de proveedor convertidos a respuestas controladas.

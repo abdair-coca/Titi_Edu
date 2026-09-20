@@ -182,7 +182,7 @@ describe('RAG chat security', () => {
     expect(result.answer).toBe('Aplicalo con extends. [1]');
   });
 
-  it('reuses only server-validated historical citations when retrieval misses', async () => {
+  it('reuses only server-validated same-course historical citations when retrieval misses', async () => {
     const fetchMock = vi.fn().mockImplementation(async (url) => {
       if (url.includes('embeddings.example')) return embeddingResponse();
       return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Aplicalo con extends. [1]' } }] }) };
@@ -216,8 +216,49 @@ describe('RAG chat security', () => {
       ? historicalSql.join('?')
       : String(historicalSql?.text || historicalSql);
     expect(historicalSqlText).toContain('AND (COALESCE(rh."evaluable", false) = false OR d."assessmentSafe" = true)');
-    expect(JSON.stringify(prisma.$queryRaw.mock.calls[2])).toContain('AND l.\\"id\\" = ');
-    expect(JSON.stringify(prisma.$queryRaw.mock.calls[2])).toContain('lesson-1');
+    expect(historicalSqlText).toContain('AND c."id" = ');
+    expect(JSON.stringify(prisma.$queryRaw.mock.calls[2])).toContain('course-1');
+  });
+
+  it('reuses a cited foreign lesson for a generic exercise follow-up', async () => {
+    const foreignChunk = {
+      ...chunk,
+      id: 'chunk-foreign',
+      lessonId: 'lesson-2',
+      lessonTitle: 'Herencia',
+      moduleTitle: 'POO',
+      contenido: 'Auto puede heredar de Vehículo mediante extends.',
+    };
+    let retrievalCalls = 0;
+    prisma.$queryRaw.mockImplementation(async (...args) => {
+      retrievalCalls += 1;
+      if (retrievalCalls <= 2) return [];
+      return JSON.stringify(args).includes('lesson-1') ? [] : [foreignChunk];
+    });
+    const fetchMock = vi.fn().mockImplementation(async (url) => {
+      if (url.includes('embeddings.example')) return embeddingResponse();
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: 'Otro ejercicio sobre herencia. [1]' } }] }),
+      };
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await chatWithCourseContext({
+      courseId: 'course-1',
+      lessonId: 'lesson-1',
+      principalId: 'student-1',
+      message: 'dame otro ejercicio',
+      history: [{
+        role: 'assistant',
+        content: 'Ejercicio anterior sobre herencia. [1]',
+        citations: [{ number: 1, chunkId: 'chunk-foreign' }],
+      }],
+    });
+
+    expect(result.answer).toBe('Otro ejercicio sobre herencia. [1]');
+    expect(result.relatedLesson).toEqual({ lessonId: 'lesson-2', title: 'Herencia', moduleTitle: 'POO' });
   });
 
   it('does not send history for state-changing requests', async () => {
