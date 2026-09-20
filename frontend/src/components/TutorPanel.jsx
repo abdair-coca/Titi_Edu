@@ -84,7 +84,8 @@ export default function TutorPanel({
   const [pending, setPending] = useState(null); // null | { stage, count }
   const [error, setError] = useState(null); // null | { question, intent }
   const textareaRef = useRef(null);
-  const lastMsgRef = useRef(null);
+  const latestTutorMessageRef = useRef(null);
+  const endRef = useRef(null);
   const activeRef = useRef(false);
   const requestIdRef = useRef(0);
   const controllerRef = useRef(null);
@@ -137,9 +138,13 @@ export default function TutorPanel({
     return () => { cancelled = true; };
   }, [lessonId]);
 
-  // Auto-scroll al último mensaje / estado de carga.
+  // Respuesta nueva: mostrar inicio. Pregunta/carga/error: mantener final visible.
   useEffect(() => {
-    lastMsgRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    if (pending || error) {
+      endRef.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+      return;
+    }
+    latestTutorMessageRef.current?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   }, [conversation.length, pending, error]);
 
   const resizeTextarea = () => {
@@ -197,7 +202,8 @@ export default function TutorPanel({
         timersRef.current.push(
           setTimeout(() => {
             if (!isCurrentRequest()) return;
-            onAppendMessages([{ role: 'tutor', content: answer, citations }]);
+            const relatedLesson = data.data?.relatedLesson ?? null;
+            onAppendMessages([{ role: 'tutor', content: answer, citations, relatedLesson }]);
             const nextPracticeState = practiceStateAfterResponse(requestIntent, citations.length);
             if (nextPracticeState !== undefined) onPracticeStateChange?.(nextPracticeState);
             activeRef.current = false;
@@ -346,6 +352,7 @@ export default function TutorPanel({
               <MessageBubble
                 key={`${index}-${msg.role}`}
                 msg={msg}
+                messageRef={index === conversation.length - 1 && msg.role === 'tutor' ? latestTutorMessageRef : undefined}
                 showActions={index === conversation.length - 1 && msg.role === 'tutor'}
                 onAsk={(prompt, options) => ask(prompt, options)}
                 onNavigateToLesson={onNavigateToLesson}
@@ -389,7 +396,7 @@ export default function TutorPanel({
               </div>
             )}
 
-            <div ref={lastMsgRef} />
+            <div ref={endRef} />
           </>
         )}
       </div>
@@ -485,7 +492,7 @@ function IndexingState() {
 }
 
 // ---- Burbujas de mensaje ----
-function MessageBubble({ msg, showActions, onAsk, onNavigateToLesson }) {
+function MessageBubble({ msg, messageRef, showActions, onAsk, onNavigateToLesson }) {
   if (msg.role === 'user') {
     return (
       <div className="self-end max-w-[85%] bg-titi-yellow text-titi-dark rounded-2xl rounded-br-md px-4 py-2.5 text-sm font-medium whitespace-pre-wrap">
@@ -494,10 +501,27 @@ function MessageBubble({ msg, showActions, onAsk, onNavigateToLesson }) {
     );
   }
 
+  const { relatedLesson } = msg;
+
   return (
-    <div className="self-start w-full max-w-full">
+    <div ref={messageRef} className="self-start w-full max-w-full">
       <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3">
         <MarkdownContent content={msg.content} format="MARKDOWN" compact codeCopy />
+        {relatedLesson && (
+          <div className="mt-3 rounded-xl border border-titi-yellow bg-titi-cream px-3 py-2.5">
+            <p className="text-xs font-bold text-titi-dark">
+              Esta respuesta usa material de otra lección del curso.
+            </p>
+            <button
+              type="button"
+              onClick={() => onNavigateToLesson(relatedLesson.lessonId)}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-titi-yellow px-3 py-1.5 text-xs font-bold text-titi-dark hover:bg-titi-yellow-light transition-colors"
+            >
+              Ir a la lección
+              <ExternalLinkIcon className="w-3.5 h-3.5" aria-hidden="true" />
+            </button>
+          </div>
+        )}
         {msg.citations?.length > 0 && (
           <div className="mt-3 border-t border-gray-100 pt-3">
             <p className="text-xs font-bold uppercase tracking-wide text-gray-500 flex items-center gap-1.5 mb-2">
