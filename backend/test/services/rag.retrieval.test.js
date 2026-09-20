@@ -198,4 +198,26 @@ describe('RAG lesson-prioritized retrieval', () => {
       : String(fallbackTemplate?.text || fallbackTemplate);
     expect(sqlText).toContain('LIMIT ?');
   });
+
+  it('reuses one query embedding and includes equally relevant foreign lesson evidence', async () => {
+    prisma.$queryRaw.mockReset();
+    prisma.$queryRaw
+      .mockResolvedValueOnce([row({ id: 'f-current', lessonId: 'lesson-1', similarity: 0.8 })])
+      .mockResolvedValueOnce([row({
+        id: 'f-foreign', lessonId: 'lesson-2', lessonTitle: 'Herencia', similarity: 0.8,
+      })]);
+
+    const result = await searchCourseContext('course-1', '¿Qué es herencia?', 5, { lessonId: 'lesson-1' });
+
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(result.map((item) => item.lessonId)).toEqual(['lesson-1', 'lesson-2']);
+    const [courseSql] = prisma.$queryRaw.mock.calls[1];
+    const sqlText = Array.isArray(courseSql) ? courseSql.join('?') : String(courseSql?.text || courseSql);
+    expect(sqlText).toContain('c."publicado" = true');
+    expect(sqlText).toContain('m."estado" = \'PUBLICADO\'');
+    expect(sqlText).toContain('l."estado" = \'PUBLICADA\'');
+    expect(sqlText).toContain('d."version" = l."version"');
+    expect(sqlText).toContain('d."activo" = true');
+    expect(sqlText).toContain('d."assessmentSafe"');
+  });
 });

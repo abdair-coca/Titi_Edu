@@ -32,6 +32,9 @@ El reindexado sigue protegido para admin, propietario o profesor del curso.
 - Validación de citas: solo se aceptan números de fuentes recuperadas. El reuso
   conversacional nunca confía en `chunkId` del cliente: lo vuelve a validar contra
   curso, lección publicada, documento activo/versionado y corpus `assessmentSafe`.
+  Si la lección activa no aporta evidencia suficiente, el retrieval puede usar otra
+  lección publicada del mismo curso; la sugerencia de navegación solo se deriva de
+  citas efectivamente validadas, nunca de chunks recuperados sin citar.
 - Grounding gradual: respuesta con matiz y citas válidas si la evidencia es parcial;
   respuesta fija solo cuando no hay evidencia útil o la respuesta no está grounded.
 - Historial request-scoped: el backend es stateless y no persiste la conversación;

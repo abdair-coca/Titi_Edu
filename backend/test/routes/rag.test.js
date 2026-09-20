@@ -56,6 +56,7 @@ describe('RAG lesson routes', () => {
       answer: 'Las variables guardan valores. [1]',
       citations: [{ number: 1, lessonId: 'l-1', title: 'Variables', excerpt: '...' }],
       usage: null,
+      relatedLesson: null,
     });
     mocks.indexCourse.mockResolvedValue({ courseId: 'c-1', total: 1, results: [{ status: 'INDEXED' }] });
   });
@@ -83,6 +84,7 @@ describe('RAG lesson routes', () => {
     expect(response.status).toBe(200);
     expect(response.body.data).toMatchObject({ answer: 'Las variables guardan valores. [1]' });
     expect(response.body.data.citations[0]).toMatchObject({ number: 1, lessonId: 'l-1' });
+    expect(response.body.data.relatedLesson).toBeNull();
     expect(mocks.chatWithCourseContext).toHaveBeenCalledWith({
       courseId: 'c-1',
       lessonId: 'l-1',

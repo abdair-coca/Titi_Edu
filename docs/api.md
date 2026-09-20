@@ -96,7 +96,7 @@ El retrieval usa únicamente documentos activos y publicados del curso.
 
 ```
 GET  /api/lessons/:id/chat/status          Estado de flag e indexado (auth)
-POST /api/lessons/:id/chat                 { message, intent?, history? } → { answer, citations, usage }
+POST /api/lessons/:id/chat                 { message, intent?, history? } → { answer, citations, relatedLesson, usage }
 POST /api/admin/rag/courses/:courseId/reindex  Reindexar curso (autor/profesor/admin)
 ```
 
@@ -117,12 +117,17 @@ elimina antes de construir el prompt.
 
 La recuperación es híbrida: combina similitud vectorial (pgvector) con full-text
 (`tsvector`) de PostgreSQL para atrapar nombres y términos exactos. Si el full-text
-falla, se cae a recuperación vectorial pura.
+falla, se cae a recuperación vectorial pura. Cuando la evidencia de la lección
+activa es débil, también puede recuperar material de otra lección publicada del
+mismo curso usando el mismo embedding de consulta; nunca cruza de curso.
 
 El chat devuelve `No encontré evidencia suficiente...` cuando no hay fragmentos
 recuperables. Con evidencia parcial responde lo respaldado y aclara qué parte no
 cubre el material. `citations` identifica `number`, `chunkId`, `lessonId`, `title`,
-`moduleTitle`, `excerpt`, `similarity` y `reusedFromHistory`. Cuando el retrieval
+`moduleTitle`, `excerpt`, `similarity` y `reusedFromHistory`. `relatedLesson` es
+`null` salvo que la respuesta cite realmente una fuente de otra lección del mismo
+curso; cuando existe contiene `lessonId`, `title` y `moduleTitle` de la sugerencia
+principal. Una fuente recuperada pero no citada no genera esta sugerencia. Cuando el retrieval
 nuevo no encuentra evidencia y la pregunta es una continuación, el backend puede
 reusar citas de los dos turnos recientes solo después de validar el `chunkId` contra
 la lección publicada, documento activo y curso actual. La interfaz muestra la fuente

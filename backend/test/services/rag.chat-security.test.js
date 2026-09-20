@@ -67,6 +67,7 @@ describe('RAG chat security', () => {
       answer: 'No encontré evidencia suficiente en los materiales publicados de este curso.',
       citations: [],
       usage: null,
+      relatedLesson: null,
     });
     expect(fetchMock).toHaveBeenCalledOnce();
   });
@@ -231,5 +232,55 @@ describe('RAG chat security', () => {
     });
     expect(result.answer).toBe('No encontré evidencia suficiente en los materiales publicados de este curso.');
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('returns cited foreign lesson as relatedLesson and marks it in prompt', async () => {
+    prisma.$queryRaw
+      .mockResolvedValueOnce([chunk])
+      .mockResolvedValueOnce([{
+        ...chunk,
+        id: 'chunk-2',
+        lessonId: 'lesson-2',
+        lessonTitle: 'Herencia',
+        moduleTitle: 'POO',
+        contenido: 'La herencia permite reutilizar comportamiento.',
+      }]);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: 'La herencia reutiliza comportamiento. [2]' } }] }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await chatWithCourseContext({
+      courseId: 'course-1', lessonId: 'lesson-1', lessonTitle: 'Variables', principalId: 'student-1',
+      message: '¿Qué es herencia?',
+    });
+
+    expect(result.relatedLesson).toEqual({ lessonId: 'lesson-2', title: 'Herencia', moduleTitle: 'POO' });
+    const [, body] = fetchMock.mock.calls[1];
+    expect(JSON.parse(body.body).messages[0].content).toContain('otra lección');
+  });
+
+  it('keeps relatedLesson null when foreign source is retrieved but uncited', async () => {
+    prisma.$queryRaw
+      .mockResolvedValueOnce([chunk])
+      .mockResolvedValueOnce([{ ...chunk, id: 'chunk-2', lessonId: 'lesson-2', lessonTitle: 'Herencia' }]);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: 'Las variables almacenan valores. [1]' } }] }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await chatWithCourseContext({
+      courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?',
+    });
+
+    expect(result.relatedLesson).toBeNull();
   });
 });
