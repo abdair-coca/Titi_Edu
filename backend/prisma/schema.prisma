@@ -97,6 +97,79 @@ model Usuario {
   tokensServicio     TokenServicio[]
   operacionesAutoria OperacionAutoria[]
   revisionesLeccion  RevisionLeccion[]
+  credencialesIa     CredencialIa[]
+  ragQuotaWindows    RagQuotaWindow[]
+}
+
+enum ProveedorIa {
+  GROQ
+}
+
+enum EstadoCredencialIa {
+  VALID
+  INVALID
+}
+
+enum RagQuotaScope {
+  CHAT_MINUTE
+  CHAT_DAY
+  CREDENTIAL_VALIDATE
+}
+
+enum RagIndexJobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model CredencialIa {
+  id            String             @id @default(uuid())
+  usuarioId     String
+  proveedor     ProveedorIa        @default(GROQ)
+  ciphertext    Bytes
+  iv            Bytes
+  authTag       Bytes
+  keyVersion    String
+  last4         String
+  status        EstadoCredencialIa @default(VALID)
+  validatedAt   DateTime
+  invalidatedAt DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  usuario       Usuario            @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, proveedor])
+}
+
+model RagQuotaWindow {
+  id          String        @id @default(uuid())
+  usuarioId   String
+  scope       RagQuotaScope
+  bucketStart DateTime
+  count       Int           @default(0)
+  updatedAt   DateTime      @updatedAt
+  usuario     Usuario       @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, scope, bucketStart])
+  @@index([bucketStart])
+}
+
+model RagIndexJob {
+  id            String            @id @default(uuid())
+  leccionId     String            @unique
+  status        RagIndexJobStatus @default(PENDING)
+  requestedAt   DateTime          @default(now())
+  startedAt     DateTime?
+  lockedAt      DateTime?
+  lockToken     String?
+  nextAttemptAt DateTime          @default(now())
+  completedAt   DateTime?
+  attempts      Int               @default(0)
+  lastError     String?
+  leccion       Leccion           @relation(fields: [leccionId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
 }
 
 // Etapa 6 — catálogo de misiones diarias. Se siembran en seed.js (idempotente por codigo).
@@ -274,6 +347,7 @@ model Leccion {
   recursoHtml       RecursoHtmlLeccion?
   revisiones        RevisionLeccion[]
   documentosRag     DocumentoRag[]
+  ragIndexJob       RagIndexJob?
 
   @@index([moduloId, estado, orden])
 }

@@ -1,3 +1,5 @@
+# Ejemplo heredado. No participa en el rollout BYOK directo a producción.
+# Si se reutiliza, debe apuntar a recursos aislados y permanecer apagado por defecto.
 services:
   - type: web
     name: titi-backend-staging
@@ -30,18 +32,25 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: RAG_ENABLED
-        value: "true"
+        value: "false"
+      - key: RAG_CHAT_ENABLED
+        value: "false"
       - key: RAG_COURSE_IDS
-        value: "*"
+        value: bceba93d-d954-4bc9-abf7-db865b1df8ff
+      - key: RAG_AUDIENCE_MODE
+        value: canary
       - key: RAG_ALLOWED_USER_EMAIL
-        value: student@gmail.com
+        sync: false
+      - key: RAG_CREDENTIAL_MODE
+        value: user_required
+      - key: AI_CREDENTIAL_KEY_CURRENT
+        sync: false
+      - key: AI_CREDENTIAL_KEY_V1
+        sync: false
       - key: EMBEDDING_API_URL
         sync: false
       - key: EMBEDDING_API_KEY
-        fromService:
-          type: web
-          name: titi-embedding-staging
-          envVarKey: EMBEDDING_API_KEY
+        sync: false
       - key: CLOUDFLARE_ACCOUNT_ID
         sync: false
       - key: CLOUDFLARE_AI_API_TOKEN
@@ -56,8 +65,6 @@ services:
         value: "120000"
       - key: EMBEDDING_MAX_RETRIES
         value: "1"
-      - key: RAG_CHAT_MODE
-        value: gateway
       - key: RAG_CHAT_RATE_LIMIT_PER_MINUTE
         value: "5"
       - key: RAG_CHAT_DAILY_QUOTA
@@ -72,62 +79,3 @@ services:
         sync: false
       - key: CLOUDFLARE_AI_GATEWAY_TOKEN
         sync: false
-      - key: GROQ_API_KEY
-        sync: false
-      - key: GROQ_MODEL
-        value: openai/gpt-oss-20b
-      - key: AI_GATEWAY_URL
-        sync: false
-      - key: AI_GATEWAY_TOKEN
-        fromService:
-          type: web
-          name: titi-ai-gateway-staging
-          envVarKey: AI_GATEWAY_TOKEN
-
-  - type: web
-    name: titi-ai-gateway-staging
-    runtime: node
-    plan: free
-    rootDir: ai-gateway
-    buildCommand: npm install --omit=dev
-    startCommand: npm start
-    healthCheckPath: /health
-    autoDeploy: false
-    envVars:
-      - key: AI_GATEWAY_TOKEN
-        generateValue: true
-      - key: AI_GATEWAY_USER_SALT
-        generateValue: true
-      - key: GROQ_API_KEY
-        sync: false
-      - key: GROQ_MODEL
-        sync: false
-      - key: GROQ_API_URL
-        value: https://api.groq.com/openai/v1/chat/completions
-      - key: AI_GATEWAY_RATE_LIMIT_PER_MINUTE
-        value: "5"
-      - key: AI_GATEWAY_DAILY_QUOTA
-        value: "30"
-      - key: AI_GATEWAY_MAX_CONCURRENCY
-        value: "2"
-      - key: AI_GATEWAY_TIMEOUT_MS
-        value: "30000"
-      - key: AI_GATEWAY_STATE_STORE
-        value: memory
-
-  - type: web
-    name: titi-embedding-staging
-    runtime: python
-    plan: starter
-    rootDir: embedding-service
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
-    healthCheckPath: /health
-    autoDeploy: false
-    envVars:
-      - key: HF_TOKEN
-        sync: false
-      - key: EMBEDDING_API_KEY
-        generateValue: true
-      - key: EMBEDDING_MODEL
-        value: google/embeddinggemma-300M

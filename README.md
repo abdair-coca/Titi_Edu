@@ -127,7 +127,7 @@ Full model, constraints, invariants and sync matrix → [`docs/architecture.md`]
 | **Backend** | Node 20, Express 5, Prisma 5, `neo4j-driver`, `jsonwebtoken`, `bcrypt`, `multer`, `cloudinary` |
 | **Databases** | Neo4j Aura (social) + PostgreSQL Neon + `pgvector` (RAG) |
 | **Storage** | Cloudinary (prod) + local disk fallback (dev) |
-| **AI** | EmbeddingGemma 300M (768d) + Groq (chat) + Cloudflare AI Gateway (optional) |
+| **AI** | Cloudflare Workers AI (embeddings) + Cloudflare AI Gateway + Groq BYOK (chat) |
 | **MCP** | `titi-authoring` — course authoring via Model Context Protocol |
 | **Tests** | Vitest + Supertest (hermetic — DBs mocked) |
 | **Deploy** | Render (backend) + Vercel (frontend) |
@@ -183,9 +183,9 @@ Only `activo=true AND estado=LISTO AND leccion.estado=PUBLICADA AND modulo.estad
 
 ### Indexing
 
-- `indexLesson(lessonId)` — gates: unpublished → `SKIPPED`, feature-disabled (`RAG_ENABLED` + `RAG_COURSE_IDS=*|list`) → `SKIPPED feature_disabled`, empty → `SKIPPED empty`, same `hash+model` + `LISTO` → `UNCHANGED` (dedup). On embedding failure → `FALLIDO` + throw. On success → transactional deactivate old docs + `INSERT …::vector` + `LISTO`.
+- `indexLesson(lessonId)` — gates: unpublished → `SKIPPED`, feature-disabled (`RAG_ENABLED` + explicit `RAG_COURSE_IDS`) → `SKIPPED feature_disabled`, empty → `SKIPPED empty`, same `hash+model` + `LISTO` → `UNCHANGED` (dedup). On embedding failure → `FALLIDO` + throw. On success → transactional deactivate old docs + `INSERT …::vector` + `LISTO`.
 - `indexCourse(courseId)` — sequential `indexLesson` over all published lessons, per-lesson `FAILED` capture.
-- `scheduleLessonIndex` / `scheduleCourseIndex` — `setImmediate` fire-and-forget on `PUT /lessons/:id`, `POST /lessons/:id/publish`, `POST /lessons/:id/html` (authoring).
+- `scheduleLessonIndex` / `scheduleCourseIndex` — encolan un `RagIndexJob` durable en PostgreSQL en `PUT /lessons/:id`, `POST /lessons/:id/publish`, `POST /lessons/:id/html`; un worker con lease y fencing procesa reintentos.
 - Manual: `POST /admin/rag/courses/:courseId/reindex` (creator/professor/ADMIN, course-enabled else 409).
 
 ### Retrieval
@@ -205,23 +205,34 @@ Lesson-prioritized: `RAG_LESSON_PRIORITY_LIMIT` (default = `LIMIT`) splits `only
 
 ### Generation
 
-`requireChatConfig()` resolves three modes:
+Production uses Cloudflare AI Gateway with the request-scoped Groq key owned by each
+user. Legacy modes remain local/rollback-only:
 
 | Mode | Env | Endpoint |
 |---|---|---|
-| `direct` (local/staging) | `RAG_CHAT_MODE=direct` | `GROQ_API_URL` + `GROQ_API_KEY` |
-| `gateway` (self-hosted) | `RAG_CHAT_MODE=gateway` + `AI_GATEWAY_URL/TOKEN` | `AI_GATEWAY_URL/v1/chat/completions` |
-| `cloudflare_gateway` | `AI_PROVIDER_ROUTE=cloudflare_gateway` | `gateway.ai.cloudflare.com/v1/{account}/{gateway}/groq/chat/completions` |
+| `cloudflare_gateway` (production) | `RAG_CREDENTIAL_MODE=user_required` + `AI_PROVIDER_ROUTE=cloudflare_gateway` | Cloudflare AI Gateway, per-user Groq key |
+| `direct` (local legacy) | `RAG_CHAT_MODE=direct` | `GROQ_API_URL` + local `GROQ_API_KEY` |
+| `gateway` (rollback legacy) | `RAG_CHAT_MODE=gateway` + `AI_GATEWAY_URL/TOKEN` | Self-hosted gateway |
 
-Production blocks `direct` — requires `gateway` or `cloudflare_gateway` (`rag.service.js:124`). Context is wrapped as **untrusted data** with `<<<RETRIEVED_SOURCE>>>` delimiters; system prompt enforces `temperature:0.2`, citations `[1]`… only from retrieved numbers, `NO_EVIDENCE_ANSWER` fallback, no tool calling.
+Production BYOK has no global Groq fallback. Credentials are AES-256-GCM encrypted in
+PostgreSQL, decrypted only for one request, and never stored in Neo4j or logs. Context
+is wrapped as **untrusted data** with `<<<RETRIEVED_SOURCE>>>` delimiters; system prompt
+enforces `temperature:0.2`, citations `[1]`… only from retrieved numbers,
+`NO_EVIDENCE_ANSWER` fallback, no tool calling.
 
 ### Safety
 
-`rag.security.js` — `detectPromptInjection` (10 injection patterns), `isBlockedActionRequest` (grade/progress/inscription/SQL), `validateGroundedAnswer` (missing/out-of-context citation → `NO_EVIDENCE_ANSWER`), `ChatRateLimiter` (5/min, 30/day per `opaquePrincipalId` = `sha256(salt:usuarioId)`), `securityEvent` logging without storing full prompts. `docs/rag-security.md` is the living reference.
+`rag.security.js` — prompt-injection/action blocking and grounded-answer validation.
+Durable PostgreSQL quotas apply per user; logs contain metadata only, never full prompts
+or responses. `docs/rag-security.md` is the living reference.
 
 ### Gating & Admin
 
-`RAG_ENABLED` + `RAG_COURSE_IDS` + `RAG_ALLOWED_USER_EMAIL` gate both `GET /lessons/:id/chat/status` and `POST /lessons/:id/chat`. `pages/admin/AdminRag.jsx` + `routes/admin-rag.js` — published course selector, paginated lesson table (`page`/`pageSize`/`courseId`/`status`/`search`), per-lesson `indexLesson` and course `indexCourse` with `force` flag, KPIs.
+`RAG_ENABLED` is the master flag; `RAG_CHAT_ENABLED` is the independent chat kill
+switch. `RAG_AUDIENCE_MODE=canary` uses `RAG_ALLOWED_USER_EMAIL`; `course_access`
+opens only to authorized course users. `RAG_COURSE_IDS` remains an explicit allowlist.
+Reindexing uses a durable PostgreSQL queue. Direct-production gates live in
+[`docs/process/produccion-rag-byok.md`](docs/process/produccion-rag-byok.md).
 
 ---
 
@@ -370,24 +381,31 @@ CLOUDINARY_API_SECRET=
 AUTHORING_CONFIRMATION_SECRET=distinct_random_secret
 SEED_PASSWORD=titi1234
 
-# RAG (optional — staging/pilot)
+# RAG BYOK (production starts dark; exact pilot course)
 RAG_ENABLED=false
-RAG_COURSE_IDS=*                 # or comma-separated course IDs
-RAG_ALLOWED_USER_EMAIL=pilot@example.com
+RAG_CHAT_ENABLED=false
+RAG_COURSE_IDS=bceba93d-d954-4bc9-abf7-db865b1df8ff
+RAG_AUDIENCE_MODE=canary         # canary | course_access
+RAG_ALLOWED_USER_EMAIL=
+RAG_CREDENTIAL_MODE=user_required
+AI_CREDENTIAL_KEY_CURRENT=V1
+AI_CREDENTIAL_KEY_V1=
 EMBEDDING_API_URL=http://127.0.0.1:8001
 EMBEDDING_API_KEY=local-dev-key
 EMBEDDING_MODEL=google/embeddinggemma-300M
 EMBEDDING_DIMENSIONS=768
-EMBEDDING_PROVIDER=local         # or cloudflare
+EMBEDDING_PROVIDER=cloudflare
 CLOUDFLARE_ACCOUNT_ID=
 CLOUDFLARE_AI_API_TOKEN=
-GROQ_API_KEY=
-GROQ_MODEL=
-AI_PROVIDER_ROUTE=legacy         # or cloudflare_gateway
+# Modelo fijo del tutor: openai/gpt-oss-20b (no configurable)
+AI_PROVIDER_ROUTE=cloudflare_gateway
 CLOUDFLARE_AI_GATEWAY_ID=
 CLOUDFLARE_AI_GATEWAY_TOKEN=
-RAG_CHAT_MODE=direct             # direct | gateway | disabled
-RAG_PRINCIPAL_SALT=local-staging-salt
+RAG_PRINCIPAL_SALT=local-dev-salt
+
+# Local/rollback legacy only; not required in BYOK production
+GROQ_API_KEY=
+RAG_CHAT_MODE=direct
 ```
 
 **`frontend/.env`**
@@ -414,8 +432,8 @@ VITE_API_URL=http://localhost:3001
 | **Gamification** | `GET /gotas` · `GET /gotas/history` · `GET /missions/today` · `GET /ranking/friends` |
 | **Shop** | `GET /shop/items` · `GET /shop/inventory` · `POST /shop/buy` · `POST /shop/use` |
 | **HTML Lessons** | `GET /lessons/:id/html` (auth, no public URL) · `POST /lessons/:id/html-attempts` · `POST /lessons/:id/html-results` (`{score, attemptToken}`) |
-| **RAG Tutor** | `GET /lessons/:id/chat/status` · `POST /lessons/:id/chat {message}` → `{answer, citations, usage}` · `POST /admin/rag/courses/:courseId/reindex` |
-| **Admin RAG** | `GET /admin/rag/courses` · `GET /admin/rag/lessons?page=&pageSize=&courseId=&status=&search=` · `POST /admin/rag/lessons/:id/reindex` · `POST /admin/rag/courses/:courseId/reindex?force=true` · `POST /admin/rag/search {query, courseId}` |
+| **RAG Tutor** | `GET /lessons/:id/chat/status` · `POST /lessons/:id/chat {message, intent?, history?}` · `GET\|PUT\|DELETE /rag/credentials/groq` |
+| **Admin RAG** | `GET /admin/rag/operations` · `GET /admin/rag/courses` · `GET /admin/rag/lessons?page=&pageSize=&courseId=&status=&search=` · `POST /admin/rag/lessons/:id/reindex` (202) · `POST /admin/rag/courses/:courseId/reindex` (202) · `POST /admin/rag/search {query, courseId}` |
 | **Authoring** | See MCP section — `POST /authoring/courses`, `PUT /authoring/courses/:id`, `POST /authoring/courses/:id/modules`, `PUT /authoring/modules/:id`, `POST /authoring/modules/:id/lessons`, `PUT /authoring/lessons/:id`, `POST /authoring/lessons/:id/publish\|archive\|restore`, `GET /authoring/lessons/:id/revisions`, `POST /authoring/lessons/:id/html`, `PUT /authoring/lessons/:id/html-deadline`, `POST /authoring/lessons/:id/materials`, `POST /authoring/courses/:id/preview-publication` → `publish`, etc. All require `Idempotency-Key` + `expectedFingerprint`. |
 | **Admin** | `GET /admin/users` · `PUT /admin/users/:id/verify|role` · `GET /admin/courses` · `DELETE /admin/courses/:id` (forced) · `GET /admin/stats` · `POST /admin/categories` |
 

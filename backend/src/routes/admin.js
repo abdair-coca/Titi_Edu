@@ -162,7 +162,7 @@ router.put('/courses/:id/approve', async (req, res) => {
       data: { publicado: true },
       select: { id: true, titulo: true, publicado: true },
     });
-    scheduleCourseIndex(actualizado.id);
+    await scheduleCourseIndex(actualizado.id);
     res.json({ success: true, data: { curso: actualizado } });
   } catch (err) {
     if (err.code === 'P2025') {

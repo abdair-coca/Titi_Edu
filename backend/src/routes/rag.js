@@ -5,12 +5,13 @@ import { ensureCourseContentAccess, loadCurrentUser } from '../middleware/permis
 import {
   RagError,
   chatWithCourseContext,
-  indexCourse,
   ragEnabledForCourse,
   ragStatusForLesson,
   ragUserAllowed,
   resolveChatIntent,
 } from '../services/rag.service.js';
+import { enqueueCourseIndex } from '../services/rag.queue.js';
+import { userCredentialRequired, groqCredentialMetadata } from '../services/ai-credentials.js';
 
 const router = Router();
 
@@ -54,12 +55,14 @@ router.get('/lessons/:id/chat/status', requireAuth, async (req, res) => {
     if (!loaded) return;
     if (!requirePilotUser(res, loaded.access.usuario)) return;
     const status = await ragStatusForLesson(req.params.id);
+    const saved = userCredentialRequired() ? await groqCredentialMetadata(loaded.access.usuario.id) : null;
     res.json({
       success: true,
       data: {
-        enabled: Boolean(status?.enabled),
+        enabled: Boolean(status?.enabled) && process.env.RAG_CHAT_ENABLED !== 'false',
         indexed: Boolean(status?.indexed),
         status: status?.status || null,
+        credential: { required: userCredentialRequired(), configured: Boolean(saved?.configured), status: saved?.status || null, last4: saved?.last4 || null },
       },
     });
   } catch (error) {
@@ -85,7 +88,7 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
     const loaded = await loadLessonAccess(req, res);
     if (!loaded) return;
     if (!requirePilotUser(res, loaded.access.usuario)) return;
-    if (!ragEnabledForCourse(loaded.lesson.modulo.cursoId)) {
+    if (!ragEnabledForCourse(loaded.lesson.modulo.cursoId) || process.env.RAG_CHAT_ENABLED === 'false') {
       return res.status(404).json({ success: false, message: 'El tutor todavía no está habilitado para este curso' });
     }
     const chatInput = {
@@ -126,8 +129,8 @@ router.post('/admin/rag/courses/:courseId/reindex', requireAuth, async (req, res
     const canManage = usuario.rol === 'ADMIN' || course.creadorId === usuario.id || course.profesores.length > 0;
     if (!canManage) return res.status(403).json({ success: false, message: 'No tienes permiso para reindexar este curso' });
     if (!ragEnabledForCourse(course.id)) return res.status(409).json({ success: false, message: 'El tutor no está habilitado para este curso' });
-    const result = await indexCourse(course.id);
-    return res.json({ success: true, data: result });
+    const result = await enqueueCourseIndex(course.id);
+    return res.status(202).json({ success: true, data: result });
   } catch (error) {
     return handleRagError(res, error, 'POST /api/admin/rag/courses/:courseId/reindex error');
   }

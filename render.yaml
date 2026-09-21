@@ -7,7 +7,8 @@ services:
     buildCommand: npm ci && npx prisma generate
     startCommand: npx prisma migrate deploy && npm start
     healthCheckPath: /api/health
-    autoDeploy: true
+    # Producción: despliegue manual después de los gates del runbook RAG.
+    autoDeploy: false
     envVars:
       - key: NEO4J_URI
         sync: false
@@ -30,10 +31,21 @@ services:
       - key: CLOUDINARY_API_SECRET
         sync: false
       - key: RAG_ENABLED
-        sync: false
+        value: "true"
+      - key: RAG_CHAT_ENABLED
+        value: "false"
       - key: RAG_COURSE_IDS
-        sync: false
+        value: bceba93d-d954-4bc9-abf7-db865b1df8ff
+      - key: RAG_AUDIENCE_MODE
+        value: canary
       - key: RAG_ALLOWED_USER_EMAIL
+        sync: false
+      - key: RAG_CREDENTIAL_MODE
+        value: user_required
+      # Nombre de versión activa y material AES-256-GCM; valores reales solo en Render.
+      - key: AI_CREDENTIAL_KEY_CURRENT
+        sync: false
+      - key: AI_CREDENTIAL_KEY_V1
         sync: false
       - key: EMBEDDING_API_URL
         sync: false
@@ -44,38 +56,26 @@ services:
       - key: CLOUDFLARE_AI_API_TOKEN
         sync: false
       - key: EMBEDDING_MODEL
-        sync: false
+        value: '@cf/google/embeddinggemma-300m'
       - key: EMBEDDING_DIMENSIONS
-        sync: false
+        value: "768"
       - key: EMBEDDING_PROVIDER
-        sync: false
+        value: cloudflare
       - key: EMBEDDING_TIMEOUT_MS
-        sync: false
+        value: "120000"
       - key: EMBEDDING_MAX_RETRIES
-        sync: false
-      - key: GROQ_API_URL
-        sync: false
-      - key: GROQ_API_KEY
-        sync: false
-      - key: GROQ_MODEL
-        sync: false
+        value: "1"
       - key: AI_PROVIDER_ROUTE
-        sync: false
+        value: cloudflare_gateway
       - key: CLOUDFLARE_AI_GATEWAY_ID
         sync: false
       - key: CLOUDFLARE_AI_GATEWAY_TOKEN
         sync: false
-      - key: RAG_CHAT_MODE
-        sync: false
       - key: RAG_CHAT_RATE_LIMIT_PER_MINUTE
-        sync: false
+        value: "5"
       - key: RAG_CHAT_DAILY_QUOTA
-        sync: false
+        value: "30"
       - key: RAG_CHAT_TIMEOUT_MS
-        sync: false
+        value: "30000"
       - key: RAG_PRINCIPAL_SALT
-        sync: false
-      - key: AI_GATEWAY_URL
-        sync: false
-      - key: AI_GATEWAY_TOKEN
         sync: false

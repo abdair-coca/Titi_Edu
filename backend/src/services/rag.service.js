@@ -1,6 +1,20 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { Prisma } from '@prisma/client';
 import prisma from '../prisma.js';
+import { RagError } from './rag.errors.js';
+import {
+  groqCredentialIsRevoked,
+  groqModel,
+  userCredentialRequired,
+  withGroqCredential,
+} from './ai-credentials.js';
+import { consumeRagQuota } from './rag.quota.js';
+import {
+  assertRagIndexLease,
+  enqueueLessonIndex,
+  enqueueCourseIndex,
+  RagIndexLeaseLostError,
+} from './rag.queue.js';
 import {
   ChatRateLimiter,
   NO_EVIDENCE_ANSWER,
@@ -70,12 +84,7 @@ const chatRateLimiter = new ChatRateLimiter({
   daily: Math.max(1, Number(process.env.RAG_CHAT_DAILY_QUOTA) || 30),
 });
 
-export class RagError extends Error {
-  constructor(status, message) {
-    super(message);
-    this.status = status;
-  }
-}
+export { RagError };
 
 function csvValues(value) {
   return String(value || '')
@@ -98,6 +107,7 @@ export function ragEnabledForCourse(courseId) {
 }
 
 export function ragUserAllowed(usuario) {
+  if (process.env.RAG_AUDIENCE_MODE === 'course_access') return Boolean(usuario?.id);
   const allowedEmails = csvValues(process.env.RAG_ALLOWED_USER_EMAIL).map((email) => email.toLowerCase());
   if (!allowedEmails.length) return false;
   return allowedEmails.includes(String(usuario?.email || '').trim().toLowerCase());
@@ -292,18 +302,25 @@ function chatMode() {
   return process.env.NODE_ENV === 'production' ? 'disabled' : 'direct';
 }
 
-function requireChatConfig() {
+function requireChatConfig(userKey) {
   const route = aiProviderRoute();
-  const model = process.env.RAG_CHAT_MODEL?.trim() || process.env.GROQ_MODEL?.trim();
+  const credentialRequired = userCredentialRequired();
+  const model = groqModel();
+
+  if (credentialRequired && !userKey) throw new RagError(409, 'Configura tu clave Groq para usar el tutor IA');
 
   if (route === 'cloudflare_gateway') {
-    const apiKey = process.env.GROQ_API_KEY?.trim();
+    const apiKey = credentialRequired ? userKey : process.env.GROQ_API_KEY?.trim();
     const gatewayToken = process.env.CLOUDFLARE_AI_GATEWAY_TOKEN?.trim();
     if (!model || !apiKey || !gatewayToken) throw new RagError(503, 'El gateway Cloudflare para Groq no está configurado');
     return { route, endpoint: cloudflareGatewayEndpoint(), token: apiKey, gatewayToken, model };
   }
 
   const mode = chatMode();
+  if (credentialRequired) {
+    if (process.env.NODE_ENV === 'production' || mode !== 'direct') throw new RagError(503, 'El tutor requiere el gateway Cloudflare para credenciales personales');
+    return { route, mode: 'direct', endpoint: 'https://api.groq.com/openai/v1/chat/completions', token: userKey, model };
+  }
   if (mode === 'disabled' || (process.env.NODE_ENV === 'production' && mode !== 'gateway')) {
     throw new RagError(503, 'El tutor IA está deshabilitado en producción hasta configurar el gateway');
   }
@@ -315,7 +332,6 @@ function requireChatConfig() {
     return { route, mode, endpoint: endpoint.endsWith('/chat/completions') ? endpoint : `${endpoint.replace(/\/$/, '')}/v1/chat/completions`, token, model: model || 'gateway-default' };
   }
 
-  if (!model) throw new RagError(503, 'El chatbot no está configurado');
   const apiKey = process.env.GROQ_API_KEY?.trim();
   if (!apiKey) throw new RagError(503, 'El chatbot Groq no está configurado');
   return { route, mode: 'direct', endpoint: groqEndpoint(), token: apiKey, model };
@@ -621,8 +637,8 @@ export async function createEmbedding(input, { kind = 'query', title = null } = 
   }
 }
 
-async function generateAnswer({ message, chunks, courseId, lessonId, principalId, history = [], intent, learningContext, lessonTitle = null }) {
-  const { route, mode, endpoint, token, gatewayToken, model } = requireChatConfig();
+async function generateAnswer({ message, chunks, courseId, lessonId, principalId, history = [], intent, learningContext, lessonTitle = null, userKey, invalidateCredential }) {
+  const { route, mode, endpoint, token, gatewayToken, model } = requireChatConfig(userKey);
   const safeLessonTitle = normalizeText(lessonTitle).slice(0, 200);
   const context = chunks.map((chunk) => [
     `<<<RETRIEVED_SOURCE number="${chunk.index}" >>>`,
@@ -672,6 +688,7 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
   const requestBody = {
     model,
     temperature: 0.2,
+    max_completion_tokens: 800,
     messages: [
       { role: 'system', content: systemContent },
       ...history.map((turn) => ({ role: turn.role, content: turn.content })),
@@ -685,7 +702,7 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
       headers: {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
-        ...(route === 'cloudflare_gateway' ? { 'cf-aig-authorization': `Bearer ${gatewayToken}` } : {}),
+        ...(route === 'cloudflare_gateway' ? { 'cf-aig-authorization': `Bearer ${gatewayToken}`, 'cf-aig-collect-log-payload': 'false' } : {}),
         ...(route === 'legacy' && mode === 'gateway' ? {
           'X-Titi-Course-Id': courseId,
           'X-Titi-Lesson-Id': lessonId,
@@ -701,6 +718,16 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
     }
     throw new RagError(502, 'No se pudo contactar al proveedor del tutor IA');
   }
+  if ([401, 403].includes(response.status) && userCredentialRequired()) {
+    const directlyRejectedByGroq = route === 'legacy' && mode === 'direct';
+    const revoked = directlyRejectedByGroq || await groqCredentialIsRevoked(token);
+    if (revoked) {
+      await invalidateCredential();
+      throw new RagError(422, 'Tu clave Groq no es válida o fue revocada; reemplázala para continuar');
+    }
+    throw new RagError(502, 'El gateway del tutor IA rechazó la solicitud; intenta más tarde');
+  }
+  if (response.status === 429) throw new RagError(429, 'Groq limitó temporalmente las consultas; intenta más tarde');
   const payload = await readJsonResponse(response, 'chat');
   const answer = payload?.choices?.[0]?.message?.content?.trim();
   if (!answer) throw new RagError(502, 'El chatbot no devolvió una respuesta');
@@ -717,46 +744,56 @@ async function loadPublishedLesson(lessonId) {
   });
 }
 
-async function quarantineActiveDocuments(lessonId, errorMessage) {
-  return prisma.documentoRag.updateMany({
-    where: { leccionId: lessonId, activo: true },
-    data: { estado: 'FALLIDO', activo: false, error: errorMessage },
+async function quarantineActiveDocuments(lessonId, errorMessage, { lease = null } = {}) {
+  if (!lease) {
+    return prisma.documentoRag.updateMany({
+      where: { leccionId: lessonId, activo: true },
+      data: { estado: 'FALLIDO', activo: false, error: errorMessage },
+    });
+  }
+  return prisma.$transaction(async (tx) => {
+    await assertRagIndexLease(tx, lease);
+    return tx.documentoRag.updateMany({
+      where: { leccionId: lessonId, activo: true },
+      data: { estado: 'FALLIDO', activo: false, error: errorMessage },
+    });
   });
 }
 
-async function recordIndexFailure({ existing, lessonId, version, hashContenido, modelo, origin, assessmentSafe, error }) {
+async function recordIndexFailure({ existing, lessonId, version, hashContenido, modelo, origin, assessmentSafe, error, lease = null }) {
   const errorMessage = String(error?.message || error).slice(0, 500);
-  await quarantineActiveDocuments(lessonId, errorMessage);
-
-  if (existing) {
-    await prisma.documentoRag.update({
-      where: { id: existing.id },
+  const write = async (db) => {
+    await assertRagIndexLease(db, lease);
+    await db.documentoRag.updateMany({
+      where: { leccionId: lessonId, activo: true },
+      data: { estado: 'FALLIDO', activo: false, error: errorMessage },
+    });
+    if (existing) {
+      await db.documentoRag.update({
+        where: { id: existing.id },
+        data: { estado: 'FALLIDO', activo: false, error: errorMessage, origen: origin },
+      });
+      return;
+    }
+    await db.documentoRag.create({
       data: {
+        leccionId: lessonId,
+        version,
+        hashContenido,
+        modelo,
+        origen: origin,
         estado: 'FALLIDO',
         activo: false,
+        assessmentSafe,
         error: errorMessage,
-        origen: origin,
       },
     });
-    return;
-  }
-
-  await prisma.documentoRag.create({
-    data: {
-      leccionId: lessonId,
-      version,
-      hashContenido,
-      modelo,
-      origen: origin,
-      estado: 'FALLIDO',
-      activo: false,
-      assessmentSafe,
-      error: errorMessage,
-    },
-  });
+  };
+  if (lease) return prisma.$transaction(write);
+  return write(prisma);
 }
 
-export async function indexLesson(lessonId, { force = false } = {}) {
+export async function indexLesson(lessonId, { force = false, lease = null } = {}) {
   const lesson = await loadPublishedLesson(lessonId);
   if (!lesson || lesson.estado !== 'PUBLICADA' || lesson.modulo.estado !== 'PUBLICADO' || !lesson.modulo.curso.publicado) {
     return { status: 'SKIPPED', lessonId };
@@ -779,12 +816,13 @@ export async function indexLesson(lessonId, { force = false } = {}) {
       origin: 'AUTOR',
       assessmentSafe: true,
       error,
+      lease,
     });
     throw error;
   }
   const { text: content, origin, assessmentSafe } = source;
   if (!content) {
-    await quarantineActiveDocuments(lessonId, 'No se encontró contenido seguro para indexar');
+    await quarantineActiveDocuments(lessonId, 'No se encontró contenido seguro para indexar', { lease });
     return { status: 'SKIPPED', lessonId, reason: 'empty' };
   }
   const hashContenido = hashContent(content);
@@ -809,13 +847,15 @@ export async function indexLesson(lessonId, { force = false } = {}) {
       preparedFragments.push({ index, content: chunks[index].content, section: chunks[index].section, embedding });
     }
   } catch (error) {
-    await recordIndexFailure({ existing, lessonId, version: lesson.version, hashContenido, modelo, origin, assessmentSafe, error });
+    if (error instanceof RagIndexLeaseLostError) throw error;
+    await recordIndexFailure({ existing, lessonId, version: lesson.version, hashContenido, modelo, origin, assessmentSafe, error, lease });
     throw error;
   }
 
   let document;
   try {
     document = await prisma.$transaction(async (tx) => {
+      await assertRagIndexLease(tx, lease);
       await tx.documentoRag.updateMany({ where: { leccionId: lessonId, activo: true }, data: { activo: false } });
       const nextDocument = existing
         ? await tx.documentoRag.update({
@@ -840,7 +880,8 @@ export async function indexLesson(lessonId, { force = false } = {}) {
       timeout: Math.max(5000, Number(process.env.RAG_INDEX_TRANSACTION_TIMEOUT_MS) || DEFAULT_INDEX_TRANSACTION_TIMEOUT_MS),
     });
   } catch (error) {
-    await recordIndexFailure({ existing, lessonId, version: lesson.version, hashContenido, modelo, origin, assessmentSafe, error });
+    if (error instanceof RagIndexLeaseLostError) throw error;
+    await recordIndexFailure({ existing, lessonId, version: lesson.version, hashContenido, modelo, origin, assessmentSafe, error, lease });
     throw error;
   }
 
@@ -1203,11 +1244,23 @@ async function loadHistoricalChunks(courseId, history) {
   }
 }
 
-export async function chatWithCourseContext({ courseId, lessonId = null, principalId = 'anonymous', message, history = [], intent, learningContext, lessonTitle = null }) {
+export async function chatWithCourseContext(input) {
+  if (process.env.RAG_CHAT_ENABLED === 'false') throw new RagError(503, 'El tutor IA está deshabilitado temporalmente');
+  if (userCredentialRequired()) {
+    return withGroqCredential(input.principalId, async (userKey, invalidateCredential) => {
+      requireChatConfig(userKey);
+      await consumeRagQuota(input.principalId, ['CHAT_MINUTE', 'CHAT_DAY']);
+      return chatWithContext({ ...input, userKey, invalidateCredential });
+    });
+  }
+  return chatWithContext(input);
+}
+
+async function chatWithContext({ courseId, lessonId = null, principalId = 'anonymous', message, history = [], intent, learningContext, lessonTitle = null, userKey, invalidateCredential }) {
   const resolvedIntent = resolveChatIntent(intent);
   if (!resolvedIntent) throw new RagError(400, 'intent no es válido');
 
-  const allowance = chatRateLimiter.consume(principalId);
+  const allowance = userCredentialRequired() ? { allowed: true } : chatRateLimiter.consume(principalId);
   if (!allowance.allowed) {
     securityEvent('chat_limit_reached', { courseId, lessonId, reason: allowance.reason });
     throw new RagError(429, 'Alcanzaste el límite temporal del tutor IA');
@@ -1249,6 +1302,8 @@ export async function chatWithCourseContext({ courseId, lessonId = null, princip
     intent: resolvedIntent,
     learningContext: safeLearningContext,
     lessonTitle: safeLessonTitle,
+    userKey,
+    invalidateCredential,
   });
   const grounded = validateGroundedAnswer(generated.answer, chunks);
   if (!grounded.valid) {
@@ -1321,20 +1376,15 @@ export async function ragStatusForLesson(lessonId) {
   };
 }
 
-export function scheduleLessonIndex(lessonId) {
+export async function scheduleLessonIndex(lessonId) {
   if (process.env.RAG_ENABLED !== 'true') return;
-  setImmediate(() => {
-    indexLesson(lessonId).catch((error) => {
-      console.error('RAG lesson index error', { lessonId, message: error.message });
-    });
-  });
+  try {
+    const lesson = await prisma.leccion.findUnique({ where: { id: lessonId }, select: { modulo: { select: { cursoId: true } } } });
+    if (lesson && ragEnabledForCourse(lesson.modulo.cursoId)) return await enqueueLessonIndex(lessonId);
+  } catch { console.error('No se pudo encolar la indexación RAG'); }
 }
 
 export function scheduleCourseIndex(courseId, { force = false } = {}) {
-  if (process.env.RAG_ENABLED !== 'true') return;
-  setImmediate(() => {
-    indexCourse(courseId, { force }).catch((error) => {
-      console.error('RAG course index error', { courseId, message: error.message });
-    });
-  });
+  if (process.env.RAG_ENABLED !== 'true' || (!force && !ragEnabledForCourse(courseId))) return;
+  return enqueueCourseIndex(courseId, { force }).catch(() => console.error('No se pudo encolar la indexación RAG'));
 }

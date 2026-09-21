@@ -511,7 +511,7 @@ router.put('/lessons/:id', requireAuthoringPrincipal('content:write'), handle(as
     updatedLessonId = updated.id;
     return { data: { lesson: updated } };
   });
-  if (updatedLessonId) scheduleLessonIndex(updatedLessonId);
+  if (updatedLessonId) await scheduleLessonIndex(updatedLessonId);
 }));
 
 router.post('/lessons/:id/publish', requireAuthoringPrincipal('publish'), handle(async (req, res) => {
@@ -554,7 +554,7 @@ router.post('/lessons/:id/publish', requireAuthoringPrincipal('publish'), handle
     return { data: { lesson: publishedLesson, moduleActivated: lesson.modulo.estado === 'BORRADOR' } };
   });
 
-  if (publishedLessonId) scheduleLessonIndex(publishedLessonId);
+  if (publishedLessonId) await scheduleLessonIndex(publishedLessonId);
 
   // Disparar notificaciones a alumnos inscritos (no completados) solo en primera publicación
   if (isFirstPublish && lessonNotificationData) {
@@ -643,7 +643,7 @@ router.post('/lessons/:id/restore', requireAuthoringPrincipal('content:write'), 
     restoredLessonId = restoredLesson.id;
     return { data: { lesson: restoredLesson } };
   });
-  if (restoredLessonId) scheduleLessonIndex(restoredLessonId);
+  if (restoredLessonId) await scheduleLessonIndex(restoredLessonId);
 }));
 
 router.get('/lessons/:id/revisions', requireAuthoringPrincipal('course:read'), handle(async (req, res) => {
@@ -702,7 +702,7 @@ router.post('/lessons/:id/revisions/:revisionId/restore', requireAuthoringPrinci
     }
     return { data: { lesson: restored, restoredRevision: revision.id } };
   });
-  if (restoredLessonId) scheduleLessonIndex(restoredLessonId);
+  if (restoredLessonId) await scheduleLessonIndex(restoredLessonId);
 }));
 
 function validateQuiz(body) {
@@ -1089,7 +1089,7 @@ async function publish(req, res, resourceType) {
     const module = await tx.modulo.update({ where: { id: resource.id }, data: { estado: 'PUBLICADO' } });
     return { data: { module } };
   });
-  if (publishedCourseId) scheduleCourseIndex(publishedCourseId);
+  if (publishedCourseId) await scheduleCourseIndex(publishedCourseId);
 }
 
 router.post('/courses/:id/publish', requireAuthoringPrincipal('publish'), handle((req, res) => publish(req, res, 'course')));
@@ -1229,7 +1229,7 @@ router.post('/lessons/:id/html', requireAuthoringPrincipal('content:write'), han
     updatedLessonId = updated.id;
     return { data: { lesson: updated, htmlResource: resource } };
   });
-  if (updatedLessonId) scheduleLessonIndex(updatedLessonId);
+  if (updatedLessonId) await scheduleLessonIndex(updatedLessonId);
 }));
 
 router.put('/lessons/:id/html-deadline', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {

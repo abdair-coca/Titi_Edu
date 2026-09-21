@@ -23,7 +23,7 @@ beforeEach(() => {
   process.env.EMBEDDING_MODEL = 'google/embeddinggemma-300M';
   process.env.EMBEDDING_PROVIDER = 'local';
   process.env.GROQ_API_KEY = 'groq-key';
-  process.env.GROQ_MODEL = 'test-chat';
+  process.env.GROQ_MODEL = 'openai/gpt-oss-20b';
   process.env.CLOUDFLARE_AI_GATEWAY_TOKEN = 'gateway-token';
   process.env.NODE_ENV = 'test';
   prisma.$queryRaw.mockResolvedValue([chunk]);
@@ -95,7 +95,7 @@ describe('RAG chat security', () => {
     vi.stubGlobal('fetch', fetchMock);
     await expect(chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?' }))
       .rejects.toEqual(expect.objectContaining({ status: 503 }));
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('routes chat through the official Cloudflare Groq gateway endpoint', async () => {
@@ -121,6 +121,7 @@ describe('RAG chat security', () => {
           Authorization: 'Bearer groq-key',
           'Content-Type': 'application/json',
           'cf-aig-authorization': 'Bearer gateway-token',
+          'cf-aig-collect-log-payload': 'false',
         },
       }));
   });

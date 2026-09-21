@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('../../src/prisma.js', () => ({ default: mocks.client }));
+vi.mock('../../src/services/rag.queue.js', () => ({ enqueueCourseIndex: mocks.indexCourse }));
 vi.mock('../../src/db.js', () => ({ runQuery: vi.fn(), toNumber: (value) => Number(value || 0), default: {} }));
 vi.mock('../../src/services/rag.service.js', () => ({
   RagError: class RagError extends Error { constructor(status, message) { super(message); this.status = status; } },
@@ -194,7 +195,7 @@ describe('RAG lesson routes', () => {
     mocks.client.curso.findUnique.mockResolvedValue({ id: 'c-1', creadorId: 'u-teacher', profesores: [] });
     const response = await request(app).post('/api/admin/rag/courses/c-1/reindex')
       .set('Authorization', `Bearer ${teacherToken}`);
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(202);
     expect(response.body.data.total).toBe(1);
     expect(mocks.indexCourse).toHaveBeenCalledWith('c-1');
   });

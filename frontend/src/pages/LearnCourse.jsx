@@ -931,6 +931,7 @@ function LessonSidePanels({
 }) {
   const toggle = (key) => onChange(open === key ? null : key);
   const isTutor = open === 'tutor';
+  const mobileTutorRef = useRef(null);
   // El grid colapsable solo gobierna Notas/Materiales/Comentarios. El tutor
   // vive en overlays propios (panel lateral md+, bottom-sheet móvil).
   const gridOpen = !isTutor ? open : null;
@@ -942,6 +943,40 @@ function LessonSidePanels({
   useEffect(() => {
     if (gridOpen) setDisplayKey(gridOpen);
   }, [gridOpen]);
+  useEffect(() => {
+    if (!isTutor || !window.matchMedia('(max-width: 767px)').matches) return undefined;
+    const previousFocus = document.activeElement;
+    const frame = requestAnimationFrame(() => {
+      mobileTutorRef.current?.querySelector('button, input, textarea, a[href]')?.focus();
+    });
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onChange(null);
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const focusable = Array.from(mobileTutorRef.current?.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), a[href]',
+      ) || []).filter((element) => element.getClientRects().length > 0);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      cancelAnimationFrame(frame);
+      document.removeEventListener('keydown', handleKeyDown);
+      previousFocus?.focus?.();
+    };
+  }, [isTutor, onChange]);
   const active = PANELS.find((p) => p.key === displayKey);
   const title =
     active?.key === 'comentarios'
@@ -960,7 +995,7 @@ function LessonSidePanels({
           aria-labelledby="lesson-tab-tutor"
           className="fixed inset-y-0 right-0 z-50 hidden md:flex flex-col w-[22rem] lg:w-[26rem] bg-white border-l border-gray-100 shadow-[-8px_0_30px_rgba(0,0,0,0.12)] titi-sheet-right"
         >
-          <TutorPanel {...tutor} onClose={() => onChange(null)} />
+          <TutorPanel {...tutor} titleId="tutor-panel-title-desktop" onClose={() => onChange(null)} />
         </div>
       )}
 
@@ -972,9 +1007,15 @@ function LessonSidePanels({
             onClick={() => onChange(null)}
             className="absolute inset-0 bg-black/30 titi-backdrop-in"
           />
-          <div className="absolute inset-x-0 bottom-0 h-[92vh] bg-white rounded-t-2xl flex flex-col overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.12)] titi-sheet-in">
+          <div
+            ref={mobileTutorRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tutor-panel-title-mobile"
+            className="absolute inset-x-0 bottom-0 h-[92vh] bg-white rounded-t-2xl flex flex-col overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.12)] titi-sheet-in"
+          >
             <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mt-2 shrink-0" />
-            <TutorPanel {...tutor} onClose={() => onChange(null)} />
+            <TutorPanel {...tutor} titleId="tutor-panel-title-mobile" onClose={() => onChange(null)} />
           </div>
         </div>
       )}

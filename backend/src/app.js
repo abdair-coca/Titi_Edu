@@ -28,6 +28,8 @@ import authoringRoutes from './routes/authoring.js'
 import gradesRoutes from './routes/grades.js'
 import ragRoutes from './routes/rag.js'
 import adminRagRoutes from './routes/admin-rag.js'
+import ragCredentialRoutes from './routes/rag-credentials.js';
+import { readiness } from './services/readiness.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -72,6 +74,16 @@ app.get('/api/health', (req, res) => {
   res.json({ success: true, data: { status: 'ok', service: 'neosocial-backend' } });
 });
 
+app.get('/api/ready', async (req, res) => {
+  try {
+    const data = await readiness();
+    res.status(data.status === 'ready' ? 200 : 503).json({ success: data.status === 'ready', data });
+  } catch {
+    res.status(503).json({ success: false, data: { status: 'not_ready', checks: { postgres: 'error', neo4j: 'error', pgvector: 'error', rag: 'error', keyring: 'error' } } });
+  }
+});
+app.use('/api/rag/credentials/groq', ragCredentialRoutes);
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/posts', postsRoutes);
@@ -102,9 +114,22 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  const status = err.status || 500;
-  res.status(status).json({ success: false, message: err.message || 'Error interno del servidor' });
+  if (err?.type === 'entity.parse.failed') {
+    if (req.originalUrl?.startsWith('/api/rag/credentials/')) res.set('Cache-Control', 'no-store');
+    return res.status(400).json({ success: false, message: 'El cuerpo JSON no es válido' });
+  }
+
+  const status = Number.isInteger(err?.status) ? err.status : 500;
+  // Never log request/error objects here: body-parser attaches the raw body to
+  // parse errors and credential routes can contain provider secrets.
+  console.error('Unhandled error', {
+    method: req.method,
+    path: req.path,
+    status,
+    name: err?.name || 'Error',
+  });
+  const message = status >= 500 ? 'Error interno del servidor' : err?.message || 'Solicitud inválida';
+  return res.status(status).json({ success: false, message });
 });
 
 export default app;

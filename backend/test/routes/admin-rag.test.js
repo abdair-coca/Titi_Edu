@@ -22,6 +22,7 @@ const mockRagService = vi.hoisted(() => ({
 
 vi.mock('../../src/db.js', () => ({ runQuery: vi.fn(), toNumber: (v) => Number(v ?? 0), default: {} }));
 vi.mock('../../src/prisma.js', () => ({ default: mockPrisma }));
+vi.mock('../../src/services/rag.queue.js', () => ({ enqueueLessonIndex: mockRagService.indexLesson }));
 vi.mock('../../src/services/rag.service.js', () => mockRagService);
 
 import app from '../../src/app.js';
@@ -199,7 +200,7 @@ describe('RAG Admin Routes (/api/admin/rag)', () => {
     expect(mockRagService.searchCourseContext).toHaveBeenCalledWith('c1', '¿Qué es la aceleración?', 5, { lessonId: 'l1' });
   });
 
-  it('POST /lessons/:lessonId/reindex triggers indexLesson with force: true and returns result', async () => {
+  it('POST /lessons/:lessonId/reindex queues durable work and returns 202', async () => {
     mockPrisma.usuario.findUnique.mockResolvedValue({ id: 'admin1', rol: 'ADMIN' });
     mockPrisma.leccion.findUnique.mockResolvedValue({
       id: 'l1',
@@ -207,7 +208,7 @@ describe('RAG Admin Routes (/api/admin/rag)', () => {
       modulo: { estado: 'PUBLICADO', curso: { publicado: true } },
     });
     mockRagService.indexLesson.mockResolvedValue({
-      status: 'INDEXED',
+      status: 'PENDING',
       documentId: 'doc1',
       lessonId: 'l1',
       chunks: 3,
@@ -217,10 +218,10 @@ describe('RAG Admin Routes (/api/admin/rag)', () => {
       .post('/api/admin/rag/lessons/l1/reindex')
       .set('Authorization', `Bearer ${tokenFor('neo-admin')}`);
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(202);
     expect(res.body.success).toBe(true);
-    expect(res.body.data.status).toBe('INDEXED');
-    expect(mockRagService.indexLesson).toHaveBeenCalledWith('l1', { force: true });
+    expect(res.body.data.status).toBe('PENDING');
+    expect(mockRagService.indexLesson).toHaveBeenCalledWith('l1');
   });
 
   it('POST /lessons/:lessonId/reindex rejects non-published lessons with 400', async () => {

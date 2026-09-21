@@ -12,8 +12,30 @@ res.json({ success: true, data: { ... } });                      // éxito
 res.status(4xx|5xx).json({ success: false, message: '...' });    // error (en español)
 ```
 
-Códigos: `200/201` ok · `400` validación · `401` no autenticado · `403` sin permiso ·
-`404` no encontrado · `409` conflicto (ya existe / dependencias) · `500` interno.
+Códigos: `200/201/202` ok/aceptado · `400` validación · `401` no autenticado ·
+`403` sin permiso · `404` no encontrado · `409` conflicto · `422` semántica ·
+`429` cuota · `502/504` proveedor · `503` no disponible · `500` interno.
+
+Readiness público para gates de despliegue:
+
+```http
+GET /api/ready
+```
+
+Responde `200` cuando todas las dependencias requeridas están listas:
+
+```json
+{"success":true,"data":{"status":"ready","checks":{"postgres":"ok","neo4j":"ok","pgvector":"ok","rag":"ok","keyring":"ok"}}}
+```
+
+Responde `503` con la misma forma y checks sanitizados cuando alguna dependencia no
+está lista, por ejemplo:
+
+```json
+{"success":false,"data":{"status":"not_ready","checks":{"postgres":"ok","neo4j":"ok","pgvector":"ok","rag":"error","keyring":"ok"}}}
+```
+
+Nunca expone URLs, secretos ni errores internos.
 
 Montaje (`app.js`): `/api/auth`, `/api/users`, `/api/posts`, `/api/search`,
 `/api/comments`, `/api/notifications`, `/api/sounds`, `/api/locations`,
@@ -90,15 +112,99 @@ DELETE /api/materials/:id                 Borrar (autor) — borra archivo del s
 
 ## Tutor RAG — `/api/lessons/:id/chat`
 
-Disponible solo para estudiantes inscritos (o docentes/admin con acceso al curso),
-lecciones publicadas y cursos incluidos explícitamente en `RAG_COURSE_IDS`.
+Disponible para usuarios autenticados con acceso al curso, en lecciones publicadas y
+cursos incluidos explícitamente en `RAG_COURSE_IDS`. En modo productivo
+`user_required`, todos los roles usan su propia credencial Groq; no hay clave global.
 El retrieval usa únicamente documentos activos y publicados del curso.
 
 ```
 GET  /api/lessons/:id/chat/status          Estado de flag e indexado (auth)
 POST /api/lessons/:id/chat                 { message, intent?, history? } → { answer, citations, relatedLesson, usage }
-POST /api/admin/rag/courses/:courseId/reindex  Reindexar curso (autor/profesor/admin)
 ```
+
+El `GET status` conserva `enabled`, `indexed` y `status`, y agrega metadata segura:
+
+```json
+{
+  "success": true,
+  "data": {
+    "enabled": true,
+    "indexed": true,
+    "status": "LISTO",
+    "credential": {
+      "required": true,
+      "configured": true,
+      "status": "VALID",
+      "last4": "abcd"
+    }
+  }
+}
+```
+
+`credential.status` es `VALID`, `INVALID` o `null`; `last4` es `null` si no existe.
+El body de `POST chat` no cambia. Errores relevantes: `400` body/intención/historial
+inválido, `401` sin sesión, `403` sin acceso/audiencia, `404` lección o feature no
+habilitada, `409` credencial requerida ausente, `422` credencial inválida, `429`
+cuota, `502/504` proveedor y `503` configuración o chat apagado.
+
+### Credencial Groq BYOK — `/api/rag/credentials/groq`
+
+Todas las operaciones requieren JWT y responden `Cache-Control: no-store`.
+
+```http
+GET /api/rag/credentials/groq
+PUT /api/rag/credentials/groq
+Content-Type: application/json
+
+{"apiKey":"<clave-personal>"}
+
+DELETE /api/rag/credentials/groq
+```
+
+`GET` y `PUT` responden solo metadata:
+
+```json
+{
+  "success": true,
+  "data": {
+    "provider": "groq",
+    "configured": true,
+    "status": "VALID",
+    "last4": "abcd",
+    "validatedAt": "2026-09-20T12:00:00.000Z",
+    "updatedAt": "2026-09-20T12:00:00.000Z"
+  }
+}
+```
+
+`status` es `VALID`, `INVALID` o `null`; `last4`, `validatedAt` y `updatedAt` pueden ser
+`null`. `DELETE` responde `{"success":true,"data":{"deleted":true}}`, exista o no
+un registro previo. La API nunca devuelve la clave completa ni ciphertext.
+
+Errores: `400` `apiKey` ausente/malformada, `401` sin sesión, `422` clave inválida o
+sin acceso al modelo, `429` límite de validación, `502/504` fallo/timeout de Groq y
+`503` keyring no disponible.
+
+### Operación y reindexado RAG
+
+```http
+GET  /api/admin/rag/operations                         ADMIN
+POST /api/admin/rag/lessons/:lessonId/reindex          ADMIN
+POST /api/admin/rag/courses/:courseId/reindex          autor/profesor/ADMIN
+```
+
+`GET operations` devuelve conteos agregados `jobs`, `credentials`,
+`usageToday: { chatRequests }` y `readiness`; no incluye claves, prompts o respuestas.
+
+Los dos endpoints de reindexado encolan trabajo durable y responden `202`. Una lección
+devuelve metadata de job `id`, `leccionId`, `status`, `requestedAt`, `nextAttemptAt` y
+`attempts`. Un curso devuelve `courseId`, `total`, `status: "QUEUED"` y `results` con
+esa metadata por lección publicada. Repetir una solicitud coalesce por lección; el
+worker usa lease, reintentos y estado durable en PostgreSQL.
+
+Errores de reindexado: `400` lección no publicada, `401` sin sesión, `403` sin permiso,
+`404` recurso inexistente, `409` curso fuera de la allowlist y `500` error interno
+sanitizado.
 
 `intent` es opcional y acepta `DUDA`, `EXPLICAR`, `EJEMPLO`, `RESUMEN`, `PRACTICA`,
 `PISTA` o `RETROALIMENTAR`; si se omite usa `DUDA`. Un valor desconocido responde

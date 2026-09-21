@@ -378,13 +378,13 @@ export default function AdminRag() {
     fetchLessons();
   }, [fetchLessons]);
 
-  // Reindexación sincrónica inmediata
+  // La API devuelve 202: solo encolamos; el worker actualiza el documento después.
   async function handleReindex(lessonId) {
     setReindexingId(lessonId);
     try {
       const res = await client.post(`/api/admin/rag/lessons/${lessonId}/reindex`);
       if (res.data?.success) {
-        // Refrescar el estado de la fila y los KPIs
+        // Refrescar para mostrar el estado durable de la cola, no fingir que ya terminó.
         await fetchLessons();
       } else {
         alert(res.data?.message || 'No se pudo reindexar la lección');
@@ -524,7 +524,8 @@ export default function AdminRag() {
               <tbody className="divide-y divide-gray-100">
                 {lessons.map((lesson) => {
                   const doc = lesson.documentoRag;
-                  const isReindexing = reindexingId === lesson.id;
+                  const queued = ['PENDING', 'RUNNING'].includes(lesson.ragIndexJob?.status);
+                  const isReindexing = reindexingId === lesson.id || queued;
 
                   return (
                     <tr key={lesson.id} className="hover:bg-gray-50/80 transition-colors">
@@ -575,7 +576,7 @@ export default function AdminRag() {
                           {isReindexing ? (
                             <>
                               <span className="w-3 h-3 border-2 border-titi-dark border-t-transparent rounded-full animate-spin" />
-                              Reindexando…
+                              {queued ? 'En cola…' : 'Enviando…'}
                             </>
                           ) : (
                             'Reindexar'

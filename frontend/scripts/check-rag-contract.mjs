@@ -23,6 +23,22 @@ for (const intent of ['EXPLICAR', 'EJEMPLO', 'PRACTICA', 'RESUMEN']) {
 }
 assert.match(panel, /\.post\(`\/api\/lessons\/\$\{lessonId\}\/chat`/);
 assert.match(panel, /message: question, history, intent: requestIntent/);
+assert.match(panel, /client\.get\('\/api\/rag\/credentials\/groq'\)/);
+assert.match(panel, /client\.put\('\/api\/rag\/credentials\/groq', \{ apiKey: submittedKey \}\)/);
+assert.match(panel, /client\.delete\('\/api\/rag\/credentials\/groq'\)/);
+assert.match(panel, /Conectá tu clave para usar el Tutor IA/);
+assert.match(panel, /https:\/\/console\.groq\.com\/keys/);
+assert.match(panel, /target="_blank"/);
+assert.match(panel, /rel="noopener noreferrer"/);
+assert.match(panel, /type=\{revealed \? 'text' : 'password'\}/);
+assert.match(panel, /autoComplete="off"/);
+assert.match(panel, /autoCapitalize="none"/);
+assert.match(panel, /spellCheck=\{false\}/);
+assert.match(panel, /maxLength=\{512\}/);
+assert.match(panel, /aria-pressed=\{revealed\}/);
+assert.match(panel, /<ConfirmModal/);
+assert.doesNotMatch(panel, /localStorage|sessionStorage|window\.history|URLSearchParams|console\.(?:log|error)|analytics/i);
+assert.doesNotMatch(panel, /message: question, history, intent: requestIntent,\s*apiKey/);
 assert.match(panel, /PRACTICE_AWAITING_ANSWER/);
 assert.match(panel, /resolveTutorIntent\(intent, practiceState\)/);
 assert.match(panel, /practiceStateAfterResponse\(requestIntent, citations\.length\)/);
@@ -49,6 +65,9 @@ assert.match(learn, /const \[tutorPractice, setTutorPractice\] = useState\(\{\}\
 assert.match(learn, /delete next\[previousLessonId\]/);
 assert.match(learn, /practiceState: tutorPractice\[activeLesson\.id\]/);
 assert.match(learn, /onPracticeStateChange:/);
+assert.match(learn, /role="dialog"/);
+assert.match(learn, /aria-modal="true"/);
+assert.match(learn, /event\.key === 'Escape'/);
 
 assert.equal(PRACTICE_AWAITING_ANSWER, 'awaiting_answer');
 assert.equal(resolveTutorIntent(undefined, { phase: PRACTICE_AWAITING_ANSWER }), 'RETROALIMENTAR');

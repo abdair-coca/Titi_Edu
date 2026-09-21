@@ -4,14 +4,32 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireRole } from '../middleware/permissions.js';
 import {
   RagError,
-  indexLesson,
   searchCourseContext,
 } from '../services/rag.service.js';
+import { enqueueLessonIndex } from '../services/rag.queue.js';
+import { readiness } from '../services/readiness.js';
 
 const router = Router();
 
 // Todas las rutas de administración RAG exigen autenticación y rol ADMIN
 router.use(requireAuth, requireRole('ADMIN'));
+
+router.get('/operations', async (req, res) => {
+  try {
+    const today = new Date(Math.floor(Date.now() / 86_400_000) * 86_400_000);
+    const [jobs, credentials, usage, ready] = await Promise.all([
+      prisma.ragIndexJob.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.credencialIa.groupBy({ by: ['status'], _count: { _all: true } }),
+      prisma.ragQuotaWindow.aggregate({ where: { scope: 'CHAT_DAY', bucketStart: today }, _sum: { count: true } }),
+      readiness(),
+    ]);
+    res.json({ success: true, data: {
+      jobs: Object.fromEntries(jobs.map((row) => [row.status, row._count._all])),
+      credentials: Object.fromEntries(credentials.map((row) => [row.status, row._count._all])),
+      usageToday: { chatRequests: usage._sum.count || 0 }, readiness: ready,
+    } });
+  } catch (error) { handleAdminRagError(res, error, 'GET /api/admin/rag/operations error'); }
+});
 
 function handleAdminRagError(res, error, label) {
   if (error instanceof RagError) {
@@ -106,7 +124,7 @@ router.get('/lessons', async (req, res) => {
             },
           },
            documentosRag: {
-            take: 1,
+             take: 1,
             orderBy: { version: 'desc' },
             select: {
               id: true,
@@ -118,9 +136,12 @@ router.get('/lessons', async (req, res) => {
               error: true,
               indexadoAt: true,
               hashContenido: true,
-              _count: { select: { fragmentos: true } },
-            },
-          },
+               _count: { select: { fragmentos: true } },
+             },
+           },
+           ragIndexJob: {
+             select: { status: true, requestedAt: true, nextAttemptAt: true, attempts: true, lastError: true },
+           },
         },
       }),
       prisma.leccion.count({ where: queryWhere }),
@@ -171,7 +192,7 @@ router.get('/lessons', async (req, res) => {
         estadoLeccion: lesson.estado,
         modulo: lesson.modulo,
         recursoHtml: lesson.recursoHtml,
-        documentoRag: activeDoc ? {
+         documentoRag: activeDoc ? {
           id: activeDoc.id,
           version: activeDoc.version,
           estado: activeDoc.estado,
@@ -182,9 +203,10 @@ router.get('/lessons', async (req, res) => {
            error: activeDoc.error,
           indexadoAt: activeDoc.indexadoAt,
           hashContenido: activeDoc.hashContenido,
-          fragmentosCount: activeDoc._count?.fragmentos ?? 0,
-        } : null,
-      };
+           fragmentosCount: activeDoc._count?.fragmentos ?? 0,
+         } : null,
+         ragIndexJob: lesson.ragIndexJob,
+       };
     });
 
     const unindexedCount = Math.max(0, totalLessons - (readyCount + failedCount + pendingCount));
@@ -337,7 +359,7 @@ router.post('/lessons/:lessonId/test-query', async (req, res) => {
   }
 });
 
-// ---- POST /lessons/:lessonId/reindex — Reindexación sincrónica forzada ----
+// ---- POST /lessons/:lessonId/reindex — Trabajo durable ----
 router.post('/lessons/:lessonId/reindex', async (req, res) => {
   try {
     const lesson = await prisma.leccion.findUnique({
@@ -356,8 +378,8 @@ router.post('/lessons/:lessonId/reindex', async (req, res) => {
       });
     }
 
-    const result = await indexLesson(req.params.lessonId, { force: true });
-    res.json({ success: true, data: result });
+    const result = await enqueueLessonIndex(req.params.lessonId);
+    res.status(202).json({ success: true, data: result });
   } catch (error) {
     handleAdminRagError(res, error, 'POST /api/admin/rag/lessons/:lessonId/reindex error');
   }

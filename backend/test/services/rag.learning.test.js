@@ -35,7 +35,7 @@ function configureChat(content = 'Respuesta respaldada. [1]') {
   Object.assign(process.env, {
     RAG_CHAT_MODE: 'direct', AI_PROVIDER_ROUTE: 'legacy', EMBEDDING_API_URL: 'https://embeddings.example',
     EMBEDDING_API_KEY: 'embedding-key', EMBEDDING_MODEL: 'google/embeddinggemma-300M', EMBEDDING_PROVIDER: 'local',
-    GROQ_API_KEY: 'groq-key', GROQ_MODEL: 'test-chat', NODE_ENV: 'test',
+    GROQ_API_KEY: 'groq-key', GROQ_MODEL: 'openai/gpt-oss-20b', NODE_ENV: 'test',
   });
   prisma.$queryRaw.mockResolvedValue([{
     id: 'chunk-1', contenido: 'Las variables almacenan valores.', lessonId: 'lesson-current',
