@@ -104,6 +104,11 @@ GET    /api/lessons/:id/note                  Nota personal privada (auth)
 PUT    /api/lessons/:id/note                  Guardar/actualizar nota (máx 5000 chars)
 ```
 
+`GET /api/lessons/:id/comments` acepta `limit` (1–100, por defecto 100) y un
+`cursor` opaco devuelto en `data.pagination.nextCursor`. La respuesta mantiene
+`data.comentarios` y añade `{ limit, hasMore, nextCursor }` para paginar sin
+alterar los consumidores existentes.
+
 ## Materiales — `/api/materials`
 ```
 POST   /api/lessons/:lessonId/materials   Subir (multipart, autor) — pdf|word|imagen|codigo|otro, 10 MB

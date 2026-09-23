@@ -650,13 +650,59 @@ router.get('/lessons/:id/comments', requireAuth, async (req, res) => {
     });
     if (!access) return;
 
-    const comentarios = await prisma.comentarioLeccion.findMany({
-      where: { leccionId: req.params.id },
-      orderBy: { createdAt: 'asc' },
-    });
+    const requestedLimit = Number.parseInt(req.query.limit, 10);
+    const limit = Number.isFinite(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, 100)
+      : 100;
+    const rawCursor = typeof req.query.cursor === 'string' ? req.query.cursor : null;
+    let cursor = null;
+    if (rawCursor) {
+      try {
+        const decoded = JSON.parse(Buffer.from(rawCursor, 'base64url').toString('utf8'));
+        if (!decoded?.id || !decoded?.createdAt) throw new Error('invalid cursor');
+        const createdAt = new Date(decoded.createdAt);
+        if (Number.isNaN(createdAt.getTime())) throw new Error('invalid cursor date');
+        cursor = { id: decoded.id, createdAt };
+      } catch {
+        return res.status(400).json({ success: false, message: 'Cursor de comentarios inválido' });
+      }
+    }
 
-    // Resolver usernames de autores y de comentarios padre
-    const usuarioIds = [...new Set(comentarios.map((c) => c.usuarioId))];
+    const where = { leccionId: req.params.id };
+    if (cursor) {
+      // Orden estable incluso cuando varios comentarios comparten el mismo
+      // createdAt: la segunda columna (id) actúa como desempate.
+      where.OR = [
+        { createdAt: { gt: cursor.createdAt } },
+        { createdAt: cursor.createdAt, id: { gt: cursor.id } },
+      ];
+    }
+
+    const comentarios = await prisma.comentarioLeccion.findMany({
+      where,
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      take: limit + 1,
+    });
+    const hasMore = comentarios.length > limit;
+    const page = hasMore ? comentarios.slice(0, limit) : comentarios;
+
+    // Resolver usernames de autores y de comentarios padre. Cuando una
+    // respuesta cae en una página distinta a su raíz, se consulta solo el
+    // comentario padre para conservar replyToUsername sin traer toda la tabla.
+    const pageIds = new Set(page.map((c) => c.id));
+    const parentIds = [...new Set(
+      page.map((c) => c.parentId).filter((id) => id && !pageIds.has(id)),
+    )];
+    const parentComments = parentIds.length
+      ? await prisma.comentarioLeccion.findMany({
+          where: { id: { in: parentIds } },
+          select: { id: true, usuarioId: true },
+        })
+      : [];
+    const usuarioIds = [...new Set([
+      ...page.map((c) => c.usuarioId),
+      ...parentComments.map((c) => c.usuarioId),
+    ])];
     const usuarios = usuarioIds.length
       ? await prisma.usuario.findMany({
           where: { id: { in: usuarioIds } },
@@ -664,15 +710,32 @@ router.get('/lessons/:id/comments', requireAuth, async (req, res) => {
         })
       : [];
     const usernameById = new Map(usuarios.map((u) => [u.id, u.username]));
-    const commentUserById = new Map(comentarios.map((c) => [c.id, usernameById.get(c.usuarioId)]));
+    const commentUserById = new Map([
+      ...page,
+      ...parentComments,
+    ].map((c) => [c.id, usernameById.get(c.usuarioId)]));
 
-    const enriched = comentarios.map((c) => ({
+    const enriched = page.map((c) => ({
       ...c,
       username: usernameById.get(c.usuarioId) || null,
       replyToUsername: c.parentId ? commentUserById.get(c.parentId) || null : null,
     }));
 
-    res.json({ success: true, data: { comentarios: enriched } });
+    const last = page[page.length - 1];
+    const nextCursor = hasMore && last
+      ? Buffer.from(JSON.stringify({
+          id: last.id,
+          createdAt: new Date(last.createdAt).toISOString(),
+        })).toString('base64url')
+      : null;
+
+    res.json({
+      success: true,
+      data: {
+        comentarios: enriched,
+        pagination: { limit, hasMore, nextCursor },
+      },
+    });
   } catch (err) {
     console.error('GET /api/lessons/:id/comments error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo comentarios' });

@@ -610,6 +610,8 @@ model ComentarioLeccion {
   leccion    Leccion             @relation(fields: [leccionId], references: [id])
   parent     ComentarioLeccion?  @relation("RespuestasComentarioLeccion", fields: [parentId], references: [id], onDelete: Cascade)
   respuestas ComentarioLeccion[] @relation("RespuestasComentarioLeccion")
+
+  @@index([leccionId, createdAt])
 }
 
 model Logro {

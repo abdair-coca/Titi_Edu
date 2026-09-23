@@ -274,13 +274,22 @@ describe('GET /api/lessons/:id (login + inscripción)', () => {
   it('200 si está inscripto', async () => {
     prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
     prisma.leccion.findUnique.mockResolvedValue({
-      id: 'l1', materiales: [], modulo: { id: 'm1', titulo: 'M1', cursoId: 'c1', estado: 'PUBLICADO' },
+      id: 'l1',
+      titulo: 'Lección 1',
+      contenido: '# Contenido de prueba',
+      formatoContenido: 'MARKDOWN',
+      materiales: [{ id: 'mat-1', nombre: 'Guía', url: '/guia.pdf', tipo: 'pdf' }],
+      modulo: { id: 'm1', titulo: 'M1', cursoId: 'c1', estado: 'PUBLICADO' },
     });
     prisma.curso.findUnique.mockResolvedValue({ creadorId: 'otro', publicado: true, profesores: [] });
     prisma.inscripcion.findUnique.mockResolvedValue({ id: 'i1' });
     const res = await request(app).get('/api/lessons/l1').set('Authorization', `Bearer ${token}`);
     expect(res.status).toBe(200);
-    expect(res.body.data.leccion.id).toBe('l1');
+    expect(res.body.data.leccion).toMatchObject({
+      id: 'l1',
+      contenido: '# Contenido de prueba',
+      materiales: [{ id: 'mat-1', nombre: 'Guía', url: '/guia.pdf', tipo: 'pdf' }],
+    });
   });
 
   it('no expone contexto RAG autoral a estudiantes', async () => {
@@ -435,6 +444,41 @@ describe('Lesson comments and replies', () => {
     expect(res.body.data.comentarios).toHaveLength(2);
     expect(res.body.data.comentarios[0].replyToUsername).toBeNull();
     expect(res.body.data.comentarios[1].replyToUsername).toBe('estudiante1');
+  });
+
+  it('GET /api/lessons/:id/comments pagina con cursor estable y conserva el autor padre', async () => {
+    allowStudent();
+    const firstCreatedAt = new Date('2026-09-22T10:00:00.000Z');
+    const secondCreatedAt = new Date('2026-09-22T10:01:00.000Z');
+    const rows = [
+      { id: 'c1', texto: 'Raíz', usuarioId: 'u1', leccionId: 'l-comm', parentId: null, createdAt: firstCreatedAt },
+      { id: 'c2', texto: 'Respuesta', usuarioId: 'u2', leccionId: 'l-comm', parentId: 'c1', createdAt: secondCreatedAt },
+    ];
+    prisma.comentarioLeccion.findMany.mockImplementation(({ where, take }) => {
+      if (where.id?.in) return Promise.resolve([{ id: 'c1', usuarioId: 'u1' }]);
+      if (where.OR) return Promise.resolve([rows[1]]);
+      return Promise.resolve(rows.slice(0, take));
+    });
+    prisma.usuario.findMany.mockResolvedValue([
+      { id: 'u1', username: 'estudiante1' },
+      { id: 'u2', username: 'profesor1' },
+    ]);
+
+    const first = await request(app)
+      .get('/api/lessons/l-comm/comments?limit=1')
+      .set('Authorization', `Bearer ${token}`);
+    expect(first.status).toBe(200);
+    expect(first.body.data.comentarios).toHaveLength(1);
+    expect(first.body.data.pagination).toMatchObject({ limit: 1, hasMore: true });
+    expect(first.body.data.pagination.nextCursor).toEqual(expect.any(String));
+
+    const second = await request(app)
+      .get(`/api/lessons/l-comm/comments?limit=1&cursor=${encodeURIComponent(first.body.data.pagination.nextCursor)}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(second.status).toBe(200);
+    expect(second.body.data.comentarios).toHaveLength(1);
+    expect(second.body.data.comentarios[0].replyToUsername).toBe('estudiante1');
+    expect(second.body.data.pagination).toMatchObject({ limit: 1, hasMore: false, nextCursor: null });
   });
 
   it('POST /api/lessons/:id/comments crea comentario raíz', async () => {
