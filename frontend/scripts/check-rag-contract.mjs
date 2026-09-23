@@ -8,6 +8,8 @@ import {
 
 const learn = fs.readFileSync('src/pages/LearnCourse.jsx', 'utf8');
 const panel = fs.readFileSync('src/components/TutorPanel.jsx', 'utf8');
+const comments = fs.readFileSync('src/components/LessonComments.jsx', 'utf8');
+const availability = fs.readFileSync('src/hooks/useTutorAvailability.js', 'utf8');
 const editor = fs.readFileSync('src/pages/teacher/ModulesEditor.jsx', 'utf8');
 const required = [
   'TutorPanel',
@@ -15,7 +17,7 @@ const required = [
   '/api/lessons/${lessonId}/chat',
   'citations',
 ];
-const missing = required.filter((token) => !learn.includes(token) && !panel.includes(token));
+const missing = required.filter((token) => !learn.includes(token) && !panel.includes(token) && !availability.includes(token));
 if (missing.length) throw new Error(`Contrato RAG incompleto: ${missing.join(', ')}`);
 
 for (const intent of ['EXPLICAR', 'EJEMPLO', 'PRACTICA', 'RESUMEN']) {
@@ -23,7 +25,8 @@ for (const intent of ['EXPLICAR', 'EJEMPLO', 'PRACTICA', 'RESUMEN']) {
 }
 assert.match(panel, /\.post\(`\/api\/lessons\/\$\{lessonId\}\/chat`/);
 assert.match(panel, /message: question, history, intent: requestIntent/);
-assert.match(panel, /client\.get\('\/api\/rag\/credentials\/groq'\)/);
+assert.ok(availability.includes('/api/lessons/${lessonId}/chat/status'));
+assert.doesNotMatch(panel, /client\.get\('\/api\/rag\/credentials\/groq'\)/);
 assert.match(panel, /client\.put\('\/api\/rag\/credentials\/groq', \{ apiKey: submittedKey \}\)/);
 assert.match(panel, /client\.delete\('\/api\/rag\/credentials\/groq'\)/);
 assert.match(panel, /Conectá tu clave para usar el Tutor IA/);
@@ -68,6 +71,11 @@ assert.match(learn, /onPracticeStateChange:/);
 assert.match(learn, /role="dialog"/);
 assert.match(learn, /aria-modal="true"/);
 assert.match(learn, /event\.key === 'Escape'/);
+assert.match(learn, /LearnCourseSkeleton/);
+assert.match(learn, /learn:shell-ready/);
+assert.match(learn, /progressLoading/);
+assert.match(panel, /learn:tutor-ready/);
+assert.match(comments, /learn:comments-ready/);
 
 assert.equal(PRACTICE_AWAITING_ANSWER, 'awaiting_answer');
 assert.equal(resolveTutorIntent(undefined, { phase: PRACTICE_AWAITING_ANSWER }), 'RETROALIMENTAR');

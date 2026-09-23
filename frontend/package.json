@@ -12,7 +12,13 @@
     "test:html-lesson": "node scripts/check-html-lesson-player.mjs",
     "test:deadline": "node scripts/check-deadline.mjs",
     "test:rag": "node scripts/check-rag-contract.mjs",
-    "test:tutor-history": "node scripts/check-tutor-history.mjs"
+    "test:tutor-history": "node scripts/check-tutor-history.mjs",
+    "test:learn-init": "node scripts/check-learn-init-order.mjs",
+    "test:learn-active-lesson": "node scripts/check-learn-active-lesson.mjs",
+    "test:learn-cache": "node scripts/check-learn-cache.mjs",
+    "test:learn-panels": "node scripts/check-learn-panels.mjs",
+    "test:learn-code-split": "node scripts/check-learn-code-split.mjs",
+    "test:tutor-key-banner": "node scripts/check-tutor-key-banner.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",

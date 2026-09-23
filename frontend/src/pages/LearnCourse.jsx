@@ -1,19 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useGamification } from '../context/GamificationContext.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
-import LessonComments from '../components/LessonComments.jsx';
 import StreakToast from '../components/StreakToast.jsx';
 import AchievementToast from '../components/AchievementToast.jsx';
-import EvaluationQuiz from '../components/EvaluationQuiz.jsx';
-import MarkdownContent from '../components/MarkdownContent.jsx';
-import HtmlLessonPlayer from '../components/HtmlLessonPlayer.jsx';
-import TutorPanel from '../components/TutorPanel.jsx';
 import { resolveMediaUrl } from '../lib/format.js';
+import {
+  clearLessonDetailCache,
+  invalidateLessonDetail,
+  requestLessonDetail,
+} from '../lib/lesson-cache.js';
+import { requestLessonComments } from '../lib/lesson-comments-cache.js';
+import { useTutorAvailability } from '../hooks/useTutorAvailability.js';
 import { sanitizeMarkdownUrl } from '../lib/markdown.js';
 import { usePopIn, useStaggerReveal } from '../lib/motion.js';
+import { markPerformance } from '../lib/performance.js';
 import {
   FileIcon,
   PencilIcon,
@@ -24,14 +27,45 @@ import {
   SparklesIcon,
 } from '../components/icons.jsx';
 
+// Los paneles y renderizadores pesados no forman parte del primer chunk de
+// LearnCourse. Se cargan en el momento justo y se pueden precargar cuando el
+// estudiante expresa intención (hover/focus/click), sin cambiar la UI.
+const loadLessonComments = () => import('../components/LessonComments.jsx');
+const loadEvaluationQuiz = () => import('../components/EvaluationQuiz.jsx');
+const loadMarkdownContent = () => import('../components/MarkdownContent.jsx');
+const loadHtmlLessonPlayer = () => import('../components/HtmlLessonPlayer.jsx');
+const loadTutorPanel = () => import('../components/TutorPanel.jsx');
+
+const LessonComments = lazy(loadLessonComments);
+const EvaluationQuiz = lazy(loadEvaluationQuiz);
+const MarkdownContent = lazy(loadMarkdownContent);
+const HtmlLessonPlayer = lazy(loadHtmlLessonPlayer);
+const TutorPanel = lazy(loadTutorPanel);
+
+const PANEL_PRELOADERS = {
+  tutor: loadTutorPanel,
+  comentarios: loadLessonComments,
+};
+
+function preloadLearnModule(loader) {
+  loader().catch(() => {});
+}
+
+function preloadLearnPanel(key) {
+  const loader = PANEL_PRELOADERS[key];
+  if (loader) preloadLearnModule(loader);
+}
+
 export default function LearnCourse() {
   const { id: courseId } = useParams();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const paramLessonId = searchParams.get('lessonId');
   const paramComments = searchParams.get('comments');
-  const { isAuthenticated, updateUser } = useAuth();
+  const { isAuthenticated, updateUser, user } = useAuth();
   const { pushGota } = useGamification();
+  const userCacheKey = user?.id || user?.neoId || user?.email || 'anonymous';
+  const previousCacheUserRef = useRef(userCacheKey);
 
   // Toast de racha
   const [streakToast, setStreakToast] = useState({ shown: false, racha: 0 });
@@ -45,6 +79,7 @@ export default function LearnCourse() {
 
   const [curso, setCurso] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [progressLoading, setProgressLoading] = useState(true);
   const [error, setError] = useState(null);
   // 403 al pedir contenido real (no inscripto, curso visto solo por el temario trimeado)
   const [accessDenied, setAccessDenied] = useState(false);
@@ -54,13 +89,10 @@ export default function LearnCourse() {
   const [newLessons, setNewLessons] = useState(() => new Set());
   const [baseProgress, setBaseProgress] = useState(null);
 
-  // Cache de lecciones completas (con contenido) por moduloId
-  // El endpoint GET /api/courses/:id no devuelve `contenido`, así que
-  // lazy-cargamos GET /api/modules/:moduloId/lessons cuando se necesita.
-  const [lessonsByModulo, setLessonsByModulo] = useState({});
-
-  // Cache de materiales por leccionId (GET /api/lessons/:id)
-  const [materialsByLesson, setMaterialsByLesson] = useState({});
+  // Detalle de la lección activa (contenido + materiales).
+  // El resumen del curso sigue siendo la fuente de navegación del sidebar;
+  // la caché/deduplicación entre lecciones queda para la Fase 3.
+  const [activeLessonDetail, setActiveLessonDetail] = useState(null);
 
   // Lección activa
   const [activeId, setActiveId] = useState(null);
@@ -76,6 +108,7 @@ export default function LearnCourse() {
 
   // Panel lateral derecho abierto: null | 'notas' | 'materiales' | 'comentarios'
   const [sidePanel, setSidePanel] = useState(null);
+  const [tutorSettingsOpen, setTutorSettingsOpen] = useState(false);
 
   // Nota personal de la lección activa
   const [noteText, setNoteText] = useState('');
@@ -131,22 +164,30 @@ export default function LearnCourse() {
     previousTutorLessonRef.current = activeId;
   }, [activeId]);
 
-  // --- Fetch del curso + progreso en paralelo ---
+  useEffect(() => {
+    if (previousCacheUserRef.current !== userCacheKey) {
+      clearLessonDetailCache();
+      previousCacheUserRef.current = userCacheKey;
+    }
+  }, [userCacheKey]);
+
+  useEffect(() => {
+    markPerformance('learn:start', courseId);
+  }, [courseId]);
+
+  useEffect(() => {
+    if (curso && !loading) markPerformance('learn:shell-ready', courseId);
+  }, [courseId, curso, loading]);
+
+  // --- Fetch del curso y progreso en paralelo, sin bloquear el shell ---
   useEffect(() => {
     if (!courseId) return;
     let cancelled = false;
     setLoading(true);
+    setProgressLoading(Boolean(isAuthenticated));
     setError(null);
 
-    Promise.all([
-      client.get(`/api/courses/${courseId}`),
-      isAuthenticated
-        ? client
-            .get(`/api/courses/${courseId}/progress`)
-            .catch(() => ({ data: null }))
-        : Promise.resolve({ data: null }),
-    ])
-      .then(([detailRes, progRes]) => {
+    const applyCourse = (detailRes) => {
         if (cancelled) return;
         const d = detailRes.data;
         if (!d?.success) {
@@ -170,9 +211,12 @@ export default function LearnCourse() {
           }
         }
         if (paramComments === 'true') setSidePanel('comentarios');
+    };
 
+    const applyProgress = (progressRes) => {
+        if (cancelled) return;
         // Aplicar progreso (set de leccionIds completadas)
-        const p = progRes?.data;
+        const p = progressRes?.data;
         if (p?.success) {
           const completedIds = new Set();
           (p.data?.modulos || []).forEach((m) =>
@@ -186,7 +230,11 @@ export default function LearnCourse() {
           setNewLessons(newIds);
           setBaseProgress(p.data);
         }
-      })
+    };
+
+    client
+      .get(`/api/courses/${courseId}`)
+      .then(applyCourse)
       .catch((err) => {
         if (cancelled) return;
         if (err.response?.status === 404) {
@@ -200,6 +248,18 @@ export default function LearnCourse() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
+
+    if (isAuthenticated) {
+      client
+        .get(`/api/courses/${courseId}/progress`)
+        .then(applyProgress)
+        .catch(() => {})
+        .finally(() => {
+          if (!cancelled) setProgressLoading(false);
+        });
+    } else {
+      setProgressLoading(false);
+    }
 
     return () => {
       cancelled = true;
@@ -235,21 +295,25 @@ export default function LearnCourse() {
     );
   }, [curso, activeId]);
 
-  // --- Lazy-cargar lecciones completas (con contenido) del módulo activo ---
+  // --- Cargar únicamente el detalle de la lección activa ---
   useEffect(() => {
-    if (!activeModulo) return;
-    if (lessonsByModulo[activeModulo.id]) return; // ya cacheado
+    if (!activeId) {
+      setActiveLessonDetail(null);
+      return;
+    }
     let cancelled = false;
-    client
-      .get(`/api/modules/${activeModulo.id}/lessons`)
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.success) {
-          setLessonsByModulo((prev) => ({
-            ...prev,
-            [activeModulo.id]: data.data?.lecciones || [],
-          }));
-        }
+    setActiveLessonDetail(null);
+    setAccessDenied(false);
+    if (!isAuthenticated) return undefined;
+
+    const request = requestLessonDetail({
+      userKey: userCacheKey,
+      courseId,
+      lessonId: activeId,
+    });
+    request.promise
+      .then((lesson) => {
+        if (!cancelled && lesson) setActiveLessonDetail(lesson);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -259,44 +323,24 @@ export default function LearnCourse() {
       });
     return () => {
       cancelled = true;
+      request.release();
     };
-  }, [activeModulo, lessonsByModulo]);
+  }, [activeId, courseId, isAuthenticated, userCacheKey]);
 
-  // --- Lección activa (con contenido si está cacheado) ---
+  // --- Lección activa (detalle completo o resumen mientras carga) ---
   const activeLesson = useMemo(() => {
-    if (!activeModulo || !activeId) return null;
-    const cached = lessonsByModulo[activeModulo.id]?.find(
-      (l) => l.id === activeId,
-    );
-    if (cached) return cached;
-    return activeModulo.lecciones?.find((l) => l.id === activeId) || null;
-  }, [activeModulo, activeId, lessonsByModulo]);
+    if (!activeId) return null;
+    if (activeLessonDetail?.id === activeId) return activeLessonDetail;
+    return curso?.modulos
+      ?.flatMap((modulo) => modulo.lecciones || [])
+      .find((lesson) => lesson.id === activeId) || null;
+  }, [curso, activeId, activeLessonDetail]);
 
-  // --- Lazy-cargar materiales de la lección activa ---
   useEffect(() => {
-    if (!activeId) return;
-    if (materialsByLesson[activeId] !== undefined) return;
-    let cancelled = false;
-    client
-      .get(`/api/lessons/${activeId}`)
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.success) {
-          setMaterialsByLesson((prev) => ({
-            ...prev,
-            [activeId]: data.data?.leccion?.materiales || [],
-          }));
-        } else {
-          setMaterialsByLesson((prev) => ({ ...prev, [activeId]: [] }));
-        }
-      })
-      .catch(() => {
-        setMaterialsByLesson((prev) => ({ ...prev, [activeId]: [] }));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [activeId, materialsByLesson]);
+    if (activeLesson && Object.prototype.hasOwnProperty.call(activeLesson, 'contenido')) {
+      markPerformance('learn:lesson-ready', activeLesson.id);
+    }
+  }, [activeLesson]);
 
   // --- Cargar la nota personal de la lección activa ---
   useEffect(() => {
@@ -346,6 +390,104 @@ export default function LearnCourse() {
   const nextLesson =
     currentIndex >= 0 ? orderedLessons[currentIndex + 1] : null;
   const hasNext = Boolean(nextLesson || curso?.evaluacionFinal);
+  const activeLessonReady = Boolean(
+    activeLesson && Object.prototype.hasOwnProperty.call(activeLesson, 'contenido'),
+  );
+
+  // El aviso comparte la misma consulta/cache que TutorPanel. Solo se consulta
+  // cuando el detalle de la lección ya está listo, evitando otra petición en
+  // el primer paint o para usuarios sin acceso al contenido.
+  const tutorAvailabilityEnabled = Boolean(
+    isAuthenticated
+      && user?.rol === 'ESTUDIANTE'
+      && activeLessonReady
+      && !activeEvalId
+      && !accessDenied,
+  );
+  const {
+    status: tutorAvailability,
+    loading: tutorAvailabilityLoading,
+  } = useTutorAvailability(activeLesson?.id || null, { enabled: tutorAvailabilityEnabled });
+  const tutorCredential = tutorAvailability?.credential || null;
+  const tutorCredentialRequired = tutorAvailability?.credential?.required !== false;
+  const tutorLessonAvailable = Boolean(tutorAvailability?.enabled && tutorAvailability?.indexed);
+  const tutorCredentialInvalid = tutorCredential?.status === 'INVALID';
+  const showTutorKeyNotice = Boolean(
+    tutorAvailabilityEnabled
+      && tutorAvailability
+      && !tutorAvailabilityLoading
+      && tutorLessonAvailable
+      && tutorCredentialRequired
+      && tutorCredential?.status !== 'VALID',
+  );
+
+  // La siguiente lección se prepara en idle, después de pintar la actual.
+  // Si el estudiante navega mientras la petición está pendiente, la petición
+  // se deduplica con la carga activa y no se bloquea el contenido visible.
+  useEffect(() => {
+    if (!activeLessonReady || !nextLesson || activeEvalId || !isAuthenticated) return undefined;
+    let request = null;
+    let settled = false;
+    const startPrefetch = () => {
+      request = requestLessonDetail({
+        userKey: userCacheKey,
+        courseId,
+        lessonId: nextLesson.id,
+      });
+      request.promise
+        .catch(() => {})
+        .finally(() => {
+          settled = true;
+          request.release();
+        });
+    };
+    const canScheduleIdle = typeof window !== 'undefined' && Boolean(window.requestIdleCallback);
+    const scheduleId = canScheduleIdle
+      ? window.requestIdleCallback(startPrefetch, { timeout: 1000 })
+      : setTimeout(startPrefetch, 250);
+
+    return () => {
+      if (canScheduleIdle && window.cancelIdleCallback) {
+        window.cancelIdleCallback(scheduleId);
+      } else clearTimeout(scheduleId);
+      if (request && !settled) request.release();
+    };
+  }, [activeLessonReady, activeLesson?.id, activeEvalId, courseId, isAuthenticated, nextLesson?.id, userCacheKey]);
+
+  // Los comentarios se precargan en idle para que abrir el panel sea inmediato,
+  // sin competir con el contenido principal de la lección.
+  useEffect(() => {
+    if (!activeLessonReady || !activeId || !isAuthenticated) return undefined;
+    let request = null;
+    let settled = false;
+    const startPrefetch = () => {
+      request = requestLessonComments({ userKey: userCacheKey, lessonId: activeId });
+      request.promise
+        .catch(() => {})
+        .finally(() => {
+          settled = true;
+          request.release();
+        });
+    };
+    const canScheduleIdle = typeof window !== 'undefined' && Boolean(window.requestIdleCallback);
+    const scheduleId = canScheduleIdle
+      ? window.requestIdleCallback(startPrefetch, { timeout: 1500 })
+      : setTimeout(startPrefetch, 400);
+    return () => {
+      if (canScheduleIdle && window.cancelIdleCallback) window.cancelIdleCallback(scheduleId);
+      else clearTimeout(scheduleId);
+      if (request && !settled) request.release();
+    };
+  }, [activeLessonReady, activeId, isAuthenticated, userCacheKey]);
+
+  // Los renderizadores de contenido se descargan después de tener la lección
+  // lista. Así el primer paint no compite con Markdown/HTML y el chunk ya está
+  // en caché cuando React lo necesita.
+  useEffect(() => {
+    if (!activeLessonReady || !activeLesson) return;
+    preloadLearnModule(loadMarkdownContent);
+    if (activeLesson.formatoContenido === 'HTML') preloadLearnModule(loadHtmlLessonPlayer);
+  }, [activeLessonReady, activeLesson?.id, activeLesson?.formatoContenido]);
 
   // Entrada escalonada de los módulos del índice lateral al cargar el curso.
   // Dep = nº de módulos (primitivo, estable). Ver motion.md §5.
@@ -355,6 +497,7 @@ export default function LearnCourse() {
   const handleSelectLesson = (lessonId) => {
     setActiveId(lessonId);
     setActiveEvalId(null);
+    setTutorSettingsOpen(false);
     setActiveHtmlEvaluable(null);
     setActiveHtmlDeadlineExpired(false);
     setCompleteError(null);
@@ -365,11 +508,23 @@ export default function LearnCourse() {
   };
 
   const handleSelectEval = (evalId) => {
+    preloadLearnModule(loadEvaluationQuiz);
     setActiveEvalId(evalId);
+    setTutorSettingsOpen(false);
     setActiveHtmlEvaluable(null);
     setActiveHtmlDeadlineExpired(false);
     setCompleteError(null);
     setDrawerOpen(false);
+  };
+
+  const handleSidePanelChange = (nextPanel) => {
+    setSidePanel(nextPanel);
+    if (nextPanel !== 'tutor') setTutorSettingsOpen(false);
+  };
+
+  const handleConfigureTutor = () => {
+    setTutorSettingsOpen(true);
+    setSidePanel('tutor');
   };
 
   const handleNext = () => {
@@ -390,7 +545,13 @@ export default function LearnCourse() {
       const { data } = await client.put(`/api/lessons/${activeId}/note`, {
         texto: noteText,
       });
-      if (data?.success) setNoteSaved(true);
+      if (data?.success) {
+        // La nota se guarda en un recurso separado; invalidar el detalle es
+        // conservador para no reutilizar una representación potencialmente
+        // desactualizada al volver a la lección.
+        invalidateLessonDetail({ userKey: userCacheKey, courseId, lessonId: activeId });
+        setNoteSaved(true);
+      }
     } catch {
       // Silencioso — el textarea conserva el texto para reintentar.
     } finally {
@@ -421,6 +582,7 @@ export default function LearnCourse() {
     try {
       const { data } = await client.post(`/api/lessons/${activeId}/complete`);
       if (data?.success) {
+        invalidateLessonDetail({ userKey: userCacheKey, courseId, lessonId: activeId });
         setCompleted((prev) => {
           const next = new Set(prev);
           next.add(activeId);
@@ -444,6 +606,7 @@ export default function LearnCourse() {
   const handleHtmlScoreRecorded = (data) => {
     if (!activeId) return;
     setCompleteError(null);
+    invalidateLessonDetail({ userKey: userCacheKey, courseId, lessonId: activeId });
     setCompleted((prev) => {
       const next = new Set(prev);
       next.add(activeId);
@@ -454,11 +617,7 @@ export default function LearnCourse() {
 
   // --- Render: loading ---
   if (loading) {
-    return (
-      <div className="flex min-h-screen bg-titi-cream items-center justify-center">
-        <Spinner />
-      </div>
-    );
+    return <LearnCourseSkeleton />;
   }
 
   // --- Render: error ---
@@ -549,9 +708,13 @@ export default function LearnCourse() {
           </h2>
           <p className="text-xs font-medium text-gray-400 mt-1">
             Lección {currentPosition} de {totalLessons}
-            <span className="block text-[11px] font-medium text-gray-400 mt-0.5">
-              {completedCount} {completedCount === 1 ? 'completada' : 'completadas'}
-            </span>
+            {progressLoading ? (
+              <span className="block mt-1.5 h-3 w-24 rounded bg-gray-100 animate-pulse" aria-label="Cargando progreso" />
+            ) : (
+              <span className="block text-[11px] font-medium text-gray-400 mt-0.5">
+                {completedCount} {completedCount === 1 ? 'completada' : 'completadas'}
+              </span>
+            )}
           </p>
 
           {/* Progreso del curso */}
@@ -559,17 +722,21 @@ export default function LearnCourse() {
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
               Progreso del curso
             </p>
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-titi-yellow rounded-full transition-all duration-500 ease-out"
-                  style={{ width: `${progressPct}%` }}
-                />
+            {progressLoading ? (
+              <div className="h-2 w-full rounded-full bg-gray-100 animate-pulse" aria-hidden="true" />
+            ) : (
+              <div className="flex items-center gap-2">
+                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-titi-yellow rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${progressPct}%` }}
+                  />
+                </div>
+                <span className="text-xs font-bold text-gray-400 tabular-nums">
+                  {progressPct}%
+                </span>
               </div>
-              <span className="text-xs font-bold text-gray-400 tabular-nums">
-                {progressPct}%
-              </span>
-            </div>
+            )}
           </div>
         </div>
 
@@ -693,29 +860,42 @@ export default function LearnCourse() {
               <CertificateBanner certificado={certBanner.certificado} onClose={() => setCertBanner(null)} />
             )}
 
+            {showTutorKeyNotice && !activeEvalId && (
+              <TutorCredentialBanner
+                invalid={tutorCredentialInvalid}
+                onConfigure={handleConfigureTutor}
+              />
+            )}
+
             {activeEvalId ? (
-              <EvaluationQuiz
-                key={activeEvalId}
-                evaluationId={activeEvalId}
-                onResult={handleProgressEvents}
-              />
+              <Suspense fallback={<LessonContentSkeleton title="evaluación" />}>
+                <EvaluationQuiz
+                  key={activeEvalId}
+                  evaluationId={activeEvalId}
+                  onResult={handleProgressEvents}
+                />
+              </Suspense>
             ) : activeLesson ? (
-              <LessonView
-                key={activeLesson.id}
-                leccion={activeLesson}
-                completed={completed.has(activeLesson.id)}
-                completing={completing}
-                completeError={completeError}
-                onComplete={handleComplete}
-                htmlEvaluable={activeHtmlEvaluable}
-                onHtmlEvaluableChange={setActiveHtmlEvaluable}
-                htmlDeadlineExpired={activeHtmlDeadlineExpired}
-                onHtmlDeadlineChange={setActiveHtmlDeadlineExpired}
-                onHtmlScoreRecorded={handleHtmlScoreRecorded}
-                hasNext={hasNext}
-                onNext={handleNext}
-                onSaveNote={() => setSidePanel('notas')}
-              />
+              Object.prototype.hasOwnProperty.call(activeLesson, 'contenido') ? (
+                <LessonView
+                  key={activeLesson.id}
+                  leccion={activeLesson}
+                  completed={completed.has(activeLesson.id)}
+                  completing={completing}
+                  completeError={completeError}
+                  onComplete={handleComplete}
+                  htmlEvaluable={activeHtmlEvaluable}
+                  onHtmlEvaluableChange={setActiveHtmlEvaluable}
+                  htmlDeadlineExpired={activeHtmlDeadlineExpired}
+                  onHtmlDeadlineChange={setActiveHtmlDeadlineExpired}
+                  onHtmlScoreRecorded={handleHtmlScoreRecorded}
+                  hasNext={hasNext}
+                  onNext={handleNext}
+                  onSaveNote={() => setSidePanel('notas')}
+                />
+              ) : (
+                <LessonContentSkeleton title={activeLesson.titulo} />
+              )
             ) : (
               <EmptyLessonState
                 onBack={() => navigate(`/courses/${courseId}`)}
@@ -728,9 +908,9 @@ export default function LearnCourse() {
         {activeLesson && !activeEvalId && (
           <LessonSidePanels
             open={sidePanel}
-            onChange={setSidePanel}
+            onChange={handleSidePanelChange}
             lessonId={activeLesson.id}
-            materiales={materialsByLesson[activeLesson.id]}
+            materiales={activeLesson.materiales || []}
             noteText={noteText}
             onNoteChange={handleNoteChange}
             onNoteSave={handleSaveNote}
@@ -738,6 +918,8 @@ export default function LearnCourse() {
             noteSaved={noteSaved}
             commentCount={commentCount}
             onCommentCount={setCommentCount}
+            onPanelIntent={preloadLearnPanel}
+            showTutorNotice={showTutorKeyNotice}
             tutor={{
               lessonId: activeLesson.id,
               cursoTitulo: curso.titulo,
@@ -750,6 +932,7 @@ export default function LearnCourse() {
               onResetConversation: () => resetTutorConversation(activeLesson.id),
               onPracticeStateChange: (state) => setTutorPracticeForLesson(activeLesson.id, state),
               onNavigateToLesson: handleSelectLesson,
+              openSettings: tutorSettingsOpen,
             }}
           />
         )}
@@ -831,22 +1014,26 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
 
       {/* Contenido de la lección — se muestra directo, sin toggle. */}
       {leccion.contenido && (
-        <MarkdownContent
-          content={leccion.contenido}
-          format="MARKDOWN"
-          className="mb-6"
-        />
+        <Suspense fallback={<LessonBodySkeleton label="Cargando contenido…" />}>
+          <MarkdownContent
+            content={leccion.contenido}
+            format="MARKDOWN"
+            className="mb-6"
+          />
+        </Suspense>
       )}
 
       {/* Profundiza en este tema (chips de IA — stub por ahora) */}
       {isHtml && (
-        <HtmlLessonPlayer
-          lessonId={leccion.id}
-          title={leccion.titulo}
-          onEvaluableChange={onHtmlEvaluableChange}
-          onDeadlineChange={onHtmlDeadlineChange}
-          onScoreRecorded={onHtmlScoreRecorded}
-        />
+        <Suspense fallback={<LessonBodySkeleton label="Cargando actividad…" />}>
+          <HtmlLessonPlayer
+            lessonId={leccion.id}
+            title={leccion.titulo}
+            onEvaluableChange={onHtmlEvaluableChange}
+            onDeadlineChange={onHtmlDeadlineChange}
+            onScoreRecorded={onHtmlScoreRecorded}
+          />
+        </Suspense>
       )}
 
       {completeError && (
@@ -907,6 +1094,109 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
   );
 }
 
+function LearnCourseSkeleton() {
+  return (
+    <div className="flex min-h-screen lg:min-h-0 lg:h-[calc(100vh-1.5rem)] bg-titi-cream lg:gap-3 animate-pulse" role="status" aria-busy="true" aria-label="Cargando curso">
+      <aside className="hidden lg:flex w-72 bg-white border border-gray-100 rounded-2xl flex-col p-4 gap-4">
+        <div className="h-3 w-16 rounded bg-gray-100" />
+        <div className="h-5 w-4/5 rounded bg-gray-100" />
+        <div className="h-3 w-2/5 rounded bg-gray-100" />
+        <div className="h-2 w-full rounded-full bg-gray-100 mt-3" />
+        <div className="space-y-3 mt-3">
+          {[0, 1, 2, 3, 4, 5].map((item) => (
+            <div key={item} className="h-8 rounded-xl bg-gray-100" />
+          ))}
+        </div>
+      </aside>
+      <main className="flex-1 p-4 sm:p-5 lg:p-5 min-w-0">
+        <div className="max-w-5xl mx-auto space-y-5">
+          <div className="lg:hidden h-10 rounded-xl bg-gray-100" />
+          <div className="h-7 w-3/5 rounded bg-gray-100" />
+          <div className="h-4 w-2/5 rounded bg-gray-100" />
+          <div className="space-y-3 pt-3">
+            <div className="h-4 w-full rounded bg-gray-100" />
+            <div className="h-4 w-11/12 rounded bg-gray-100" />
+            <div className="h-4 w-4/5 rounded bg-gray-100" />
+            <div className="h-48 w-full rounded-2xl bg-gray-100 mt-6" />
+          </div>
+        </div>
+      </main>
+      <aside className="hidden lg:flex w-24 bg-white border border-gray-100 rounded-2xl flex-col justify-center gap-3 p-3">
+        {[0, 1, 2, 3].map((item) => <div key={item} className="h-14 rounded-xl bg-gray-100" />)}
+      </aside>
+    </div>
+  );
+}
+
+function LessonContentSkeleton({ title }) {
+  return (
+    <article className="animate-pulse" aria-busy="true" aria-label="Cargando lección">
+      <div className="h-7 w-3/5 rounded bg-gray-100" aria-hidden="true" />
+      <div className="h-4 w-2/5 rounded bg-gray-100 mt-3" aria-hidden="true" />
+      <div className="space-y-3 mt-8">
+        <div className="h-4 w-full rounded bg-gray-100" />
+        <div className="h-4 w-11/12 rounded bg-gray-100" />
+        <div className="h-4 w-4/5 rounded bg-gray-100" />
+        <div className="h-52 w-full rounded-2xl bg-gray-100 mt-6" />
+      </div>
+      <span className="sr-only">Cargando {title || 'lección'}.</span>
+    </article>
+  );
+}
+
+function TutorCredentialBanner({ invalid, onConfigure }) {
+  return (
+    <section
+      aria-live="polite"
+      aria-labelledby="tutor-credential-banner-title"
+      className="mb-5 flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-titi-yellow bg-titi-yellow-light px-4 py-3.5 sm:px-5"
+    >
+      <span className="w-10 h-10 rounded-xl bg-titi-yellow grid place-items-center shrink-0" aria-hidden="true">
+        <SparklesIcon className="w-5 h-5 text-titi-dark" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <h2 id="tutor-credential-banner-title" className="text-sm font-extrabold text-titi-dark">
+          {invalid ? 'Tu clave necesita reemplazo' : 'Conecta tu clave personal de Groq para usar el Tutor IA'}
+        </h2>
+        <p className="mt-0.5 text-xs sm:text-sm font-medium text-gray-600">
+          {invalid
+            ? 'La clave guardada no es válida o fue revocada. Reemplázala para continuar.'
+            : 'La clave se valida y se guarda cifrada en tu cuenta; nunca se muestra completa.'}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onConfigure}
+        className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center rounded-xl bg-titi-dark px-4 py-2.5 text-sm font-bold text-white hover:bg-titi-dark/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-dark focus-visible:ring-offset-2 transition-colors"
+      >
+        Configurar ahora
+      </button>
+    </section>
+  );
+}
+
+function LessonBodySkeleton({ label }) {
+  return (
+    <div className="space-y-3 mb-6 animate-pulse" aria-busy="true" role="status">
+      <div className="h-4 w-full rounded bg-gray-100" aria-hidden="true" />
+      <div className="h-4 w-11/12 rounded bg-gray-100" aria-hidden="true" />
+      <div className="h-4 w-4/5 rounded bg-gray-100" aria-hidden="true" />
+      <span className="sr-only">{label}</span>
+    </div>
+  );
+}
+
+function PanelSkeleton({ label = 'Cargando panel…' }) {
+  return (
+    <div className="space-y-3 animate-pulse" aria-busy="true" role="status">
+      <div className="h-4 w-2/3 rounded bg-gray-100" aria-hidden="true" />
+      <div className="h-24 w-full rounded-xl bg-gray-100" aria-hidden="true" />
+      <div className="h-4 w-5/6 rounded bg-gray-100" aria-hidden="true" />
+      <span className="sr-only">{label}</span>
+    </div>
+  );
+}
+
 // ---- Columna derecha: riel de íconos + panel desplegable ----
 const PANELS = [
   { key: 'tutor', label: 'Tutor IA', Icon: SparklesIcon, title: 'Tutor IA' },
@@ -927,6 +1217,8 @@ function LessonSidePanels({
   noteSaved,
   commentCount,
   onCommentCount,
+  onPanelIntent,
+  showTutorNotice,
   tutor,
 }) {
   const toggle = (key) => onChange(open === key ? null : key);
@@ -995,7 +1287,9 @@ function LessonSidePanels({
           aria-labelledby="lesson-tab-tutor"
           className="fixed inset-y-0 right-0 z-50 hidden md:flex flex-col w-[22rem] lg:w-[26rem] bg-white border-l border-gray-100 shadow-[-8px_0_30px_rgba(0,0,0,0.12)] titi-sheet-right"
         >
-          <TutorPanel {...tutor} titleId="tutor-panel-title-desktop" onClose={() => onChange(null)} />
+          <Suspense fallback={<PanelSkeleton label="Cargando Tutor IA…" />}>
+            <TutorPanel {...tutor} titleId="tutor-panel-title-desktop" onClose={() => onChange(null)} />
+          </Suspense>
         </div>
       )}
 
@@ -1015,7 +1309,9 @@ function LessonSidePanels({
             className="absolute inset-x-0 bottom-0 h-[92vh] bg-white rounded-t-2xl flex flex-col overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.12)] titi-sheet-in"
           >
             <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mt-2 shrink-0" />
-            <TutorPanel {...tutor} titleId="tutor-panel-title-mobile" onClose={() => onChange(null)} />
+            <Suspense fallback={<PanelSkeleton label="Cargando Tutor IA…" />}>
+              <TutorPanel {...tutor} titleId="tutor-panel-title-mobile" onClose={() => onChange(null)} />
+            </Suspense>
           </div>
         </div>
       )}
@@ -1069,7 +1365,9 @@ function LessonSidePanels({
                 )}
                 {displayKey === 'materiales' && <MaterialsPanel materiales={materiales} />}
                 {displayKey === 'comentarios' && (
-                  <LessonComments lessonId={lessonId} hideHeader onCount={onCommentCount} />
+                  <Suspense fallback={<PanelSkeleton label="Cargando comentarios…" />}>
+                    <LessonComments lessonId={lessonId} hideHeader onCount={onCommentCount} />
+                  </Suspense>
                 )}
               </div>
             )}
@@ -1084,17 +1382,20 @@ function LessonSidePanels({
         >
           {PANELS.map(({ key, label, Icon }) => {
             const isOpen = open === key;
+            const needsTutorKey = key === 'tutor' && showTutorNotice;
             return (
               <button
                 key={key}
                 type="button"
                 onClick={() => toggle(key)}
+                onFocus={() => onPanelIntent?.(key)}
+                onMouseEnter={() => onPanelIntent?.(key)}
                 id={`lesson-tab-${key}`}
                 role="tab"
                 aria-selected={isOpen}
                 aria-controls={`lesson-panel-${key}`}
                 className={[
-                  'flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl transition-colors w-full',
+                  'relative flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl transition-colors w-full',
                   isOpen
                     ? 'bg-titi-yellow-light text-titi-dark border-b-2 border-titi-yellow lg:border-b-0'
                     : 'text-gray-500 hover:bg-titi-cream hover:text-titi-dark',
@@ -1102,6 +1403,15 @@ function LessonSidePanels({
               >
                 <Icon className="w-5 h-5" />
                 <span className="text-xs font-semibold leading-none">{label}</span>
+                {needsTutorKey && (
+                  <>
+                    <span
+                      className="absolute right-2 top-2 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white"
+                      aria-hidden="true"
+                    />
+                    <span className="sr-only">Requiere configurar una clave de Groq</span>
+                  </>
+                )}
               </button>
             );
           })}
@@ -1263,16 +1573,6 @@ function EmptyLessonState({ onBack }) {
       >
         Volver al detalle del curso
       </button>
-    </div>
-  );
-}
-
-// ---- Spinner ----
-function Spinner() {
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="w-12 h-12 border-4 border-titi-yellow-light border-t-titi-yellow rounded-full animate-spin" />
-      <p className="text-sm font-semibold text-gray-400">Cargando curso…</p>
     </div>
   );
 }

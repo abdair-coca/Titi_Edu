@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { relativeTime } from '../lib/format.js';
+import { invalidateLessonComments, requestLessonComments } from '../lib/lesson-comments-cache.js';
 import TitiMascot from './TitiMascot.jsx';
+import { markPerformance } from '../lib/performance.js';
 
 export default function LessonComments({ lessonId, hideHeader = false, onCount }) {
   const { isAuthenticated, user } = useAuth();
+  const userKey = user?.id || user?.neoId || user?.email || 'anonymous';
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -20,27 +23,32 @@ export default function LessonComments({ lessonId, hideHeader = false, onCount }
     onCount?.(comments.length);
   }, [comments.length, onCount]);
 
-  const fetchComments = useCallback(async () => {
-    if (!lessonId) return;
+  useEffect(() => {
+    if (!lessonId) return undefined;
+    let cancelled = false;
     setLoading(true);
     setError(null);
-    try {
-      const { data } = await client.get(`/api/lessons/${lessonId}/comments`);
-      if (data?.success) {
-        setComments(data.data.comentarios || []);
-      } else {
-        setError(data?.message || 'No se pudieron cargar los comentarios');
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || err.message || 'Error de red');
-    } finally {
-      setLoading(false);
-    }
-  }, [lessonId]);
+    const request = requestLessonComments({ userKey, lessonId });
+    request.promise
+      .then((nextComments) => {
+        if (!cancelled) setComments(nextComments || []);
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err.response?.data?.message || err.message || 'Error de red');
+      })
+      .finally(() => {
+        request.release();
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+      request.release();
+    };
+  }, [lessonId, userKey]);
 
   useEffect(() => {
-    fetchComments();
-  }, [fetchComments]);
+    if (!loading) markPerformance('learn:comments-ready', lessonId);
+  }, [lessonId, loading]);
 
   // Agrupa en comentarios raíz (parentId == null) y respuestas por rootId
   const { rootComments, repliesByParentId } = useMemo(() => {
@@ -105,6 +113,7 @@ export default function LessonComments({ lessonId, hideHeader = false, onCount }
         setComments((prev) =>
           prev.map((c) => (c.id === optimistic.id ? data.data.comentario : c))
         );
+        invalidateLessonComments({ userKey, lessonId });
       } else {
         setComments((prev) => prev.filter((c) => c.id !== optimistic.id));
         setError(data?.message || 'Error al comentar');

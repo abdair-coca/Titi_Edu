@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import client from '../api/client.js';
+import { markPerformance } from '../lib/performance.js';
 import ConfirmModal from './ConfirmModal.jsx';
 import MarkdownContent from './MarkdownContent.jsx';
 import TitiMascot from './TitiMascot.jsx';
+import { useTutorAvailability } from '../hooks/useTutorAvailability.js';
 import { buildTutorHistory } from '../lib/tutorHistory.js';
 import {
   PRACTICE_AWAITING_ANSWER,
@@ -79,14 +81,21 @@ export default function TutorPanel({
   onPracticeStateChange,
   onNavigateToLesson,
   onClose,
+  openSettings = false,
   titleId = 'tutor-panel-title',
 }) {
-  const [status, setStatus] = useState(null); // null | { enabled, indexed, credential }
-  const [statusError, setStatusError] = useState(null);
-  const [credential, setCredential] = useState(null);
-  const [credentialLoading, setCredentialLoading] = useState(true);
-  const [credentialError, setCredentialError] = useState(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const {
+    status,
+    statusError,
+    loading: credentialLoading,
+    refresh: refreshTutorState,
+  } = useTutorAvailability(lessonId);
+  const credential = status?.credential || null;
+  const statusErrorMessage = statusError
+    ? requestErrorMessage(statusError, 'No se pudo verificar la disponibilidad del tutor.')
+    : null;
+  const credentialError = statusErrorMessage;
+  const [settingsOpen, setSettingsOpen] = useState(openSettings);
   const [input, setInput] = useState('');
   const [pending, setPending] = useState(null); // null | { stage, count }
   const [error, setError] = useState(null); // null | { question, intent }
@@ -97,7 +106,10 @@ export default function TutorPanel({
   const requestIdRef = useRef(0);
   const controllerRef = useRef(null);
   const timersRef = useRef([]);
-  const availabilityRequestRef = useRef(0);
+
+  useEffect(() => {
+    if (openSettings) setSettingsOpen(true);
+  }, [openSettings]);
 
   const clearTimers = () => {
     timersRef.current.forEach((t) => clearTimeout(t));
@@ -125,56 +137,9 @@ export default function TutorPanel({
     setInput('');
   }, [lessonId]);
 
-  const refreshTutorState = useCallback(async ({ showLoading = true } = {}) => {
-    const requestId = availabilityRequestRef.current + 1;
-    availabilityRequestRef.current = requestId;
-    if (showLoading) setStatus(null);
-    setStatusError(null);
-    setCredentialLoading(true);
-    setCredentialError(null);
-
-    const [statusResult, credentialResult] = await Promise.allSettled([
-      client.get(`/api/lessons/${lessonId}/chat/status`),
-      client.get('/api/rag/credentials/groq'),
-    ]);
-    if (availabilityRequestRef.current !== requestId) return;
-
-    let nextStatus = null;
-    if (statusResult.status === 'fulfilled' && statusResult.value.data?.success) {
-      const data = statusResult.value.data.data;
-      nextStatus = {
-        enabled: Boolean(data?.enabled),
-        indexed: Boolean(data?.indexed),
-        credential: data?.credential || null,
-      };
-      setStatus(nextStatus);
-    } else {
-      setStatus(null);
-      setStatusError(requestErrorMessage(
-        statusResult.status === 'rejected' ? statusResult.reason : null,
-        'No se pudo verificar la disponibilidad del tutor.',
-      ));
-    }
-
-    if (credentialResult.status === 'fulfilled' && credentialResult.value.data?.success) {
-      setCredential({
-        ...(nextStatus?.credential || {}),
-        ...credentialResult.value.data.data,
-      });
-    } else {
-      setCredential(nextStatus?.credential || null);
-      setCredentialError(requestErrorMessage(
-        credentialResult.status === 'rejected' ? credentialResult.reason : null,
-        'No se pudo cargar la configuración de la clave.',
-      ));
-    }
-    setCredentialLoading(false);
-  }, [lessonId]);
-
   useEffect(() => {
-    refreshTutorState();
-    return () => { availabilityRequestRef.current += 1; };
-  }, [refreshTutorState]);
+    if (!credentialLoading && (status || statusErrorMessage)) markPerformance('learn:tutor-ready', lessonId);
+  }, [credentialLoading, lessonId, status, statusErrorMessage]);
 
   const credentialRequired = status?.credential?.required !== false;
   const credentialReady = !credentialRequired || Boolean(
@@ -271,7 +236,7 @@ export default function TutorPanel({
           message: requestErrorMessage(err, 'No se pudo consultar al tutor en este momento.'),
         });
         if ([409, 422].includes(err.response?.status)) {
-          refreshTutorState({ showLoading: false });
+          refreshTutorState({ force: true, showLoading: false });
         }
       });
   };
@@ -413,11 +378,11 @@ export default function TutorPanel({
             required={credentialRequired}
             loading={credentialLoading}
             loadError={credentialError}
-            onRetry={() => refreshTutorState({ showLoading: false })}
-            onChanged={() => refreshTutorState({ showLoading: false })}
+            onRetry={() => refreshTutorState({ force: true, showLoading: false })}
+            onChanged={() => refreshTutorState({ force: true, showLoading: false })}
           />
-        ) : statusError ? (
-          <TutorLoadError message={statusError} onRetry={() => refreshTutorState()} />
+        ) : statusErrorMessage ? (
+          <TutorLoadError message={statusErrorMessage} onRetry={() => refreshTutorState({ force: true })} />
         ) : status === null ? (
           <p className="text-sm text-gray-400 font-medium">Verificando disponibilidad del tutor…</p>
         ) : !status.enabled ? (
@@ -588,6 +553,12 @@ function TutorSettings({ credential, required, loading, loadError, onRetry, onCh
   useEffect(() => {
     if (!connected) setEditing(true);
   }, [connected]);
+
+  useEffect(() => {
+    if (!editing || connected || loading) return undefined;
+    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [connected, editing, loading]);
 
   const focusInput = () => {
     requestAnimationFrame(() => inputRef.current?.focus());
