@@ -38,6 +38,7 @@ export async function enqueueLessonIndex(leccionId, { db = prisma } = {}) {
       "lockToken" = CASE WHEN "RagIndexJob"."status" = 'RUNNING' THEN "RagIndexJob"."lockToken" ELSE NULL END
     RETURNING "id", "leccionId", "status", "requestedAt", "nextAttemptAt", "attempts", "lockToken"
   `;
+  wakeIndexWorker();
   return rows[0];
 }
 
@@ -108,21 +109,71 @@ export async function processNextIndexJob(indexLesson, { db = prisma } = {}) {
   return true;
 }
 
+// Neon factura el cómputo mientras haya consultas: un bucle que revisa la cola
+// cada pocos segundos nunca deja dormir la base. Por eso el worker no hace polling.
+// Procesa al arrancar, al encolar una lección (wakeIndexWorker), cuando llega la
+// hora de un reintento, y en un barrido de respaldo por hora que recupera leases
+// vencidos si un proceso murió a mitad de un trabajo.
+const SAFETY_SWEEP_MS = 60 * 60_000;
+const RETRY_AFTER_ERROR_MS = 60_000;
+let wakeWorker = () => {};
+
+export function wakeIndexWorker() {
+  wakeWorker();
+}
+
 export function startIndexWorker(indexLesson) {
+  if (process.env.RAG_ENABLED !== 'true') return async () => {};
   let stopped = false;
-  let timer;
-  let active = Promise.resolve();
-  const tick = () => {
-    active = (async () => {
-      let worked = false;
-      try { worked = await processNextIndexJob(indexLesson); }
-      catch { console.error('La cola RAG no está disponible'); }
-      if (!stopped) {
-        timer = setTimeout(tick, worked ? 50 : 5000);
-        timer.unref();
-      }
-    })();
+  let running = null;
+  let rerun = false;
+  let dueTimer = null;
+
+  const arm = (ms) => {
+    if (stopped) return;
+    clearTimeout(dueTimer);
+    dueTimer = setTimeout(run, ms);
+    dueTimer.unref();
   };
-  if (process.env.RAG_ENABLED === 'true') tick();
-  return async () => { stopped = true; clearTimeout(timer); await active; };
+  const drain = async () => {
+    let worked = true;
+    while (worked && !stopped) {
+      try { worked = await processNextIndexJob(indexLesson); }
+      catch { console.error('La cola RAG no está disponible'); return false; }
+    }
+    return true;
+  };
+  const scheduleNextAttempt = async () => {
+    try {
+      const next = await prisma.ragIndexJob.findFirst({
+        where: { status: 'PENDING' },
+        orderBy: { nextAttemptAt: 'asc' },
+        select: { nextAttemptAt: true },
+      });
+      if (next) arm(Math.max(0, next.nextAttemptAt.getTime() - Date.now()));
+    } catch { console.error('La cola RAG no está disponible'); arm(RETRY_AFTER_ERROR_MS); }
+  };
+  const run = () => {
+    if (stopped) return;
+    if (running) { rerun = true; return; }
+    running = (async () => {
+      if (await drain()) await scheduleNextAttempt();
+      else arm(RETRY_AFTER_ERROR_MS);
+    })().finally(() => {
+      running = null;
+      if (rerun && !stopped) { rerun = false; run(); }
+    });
+  };
+
+  wakeWorker = run;
+  const sweep = setInterval(run, SAFETY_SWEEP_MS);
+  sweep.unref();
+  run();
+  return async () => {
+    stopped = true;
+    wakeWorker = () => {};
+    clearInterval(sweep);
+    clearTimeout(dueTimer);
+    await running;
+  };
 }

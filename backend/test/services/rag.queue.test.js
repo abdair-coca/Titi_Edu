@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-vi.mock('../../src/prisma.js', () => ({ default: {} }));
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+const prismaMock = vi.hoisted(() => ({ $queryRaw: vi.fn(), $executeRaw: vi.fn(), ragIndexJob: { findFirst: vi.fn() } }));
+vi.mock('../../src/prisma.js', () => ({ default: prismaMock }));
 import { assertRagIndexLease, enqueueLessonIndex, enqueueCourseIndex, processNextIndexJob, startIndexWorker } from '../../src/services/rag.queue.js';
 const job = { id: 'job', leccionId: 'lesson', attempts: 1, startedAt: new Date('2026-09-20T12:00:00Z'), lockToken: 'lease-token' };
 function database(claim = job) {
@@ -58,5 +59,61 @@ describe('durable indexing queue', () => {
     vi.stubEnv('RAG_ENABLED', 'false'); const index = vi.fn();
     await startIndexWorker(index)();
     expect(index).not.toHaveBeenCalled();
+  });
+});
+describe('worker sin polling (ahorro de cómputo en Neon)', () => {
+  const start = new Date('2026-09-20T12:00:00Z');
+  beforeEach(() => {
+    vi.useFakeTimers(); vi.setSystemTime(start); vi.stubEnv('RAG_ENABLED', 'true');
+    prismaMock.$queryRaw.mockReset(); prismaMock.$queryRaw.mockResolvedValue([]);
+    prismaMock.$executeRaw.mockReset(); prismaMock.$executeRaw.mockResolvedValue(1);
+    prismaMock.ragIndexJob.findFirst.mockReset(); prismaMock.ragIndexJob.findFirst.mockResolvedValue(null);
+  });
+  it('no consulta la cola mientras está ocioso', async () => {
+    const stop = startIndexWorker(vi.fn());
+    await vi.advanceTimersByTimeAsync(0);
+    const booted = prismaMock.$queryRaw.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(59 * 60_000);
+    expect(prismaMock.$queryRaw.mock.calls.length).toBe(booted);
+    await stop();
+  });
+  it('barrido de respaldo una vez por hora', async () => {
+    const stop = startIndexWorker(vi.fn());
+    await vi.advanceTimersByTimeAsync(0);
+    const booted = prismaMock.$queryRaw.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(60 * 60_000);
+    expect(prismaMock.$queryRaw.mock.calls.length).toBe(booted + 1);
+    await stop();
+  });
+  it('despierta al encolar una lección', async () => {
+    const stop = startIndexWorker(vi.fn());
+    await vi.advanceTimersByTimeAsync(0);
+    const executesBefore = prismaMock.$executeRaw.mock.calls.length;
+    await enqueueLessonIndex('lesson');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(prismaMock.$executeRaw.mock.calls.length).toBeGreaterThan(executesBefore);
+    await stop();
+  });
+  it('reintenta en un minuto si la base no responde', async () => {
+    prismaMock.$queryRaw.mockRejectedValueOnce(new Error('db down'));
+    const stop = startIndexWorker(vi.fn());
+    await vi.advanceTimersByTimeAsync(0);
+    const booted = prismaMock.$queryRaw.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(59_000);
+    expect(prismaMock.$queryRaw.mock.calls.length).toBe(booted);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(prismaMock.$queryRaw.mock.calls.length).toBe(booted + 1);
+    await stop();
+  });
+  it('programa el reintento según nextAttemptAt', async () => {
+    prismaMock.ragIndexJob.findFirst.mockResolvedValueOnce({ nextAttemptAt: new Date(start.getTime() + 60_000) });
+    const stop = startIndexWorker(vi.fn());
+    await vi.advanceTimersByTimeAsync(0);
+    const booted = prismaMock.$queryRaw.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(59_000);
+    expect(prismaMock.$queryRaw.mock.calls.length).toBe(booted);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(prismaMock.$queryRaw.mock.calls.length).toBe(booted + 1);
+    await stop();
   });
 });
