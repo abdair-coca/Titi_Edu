@@ -15,3 +15,6 @@ embedding-service/.venv/
 backend/.env.staging
 ai-gateway/.env.staging
 embedding-service/.env.staging
+
+# Caché de Vite generada en la raíz
+.vite/
