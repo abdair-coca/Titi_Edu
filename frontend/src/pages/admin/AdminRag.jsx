@@ -5,6 +5,7 @@ import { ChipIcon } from '../../components/icons.jsx';
 const STATUS_FILTERS = [
   { value: 'ALL', label: 'Todos los estados' },
   { value: 'LISTO', label: 'Listo (Indexado)' },
+  { value: 'DESACTUALIZADO', label: 'Desactualizado' },
   { value: 'FALLIDO', label: 'Con error' },
   { value: 'PENDIENTE', label: 'Pendiente' },
   { value: 'SIN_INDEXAR', label: 'Sin indexar' },
@@ -23,7 +24,18 @@ function formatDate(isoString) {
   });
 }
 
-function StatusBadge({ estado, error }) {
+function StatusBadge({ estado, error, stale }) {
+  if (stale) {
+    return (
+      <span
+        title="La lección cambió de versión: el tutor no ve este documento hasta reindexarla"
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-titi-streak/10 text-titi-streak border border-titi-streak/30 cursor-help"
+      >
+        <span className="w-2 h-2 rounded-full bg-titi-streak" />
+        Desactualizado
+      </span>
+    );
+  }
   if (estado === 'LISTO') {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-green-100 text-green-800 border border-green-200">
@@ -306,6 +318,7 @@ export default function AdminRag() {
     failed: 0,
     pending: 0,
     unindexed: 0,
+    stale: 0,
   });
 
   const [courseFilter, setCourseFilter] = useState('');
@@ -412,7 +425,7 @@ export default function AdminRag() {
       </header>
 
       {/* Tarjetas KPI de Resumen */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Publicadas</p>
           <p className="text-3xl font-black text-titi-dark mt-1 tabular-nums">{summary.totalLessons}</p>
@@ -422,6 +435,11 @@ export default function AdminRag() {
           <p className="text-xs font-bold text-green-700 uppercase tracking-wider">Listas (Indexadas)</p>
           <p className="text-3xl font-black text-green-600 mt-1 tabular-nums">{summary.ready}</p>
           <span className="text-[11px] font-semibold text-green-700">En base vectorial</span>
+        </div>
+        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
+          <p className="text-xs font-bold text-titi-streak uppercase tracking-wider">Desactualizadas</p>
+          <p className="text-3xl font-black text-titi-streak mt-1 tabular-nums">{summary.stale ?? 0}</p>
+          <span className="text-[11px] font-semibold text-titi-streak">El tutor no las ve</span>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
           <p className="text-xs font-bold text-red-700 uppercase tracking-wider">Con Error</p>
@@ -548,7 +566,7 @@ export default function AdminRag() {
                         )}
                       </td>
                       <td className="py-3.5 px-4">
-                        <StatusBadge estado={doc?.estado} error={doc?.error} />
+                        <StatusBadge estado={doc?.estado} error={doc?.error} stale={doc?.desactualizado} />
                       </td>
                       <td className="py-3.5 px-4 font-medium text-gray-500 whitespace-nowrap">
                         {formatDate(doc?.indexadoAt)}

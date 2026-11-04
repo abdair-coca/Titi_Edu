@@ -7,6 +7,7 @@ const mockPrisma = vi.hoisted(() => ({
   curso: { findMany: vi.fn(), count: vi.fn() },
   leccion: { findMany: vi.fn(), findUnique: vi.fn(), count: vi.fn() },
   documentoRag: { count: vi.fn(), findUnique: vi.fn() },
+  $queryRaw: vi.fn(),
 }));
 
 const mockRagService = vi.hoisted(() => ({
@@ -32,7 +33,9 @@ const JWT_SECRET = process.env.JWT_SECRET || 'test-secret';
 const tokenFor = (neoId) => jwt.sign({ id: neoId }, JWT_SECRET, { expiresIn: '1h' });
 
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.resetAllMocks();
+  mockRagService.buildContextualRetrievalQuery.mockImplementation((message, _history, title) => `${message}\nTema: ${title}`);
+  mockPrisma.$queryRaw.mockResolvedValue([]);
   process.env.JWT_SECRET = JWT_SECRET;
 });
 
@@ -114,10 +117,55 @@ describe('RAG Admin Routes (/api/admin/rag)', () => {
     expect(res.body.data.summary).toEqual({
       totalLessons: 10,
       ready: 8,
+      stale: 0,
       failed: 1,
       pending: 0,
       unindexed: 1,
     });
+    expect(res.body.data.lessons[0].documentoRag.desactualizado).toBe(false);
+  });
+
+  it('GET /lessons reports a document from another version as stale, not ready', async () => {
+    mockPrisma.usuario.findUnique.mockResolvedValue({ id: 'admin1', rol: 'ADMIN' });
+    mockPrisma.$queryRaw.mockResolvedValue([{ id: 'l1' }]);
+    mockPrisma.leccion.findMany.mockResolvedValue([{
+      id: 'l1',
+      titulo: 'Cinemática',
+      orden: 1,
+      estado: 'PUBLICADA',
+      recursoHtml: null,
+      modulo: { id: 'm1', titulo: 'Módulo 1', curso: { id: 'c1', titulo: 'Física', publicado: true } },
+      documentosRag: [{ id: 'doc1', version: 1, estado: 'LISTO', activo: true, modelo: 'm', _count: { fragmentos: 3 } }],
+    }]);
+    mockPrisma.leccion.count.mockResolvedValueOnce(1).mockResolvedValueOnce(4);
+    mockPrisma.documentoRag.count.mockResolvedValueOnce(3).mockResolvedValueOnce(0).mockResolvedValueOnce(0);
+
+    const res = await request(app)
+      .get('/api/admin/rag/lessons?status=DESACTUALIZADO')
+      .set('Authorization', `Bearer ${tokenFor('neo-admin')}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.lessons[0].documentoRag.desactualizado).toBe(true);
+    expect(res.body.data.summary).toMatchObject({ totalLessons: 4, ready: 2, stale: 1, unindexed: 1 });
+    expect(mockPrisma.leccion.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: { in: ['l1'] } }),
+    }));
+  });
+
+  it('GET /lessons filters stale lessons out of the ready status', async () => {
+    mockPrisma.usuario.findUnique.mockResolvedValue({ id: 'admin1', rol: 'ADMIN' });
+    mockPrisma.$queryRaw.mockResolvedValue([{ id: 'l1' }]);
+    mockPrisma.leccion.findMany.mockResolvedValue([]);
+    mockPrisma.leccion.count.mockResolvedValue(0);
+    mockPrisma.documentoRag.count.mockResolvedValue(0);
+
+    await request(app)
+      .get('/api/admin/rag/lessons?status=LISTO')
+      .set('Authorization', `Bearer ${tokenFor('neo-admin')}`);
+
+    expect(mockPrisma.leccion.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: { notIn: ['l1'] } }),
+    }));
   });
 
   it('GET /lessons/:lessonId/fragments returns 404 when lesson does not exist', async () => {

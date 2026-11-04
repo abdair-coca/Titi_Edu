@@ -36,11 +36,11 @@
 
 ## U1 — Índice sincronizado (punto 1)
 
-- [ ] Programar reindexación tras adjuntar o borrar material y tras cambiar plazo.
-- [ ] Reasignar el documento a la versión actual si la huella no cambió.
-- [ ] Incluir título y versión de chunking en la huella.
-- [ ] Panel admin: mostrar documentos desactualizados y excluirlos de "listos".
-- [ ] Tests de rutas de authoring, de reutilización y de `admin-rag`.
+- [x] Programar reindexación tras adjuntar o borrar material y tras cambiar plazo.
+- [x] Reasignar el documento a la versión actual si la huella no cambió.
+- [x] Incluir título y versión de chunking en la huella.
+- [x] Panel admin: mostrar documentos desactualizados y excluirlos de "listos".
+- [x] Tests de rutas de authoring, de reutilización y de `admin-rag`.
 
 ## U5 — HTML evaluable (punto 5)
 

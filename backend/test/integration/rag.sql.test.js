@@ -7,6 +7,8 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 //   RAG_TEST_DATABASE_URL=<local url> npx vitest run test/integration
 const testUrl = process.env.RAG_TEST_DATABASE_URL;
 
+vi.mock('../../src/db.js', () => ({ runQuery: vi.fn(), toNumber: (value) => Number(value || 0), default: {} }));
+
 function assertDisposableDatabase(url) {
   const { hostname } = new URL(url);
   if (!['localhost', '127.0.0.1'].includes(hostname)) {
@@ -157,6 +159,24 @@ describe.skipIf(!testUrl)('RAG retrieval SQL on real Postgres with pgvector', ()
   it('excludes documents from an older lesson version', async () => {
     const rows = await searchCourseContext(courseId, 'q', 5, { ftsQuery: 'NAT' });
     expect(rows.some((row) => row.content.includes('versión anterior'))).toBe(false);
+  });
+
+  it('finds a lesson again once its document moves to the current version', async () => {
+    const before = await searchCourseContext(courseId, 'q', 5, { ftsQuery: 'versión anterior' });
+    expect(before.some((row) => row.lessonId === staleLessonId)).toBe(false);
+
+    await prisma.documentoRag.updateMany({ where: { leccionId: staleLessonId }, data: { version: 5 } });
+
+    const after = await searchCourseContext(courseId, 'q', 5, { ftsQuery: 'versión anterior' });
+    expect(after.some((row) => row.lessonId === staleLessonId)).toBe(true);
+    await prisma.documentoRag.updateMany({ where: { leccionId: staleLessonId }, data: { version: 4 } });
+  });
+
+  it('lists lessons whose active document belongs to another version', async () => {
+    const { staleLessonIds } = await import('../../src/routes/admin-rag.js');
+    await expect(staleLessonIds(courseId)).resolves.toEqual([staleLessonId]);
+    await expect(staleLessonIds(randomUUID())).resolves.toEqual([]);
+    expect(await staleLessonIds(null)).toContain(staleLessonId);
   });
 
   it('honors the lesson filter in both modes', async () => {

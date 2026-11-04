@@ -37,6 +37,7 @@ const DEFAULT_EVIDENCE_THRESHOLD = 0.45;
 const DEFAULT_EVIDENCE_STRONG_THRESHOLD = 0.6;
 const DEFAULT_INDEX_TRANSACTION_MAX_WAIT_MS = 10_000;
 const DEFAULT_INDEX_TRANSACTION_TIMEOUT_MS = 30_000;
+const INDEX_FORMAT_VERSION = 2;
 export const VECTOR_DIMENSIONS = 768;
 export const DEFAULT_CHAT_INTENT = 'DUDA';
 export const CHAT_INTENTS = Object.freeze([
@@ -572,6 +573,12 @@ function hashContent(content) {
   return createHash('sha256').update(content, 'utf8').digest('hex');
 }
 
+// Everything that shapes the stored vectors: bump the version when chunking or the
+// embedded text changes, so existing documents are regenerated on their next reindex.
+function indexFingerprint(title, content) {
+  return hashContent(`${INDEX_FORMAT_VERSION}\n${title || ''}\n${content}`);
+}
+
 export function formatVector(vector) {
   const normalized = validateEmbedding(vector);
   return `[${normalized.join(',')}]`;
@@ -843,7 +850,7 @@ export async function indexLesson(lessonId, { force = false, lease = null } = {}
     await quarantineActiveDocuments(lessonId, 'No se encontró contenido seguro para indexar', { lease });
     return { status: 'SKIPPED', lessonId, reason: 'empty' };
   }
-  const hashContenido = hashContent(content);
+  const hashContenido = indexFingerprint(lesson.titulo, content);
   const modelo = embeddingModel();
   const existing = await prisma.documentoRag.findUnique({
     where: { leccionId_version: { leccionId: lessonId, version: lesson.version } },
@@ -855,6 +862,19 @@ export async function indexLesson(lessonId, { force = false, lease = null } = {}
     && existing.assessmentSafe === assessmentSafe
     && (existing.origen || 'HTML_FALLBACK') === origin) {
     return { status: 'UNCHANGED', documentId: existing.id, lessonId };
+  }
+
+  // A new version may not touch indexed text (a material, a deadline): keep the
+  // vectors and move the document forward instead of paying for new embeddings.
+  const reusable = existing ? null : await prisma.documentoRag.findFirst({
+    where: { leccionId: lessonId, activo: true, estado: 'LISTO', hashContenido, modelo, assessmentSafe, origen: origin },
+  });
+  if (reusable) {
+    await prisma.$transaction(async (tx) => {
+      await assertRagIndexLease(tx, lease);
+      await tx.documentoRag.update({ where: { id: reusable.id }, data: { version: lesson.version } });
+    });
+    return { status: 'REUSED', documentId: reusable.id, lessonId };
   }
 
   const chunks = deduplicatePreparedFragments(chunkStructuredText(content));
