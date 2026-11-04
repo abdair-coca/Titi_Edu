@@ -179,6 +179,39 @@ describe.skipIf(!testUrl)('RAG retrieval SQL on real Postgres with pgvector', ()
     expect(await staleLessonIds(null)).toContain(staleLessonId);
   });
 
+  it('finds pending questions of module and final evaluations, skipping approved ones', async () => {
+    const { findPendingAssessmentMatch } = await import('../../src/services/rag.assessment.js');
+    const suffix = randomUUID();
+    const student = await prisma.usuario.create({ data: { neoId: suffix, username: suffix, email: `${suffix}@example.com` } });
+    const modulo = await prisma.modulo.findFirst({ where: { cursoId: courseId } });
+    const question = (texto, correcta) => ({
+      create: {
+        texto,
+        tipo: 'OPCION_MULTIPLE',
+        orden: 1,
+        opciones: { create: [{ texto: correcta, esCorrecta: true }, { texto: 'Otra opción', esCorrecta: false }] },
+      },
+    });
+    await prisma.evaluacion.create({
+      data: { titulo: 'Módulo', moduloId: modulo.id, preguntas: question('¿Qué dispositivo traduce direcciones privadas?', 'El router') },
+    });
+    const final = await prisma.evaluacion.create({
+      data: { titulo: 'Final', cursoId: courseId, esFinal: true, preguntas: question('¿Qué protocolo resuelve nombres de dominio?', 'DNS') },
+    });
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const search = (message) => findPendingAssessmentMatch({ courseId, usuarioId: student.id, candidates: [message] });
+
+    await expect(search('¿Qué dispositivo traduce direcciones privadas?')).resolves.toEqual({ correctOptions: ['El router'] });
+    await expect(search('¿Qué protocolo resuelve nombres de dominio?')).resolves.toEqual({ correctOptions: ['DNS'] });
+    await expect(search('¿Qué es una subred?')).resolves.toBeNull();
+
+    await prisma.intento.create({ data: { usuarioId: student.id, evaluacionId: final.id, numero: 1, nota: 100, aprobado: true } });
+    await expect(search('¿Qué protocolo resuelve nombres de dominio?')).resolves.toBeNull();
+
+    expect(warning).not.toHaveBeenCalled();
+    warning.mockRestore();
+  });
+
   it('honors the lesson filter in both modes', async () => {
     const rows = await searchCourseContext(courseId, 'q', 5, { lessonId, ftsQuery: 'NAT' });
     expect(rows.every((row) => row.lessonId === lessonId)).toBe(true);

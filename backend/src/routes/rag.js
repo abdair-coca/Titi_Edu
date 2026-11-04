@@ -103,6 +103,7 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
     // Teachers and administrators can preview content, but must never provide
     // a student's private learning metadata to the provider.
     if (!loaded.access.enrolled || loaded.access.usuario.rol !== 'ESTUDIANTE') {
+      chatInput.protectAssessments = false;
       chatInput.learningContext = {
         lessonState: 'NO_INICIADA',
         courseProgress: { completedLessons: 0, totalLessons: 0 },

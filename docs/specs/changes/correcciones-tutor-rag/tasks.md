@@ -51,10 +51,10 @@
 
 ## U6 — Protección de evaluaciones (punto 6)
 
-- [ ] Crear `services/rag.assessment.js`: carga, comparación y filtro de salida.
-- [ ] Integrar en `chatWithContext`: forzar `PISTA` y aplicar el filtro.
-- [ ] Eximir a profesores y administradores desde `routes/rag.js`.
-- [ ] Tests: coincidencia, aprobada, staff, fallo de consulta y prompt sin opciones.
+- [x] Crear `services/rag.assessment.js`: carga, comparación y filtro de salida.
+- [x] Integrar en `chatWithContext`: forzar `PISTA` y aplicar el filtro.
+- [x] Eximir a profesores y administradores desde `routes/rag.js`.
+- [x] Tests: coincidencia, aprobada, staff, fallo de consulta y prompt sin opciones.
 
 ## U7 — Lectura de JavaScript (punto 7)
 
