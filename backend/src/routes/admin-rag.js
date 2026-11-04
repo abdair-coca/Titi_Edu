@@ -4,6 +4,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireRole } from '../middleware/permissions.js';
 import {
   RagError,
+  buildContextualRetrievalQuery,
   searchCourseContext,
 } from '../services/rag.service.js';
 import { enqueueLessonIndex } from '../services/rag.queue.js';
@@ -336,7 +337,13 @@ router.post('/lessons/:lessonId/test-query', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
 
-    const chunks = await searchCourseContext(lesson.modulo.cursoId, query, 5, { lessonId: lesson.id });
+    // Same query the chat would build for a first question in this lesson.
+    const chunks = await searchCourseContext(
+      lesson.modulo.cursoId,
+      buildContextualRetrievalQuery(query, [], lesson.titulo),
+      5,
+      { lessonId: lesson.id, ftsQuery: query },
+    );
 
     res.json({
       success: true,

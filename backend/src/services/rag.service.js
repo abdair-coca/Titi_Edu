@@ -26,6 +26,7 @@ import {
   isSocialMessage,
   securityEvent,
   safeUsage,
+  stripCitationMarkers,
   validateGroundedAnswer,
 } from './rag.security.js';
 
@@ -705,7 +706,10 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
     max_completion_tokens: 800,
     messages: [
       { role: 'system', content: systemContent },
-      ...history.map((turn) => ({ role: turn.role, content: turn.content })),
+      // Each turn numbers its sources anew, so an old [1] would point at the wrong one.
+      ...history
+        .map((turn) => ({ role: turn.role, content: turn.role === 'assistant' ? stripCitationMarkers(turn.content) : turn.content }))
+        .filter((turn) => turn.content),
       { role: 'user', content: message },
     ],
   };
@@ -972,7 +976,8 @@ async function searchFragmentsVector(courseId, embedding, limit, lessonId = null
 
 // Búsqueda híbrida: fusiona ranking vectorial y full-text con Reciprocal Rank
 // Fusion (RRF). El vector aporta semántica; el full-text recupera términos
-// exactos (nombres propios, siglas) que el embedding puede perder.
+// exactos (nombres propios, siglas) que el embedding puede perder. Solo la
+// coincidencia de todos los términos califica como evidencia; la parcial ordena.
 async function searchFragmentsHybrid(courseId, embedding, query, limit, lessonId = null, mode = null) {
   return prisma.$queryRaw`
     WITH scored AS (
@@ -985,7 +990,8 @@ async function searchFragmentsHybrid(courseId, embedding, query, limit, lessonId
           d."origen" AS "origen",
           f."seccion" AS "seccion",
           1 - (f."embedding" <=> ${embedding}::vector) AS "similarity",
-         ts_rank_cd(f."tsv", plainto_tsquery('spanish', ${query})) AS "ftsRank"
+         ts_rank_cd(f."tsv", replace(plainto_tsquery('spanish', ${query})::text, '&', '|')::tsquery) AS "ftsRank",
+         f."tsv" @@ plainto_tsquery('spanish', ${query}) AS "ftsMatch"
       FROM "FragmentoRag" f
       JOIN "DocumentoRag" d ON d."id" = f."documentoId"
        JOIN "Leccion" l ON l."id" = d."leccionId"
@@ -1005,7 +1011,7 @@ async function searchFragmentsHybrid(courseId, embedding, query, limit, lessonId
      qualified AS (
        SELECT *
        FROM scored
-       WHERE "similarity" >= ${evidenceThreshold()} OR "ftsRank" > 0
+       WHERE "similarity" >= ${evidenceThreshold()} OR "ftsMatch"
      ),
      ranked AS (
        SELECT
@@ -1026,7 +1032,7 @@ async function searchFragmentsHybrid(courseId, embedding, query, limit, lessonId
         "origen",
         "seccion",
         "similarity",
-       ("ftsRank" > 0) AS "ftsMatch",
+       "ftsMatch",
        (
         ${HYBRID_VECTOR_WEIGHT}::float8 / (60 + "vectorRank")
         + CASE
@@ -1084,7 +1090,9 @@ function deduplicateFragments(rows) {
   });
 }
 
-export async function searchCourseContext(courseId, query, limit = DEFAULT_RETRIEVAL_LIMIT, { lessonId = null } = {}) {
+// `query` feeds the embedding and may carry context; `ftsQuery` must hold only the
+// student's words, because full-text requires every term to appear in a fragment.
+export async function searchCourseContext(courseId, query, limit = DEFAULT_RETRIEVAL_LIMIT, { lessonId = null, ftsQuery = query } = {}) {
   const embedding = formatVector(await createEmbedding(query, { kind: 'query' }));
   let rows;
   if (lessonId) {
@@ -1092,10 +1100,10 @@ export async function searchCourseContext(courseId, query, limit = DEFAULT_RETRI
     // desde el resto del curso. K lo define RAG_LESSON_PRIORITY_LIMIT (default =
     // el límite total = fill-only; un valor menor ej. 3 = split fijo 3+2).
     const lessonPriority = Math.max(1, Math.min(limit, Number(process.env.RAG_LESSON_PRIORITY_LIMIT) || limit));
-    const lessonRows = await searchFragments(courseId, embedding, query, lessonPriority, lessonId, 'only');
+    const lessonRows = await searchFragments(courseId, embedding, ftsQuery, lessonPriority, lessonId, 'only');
     // Reuse same embedding for same-course search. Needed when current lesson weak,
     // or another lesson has equally/better relevant evidence.
-    const courseRows = await searchFragments(courseId, embedding, query, Math.max(limit, 1), lessonId, 'exclude');
+    const courseRows = await searchFragments(courseId, embedding, ftsQuery, Math.max(limit, 1), lessonId, 'exclude');
     const currentTop = lessonRows.reduce((max, row) => Math.max(max, Number(row.similarity) || 0), 0);
     const currentHasStrongEvidence = lessonRows.some((row) => row.ftsMatch || Number(row.similarity) >= evidenceThreshold());
     const equallyRelevantForeign = courseRows.filter((row) => (
@@ -1108,7 +1116,7 @@ export async function searchCourseContext(courseId, query, limit = DEFAULT_RETRI
       ? [...lessonRows.slice(0, Math.max(0, limit - 1)), foreignRows[0]]
       : [...lessonRows, ...foreignRows];
   } else {
-    rows = await searchFragments(courseId, embedding, query, limit);
+    rows = await searchFragments(courseId, embedding, ftsQuery, limit);
   }
   return mapContextRows(rows, limit);
 }
@@ -1132,6 +1140,7 @@ function mapContextRows(rows, limit) {
 const DEFAULT_CHAT_HISTORY_LIMIT = 8;
 const MAX_HISTORY_TURN_CHARS = 1000;
 const MAX_RETRIEVAL_HISTORY_TURNS = 2;
+const MAX_RETRIEVAL_TURN_CHARS = 200;
 const MAX_HISTORICAL_CITATIONS = DEFAULT_RETRIEVAL_LIMIT;
 const CONTEXTUAL_CLARIFICATION_ANSWER = '¿Te referís al concepto de la conversación anterior? Indicame el caso concreto o el lenguaje del curso y lo relaciono con los materiales de esta lección.';
 
@@ -1182,16 +1191,18 @@ export function normalizeChatHistory(history, limit = DEFAULT_CHAT_HISTORY_LIMIT
 
 export function buildContextualRetrievalQuery(message, history = [], lessonTitle = null) {
   const currentMessage = normalizeText(message);
-  const recentContext = (Array.isArray(history) ? history : [])
+  // A standalone question keeps its own meaning; older turns would only dilute it.
+  const turns = isConversationContinuation(message) && Array.isArray(history) ? history : [];
+  const recentContext = turns
     .slice(-MAX_RETRIEVAL_HISTORY_TURNS)
     .filter((turn) => turn?.content && !detectPromptInjection(turn.content).length)
-    .map((turn) => `${turn.role === 'assistant' ? 'Tutor' : 'Estudiante'}: ${normalizeText(turn.content)}`)
+    .map((turn) => `${turn.role === 'assistant' ? 'Tutor' : 'Estudiante'}: ${normalizeText(stripCitationMarkers(turn.content)).slice(0, MAX_RETRIEVAL_TURN_CHARS)}`)
     .join('\n');
   const safeTitle = normalizeText(lessonTitle).slice(0, 200);
 
   return [
     currentMessage,
-    recentContext ? `Contexto conversacional reciente para desambiguar la pregunta:\n${recentContext}` : '',
+    recentContext,
     safeTitle ? `Tema de la lección actual: ${safeTitle}` : '',
   ].filter(Boolean).join('\n');
 }
@@ -1303,7 +1314,7 @@ async function chatWithContext({ courseId, lessonId = null, principalId = 'anony
   const safeLessonTitle = normalizeText(lessonTitle).slice(0, 200);
   const retrievalQuery = buildContextualRetrievalQuery(message, safeHistory, safeLessonTitle);
   // Prioriza la lección abierta (top-K de esa lección + fallback al curso).
-  let chunks = await searchCourseContext(courseId, retrievalQuery, DEFAULT_RETRIEVAL_LIMIT, { lessonId });
+  let chunks = await searchCourseContext(courseId, retrievalQuery, DEFAULT_RETRIEVAL_LIMIT, { lessonId, ftsQuery: normalizeText(message) });
   if (!chunks.length) {
     chunks = isConversationContinuation(message)
       ? await loadHistoricalChunks(courseId, safeHistory)

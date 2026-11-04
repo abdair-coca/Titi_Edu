@@ -135,7 +135,18 @@ describe('RAG lesson-prioritized retrieval', () => {
 
     const [hybridSql] = prisma.$queryRaw.mock.calls[0];
     const hybridSqlText = Array.isArray(hybridSql) ? hybridSql.join('?') : String(hybridSql?.text || hybridSql);
-    expect(hybridSqlText).toContain('WHERE "similarity" >= ? OR "ftsRank" > 0');
+    expect(hybridSqlText).toContain('WHERE "similarity" >= ? OR "ftsMatch"');
+  });
+
+  it('sends only the student words to full-text and the enriched query to the embedding', async () => {
+    prisma.$queryRaw.mockResolvedValueOnce([row({ id: 'f-1' })]);
+
+    await searchCourseContext('course-1', '¿Qué es NAT?\nTema de la lección actual: Redes', 5, { ftsQuery: '¿Qué es NAT?' });
+
+    expect(JSON.parse(fetch.mock.calls[0][1].body).input).toContain('Tema de la lección actual: Redes');
+    const [, ...params] = prisma.$queryRaw.mock.calls[0];
+    expect(params).toContain('¿Qué es NAT?');
+    expect(params).not.toContain('¿Qué es NAT?\nTema de la lección actual: Redes');
   });
 
   it('does not use vector results below the evidence threshold', async () => {

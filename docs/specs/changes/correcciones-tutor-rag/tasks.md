@@ -27,12 +27,12 @@
 
 ## U2 — Consultas de recuperación (puntos 2 y 10)
 
-- [ ] Separar la consulta de embedding (`buildContextualRetrievalQuery`) de la full-text.
-- [ ] Pasar `ftsQuery` por `searchCourseContext` y `searchFragments`.
-- [ ] SQL híbrido: `ftsMatch` exige todos los términos; orden con coincidencia parcial.
-- [ ] Quitar marcas `[n]` de los turnos enviados al modelo.
-- [ ] Alinear el simulador de `admin-rag.js` con el chat.
-- [ ] Probar el SQL contra pgvector desechable (`test/integration/rag.sql.test.js`).
+- [x] Separar la consulta de embedding (`buildContextualRetrievalQuery`) de la full-text.
+- [x] Pasar `ftsQuery` por `searchCourseContext` y `searchFragments`.
+- [x] SQL híbrido: `ftsMatch` exige todos los términos; orden con coincidencia parcial.
+- [x] Quitar marcas `[n]` de los turnos enviados al modelo.
+- [x] Alinear el simulador de `admin-rag.js` con el chat.
+- [x] Probar el SQL contra pgvector desechable (`test/integration/rag.sql.test.js`).
 
 ## U1 — Índice sincronizado (punto 1)
 

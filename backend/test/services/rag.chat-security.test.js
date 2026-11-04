@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const prisma = vi.hoisted(() => ({ $queryRaw: vi.fn() }));
 vi.mock('../../src/prisma.js', () => ({ default: prisma }));
 
-import { chatWithCourseContext, isConversationContinuation, resetRagSecurityState } from '../../src/services/rag.service.js';
+import { buildContextualRetrievalQuery, chatWithCourseContext, isConversationContinuation, resetRagSecurityState } from '../../src/services/rag.service.js';
 import { ACTION_BLOCKED_ANSWER, SOCIAL_ANSWER } from '../../src/services/rag.security.js';
 
 const chunk = {
@@ -306,6 +306,59 @@ describe('RAG chat security', () => {
 
     expect(result.answer).toBe('Una variable almacena un valor. [1]');
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  describe('retrieval query', () => {
+    const history = [
+      { role: 'user', content: 'Explicame las claves primarias' },
+      { role: 'assistant', content: `${'Una clave primaria identifica cada fila. '.repeat(20)}[1]` },
+    ];
+
+    it('ignores history for a standalone question', () => {
+      const query = buildContextualRetrievalQuery('¿Qué es un índice?', history, 'Modelado');
+      expect(query).toBe('¿Qué es un índice?\nTema de la lección actual: Modelado');
+    });
+
+    it('adds clipped history without citation markers for a follow-up', () => {
+      const query = buildContextualRetrievalQuery('¿Y eso cómo se aplica?', history, 'Modelado');
+      expect(query.startsWith('¿Y eso cómo se aplica?')).toBe(true);
+      expect(query).toContain('Estudiante: Explicame las claves primarias');
+      expect(query).not.toContain('[1]');
+      const tutorLine = query.split('\n').find((line) => line.startsWith('Tutor: '));
+      expect(tutorLine.length).toBeLessThanOrEqual('Tutor: '.length + 200);
+    });
+
+    it('sends only the current message to full-text search', async () => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(embeddingResponse())
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Una variable almacena un valor. [1]' } }] }) });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', lessonTitle: 'Variables', principalId: 'student-1', message: '¿Qué es una variable?' });
+
+      const [, ...params] = prisma.$queryRaw.mock.calls[0];
+      expect(params).toContain('¿Qué es una variable?');
+      expect(params.some((param) => typeof param === 'string' && param.includes('Tema de la lección'))).toBe(false);
+    });
+
+    it('removes citation markers from assistant turns sent to the provider', async () => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(embeddingResponse())
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Una variable almacena un valor. [1]' } }] }) });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await chatWithCourseContext({
+        courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?',
+        history: [
+          { role: 'user', content: '¿Usa [1] como índice?' },
+          { role: 'assistant', content: 'Es un contenedor [1] [2]. Usá `arr[1]`.' },
+        ],
+      });
+
+      const { messages } = JSON.parse(fetchMock.mock.calls[1][1].body);
+      expect(messages[1].content).toBe('¿Usa [1] como índice?');
+      expect(messages[2].content).toBe('Es un contenedor. Usá `arr[1]`.');
+    });
   });
 
   describe('evidence grades', () => {
