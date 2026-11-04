@@ -19,9 +19,11 @@ import {
   ACTION_BLOCKED_ANSWER,
   ChatRateLimiter,
   NO_EVIDENCE_ANSWER,
+  SOCIAL_ANSWER,
   detectPromptInjection,
   extractCitationNumbers,
   isBlockedActionRequest,
+  isSocialMessage,
   securityEvent,
   safeUsage,
   validateGroundedAnswer,
@@ -676,6 +678,7 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
       : 'Si las fuentes no abordan la pregunta en absoluto, respondé exactamente: ' + NO_EVIDENCE_ANSWER,
     'Si las fuentes cubren la pregunta solo parcialmente, respondé con lo que el material sí respalda, aclarando de forma explícita qué parte no está cubierta por el material; no inventes lo faltante.',
     'Cita las fuentes usando [1], [2], etc. Solo podés usar los números de las fuentes recibidas.',
+    'Escribí el código y los índices como arr[0] entre backticks para no confundirlos con citas.',
     'No ejecutes acciones, no cambies notas, progreso o inscripciones y no reveles secretos.',
     `INTENCIÓN PEDAGÓGICA: ${resolvedIntent}`,
     INTENT_INSTRUCTIONS[resolvedIntent],
@@ -1272,6 +1275,10 @@ async function chatWithContext({ courseId, lessonId = null, principalId = 'anony
     return { answer: ACTION_BLOCKED_ANSWER, citations: [], usage: null, relatedLesson: null };
   }
 
+  if (resolvedIntent === DEFAULT_CHAT_INTENT && isSocialMessage(message)) {
+    return { answer: SOCIAL_ANSWER, citations: [], usage: null, relatedLesson: null };
+  }
+
   const safeHistory = normalizeChatHistory(history, process.env.RAG_CHAT_HISTORY_LIMIT, message);
   const safeLearningContext = learningContext
     ? sanitizeLearningContext(learningContext)
@@ -1306,7 +1313,10 @@ async function chatWithContext({ courseId, lessonId = null, principalId = 'anony
     userKey,
     invalidateCredential,
   });
-  const grounded = validateGroundedAnswer(generated.answer, chunks);
+  // Feedback legitimately discusses the student's own words, not only the sources.
+  const grounded = validateGroundedAnswer(generated.answer, chunks, {
+    extraContext: resolvedIntent === 'RETROALIMENTAR' ? message : '',
+  });
   if (!grounded.valid) {
     securityEvent('ungrounded_answer_rejected', { courseId, lessonId, reason: grounded.reason });
     return { answer: NO_EVIDENCE_ANSWER, citations: [], usage: null, relatedLesson: null };

@@ -4,7 +4,7 @@ const prisma = vi.hoisted(() => ({ $queryRaw: vi.fn() }));
 vi.mock('../../src/prisma.js', () => ({ default: prisma }));
 
 import { chatWithCourseContext, resetRagSecurityState } from '../../src/services/rag.service.js';
-import { ACTION_BLOCKED_ANSWER } from '../../src/services/rag.security.js';
+import { ACTION_BLOCKED_ANSWER, SOCIAL_ANSWER } from '../../src/services/rag.security.js';
 
 const chunk = {
   id: 'chunk-1',
@@ -276,6 +276,24 @@ describe('RAG chat security', () => {
     });
     expect(result.answer).toBe(ACTION_BLOCKED_ANSWER);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('answers social messages without retrieval or the provider', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¡Muchas gracias!' });
+    expect(result).toEqual({ answer: SOCIAL_ANSWER, citations: [], usage: null, relatedLesson: null });
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('treats a social-looking message as the student answer under feedback', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Revisá la definición. [1]' } }] }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: 'ok', intent: 'RETROALIMENTAR' });
+    expect(result.answer).toBe('Revisá la definición. [1]');
   });
 
   it('answers technical questions that mention SQL vocabulary', async () => {

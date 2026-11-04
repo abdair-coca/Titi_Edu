@@ -12,12 +12,12 @@
 
 ## U4 — Validación de respuestas (punto 4)
 
-- [ ] Reescribir la extracción de citas: código excluido, `[1, 2]`, `[1][2]`, `【1】`.
-- [ ] Normalizar las citas de la respuesta entregada.
-- [ ] Agregar respaldo por términos con `RAG_SUPPORT_MIN_OVERLAP`.
-- [ ] Responder mensajes sociales sin recuperación ni proveedor.
-- [ ] Pedir código entre backticks en el prompt.
-- [ ] Tests de cada formato, respaldo y mensajes sociales.
+- [x] Reescribir la extracción de citas: código excluido, `[1, 2]`, `[1][2]`, `【1】`.
+- [x] Normalizar las citas de la respuesta entregada.
+- [x] Agregar respaldo por términos con `RAG_SUPPORT_MIN_OVERLAP`.
+- [x] Responder mensajes sociales sin recuperación ni proveedor.
+- [x] Pedir código entre backticks en el prompt.
+- [x] Tests de cada formato, respaldo y mensajes sociales.
 
 ## U9 — Grados de evidencia y continuación (punto 9)
 
