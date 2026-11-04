@@ -21,9 +21,9 @@
 
 ## U9 — Grados de evidencia y continuación (punto 9)
 
-- [ ] Agregar `RAG_EVIDENCE_STRONG_THRESHOLD` y usarlo en `partialEvidence`.
-- [ ] Acotar y exportar `isConversationContinuation`.
-- [ ] Tests de evidencia parcial y de continuación.
+- [x] Agregar `RAG_EVIDENCE_STRONG_THRESHOLD` y usarlo en `partialEvidence`.
+- [x] Acotar y exportar `isConversationContinuation`.
+- [x] Tests de evidencia parcial y de continuación.
 
 ## U2 — Consultas de recuperación (puntos 2 y 10)
 

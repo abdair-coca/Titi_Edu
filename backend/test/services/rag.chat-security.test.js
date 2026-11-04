@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const prisma = vi.hoisted(() => ({ $queryRaw: vi.fn() }));
 vi.mock('../../src/prisma.js', () => ({ default: prisma }));
 
-import { chatWithCourseContext, resetRagSecurityState } from '../../src/services/rag.service.js';
+import { chatWithCourseContext, isConversationContinuation, resetRagSecurityState } from '../../src/services/rag.service.js';
 import { ACTION_BLOCKED_ANSWER, SOCIAL_ANSWER } from '../../src/services/rag.security.js';
 
 const chunk = {
@@ -306,6 +306,78 @@ describe('RAG chat security', () => {
 
     expect(result.answer).toBe('Una variable almacena un valor. [1]');
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  describe('evidence grades', () => {
+    const answered = () => vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Una variable almacena un valor. [1]' } }] }) });
+    const systemPrompt = (fetchMock) => JSON.parse(fetchMock.mock.calls[1][1].body).messages[0].content;
+    const ask = () => chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?' });
+
+    afterEach(() => { delete process.env.RAG_EVIDENCE_STRONG_THRESHOLD; });
+
+    it('marks modest evidence as partial without discarding it', async () => {
+      prisma.$queryRaw.mockResolvedValue([{ ...chunk, similarity: 0.5 }]);
+      const fetchMock = answered();
+      vi.stubGlobal('fetch', fetchMock);
+      const result = await ask();
+      expect(systemPrompt(fetchMock)).toContain('La evidencia recuperada es débil o parcial');
+      expect(result.citations).toHaveLength(1);
+    });
+
+    it('treats strong evidence as sufficient', async () => {
+      prisma.$queryRaw.mockResolvedValue([{ ...chunk, similarity: 0.8 }]);
+      const fetchMock = answered();
+      vi.stubGlobal('fetch', fetchMock);
+      await ask();
+      expect(systemPrompt(fetchMock)).not.toContain('La evidencia recuperada es débil o parcial');
+    });
+
+    it('treats an exact text match as sufficient despite a low score', async () => {
+      prisma.$queryRaw.mockResolvedValue([{ ...chunk, similarity: 0.2, ftsMatch: true }]);
+      const fetchMock = answered();
+      vi.stubGlobal('fetch', fetchMock);
+      await ask();
+      expect(systemPrompt(fetchMock)).not.toContain('La evidencia recuperada es débil o parcial');
+    });
+
+    it('honors the configured strong threshold', async () => {
+      process.env.RAG_EVIDENCE_STRONG_THRESHOLD = '0.9';
+      prisma.$queryRaw.mockResolvedValue([{ ...chunk, similarity: 0.8 }]);
+      const fetchMock = answered();
+      vi.stubGlobal('fetch', fetchMock);
+      await ask();
+      expect(systemPrompt(fetchMock)).toContain('La evidencia recuperada es débil o parcial');
+    });
+  });
+
+  it.each([
+    ['¿Quién ganó los mundiales de fútbol?', false],
+    ['¿Qué es la fotosíntesis?', false],
+    ['La fotosíntesis es un proceso de las plantas verdes, ¿verdad?', false],
+    ['¿Qué es Docker?', false],
+    ['Yogur y fermentación', false],
+    ['¿y eso?', true],
+    ['Pero no me quedó claro', true],
+    ['dame otro ejercicio', true],
+    ['¿Cómo lo aplico?', true],
+    ['Explicame esto mejor', true],
+  ])('classifies "%s" as continuation: %s', (message, expected) => {
+    expect(isConversationContinuation(message)).toBe(expected);
+  });
+
+  it('asks for clarification only for real follow-ups without evidence', async () => {
+    prisma.$queryRaw.mockReset();
+    prisma.$queryRaw.mockResolvedValue([]);
+    const history = [{ role: 'user', content: '¿Qué es una variable?' }];
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => embeddingResponse()));
+
+    const offTopic = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Quién ganó los mundiales?', history });
+    const followUp = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿y eso cómo sigue?', history });
+
+    expect(offTopic.answer).toBe('No encontré evidencia suficiente en los materiales publicados de este curso.');
+    expect(followUp.answer).toContain('¿Te referís al concepto de la conversación anterior?');
   });
 
   it('returns cited foreign lesson as relatedLesson and marks it in prompt', async () => {

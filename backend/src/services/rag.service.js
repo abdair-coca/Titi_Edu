@@ -33,6 +33,7 @@ const DEFAULT_CHUNK_SIZE = 900;
 const DEFAULT_CHUNK_OVERLAP = 120;
 const DEFAULT_RETRIEVAL_LIMIT = 5;
 const DEFAULT_EVIDENCE_THRESHOLD = 0.45;
+const DEFAULT_EVIDENCE_STRONG_THRESHOLD = 0.6;
 const DEFAULT_INDEX_TRANSACTION_MAX_WAIT_MS = 10_000;
 const DEFAULT_INDEX_TRANSACTION_TIMEOUT_MS = 30_000;
 export const VECTOR_DIMENSIONS = 768;
@@ -249,6 +250,15 @@ function evidenceThreshold() {
     ? DEFAULT_EVIDENCE_THRESHOLD
     : Number(configured);
   return Math.max(0, Math.min(1, Number.isFinite(parsed) ? parsed : DEFAULT_EVIDENCE_THRESHOLD));
+}
+
+// Only changes how the tutor answers: evidence under evidenceThreshold() is never
+// retrieved. Above it, a modest top score tells the model the coverage is partial.
+function evidenceStrongThreshold() {
+  const configured = process.env.RAG_EVIDENCE_STRONG_THRESHOLD?.trim();
+  const parsed = configured ? Number(configured) : DEFAULT_EVIDENCE_STRONG_THRESHOLD;
+  const strong = Number.isFinite(parsed) ? parsed : DEFAULT_EVIDENCE_STRONG_THRESHOLD;
+  return Math.max(evidenceThreshold(), Math.min(1, strong));
 }
 
 function embeddingModel() {
@@ -658,7 +668,7 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
   if (historySignals.length) securityEvent('history_injection_signal', { courseId, lessonId, count: historySignals.length });
 
   const topSimilarity = chunks.reduce((max, chunk) => Math.max(max, Number(chunk.similarity) || 0), 0);
-  const partialEvidence = topSimilarity < evidenceThreshold()
+  const partialEvidence = topSimilarity < evidenceStrongThreshold()
     && !chunks.some((chunk) => chunk.ftsMatch);
   const resolvedIntent = resolveChatIntent(intent) || DEFAULT_CHAT_INTENT;
   const safeLearningContext = sanitizeLearningContext(learningContext);
@@ -1186,11 +1196,16 @@ export function buildContextualRetrievalQuery(message, history = [], lessonTitle
   ].filter(Boolean).join('\n');
 }
 
-function isConversationContinuation(message) {
+const MAX_WORDS_FOR_BARE_PRONOUN = 6;
+
+// Articles ("la", "los") appear in almost any question, so they do not count: only
+// an opening connector or an explicit reference to something already said does.
+export function isConversationContinuation(message) {
   const text = normalizeText(message).toLocaleLowerCase();
   if (!text) return false;
-  return /^(?:[¿?¡!.,;:\s]*(?:y|pero|entonces|eso|esto|esa|ese|estos|estas|lo|la|los|las)\b)/i.test(text)
-    || /\b(?:lo|la|los|las|esto|eso|esa|ese|aplicarlo|aplícalo|otro|otra)\b/i.test(text);
+  if (/^[¿?¡!.,;:\s]*(?:y|pero|entonces|eso|esto|esa|ese|estos|estas)(?![\p{L}\p{N}_])/iu.test(text)) return true;
+  if (/(?<![\p{L}\p{N}_])(?:esto|eso|esa|ese|aplicarlo|aplícalo|otro|otra)(?![\p{L}\p{N}_])/iu.test(text)) return true;
+  return text.split(' ').length <= MAX_WORDS_FOR_BARE_PRONOUN && /(?<![\p{L}\p{N}_])lo(?![\p{L}\p{N}_])/iu.test(text);
 }
 
 function historicalChunkIds(history) {
