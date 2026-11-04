@@ -106,6 +106,13 @@ describe('RAG text preparation', () => {
     expect(text).not.toContain('La respuesta es un contenedor.');
   });
 
+  it('removes answer sentences from the text of evaluable lessons only', () => {
+    const contenido = 'La célula produce energía. La respuesta correcta es la mitocondria.';
+    const html = '<p>Actividad de repaso visible.</p>';
+    expect(lessonRagText({ titulo: 'T', contenido, recursoHtml: { html, evaluable: true } })).not.toContain('mitocondria');
+    expect(lessonRagText({ titulo: 'T', contenido, recursoHtml: { html, evaluable: false } })).toContain('mitocondria');
+  });
+
   it('uses one retrieval preprocessing contract for queries and documents', () => {
     expect(prepareEmbeddingText('¿Qué es una variable?')).toBe('task: search result | query: ¿Qué es una variable?');
     expect(prepareEmbeddingText('Una variable almacena un valor.', { kind: 'document', title: 'Variables' }))

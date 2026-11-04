@@ -44,10 +44,10 @@
 
 ## U5 — HTML evaluable (punto 5)
 
-- [ ] Enmascarar clases e ids ocultados por `<style>` en modo seguro.
-- [ ] Lista permitida de atributos `data-*` en modo seguro.
-- [ ] Excluir bloques de `contenido` que revelen respuestas en lecciones evaluables.
-- [ ] Tests de fugas y de que el modo no evaluable no cambia.
+- [x] Enmascarar clases e ids ocultados por `<style>` en modo seguro.
+- [x] Lista permitida de atributos `data-*` en modo seguro.
+- [x] Excluir bloques de `contenido` que revelen respuestas en lecciones evaluables.
+- [x] Tests de fugas y de que el modo no evaluable no cambia.
 
 ## U6 — Protección de evaluaciones (punto 6)
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extractLessonHtmlContent } from '../../src/services/html-extractor.service.js';
+import { extractLessonHtmlContent, removeAssessmentSecretText } from '../../src/services/html-extractor.service.js';
 
 describe('extractLessonHtmlContent', () => {
   it('extracts visible DOM text from headings, paragraphs, and lists', () => {
@@ -147,6 +147,46 @@ describe('extractLessonHtmlContent', () => {
     expect(result).toContain('Contenido educativo visible y permitido.');
     expect(result).toContain('Texto educativo visible y permitido.');
     expect(result).not.toMatch(/CLAVE (?:CSS|ARIA|DATA|JSON|JS)/);
+  });
+
+  describe('assessment-safe leaks through styles and unknown attributes', () => {
+    const safe = (html) => extractLessonHtmlContent(html, { assessmentSafe: true });
+
+    it.each([
+      ['class selector', '<style>.rta{display:none}</style><p class="rta">CLAVE OCULTA por estilo</p>'],
+      ['id selector', '<style>#rta { visibility: hidden; }</style><p id="rta">CLAVE OCULTA por estilo</p>'],
+      ['tag and class', '<style>p.rta{display:none !important}</style><p class="otra rta">CLAVE OCULTA por estilo</p>'],
+      ['descendant selector', '<style>.quiz .rta{opacity:0}</style><div class="quiz"><p class="rta">CLAVE OCULTA por estilo</p></div>'],
+      ['selector list', '<style>.a, .rta{display:none}</style><p class="rta">CLAVE OCULTA por estilo</p>'],
+      ['nested text', '<style>.rta{display:none}</style><div class="rta"><p>CLAVE OCULTA por estilo</p></div>'],
+      ['unknown data attribute', '<div data-rta="CLAVE OCULTA en atributo"></div>'],
+      ['unknown data attribute with hyphen', '<div data-valor-esperado="CLAVE OCULTA en atributo"></div>'],
+    ])('excludes text hidden by %s', (_label, html) => {
+      expect(safe(`${html}<p>Texto educativo visible y permitido.</p>`)).toBe('Texto educativo visible y permitido.');
+    });
+
+    it('keeps elements that a stylesheet shows or that use other classes', () => {
+      const result = safe('<style>.rta{display:none}.ficha{display:block;opacity:0.5}</style><p class="ficha">Texto educativo visible.</p>');
+      expect(result).toBe('Texto educativo visible.');
+    });
+
+    it('keeps allowed pedagogical data attributes', () => {
+      const result = safe('<div data-question="¿Cuál es la capital de Bolivia?" data-title="Geografía de Bolivia"></div>');
+      expect(result).toContain('¿Cuál es la capital de Bolivia?');
+      expect(result).toContain('Geografía de Bolivia');
+    });
+
+    it('does not apply these exclusions outside safe mode', () => {
+      const html = '<style>.rta{display:none}</style><p class="rta">Sucre es la capital constitucional</p><div data-rta="La Paz es la sede de gobierno"></div>';
+      const result = extractLessonHtmlContent(html);
+      expect(result).toContain('Sucre es la capital constitucional');
+      expect(result).toContain('La Paz es la sede de gobierno');
+    });
+  });
+
+  it('removes only the sentences that reveal an answer', () => {
+    expect(removeAssessmentSecretText('Las plantas producen energía. La respuesta correcta es la clorofila.\nRepasá el capítulo.'))
+      .toBe('Las plantas producen energía.\nRepasá el capítulo.');
   });
 
   it('does not keep structured options explicitly marked hidden', () => {

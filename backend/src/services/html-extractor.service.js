@@ -312,8 +312,48 @@ function isAssessmentSecretLiteral(value) {
   return ASSESSMENT_SECRET_TEXT_PATTERN.test(value);
 }
 
-function hasHiddenDomState(attributes) {
+// An unknown data-* name may hold the answer, so safe mode allows only known ones.
+const SAFE_DATA_ATTRIBUTES = new Set([
+  'question', 'pregunta', 'enunciado', 'consigna', 'title', 'titulo', 'text', 'texto', 'content', 'contenido',
+  'description', 'descripcion', 'concept', 'concepto', 'definition', 'definicion', 'flow', 'label', 'etiqueta',
+]);
+
+function isUnsafeAttribute(name) {
+  const normalized = normalizeKey(name);
+  return normalized.startsWith('data') && !SAFE_DATA_ATTRIBUTES.has(normalized.replace(/^data/, ''));
+}
+
+export function removeAssessmentSecretText(text) {
+  return String(text || '').split('\n')
+    .map((line) => line.split(/(?<=[.!?])\s+/).filter((sentence) => !isAssessmentSecretLiteral(sentence)).join(' '))
+    .join('\n');
+}
+
+const CSS_HIDING_DECLARATION = /(?:display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0(?:\.0+)?(?:\s*!\s*important)?\s*(?:;|$))/i;
+const CSS_LAST_SIMPLE_SELECTOR = /(?:^|[\s>+~])[a-z0-9-]*([.#])([\w-]+)$/i;
+
+// Only simple class or id selectors: a stylesheet can hide an answer without any
+// attribute on the element. Scripts that hide elements at runtime remain out of reach.
+function collectCssHiddenNames(html) {
+  const hidden = { classes: new Set(), ids: new Set() };
+  for (const [, css] of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
+    const rules = css.replace(/\/\*[\s\S]*?\*\//g, ' ').matchAll(/([^{}]+)\{([^{}]*)\}/g);
+    for (const [, selectors, declarations] of rules) {
+      if (!CSS_HIDING_DECLARATION.test(declarations)) continue;
+      for (const selector of selectors.split(',')) {
+        const match = selector.trim().match(CSS_LAST_SIMPLE_SELECTOR);
+        if (match) (match[1] === '.' ? hidden.classes : hidden.ids).add(match[2]);
+      }
+    }
+  }
+  return hidden;
+}
+
+function hasHiddenDomState(attributes, cssHidden) {
   if (/(?:^|\s)hidden(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?(?=\s|\/?>(?:$|\s))/i.test(attributes)) return true;
+
+  const idAttr = attributes.match(/\sid\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+  if (cssHidden.ids.has(idAttr?.[1] ?? idAttr?.[2] ?? idAttr?.[3])) return true;
 
   const ariaHidden = attributes.match(/\baria-hidden\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
   if (['true', '1', 'yes', 'on'].includes((ariaHidden?.[1] ?? ariaHidden?.[2] ?? ariaHidden?.[3] ?? '').trim().toLowerCase())) return true;
@@ -325,6 +365,7 @@ function hasHiddenDomState(attributes) {
   const classAttr = attributes.match(/\bclass\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
   const classValue = classAttr?.[1] ?? classAttr?.[2] ?? classAttr?.[3] ?? '';
   if (classValue.split(/\s+/).some((className) => /(?:hidden|ishidden|dnone|displaynone|invisible|visuallyhidden|sronly|opacity0|secret|answer|solution|feedback|correct)/i.test(normalizeKey(className)))) return true;
+  if (classValue.split(/\s+/).some((className) => cssHidden.classes.has(className))) return true;
 
   const dataHidden = attributes.match(/\bdata-hidden(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?(?=\s|\/?>(?:$|\s))/i);
   const dataHiddenValue = dataHidden?.[1] ?? dataHidden?.[2] ?? dataHidden?.[3] ?? '';
@@ -342,6 +383,8 @@ function hasHiddenDomState(attributes) {
 }
 
 function maskUnsafeDomSubtrees(html) {
+  const cssHidden = collectCssHiddenNames(html);
+  const isHiddenTag = (tag) => hasHiddenDomState(tag, cssHidden);
   const tagRegex = /<\/?[a-z][^>]*>/gi;
   const stack = [];
   let cursor = 0;
@@ -354,7 +397,7 @@ function maskUnsafeDomSubtrees(html) {
     const name = tag.match(/^<\/?\s*([a-z0-9-]+)/i)?.[1]?.toLowerCase();
     const parentHidden = stack.some((entry) => entry.hidden);
 
-    if (!parentHidden && !(closing === false && (name === 'template' || hasHiddenDomState(tag)))) {
+    if (!parentHidden && !(closing === false && (name === 'template' || isHiddenTag(tag)))) {
       masked += html.slice(cursor, match.index);
     }
 
@@ -364,7 +407,7 @@ function maskUnsafeDomSubtrees(html) {
       if (stackIndex !== -1) stack.splice(stack.length - 1 - stackIndex, 1);
     } else {
       const selfClosing = /\/\s*>$/.test(tag) || HTML_VOID_ELEMENTS.has(name);
-      const hidden = parentHidden || name === 'template' || hasHiddenDomState(tag);
+      const hidden = parentHidden || name === 'template' || isHiddenTag(tag);
       if (!parentHidden && !hidden) masked += tag;
       if (!selfClosing) stack.push({ name, hidden });
     }
@@ -698,7 +741,7 @@ function extractDomContent(html, seenStrings, { assessmentSafe = false } = {}) {
     const attrName = attrMatch[1] || '';
     const rawValue = attrMatch[2] ?? attrMatch[3] ?? attrMatch[4] ?? '';
     const cleaned = cleanString(rawValue);
-    if (assessmentSafe && (isAssessmentSecretKey(attrName) || isAssessmentSecretLiteral(cleaned))) continue;
+    if (assessmentSafe && (isUnsafeAttribute(attrName) || isAssessmentSecretKey(attrName) || isAssessmentSecretLiteral(cleaned))) continue;
     if (isNaturalLanguageText(cleaned) && !seenStrings.has(cleaned)) {
       extracted.push(cleaned);
       seenStrings.add(cleaned);

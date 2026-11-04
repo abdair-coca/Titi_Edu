@@ -365,6 +365,7 @@ import {
   decodeHtmlEntities,
   extractLessonHtmlContent,
   normalizeText,
+  removeAssessmentSecretText,
 } from './html-extractor.service.js';
 
 export { decodeHtmlEntities, extractLessonHtmlContent, normalizeText };
@@ -534,7 +535,8 @@ export function lessonRagText(lesson) {
     if (t) parts.push(t);
   }
   if (lesson.contenido) {
-    const c = normalizeText(lesson.contenido);
+    const evaluable = lesson.recursoHtml?.evaluable === true;
+    const c = normalizeText(evaluable ? removeAssessmentSecretText(lesson.contenido) : lesson.contenido);
     if (c) parts.push(c);
   }
   if (lesson.recursoHtml?.html) {
