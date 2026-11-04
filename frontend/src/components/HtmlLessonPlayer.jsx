@@ -262,8 +262,8 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
 
   return (
     <section className="mb-6">
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white lg:contents">
-        <div className="flex flex-col gap-3 bg-titi-dark px-4 py-3 sm:flex-row sm:items-center sm:justify-between lg:hidden">
+      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+        <div className="flex flex-col gap-3 bg-titi-dark px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-white">{title || 'Presentación interactiva'}</p>
             <span className="mt-1 inline-flex rounded-full bg-white/10 px-2 py-1 text-[11px] font-bold text-titi-yellow">
@@ -288,7 +288,7 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
           referrerPolicy="no-referrer"
           allow="fullscreen"
           allowFullScreen
-          className="h-[clamp(24rem,62vh,32rem)] w-full bg-white lg:h-auto lg:min-h-[32rem] lg:rounded-2xl lg:border lg:border-gray-200"
+          className="h-[clamp(24rem,62vh,32rem)] w-full bg-white lg:h-auto lg:min-h-[32rem]"
         />
       </div>
       {evaluable && (
