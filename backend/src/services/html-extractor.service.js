@@ -829,6 +829,29 @@ function extractScriptContent(html, seenStrings, { assessmentSafe = false } = {}
   return extracted;
 }
 
+const HEADING_MARK = '\u0001';
+
+// Visible text flows into paragraphs and each heading opens a Markdown section, which
+// is the structure chunking understands.
+function formatDomBlocks(parts) {
+  const blocks = [];
+  let paragraph = [];
+  const flush = () => {
+    if (paragraph.length) blocks.push(normalizeText(paragraph.join(' ')));
+    paragraph = [];
+  };
+  for (const part of parts) {
+    if (part.startsWith(HEADING_MARK)) {
+      flush();
+      blocks.push(`## ${part.slice(HEADING_MARK.length)}`);
+    } else {
+      paragraph.push(part);
+    }
+  }
+  flush();
+  return blocks.join('\n\n');
+}
+
 function extractDomContent(html, seenStrings, { assessmentSafe = false } = {}) {
   const extracted = [];
 
@@ -857,6 +880,7 @@ function extractDomContent(html, seenStrings, { assessmentSafe = false } = {}) {
   const withoutScripts = cleanedHtml.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ');
   const domText = decodeHtmlEntities(
     withoutScripts
+      .replace(/<h[1-6]\b[^>]*>/gi, `\n${HEADING_MARK}`)
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<\/(?:p|div|section|article|li|h[1-6]|tr|button|summary|details|td|th)>/gi, '\n')
       .replace(/<[^>]+>/g, ' '),
@@ -866,12 +890,13 @@ function extractDomContent(html, seenStrings, { assessmentSafe = false } = {}) {
     .filter(Boolean);
 
   for (const line of domText) {
-    const cleaned = cleanString(line);
+    const prefix = line.startsWith(HEADING_MARK) ? HEADING_MARK : '';
+    const cleaned = cleanString(line.replace(HEADING_MARK, ''));
     if (!cleaned || seenStrings.has(cleaned)) continue;
     if (isUiNoise(cleaned)) continue;
     if (CODE_EXCLUDE_TOKENS.has(cleaned) || CODE_EXCLUDE_TOKENS.has(cleaned.toLowerCase())) continue;
     if (isNaturalLanguageText(cleaned)) {
-      extracted.push(cleaned);
+      extracted.push(prefix + cleaned);
       seenStrings.add(cleaned);
       continue;
     }
@@ -879,7 +904,7 @@ function extractDomContent(html, seenStrings, { assessmentSafe = false } = {}) {
     // ej. "Actividad", "Variables", "Modelo OSI" corto pero válido
     if (cleaned.length >= 4 && cleaned.length <= 40 && /^[A-ZÁÉÍÓÚÑa-záéíóúñ0-9][A-Za-zÁÉÍÓÚÑa-záéíóúñ0-9\s\-:]+$/.test(cleaned)) {
       if (/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(cleaned) && !cleaned.includes('_') && !/^[A-Z0-9_]+$/.test(cleaned)) {
-        extracted.push(cleaned);
+        extracted.push(prefix + cleaned);
         seenStrings.add(cleaned);
       }
     }
@@ -910,7 +935,7 @@ export function extractLessonHtmlContent(html, { assessmentSafe = false } = {}) 
 
   // 3. Unir de forma estructurada para mantener coherencia semántica en los chunks
   // Preservamos \n\n entre bloques para que chunkText pueda mantener Pregunta+Opciones+Respuesta juntas
-  const domBlock = domParts.length > 0 ? normalizeText(domParts.join(' ')) : '';
+  const domBlock = formatDomBlocks(domParts);
   const scriptBlock = scriptParts.length > 0
     ? scriptParts.map((part) => normalizeText(part)).filter(Boolean).join('\n\n')
     : '';

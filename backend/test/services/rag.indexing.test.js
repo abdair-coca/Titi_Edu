@@ -284,6 +284,50 @@ describe('RAG indexing feature flag', () => {
     });
   });
 
+  describe('section context', () => {
+    let tx;
+    const embeddedInputs = () => fetch.mock.calls.map(([, options]) => JSON.parse(options.body).input);
+
+    beforeEach(() => {
+      Object.assign(process.env, {
+        EMBEDDING_API_URL: 'https://embeddings.example', EMBEDDING_API_KEY: 'test-key',
+        EMBEDDING_MODEL: 'google/embeddinggemma-300M', EMBEDDING_PROVIDER: 'local', EMBEDDING_MAX_RETRIES: '0',
+      });
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+        ok: true, status: 200, json: async () => ({ data: [{ embedding: Array.from({ length: 768 }, () => 0.01) }] }),
+      }));
+      tx = {
+        documentoRag: { updateMany: vi.fn(), create: vi.fn().mockResolvedValue({ id: 'document-1' }), update: vi.fn().mockResolvedValue({ id: 'document-1' }) },
+        fragmentoRag: { deleteMany: vi.fn() },
+        $executeRaw: vi.fn(),
+      };
+      mocks.$transaction.mockImplementation((callback) => callback(tx));
+      mocks.documentoRag.findUnique.mockResolvedValue(null);
+    });
+
+    const lesson = (contenido) => ({
+      id: 'lesson-1', version: 1, estado: 'PUBLICADA', titulo: 'Índices', contenido,
+      modulo: { estado: 'PUBLICADO', curso: { id: 'course-pilot', publicado: true } },
+    });
+
+    it('embeds the section with the title and skips the fragment that only repeats it', async () => {
+      mocks.leccion.findUnique.mockResolvedValue(lesson('# Costos\n\nEncarecen escrituras.'));
+
+      await expect(indexLesson('lesson-1')).resolves.toMatchObject({ status: 'INDEXED', chunks: 1 });
+
+      expect(embeddedInputs()).toEqual(['title: Índices - Costos | text: Costos Encarecen escrituras.']);
+      expect(tx.$executeRaw).toHaveBeenCalledOnce();
+    });
+
+    it('keeps the title fragment when the lesson has no other text', async () => {
+      mocks.leccion.findUnique.mockResolvedValue(lesson(''));
+
+      await expect(indexLesson('lesson-1')).resolves.toMatchObject({ status: 'INDEXED', chunks: 1 });
+
+      expect(embeddedInputs()).toEqual(['title: Índices | text: Índices']);
+    });
+  });
+
   it('keeps legacy lessons on HTML_FALLBACK source', async () => {
     mocks.leccion.findUnique.mockResolvedValue({
       id: 'lesson-1', version: 1, estado: 'PUBLICADA', titulo: 'Lesson', contenido: 'Contenido legacy',

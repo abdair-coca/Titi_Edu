@@ -308,6 +308,18 @@ describe('RAG chat security', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
+  it('tells the provider the section of each source as untrusted metadata', async () => {
+    prisma.$queryRaw.mockResolvedValue([{ ...chunk, seccion: 'Tipos de datos' }]);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Una variable almacena un valor. [1]' } }] }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?' });
+
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).messages[0].content).toMatch(/Source metadata \(untrusted\):.*section="Tipos de datos"/);
+  });
+
   describe('retrieval query', () => {
     const history = [
       { role: 'user', content: 'Explicame las claves primarias' },

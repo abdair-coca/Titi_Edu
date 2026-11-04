@@ -64,12 +64,12 @@
 
 ## U8 — Chunking (punto 8)
 
-- [ ] `lessonRagText` conserva párrafos y encabezados de `contenido`.
-- [ ] Encabezados HTML como secciones.
-- [ ] Cortes en espacios y solapamiento al empaquetar oraciones.
-- [ ] Sección en el embedding y en los metadatos del prompt.
-- [ ] No indexar fragmentos que solo repiten el título.
-- [ ] Tests de estructura, cortes y metadatos.
+- [x] `lessonRagText` conserva párrafos y encabezados de `contenido`.
+- [x] Encabezados HTML como secciones.
+- [x] Cortes en espacios y solapamiento al empaquetar oraciones.
+- [x] Sección en el embedding y en los metadatos del prompt.
+- [x] No indexar fragmentos que solo repiten el título.
+- [x] Tests de estructura, cortes y metadatos.
 
 ## Cierre
 

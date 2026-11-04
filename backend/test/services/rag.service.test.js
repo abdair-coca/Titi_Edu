@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  chunkStructuredText,
   chunkText,
   createEmbedding,
   formatVector,
@@ -111,6 +112,42 @@ describe('RAG text preparation', () => {
     const html = '<p>Actividad de repaso visible.</p>';
     expect(lessonRagText({ titulo: 'T', contenido, recursoHtml: { html, evaluable: true } })).not.toContain('mitocondria');
     expect(lessonRagText({ titulo: 'T', contenido, recursoHtml: { html, evaluable: false } })).toContain('mitocondria');
+  });
+
+  describe('chunking structure', () => {
+    const sentence = (index) => `Oración número ${index} sobre índices de bases de datos relacionales.`;
+
+    it('keeps Markdown sections from lesson content', () => {
+      const text = lessonRagText({ titulo: 'Índices', contenido: '# Introducción\r\n\r\nAceleran lecturas.\n\n\n\n## Costos\n\nEncarecen escrituras.' });
+      expect(chunkStructuredText(text).map(({ section, content }) => ({ section, content }))).toEqual([
+        { section: null, content: 'Índices' },
+        { section: 'Introducción', content: 'Introducción\n\nAceleran lecturas.' },
+        { section: 'Costos', content: 'Costos\n\nEncarecen escrituras.' },
+      ]);
+    });
+
+    it('turns HTML headings into sections', () => {
+      const text = lessonRagText({ titulo: 'Redes', contenido: '', recursoHtml: { html: '<h1>Modelo OSI</h1><p>Define siete capas de comunicación.</p><h2><b>Capa física</b></h2><p>Transmite bits por el medio.</p>' } });
+      expect(chunkStructuredText(text).map(({ section }) => section)).toEqual([null, 'Modelo OSI', 'Capa física']);
+    });
+
+    it('cuts on spaces instead of splitting words', () => {
+      const chunks = chunkText(`A\n\n${'palabra '.repeat(200).trim()}`);
+      for (const chunk of chunks) expect(chunk).toMatch(/^(?:A|palabra(?: palabra)*)$/);
+      expect(chunks.length).toBeGreaterThan(2);
+    });
+
+    it('keeps exact cuts for text without spaces', () => {
+      expect(chunkText('abcdefghijklmnopqrstuvwxyz', 10, 3)).toEqual(['abcdefghij', 'hijklmnopq', 'opqrstuvwx', 'vwxyz']);
+    });
+
+    it('overlaps long sections packed by sentences', () => {
+      const long = Array.from({ length: 40 }, (_, index) => sentence(index)).join(' ');
+      const [, first, second] = chunkText(`A\n\n${long}`);
+      const lastWords = first.split(' ').slice(-3).join(' ');
+      expect(second).toContain(lastWords);
+      expect(second.split(' ')[0]).toMatch(/^[\p{L}\p{N}.]+$/u);
+    });
   });
 
   it('uses one retrieval preprocessing contract for queries and documents', () => {
