@@ -535,35 +535,141 @@ function isNaturalLanguageText(str) {
   return false;
 }
 
+const JS_STRING_ESCAPES = { n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', v: '\v', 0: '\0' };
+
+function skipJsComment(source, index) {
+  if (source[index] !== '/') return index;
+  if (source[index + 1] === '/') {
+    const end = source.indexOf('\n', index);
+    return end === -1 ? source.length : end + 1;
+  }
+  if (source[index + 1] === '*') {
+    const end = source.indexOf('*/', index + 2);
+    return end === -1 ? source.length : end + 2;
+  }
+  return index;
+}
+
+// Returns the decoded value and the index after the closing quote, or null when the
+// string never closes or a template interpolates a runtime value.
+function readJsString(source, start) {
+  const quote = source[start];
+  let value = '';
+  for (let index = start + 1; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === quote) return { value, end: index + 1 };
+    if (quote === '`' && char === '$' && source[index + 1] === '{') return null;
+    if (char !== '\\') {
+      value += char;
+      continue;
+    }
+    index += 1;
+    const escaped = source[index];
+    if (escaped === 'u' && /^[0-9a-fA-F]{4}$/.test(source.slice(index + 1, index + 5))) {
+      value += String.fromCharCode(Number.parseInt(source.slice(index + 1, index + 5), 16));
+      index += 4;
+    } else if (escaped !== '\n') {
+      value += JS_STRING_ESCAPES[escaped] ?? escaped;
+    }
+  }
+  return null;
+}
+
+const JS_QUOTES = new Set(['"', "'", '`']);
+const JS_NUMBER = /^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
+
+// Converts a JS object or array literal to JSON. Strings are read as a unit, so a
+// `//` inside a URL is not a comment. Anything computed makes the literal unreadable.
+function jsLiteralToJson(source) {
+  let output = '';
+  let index = 0;
+  while (index < source.length) {
+    const char = source[index];
+    const afterComment = skipJsComment(source, index);
+    if (afterComment !== index) {
+      index = afterComment;
+    } else if (/\s/.test(char)) {
+      index += 1;
+    } else if (JS_QUOTES.has(char)) {
+      const string = readJsString(source, index);
+      if (!string) return null;
+      output += JSON.stringify(string.value);
+      index = string.end;
+    } else if ('{[:,'.includes(char)) {
+      output += char;
+      index += 1;
+    } else if ('}]'.includes(char)) {
+      output = output.replace(/,$/, '') + char;
+      index += 1;
+    } else {
+      const token = source.slice(index).match(/^[\w$.+-]+/)?.[0];
+      if (!token) return null;
+      index += token.length;
+      if (source.slice(index).match(/^\s*:/)) output += JSON.stringify(token);
+      else if (['true', 'false', 'null'].includes(token) || JS_NUMBER.test(token)) output += token;
+      else if (token === 'undefined') output += 'null';
+      else return null;
+    }
+  }
+  return output;
+}
+
 function parseRelaxedJson(raw) {
   if (!raw || typeof raw !== 'string') return null;
   const trimmed = raw.trim();
   if (!((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']')))) {
     return null;
   }
-
-  // 1. Intento directo JSON estándar
   try {
     return JSON.parse(trimmed);
   } catch {}
-
-  // 2. Intento relajando sintaxis de objetos JavaScript comunes
   try {
-    const relaxed = trimmed
-      // Comentarios de una línea y multilínea
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '')
-      // Quitar comas colgantes antes de ] o }
-      .replace(/,\s*([\]}])/g, '$1')
-      // Comillas en propiedades no entrecomilladas: { pregunta: "x" } -> { "pregunta": "x" }
-      .replace(/([{,]\s*)([a-zA-Z0-9_$]+)\s*:/g, '$1"$2":')
-      // Reemplazar comillas simples con dobles si no están escapadas
-      .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (_, inner) => JSON.stringify(inner));
+    const json = jsLiteralToJson(trimmed);
+    return json === null ? null : JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
 
-    return JSON.parse(relaxed);
-  } catch {}
+// Finds where a literal ends by balancing brackets outside strings and comments,
+// so it does not depend on a trailing semicolon.
+function findLiteralEnd(source, start) {
+  let depth = 0;
+  let index = start;
+  while (index < source.length) {
+    const afterComment = skipJsComment(source, index);
+    if (afterComment !== index) {
+      index = afterComment;
+      continue;
+    }
+    const char = source[index];
+    if (JS_QUOTES.has(char)) {
+      const string = readJsString(source, index);
+      if (!string) return -1;
+      index = string.end;
+      continue;
+    }
+    if ('{['.includes(char)) depth += 1;
+    if ('}]'.includes(char)) {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+    }
+    index += 1;
+  }
+  return -1;
+}
 
-  return null;
+function findAssignedLiterals(script) {
+  const literals = [];
+  const assignment = /(?:\b(?:const|let|var)\s+([\w$]+)|\bwindow\.([\w$]+))\s*=\s*(?=[[{])/g;
+  let match;
+  while ((match = assignment.exec(script)) !== null) {
+    const end = findLiteralEnd(script, assignment.lastIndex);
+    if (end === -1) continue;
+    literals.push({ name: match[1] ?? match[2], source: script.slice(assignment.lastIndex, end) });
+    assignment.lastIndex = end;
+  }
+  return literals;
 }
 
 function formatStructuredItem(item, { assessmentSafe = false } = {}) {
@@ -682,10 +788,9 @@ function extractScriptContent(html, seenStrings, { assessmentSafe = false } = {}
 
     // B. Buscar declaraciones de objetos o arrays asignados en JavaScript:
     // e.g. const questions = [...]; let cards = [...]; window.data = {...};
-    const varMatches = scriptBody.matchAll(/(?:const|let|var|window\.[a-zA-Z0-9_$]+)\s*[a-zA-Z0-9_$]*\s*=\s*(\[[\s\S]*?\]|\{[\s\S]*?\})\s*(?:;|$)/g);
-    for (const varMatch of varMatches) {
-      const literalCandidate = varMatch[1];
-      const parsed = parseRelaxedJson(literalCandidate);
+    for (const { name, source } of findAssignedLiterals(scriptBody)) {
+      if (assessmentSafe && isAssessmentSecretKey(name)) continue;
+      const parsed = parseRelaxedJson(source);
       if (parsed) {
         extractStructuredData(parsed, extracted, seenStrings, { assessmentSafe });
       }

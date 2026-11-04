@@ -58,9 +58,9 @@
 
 ## U7 — Lectura de JavaScript (punto 7)
 
-- [ ] Localizar literales con un escáner que respete strings y comentarios.
-- [ ] Convertir objetos JS a JSON respetando strings.
-- [ ] Tests: sin `;`, con URL, literal inválido y modo seguro.
+- [x] Localizar literales con un escáner que respete strings y comentarios.
+- [x] Convertir objetos JS a JSON respetando strings.
+- [x] Tests: sin `;`, con URL, literal inválido y modo seguro.
 
 ## U8 — Chunking (punto 8)
 

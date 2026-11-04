@@ -149,6 +149,48 @@ describe('extractLessonHtmlContent', () => {
     expect(result).not.toMatch(/CLAVE (?:CSS|ARIA|DATA|JSON|JS)/);
   });
 
+  describe('JavaScript literals', () => {
+    const quiz = 'Pregunta: ¿Capital de Bolivia? | Opciones: Sucre, Lima';
+
+    it.each([
+      ['no trailing semicolon', '<script>const qs = [{"pregunta":"¿Capital de Bolivia?","opciones":["Sucre","Lima"]}]\nconst x = 1\nstart()</script>'],
+      ['a URL inside a string', "<script>const qs = [{pregunta:'¿Capital de Bolivia?',opciones:['Sucre','Lima'],fuente:'https://x.org/a'}];</script>"],
+      ['comments and trailing commas', "<script>const qs = [ // datos\n { pregunta: '¿Capital de Bolivia?', /* nota */ opciones: ['Sucre', 'Lima',], },\n];</script>"],
+      ['brackets inside strings', "<script>const qs = [{pregunta:'¿Capital de Bolivia?',opciones:['Sucre','Lima'],nota:'a]b}c'}]</script>"],
+      ['a window assignment', "<script>window.DATA = [{pregunta:'¿Capital de Bolivia?',opciones:['Sucre','Lima']}]</script>"],
+      ['a template string', '<script>const qs = [{pregunta:`¿Capital de Bolivia?`,opciones:[`Sucre`,`Lima`]}];</script>'],
+    ])('reads a literal with %s', (_label, html) => {
+      expect(extractLessonHtmlContent(html, { assessmentSafe: true })).toContain(quiz);
+    });
+
+    it('decodes escapes without breaking the value', () => {
+      const html = String.raw`<script>const qs = [{pregunta:'¿Qué dijo O\'Brien en época?',opciones:['Uno','Dos']}]</script>`;
+      expect(extractLessonHtmlContent(html, { assessmentSafe: true })).toContain("¿Qué dijo O'Brien en época?");
+    });
+
+    it('ignores an unreadable literal and keeps the rest', () => {
+      const html = "<script>const roto = [{pregunta: calcular()}];\nconst qs = [{pregunta:'¿Capital de Bolivia?',opciones:['Sucre','Lima']}];</script>";
+      expect(extractLessonHtmlContent(html, { assessmentSafe: true })).toContain(quiz);
+    });
+
+    it('ignores templates that interpolate runtime values', () => {
+      const html = '<script>const qs = [{pregunta:`¿Qué pasa con ${nombre}?`,opciones:["Uno","Dos"]}];</script>';
+      expect(extractLessonHtmlContent(html, { assessmentSafe: true })).toBe('');
+    });
+
+    it('keeps safe-mode exclusions in literals it can now read', () => {
+      const html = "<script>const qs = [{pregunta:'¿Capital de Bolivia?',opciones:['Sucre','Lima'],correcta:'CLAVE',fuente:'https://x.org'}]\nconst solucion = {texto:'CLAVE SOLUCION'}\nconst feedback = {texto:'CLAVE FEEDBACK'}</script>";
+      const result = extractLessonHtmlContent(html, { assessmentSafe: true });
+      expect(result).toContain(quiz);
+      expect(result).not.toContain('CLAVE');
+    });
+
+    it('still reveals answers outside safe mode', () => {
+      const html = "<script>const qs = [{pregunta:'¿Capital de Bolivia?',opciones:['Sucre','Lima'],correcta:'Sucre'}]</script>";
+      expect(extractLessonHtmlContent(html)).toContain('Respuesta correcta: Sucre');
+    });
+  });
+
   describe('assessment-safe leaks through styles and unknown attributes', () => {
     const safe = (html) => extractLessonHtmlContent(html, { assessmentSafe: true });
 
