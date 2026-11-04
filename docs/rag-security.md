@@ -58,8 +58,21 @@ de otros estudiantes.
 ## Controles de aplicación
 
 - Contexto recuperado e historial se tratan como datos no confiables.
-- Se detectan señales de prompt injection y se bloquean solicitudes de modificar notas,
-  progreso, inscripciones o ejecutar SQL.
+- Se detectan señales de prompt injection y se bloquean pedidos de modificar notas,
+  progreso o inscripciones y órdenes de ejecutar SQL. El vocabulario técnico no se bloquea:
+  el modelo no tiene herramientas, así que preguntar qué hace `UPDATE` no entraña riesgo.
+- Una respuesta debe citar fuentes recuperadas y compartir términos con ellas. Es una
+  heurística contra respuestas sin relación con la fuente, no una verificación de cada
+  afirmación.
+- En HTML evaluable se excluye lo oculto por atributos o por reglas simples de `<style>`,
+  y de `data-*` solo se leen nombres pedagógicos permitidos. No se detecta lo que un script
+  oculta en ejecución ni los selectores complejos: para material sensible, usar contexto
+  autoral. Un estilo que oculte pantallas por defecto también las excluye del índice.
+- Si un mensaje coincide con una pregunta de una evaluación no aprobada, el tutor solo da
+  una pista y se rechaza la respuesta que contenga la opción correcta. Las opciones correctas
+  no se envían al proveedor. Una paráfrasis puede evadir la comparación: frena el copiar y
+  pegar, pero no reemplaza la supervisión de una evaluación. Si la consulta falla, el chat
+  continúa sin esta protección y registra `assessment_guard_failed`.
 - El modelo no tiene tools, function calling ni acceso directo a APIs de negocio o DB.
 - Las citas se validan contra curso, lección publicada, documento activo y corpus
   `assessmentSafe`; un `chunkId` del cliente nunca se confía sin revalidación.

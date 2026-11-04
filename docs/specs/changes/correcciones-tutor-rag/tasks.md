@@ -73,9 +73,10 @@
 
 ## Cierre
 
-- [ ] `npm --prefix backend test`
-- [ ] `npm --prefix backend run lint`
-- [ ] `npm --prefix frontend run build`
-- [ ] Actualizar `docs/api.md`, `docs/rag-security.md`, variables de entorno de ejemplo e índice de `AGENTS.md`.
-- [ ] Escribir `verify-report.md`.
+- [x] `npm --prefix backend test`
+- [x] `npm --prefix backend run lint`
+- [x] `npm --prefix frontend run build`
+- [x] Actualizar `docs/api.md`, `docs/rag-security.md`, variables de entorno de ejemplo e índice de `AGENTS.md`.
+- [x] Escribir `verify-report.md`.
 - [ ] Confirmar con el usuario la reindexación de producción (pendiente, no se ejecuta en este change sin su aprobación).
+- [ ] Probar el chat con una clave Groq real en un curso piloto.
