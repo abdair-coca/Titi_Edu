@@ -6,9 +6,9 @@
 
 ## U3 — Bloqueo de acciones (punto 3)
 
-- [ ] Acotar `ACTION_PATTERNS` en `rag.security.js` a pedidos, no vocabulario.
-- [ ] Agregar `ACTION_BLOCKED_ANSWER` y usarla en `chatWithContext`.
-- [ ] Tests: preguntas técnicas pasan, pedidos se bloquean sin proveedor.
+- [x] Acotar `ACTION_PATTERNS` en `rag.security.js` a pedidos, no vocabulario.
+- [x] Agregar `ACTION_BLOCKED_ANSWER` y usarla en `chatWithContext`.
+- [x] Tests: preguntas técnicas pasan, pedidos se bloquean sin proveedor.
 
 ## U4 — Validación de respuestas (punto 4)
 

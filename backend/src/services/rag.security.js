@@ -1,4 +1,6 @@
 export const NO_EVIDENCE_ANSWER = 'No encontré evidencia suficiente en los materiales publicados de este curso.';
+export const ACTION_BLOCKED_ANSWER = 'No puedo cambiar notas, progreso ni inscripciones, ni ejecutar comandos. Sí puedo ayudarte a entender el material de este curso.';
+export const SOCIAL_ANSWER = '¡Con gusto! Contame qué parte de la lección querés repasar.';
 
 const INJECTION_PATTERNS = [
   /ignore\s+(all|any|the|previous|prior)\s+instructions?/i,
@@ -13,12 +15,18 @@ const INJECTION_PATTERNS = [
   /act[uú]a\s+como\s+(administrador|desarrollador|sistema)/i,
 ];
 
+const ACADEMIC_RECORD = '(?:nota|notas|calificaci[oó]n|calificaciones|progreso|inscripci[oó]n|inscripciones)';
+const POLITE_START = '^\\s*[¿¡]?\\s*(?:por favor,?\\s+)?';
+
+// Blocks requests to act on the platform, never vocabulary: a database course
+// must be able to ask what SQL or UPDATE mean.
 const ACTION_PATTERNS = [
-  /cambia(r)?\s+(mi|la|las|el|los)?\s*(nota|notas|progreso|inscripci[oó]n)/i,
-  /modifica(r)?\s+(mi|la|las|el|los)?\s*(nota|notas|progreso|inscripci[oó]n)/i,
-  /actualiza(r)?\s+(mi|la|las|el|los)?\s*(nota|notas|progreso|inscripci[oó]n)/i,
-  /inscribe(me)?\s+(en|al|a)/i,
-  /\b(exec|execute|sql|delete|update)\b/i,
+  new RegExp(`\\b(?:c[aá]mbi|modif[ií]c|actual[ií]z|b[oó]rr|el[ií]min|s[uú]b)(?:a|á|e|í|ar|ir|ame|eme|ime)\\s+(?:mi|mis)\\s+${ACADEMIC_RECORD}\\b`, 'i'),
+  new RegExp(`${POLITE_START}(?:c[aá]mbia|modif[ií]ca|actual[ií]za|s[uú]be)(?:me)?\\s+(?:la|las|el|los)\\s+${ACADEMIC_RECORD}\\b`, 'i'),
+  /\b(?:update|change|modify|delete|set)\s+my\s+(?:grade|grades|progress|enrollment|score)\b/i,
+  /\b(?:des)?inscr[ií]b[ea]me\b/i,
+  new RegExp(`${POLITE_START}(?:des)?inscr[ií]be\\s+(?:en|al|a)\\b`, 'i'),
+  new RegExp(`${POLITE_START}(?:ejecut[aá]|corr[eé]|run|execute|exec)\\s+(?:(?:este|esta|el|la|un|una|this|the|a)\\s+)?(?:sql|query|consulta|comando|command|script)\\b`, 'i'),
 ];
 
 export function detectPromptInjection(value) {

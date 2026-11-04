@@ -16,6 +16,7 @@ import {
   RagIndexLeaseLostError,
 } from './rag.queue.js';
 import {
+  ACTION_BLOCKED_ANSWER,
   ChatRateLimiter,
   NO_EVIDENCE_ANSWER,
   detectPromptInjection,
@@ -1268,7 +1269,7 @@ async function chatWithContext({ courseId, lessonId = null, principalId = 'anony
 
   if (isBlockedActionRequest(message)) {
     securityEvent('blocked_action_request', { courseId, lessonId, reason: 'read_only_policy' });
-    return { answer: NO_EVIDENCE_ANSWER, citations: [], usage: null, relatedLesson: null };
+    return { answer: ACTION_BLOCKED_ANSWER, citations: [], usage: null, relatedLesson: null };
   }
 
   const safeHistory = normalizeChatHistory(history, process.env.RAG_CHAT_HISTORY_LIMIT, message);

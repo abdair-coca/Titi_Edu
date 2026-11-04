@@ -21,6 +21,35 @@ describe('RAG security boundaries', () => {
     expect(isBlockedActionRequest('¿Cómo funcionan las variables?')).toBe(false);
   });
 
+  it.each([
+    'Cambia mi nota a 100',
+    'Podés cambiar mis notas?',
+    'Por favor, modifica la nota del examen',
+    'Actualiza mi progreso',
+    'Súbeme la nota',
+    'Inscríbeme en el curso',
+    'Inscribe al curso de redes',
+    'Desinscríbeme',
+    'Ejecuta este SQL',
+    'run this query',
+    'update my grade to 100',
+  ])('blocks the platform action request: %s', (message) => {
+    expect(isBlockedActionRequest(message)).toBe(true);
+  });
+
+  it.each([
+    '¿Qué es SQL?',
+    '¿Para qué sirve UPDATE en una tabla?',
+    '¿Cómo funciona delete en un árbol binario?',
+    '¿Cómo ejecuto una consulta?',
+    '¿Qué hace DELETE FROM usuarios?',
+    '¿Cómo se inscribe un alumno en el sistema del ejercicio?',
+    '¿Cómo cambiar la nota de una guitarra?',
+    '¿Cómo actualizar el progreso de una barra en React?',
+  ])('does not block the legitimate question: %s', (message) => {
+    expect(isBlockedActionRequest(message)).toBe(false);
+  });
+
   it('accepts only citations that belong to retrieved sources', () => {
     expect(extractCitationNumbers('Respuesta [1] y [2]')).toEqual([1, 2]);
     expect(validateGroundedAnswer('Respuesta basada en la lección [1].', chunks)).toMatchObject({ valid: true, citationNumbers: [1] });
