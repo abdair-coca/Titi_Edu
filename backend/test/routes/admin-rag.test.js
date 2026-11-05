@@ -14,6 +14,7 @@ const mockRagService = vi.hoisted(() => ({
   indexLesson: vi.fn(),
   searchCourseContext: vi.fn(),
   buildContextualRetrievalQuery: vi.fn((message, _history, title) => `${message}\nTema: ${title}`),
+  buildFullTextQuery: vi.fn((message) => `fts:${message}`),
   RagError: class RagError extends Error {
     constructor(status, message) {
       super(message);
@@ -35,6 +36,7 @@ const tokenFor = (neoId) => jwt.sign({ id: neoId }, JWT_SECRET, { expiresIn: '1h
 beforeEach(() => {
   vi.resetAllMocks();
   mockRagService.buildContextualRetrievalQuery.mockImplementation((message, _history, title) => `${message}\nTema: ${title}`);
+  mockRagService.buildFullTextQuery.mockImplementation((message) => `fts:${message}`);
   mockPrisma.$queryRaw.mockResolvedValue([]);
   process.env.JWT_SECRET = JWT_SECRET;
 });
@@ -250,7 +252,7 @@ describe('RAG Admin Routes (/api/admin/rag)', () => {
       'c1',
       '¿Qué es la aceleración?\nTema: Cinemática',
       5,
-      { lessonId: 'l1', ftsQuery: '¿Qué es la aceleración?' },
+      { lessonId: 'l1', ftsQuery: 'fts:¿Qué es la aceleración?' },
     );
   });
 

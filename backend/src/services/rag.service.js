@@ -43,6 +43,7 @@ const DEFAULT_EVIDENCE_STRONG_THRESHOLD = 0.6;
 const DEFAULT_INDEX_TRANSACTION_MAX_WAIT_MS = 10_000;
 const DEFAULT_INDEX_TRANSACTION_TIMEOUT_MS = 30_000;
 const INDEX_FORMAT_VERSION = 2;
+const MAX_COMPLETION_TOKENS = 1600;
 export const VECTOR_DIMENSIONS = 768;
 export const DEFAULT_CHAT_INTENT = 'DUDA';
 export const CHAT_INTENTS = Object.freeze([
@@ -728,7 +729,8 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
   const requestBody = {
     model,
     temperature: 0.2,
-    max_completion_tokens: 800,
+    // The model's reasoning counts against this limit and can use up most of it.
+    max_completion_tokens: MAX_COMPLETION_TOKENS,
     messages: [
       { role: 'system', content: systemContent },
       // Each turn numbers its sources anew, so an old [1] would point at the wrong one.
@@ -1129,6 +1131,24 @@ function deduplicateFragments(rows) {
   });
 }
 
+// Words that frame a question but rarely appear in the material. Spanish stop words do
+// not cover them, and full-text requires every term, so "¿Qué significa LIFO?" found nothing.
+const QUESTION_FRAMING_WORDS = new Set([
+  'como', 'cual', 'cuales', 'cuando', 'cuanto', 'cuanta', 'cuantos', 'cuantas', 'donde', 'quien', 'quienes', 'que', 'porque', 'por', 'para',
+  'hace', 'hacen', 'hacer', 'sirve', 'sirven', 'servir', 'significa', 'significan', 'significado', 'funciona', 'funcionan', 'funcionar',
+  'aparece', 'aparecen', 'ocurre', 'ocurren', 'pasa', 'pasan', 'sucede', 'suceden', 'usa', 'usan', 'usar', 'uso', 'utiliza', 'utilizar',
+  'puedo', 'puede', 'pueden', 'debo', 'debe', 'deben', 'tengo', 'hay', 'explica', 'explicame', 'explicar', 'dime', 'dame', 'muestrame',
+  'diferencia', 'diferencias',
+]);
+
+export function buildFullTextQuery(message) {
+  return normalizeText(message)
+    .split(' ')
+    .map((word) => word.replace(/^[^\p{L}\p{N}@_]+|[^\p{L}\p{N})_]+$/gu, ''))
+    .filter((word) => word && !QUESTION_FRAMING_WORDS.has(word.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()))
+    .join(' ');
+}
+
 // `query` feeds the embedding and may carry context; `ftsQuery` must hold only the
 // student's words, because full-text requires every term to appear in a fragment.
 export async function searchCourseContext(courseId, query, limit = DEFAULT_RETRIEVAL_LIMIT, { lessonId = null, ftsQuery = query } = {}) {
@@ -1362,7 +1382,7 @@ async function chatWithContext({ courseId, lessonId = null, principalId = 'anony
   const safeLessonTitle = normalizeText(lessonTitle).slice(0, 200);
   const retrievalQuery = buildContextualRetrievalQuery(message, safeHistory, safeLessonTitle);
   // Prioriza la lección abierta (top-K de esa lección + fallback al curso).
-  let chunks = await searchCourseContext(courseId, retrievalQuery, DEFAULT_RETRIEVAL_LIMIT, { lessonId, ftsQuery: normalizeText(message) });
+  let chunks = await searchCourseContext(courseId, retrievalQuery, DEFAULT_RETRIEVAL_LIMIT, { lessonId, ftsQuery: buildFullTextQuery(message) });
   if (!chunks.length) {
     chunks = isConversationContinuation(message)
       ? await loadHistoricalChunks(courseId, safeHistory)

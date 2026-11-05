@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const prisma = vi.hoisted(() => ({ $queryRaw: vi.fn() }));
 vi.mock('../../src/prisma.js', () => ({ default: prisma }));
 
-import { buildContextualRetrievalQuery, chatWithCourseContext, isConversationContinuation, resetRagSecurityState } from '../../src/services/rag.service.js';
+import { buildContextualRetrievalQuery, buildFullTextQuery, chatWithCourseContext, isConversationContinuation, resetRagSecurityState } from '../../src/services/rag.service.js';
 import { ACTION_BLOCKED_ANSWER, SOCIAL_ANSWER } from '../../src/services/rag.security.js';
 
 const chunk = {
@@ -340,6 +340,18 @@ describe('RAG chat security', () => {
       expect(tutorLine.length).toBeLessThanOrEqual('Tutor: '.length + 200);
     });
 
+    it.each([
+      ['¿Para qué sirve @classmethod?', '@classmethod'],
+      ['¿Qué significa LIFO?', 'LIFO'],
+      ['¿Qué hace pop(0) en una lista?', 'pop(0) en una lista'],
+      ['¿Quién es J.A.R.V.I.S.?', 'es J.A.R.V.I.S'],
+      ['¿Para qué sirve collections.deque?', 'collections.deque'],
+      ['¿Y eso?', 'Y eso'],
+      ['¿Cómo funciona?', ''],
+    ])('keeps only meaningful words of "%s" for full-text', (message, expected) => {
+      expect(buildFullTextQuery(message)).toBe(expected);
+    });
+
     it('sends only the current message to full-text search', async () => {
       const fetchMock = vi.fn()
         .mockResolvedValueOnce(embeddingResponse())
@@ -349,7 +361,7 @@ describe('RAG chat security', () => {
       await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', lessonTitle: 'Variables', principalId: 'student-1', message: '¿Qué es una variable?' });
 
       const [, ...params] = prisma.$queryRaw.mock.calls[0];
-      expect(params).toContain('¿Qué es una variable?');
+      expect(params).toContain(buildFullTextQuery('¿Qué es una variable?'));
       expect(params.some((param) => typeof param === 'string' && param.includes('Tema de la lección'))).toBe(false);
     });
 

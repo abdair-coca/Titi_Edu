@@ -118,6 +118,24 @@ describe.skipIf(!testUrl)('RAG retrieval SQL on real Postgres with pgvector', ()
     fallback.mockRestore();
   });
 
+  it.each([
+    ['¿Para qué sirve NAT?'],
+    ['¿Qué significa NAT?'],
+    ['¿Cuándo aparece NAT?'],
+    ['¿Qué hace NAT?'],
+    ['¿Quién usa NAT?'],
+  ])('matches an exact term inside the natural question: %s', async (message) => {
+    const { buildFullTextQuery } = await import('../../src/services/rag.service.js');
+    const rows = await searchCourseContext(courseId, 'q', 5, { ftsQuery: buildFullTextQuery(message) });
+    expect(rows.find((row) => row.content.startsWith('NAT traduce'))).toMatchObject({ ftsMatch: true });
+  });
+
+  it('does not qualify on framing words alone', async () => {
+    const { buildFullTextQuery } = await import('../../src/services/rag.service.js');
+    const rows = await searchCourseContext(courseId, 'q', 5, { ftsQuery: buildFullTextQuery('¿Para qué sirve?') });
+    expect(rows.some((row) => row.ftsMatch)).toBe(false);
+  });
+
   it('would not match if full-text received the enriched embedding query', async () => {
     const rows = await searchCourseContext(courseId, 'q', 5, { ftsQuery: '¿Qué es NAT?\nTema de la lección actual: Redes' });
     expect(rows.some((row) => row.ftsMatch)).toBe(false);

@@ -6,6 +6,7 @@ import { requireRole } from '../middleware/permissions.js';
 import {
   RagError,
   buildContextualRetrievalQuery,
+  buildFullTextQuery,
   searchCourseContext,
 } from '../services/rag.service.js';
 import { enqueueLessonIndex } from '../services/rag.queue.js';
@@ -374,7 +375,7 @@ router.post('/lessons/:lessonId/test-query', async (req, res) => {
       lesson.modulo.cursoId,
       buildContextualRetrievalQuery(query, [], lesson.titulo),
       5,
-      { lessonId: lesson.id, ftsQuery: query },
+      { lessonId: lesson.id, ftsQuery: buildFullTextQuery(query) },
     );
 
     res.json({
