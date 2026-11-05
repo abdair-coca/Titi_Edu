@@ -185,6 +185,32 @@ describe('extractLessonHtmlContent', () => {
       expect(result).not.toContain('CLAVE');
     });
 
+    // Forma real de la lección "Protocolo Endgame": las ayudas por niveles incluyen la solución.
+    it('excludes progressive hints and reference code from literals it can now read', () => {
+      const html = `<script>const CODEX = { misiones: [{
+        titulo: "Misión 1: Bahía Mark I",
+        descripcion: "Construye la clase base de la armadura.",
+        hints: [
+          { level: 1, title: "Concepto", body: "CLAVE PISTA uno sobre el constructor." },
+          { level: 3, title: "Código de Referencia", body: \`CLAVE def volar(self):
+    return True\` }
+        ],
+        pistas: [{ titulo: "Ayuda", contenido: "CLAVE PISTA dos en español." }],
+        solutions: [{ title: "Ayuda", content: "CLAVE solución en plural." }],
+        extra: { title: "Código de Referencia", content: "CLAVE bajo una clave inocente." }
+      }] }</script>`;
+
+      const result = extractLessonHtmlContent(html, { assessmentSafe: true });
+
+      expect(result).toContain('Construye la clase base de la armadura.');
+      expect(result).not.toContain('CLAVE');
+    });
+
+    it('keeps hints available outside safe mode', () => {
+      const html = '<script>const CODEX = { misiones: [{ hints: [{ title: "Concepto de herencia", body: "Una subclase reutiliza la clase base." }] }] }</script>';
+      expect(extractLessonHtmlContent(html)).toContain('Una subclase reutiliza la clase base.');
+    });
+
     it('still reveals answers outside safe mode', () => {
       const html = "<script>const qs = [{pregunta:'¿Capital de Bolivia?',opciones:['Sucre','Lima'],correcta:'Sucre'}]</script>";
       expect(extractLessonHtmlContent(html)).toContain('Respuesta correcta: Sucre');

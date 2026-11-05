@@ -270,8 +270,8 @@ const ASSESSMENT_SECRET_KEYS = new Set([
   'privado',
 ].map((key) => key.replace(/[-_\s]/g, '').toLowerCase()));
 
-const ASSESSMENT_SECRET_KEY_PATTERN = /^(?:(?:selected|expected|chosen|given|submitted|user|student|provided)?(?:answer|answers|respuesta|respuestas)|(?:selected|expected|chosen|given|submitted|user|student|provided|correct|right)?(?:option|options|choice|choices|opcion|opciones|alternativa|alternativas)|(?:is|es)?(?:correct|correcta|correcto|right)|solution|solucion|explicacion|explanation|feedback|pista|hint)(?:answer|answers|key|option|choice|value|text|index|id|respuesta|correcta|correcto|explicacion|explanation|feedback|pista|hint)*$/i;
-const ASSESSMENT_SECRET_TEXT_PATTERN = /\b(?:respuesta\s+(?:correcta|correcto|esperada|esperado)|(?:respuesta|answer|solution|soluci[oó]n)\s+(?:es|is)|(?:opci[oó]n|option)\s+(?:correcta|correct|seleccionada|selected)|correct\s+answer|expected\s+answer|(?:answer|respuesta|solution|soluci[oó]n)\s*[:=]|answer\s+(?:key|explanation)|clave\s+(?:de\s+)?respuesta|soluci[oó]n(?:\s+(?:correcta|answer|key))?|feedback|retroalimentaci[oó]n)\b/i;
+const ASSESSMENT_SECRET_KEY_PATTERN = /^(?:(?:selected|expected|chosen|given|submitted|user|student|provided)?(?:answer|answers|respuesta|respuestas)|(?:selected|expected|chosen|given|submitted|user|student|provided|correct|right)?(?:option|options|choice|choices|opcion|opciones|alternativa|alternativas)|(?:is|es)?(?:correct|correcta|correcto|right)|solutions?|solucion(?:es)?|explicacion(?:es)?|explanations?|feedbacks?|pistas?|hints?|tips?|referencia|reference)(?:answer|answers|key|option|choice|value|text|index|id|respuesta|correcta|correcto|explicacion|explanation|feedback|pista|hint|code|codigo)*$/i;
+const ASSESSMENT_SECRET_TEXT_PATTERN = /\b(?:respuesta\s+(?:correcta|correcto|esperada|esperado)|(?:respuesta|answer|solution|soluci[oó]n)\s+(?:es|is)|(?:opci[oó]n|option)\s+(?:correcta|correct|seleccionada|selected)|correct\s+answer|expected\s+answer|(?:answer|respuesta|solution|soluci[oó]n)\s*[:=]|answer\s+(?:key|explanation)|clave\s+(?:de\s+)?respuesta|soluci[oó]n(?:\s+(?:correcta|answer|key))?|c[oó]digo\s+(?:de\s+)?(?:referencia|soluci[oó]n)|reference\s+code|feedback|retroalimentaci[oó]n)\b/i;
 const HTML_VOID_ELEMENTS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
 
 function normalizeKey(value) {
@@ -741,6 +741,7 @@ function extractStructuredData(data, results, seenStrings, options = {}) {
   if (typeof data === 'object') {
     if (options.assessmentSafe && isStructuredItemHidden(data)) return;
     const formatted = formatStructuredItem(data, options);
+    if (formatted && options.assessmentSafe && isAssessmentSecretLiteral(formatted)) return;
     if (formatted) {
       results.push(formatted);
       // Registrar las cadenas individuales como vistas para evitar duplicación
