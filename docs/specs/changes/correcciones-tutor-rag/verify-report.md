@@ -6,9 +6,10 @@
 
 ## Resultado
 
-Implementado y verificado en código y en un Postgres con pgvector desechable. **No se probó
-con el proveedor real de embeddings ni con Groq**, y producción no se tocó, así que el change
-sigue activo hasta completar lo pendiente.
+Implementado y verificado en código, en Postgres con pgvector desechable y con proveedores
+reales sobre una copia local del curso piloto (ver "Verificación con proveedores reales").
+Producción no se tocó, y la versión final no se pudo medir completa con Groq por su límite
+diario, así que el change sigue activo hasta completar lo pendiente.
 
 | Comprobación | Resultado |
 |---|---|
@@ -43,6 +44,54 @@ hermética.
 | 9 | Evidencia parcial activa; continuación acotada | `rag.chat-security.test.js` | PASS |
 | 10 | Historial solo en continuaciones, recortado y sin `[n]` | `rag.chat-security.test.js` | PASS |
 
+## Verificación con proveedores reales
+
+Curso piloto copiado en solo lectura a un Postgres local, con embeddings de Cloudflare y
+`openai/gpt-oss-20b` reales. El curso no tiene evaluaciones guardadas: se añadió una de prueba
+solo en la copia. Versiones: **anterior** `03cb712`, **primera** `f843566`, **final** `b6e8e48`.
+
+Búsqueda, 48 preguntas con respuesta en el material (fragmento correcto entre las 5 fuentes):
+
+| Medida | Anterior | Primera | Final |
+|---|---|---|---|
+| Fragmento correcto en las 5 fuentes | 43 | 45 | 48 |
+| Término exacto, 8 preguntas | 5 | 5 | 8 |
+| Cambio de tema, 6 preguntas | 4 | 6 | 6 |
+| Preguntas con coincidencia exacta | 0 | 16 | 29 |
+| Fuera de tema admitido por texto, 6 preguntas | 0 | 0 | 0 |
+
+Respuestas, 47 casos y 54 turnos, anterior frente a primera. Faltan por medir `g05` en adelante.
+
+| Medida | Anterior | Primera |
+|---|---|---|
+| Criterio automático | 35/54 | 46/54 |
+| Respuestas descartadas por el validador | 13 | 6 |
+| Pregunta de evaluación copiada sin revelar | 0/4 | 4/4 |
+| Gana en lectura a ciegas, 50 turnos (34 empates) | 3 | 13 |
+| Respuestas cortadas por el tope de tokens | 1 | 4 |
+
+Punta a punta con HTTP, clave del usuario, gateway de Cloudflare y worker: 27/27 en `7aa7de6`.
+El código anterior falla el punto 1: tras adjuntar un material la búsqueda devuelve 0 resultados
+y el panel sigue mostrando `LISTO`. Panel admin y chat revisados en el navegador.
+
+### Fallos que encontró esta verificación
+
+- **Fuga por el punto 7:** el lector nuevo llevaba al índice las ayudas `hints` y el código de
+  referencia del HTML evaluable. Corregido en `7aa7de6`.
+- **Punto 2 incompleto:** las palabras de la pregunta (`sirve`, `significa`) impedían coincidir
+  en 8 de 12 preguntas probadas. Corregido en `b6e8e48`.
+- **Tope de 800 tokens:** el razonamiento lo agotaba y causaba respuestas vacías o sin citas.
+  Subido a 1600 en `b6e8e48`; falta confirmar el efecto con el modelo.
+
+### Observaciones
+
+- La protección de evaluaciones actúa sobre todo por el filtro de salida: en los casos medidos el
+  modelo dio la respuesta aunque se le pidió una pista, así que el alumno recibe el mensaje de
+  repaso y no una pista.
+- El límite gratuito de Groq es de 200.000 tokens al día, unas 100 preguntas por clave.
+- Las lecciones 1.1 y 2.2 tienen el mismo HTML, pero el contexto del tutor de la 1.1 es de
+  recursividad. Es un problema de datos del curso, no corregido aquí.
+
 ## Cómo repetir la prueba de SQL
 
 ```bash
@@ -57,13 +106,11 @@ La prueba rechaza cualquier host que no sea local.
 
 ## Límites conocidos
 
-- **Calidad sin medir:** no se evaluó si las respuestas o los resultados mejoran con
-  preguntas reales. Los umbrales `0.60` y `0.15` son valores iniciales sin calibrar. El
-  respaldo por términos puede rechazar respuestas válidas si el material está en otro idioma
-  que la respuesta; vigilar el evento `unsupported_by_cited_sources`.
-- **Modelo real:** el prompt nuevo no se probó con `openai/gpt-oss-20b`.
-- **Panel admin:** la tarjeta y la insignia de desactualizadas compilan, pero no se revisaron
-  en el navegador.
+- **Medición limitada:** una sola pasada, preguntas escritas por quien hizo el cambio y un solo
+  curso. La lectura a ciegas la hizo la misma persona. Los umbrales `0.60` y `0.15` siguen sin
+  calibrar. El respaldo por términos no se activó en ningún turno real, así que solo está probado
+  con tests; vigilar el evento `unsupported_by_cited_sources`.
+- **Versión final:** su efecto en las respuestas del modelo está pendiente de medir.
 - **Protección de evaluaciones:** una paráfrasis la evade, y no cubre preguntas de HTML
   evaluable, que no se guardan como `Pregunta`.
 - **HTML evaluable:** un estilo que oculte pantallas por defecto las saca del índice; esas
@@ -71,6 +118,7 @@ La prueba rechaza cualquier host que no sea local.
 
 ## Pendiente antes de archivar
 
-1. Reindexar producción, con confirmación: las lecciones ya desactualizadas no se recuperan
+1. Medir la versión final con el modelo: casos afectados por el tope de tokens y el full-text,
+   intenciones pedagógicas, paráfrasis e inyección.
+2. Reindexar producción, con confirmación: las lecciones ya desactualizadas no se recuperan
    solas, y cada una regenera sus embeddings una vez porque cambió el formato de indexación.
-2. Probar el chat con una clave Groq real en un curso piloto.

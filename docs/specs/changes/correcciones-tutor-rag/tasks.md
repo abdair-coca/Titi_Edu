@@ -79,4 +79,5 @@
 - [x] Actualizar `docs/api.md`, `docs/rag-security.md`, variables de entorno de ejemplo e índice de `AGENTS.md`.
 - [x] Escribir `verify-report.md`.
 - [ ] Confirmar con el usuario la reindexación de producción (pendiente, no se ejecuta en este change sin su aprobación).
-- [ ] Probar el chat con una clave Groq real en un curso piloto.
+- [x] Comparar con Groq y Cloudflare reales sobre una copia local del curso piloto.
+- [ ] Medir la versión final con el modelo (pendiente por el límite diario de Groq).

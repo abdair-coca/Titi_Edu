@@ -35,8 +35,9 @@ SHALL contar este último como listo. El filtro de estado SHALL permitir encontr
 
 ### Requisito 2.1 — Full-text sobre la pregunta
 
-La búsqueda full-text SHALL usar solo el mensaje actual del estudiante. No SHALL incluir
-historial, título ni textos fijos.
+La búsqueda full-text SHALL usar solo el mensaje actual del estudiante, sin las palabras que
+solo formulan la pregunta ("sirve", "significa", "cuándo"). No SHALL incluir historial, título
+ni textos fijos.
 
 Una coincidencia de todos los términos del mensaje SHALL calificar como evidencia. Una
 coincidencia parcial SHALL influir en el orden, pero no SHALL calificar por sí sola.
