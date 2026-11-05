@@ -714,7 +714,7 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
       : 'Si las fuentes no abordan la pregunta en absoluto, respondé exactamente: ' + NO_EVIDENCE_ANSWER,
     'Si las fuentes cubren la pregunta solo parcialmente, respondé con lo que el material sí respalda, aclarando de forma explícita qué parte no está cubierta por el material; no inventes lo faltante.',
     'Cita las fuentes usando [1], [2], etc. Solo podés usar los números de las fuentes recibidas.',
-    'Escribí el código y los índices como arr[0] entre backticks para no confundirlos con citas.',
+    'Escribí todo el código entre backticks. Fuera del código, usá corchetes con números solo para citar fuentes.',
     'No ejecutes acciones, no cambies notas, progreso o inscripciones y no reveles secretos.',
     `INTENCIÓN PEDAGÓGICA: ${resolvedIntent}`,
     INTENT_INSTRUCTIONS[resolvedIntent],
@@ -1394,20 +1394,31 @@ async function chatWithContext({ courseId, lessonId = null, principalId = 'anony
       : NO_EVIDENCE_ANSWER;
     return { answer, citations: [], usage: null, relatedLesson: null };
   }
-  const generated = await generateAnswer({
-    message,
-    chunks,
-    courseId,
-    lessonId,
-    principalId,
-    history: safeHistory,
-    intent: effectiveIntent,
-    assessmentGuard: Boolean(assessmentMatch),
-    learningContext: safeLearningContext,
-    lessonTitle: safeLessonTitle,
-    userKey,
-    invalidateCredential,
-  });
+  let generated;
+  try {
+    generated = await generateAnswer({
+      message,
+      chunks,
+      courseId,
+      lessonId,
+      principalId,
+      history: safeHistory,
+      intent: effectiveIntent,
+      assessmentGuard: Boolean(assessmentMatch),
+      learningContext: safeLearningContext,
+      lessonTitle: safeLessonTitle,
+      userKey,
+      invalidateCredential,
+    });
+  } catch (error) {
+    // Measured with the real model: told to hint without revealing, it can reason
+    // until the token limit and return nothing. The student gets the guidance instead.
+    if (assessmentMatch && error instanceof RagError && error.status === 502) {
+      securityEvent('assessment_answer_withheld', { courseId, lessonId, reason: 'empty_answer' });
+      return { answer: ASSESSMENT_GUIDANCE_ANSWER, citations: [], usage: null, relatedLesson: null };
+    }
+    throw error;
+  }
   // Feedback legitimately discusses the student's own words, not only the sources.
   const grounded = validateGroundedAnswer(generated.answer, chunks, {
     extraContext: effectiveIntent === 'RETROALIMENTAR' ? message : '',

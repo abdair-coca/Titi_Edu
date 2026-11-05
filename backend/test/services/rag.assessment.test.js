@@ -150,6 +150,23 @@ describe('chat protection for pending evaluations', () => {
     expect(result.citations).toEqual([]);
   });
 
+  it('gives the guidance instead of an error when the guarded answer comes back empty', async () => {
+    provider('');
+    const result = await ask();
+    expect(result).toMatchObject({ answer: ASSESSMENT_GUIDANCE_ANSWER, citations: [] });
+  });
+
+  it('keeps the provider error for empty answers outside an evaluation', async () => {
+    provider('');
+    await expect(ask({ message: '¿Qué es una célula?' })).rejects.toMatchObject({ status: 502 });
+  });
+
+  it('does not suggest a code example that the model could copy into answers', async () => {
+    const fetchMock = provider('La mitocondria produce energía celular. [1]');
+    await ask({ message: '¿Qué es una célula?' });
+    expect(prompt(fetchMock)).not.toContain('arr[0]');
+  });
+
   it('checks the previous student turn for a follow-up', async () => {
     const fetchMock = provider('Pensá en la energía celular. [1]');
     await ask({ message: '¿y cuál es entonces?', history: [{ role: 'user', content: QUESTION }] });
