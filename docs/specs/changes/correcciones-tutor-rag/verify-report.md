@@ -8,8 +8,9 @@
 
 Implementado y verificado en código, en Postgres con pgvector desechable y con proveedores
 reales sobre una copia local del curso piloto (ver "Verificación con proveedores reales").
-Producción no se tocó, y la versión final no se pudo medir completa con Groq por su límite
-diario, así que el change sigue activo hasta completar lo pendiente.
+Desplegado y reindexado en producción el 2026-11-07 (ver "Producción"). La versión final no
+se pudo medir completa con Groq por su límite diario, así que el change sigue activo hasta
+completar esa medición.
 
 | Comprobación | Resultado |
 |---|---|
@@ -116,9 +117,13 @@ La prueba rechaza cualquier host que no sea local.
 - **HTML evaluable:** un estilo que oculte pantallas por defecto las saca del índice; esas
   lecciones necesitan contexto autoral.
 
+## Producción (2026-11-07)
+
+Desplegado en Render con el merge `4906e0b` (junto con `evaluacion-busqueda-rag`). Todos los
+cursos con RAG se reindexaron con el formato de indexación 3 y sus lecciones quedaron en
+`LISTO`. El usuario probó el tutor en producción y funciona bien.
+
 ## Pendiente antes de archivar
 
 1. Medir la versión final con el modelo: casos afectados por el tope de tokens y el full-text,
    intenciones pedagógicas, paráfrasis e inyección.
-2. Reindexar producción, con confirmación: las lecciones ya desactualizadas no se recuperan
-   solas, y cada una regenera sus embeddings una vez porque cambió el formato de indexación.

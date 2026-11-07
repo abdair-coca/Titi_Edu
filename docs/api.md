@@ -239,6 +239,14 @@ falla, se cae a recuperación vectorial pura. Cuando la evidencia de la lección
 activa es débil, también puede recuperar material de otra lección publicada del
 mismo curso usando el mismo embedding de consulta; nunca cruza de curso.
 
+Con el reranker activo (`RAG_RERANK_ENABLED`, credenciales de Cloudflare), la búsqueda
+híbrida junta 15 candidatos y `@cf/baai/bge-reranker-base` los ordena con la pregunta del
+estudiante; Presentación y Pistas bajan su puntaje (×0.3). Se devuelven de 1 a 5 fuentes:
+la mejor siempre, y las demás solo si tienen al menos el 5 % de su puntaje. Si el reranker
+falla o tarda más de `RAG_RERANK_TIMEOUT_MS`, se usa el orden híbrido sin corte. Por eso
+`citations` puede tener menos de 5 fuentes aunque el material tenga más fragmentos
+parecidos.
+
 El chat devuelve `No encontré evidencia suficiente...` cuando no hay fragmentos
 recuperables. Con evidencia parcial responde lo respaldado y aclara qué parte no
 cubre el material. `citations` identifica `number`, `chunkId`, `lessonId`, `title`,

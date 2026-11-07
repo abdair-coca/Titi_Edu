@@ -37,4 +37,5 @@
 
 - [x] `npm --prefix backend test` y `npm --prefix backend run lint`.
 - [x] `verify-report.md` con los resultados.
-- [ ] Reindexar producción, con confirmación del usuario (junto con `correcciones-tutor-rag`).
+- [x] Reindexar producción, con confirmación del usuario (junto con `correcciones-tutor-rag`): desplegado `4906e0b` y todos los cursos con RAG reindexados el 2026-11-07.
+- [x] Guardar mediciones de referencia en `backend/eval/rag/baselines/` y `HISTORIAL.md`, con `--save` y `--compare` para comparar cambios futuros.
