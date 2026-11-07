@@ -47,7 +47,7 @@ describe('chat with personal Groq key', () => {
     const [url, request] = fetchMock.mock.calls.find(([url]) => url.includes('gateway.ai.cloudflare.com'));
     expect(url).toBe('https://gateway.ai.cloudflare.com/v1/account/gateway/groq/chat/completions');
     expect(request.headers).toMatchObject({ Authorization: 'Bearer gsk_personal', 'cf-aig-authorization': 'Bearer gateway-token', 'cf-aig-collect-log-payload': 'false' });
-    expect(JSON.parse(request.body)).toMatchObject({ model: 'openai/gpt-oss-20b', max_completion_tokens: 1600, temperature: 0.2 });
+    expect(JSON.parse(request.body)).toMatchObject({ model: 'openai/gpt-oss-20b', max_completion_tokens: 3200, temperature: 0.2 });
     expect(JSON.parse(request.body)).not.toHaveProperty('tools');
     expect(JSON.stringify(fetchMock.mock.calls)).not.toContain('institutional-must-not-be-used');
   });

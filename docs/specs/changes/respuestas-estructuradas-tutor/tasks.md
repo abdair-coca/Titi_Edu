@@ -19,15 +19,15 @@
 
 ## U2 — Generación con structured outputs
 
-- [ ] Subir `MAX_COMPLETION_TOKENS` de 1600 a 3200.
-- [ ] Leer `RAG_DIL_ENABLED` y, con el flag encendido, agregar `response_format`
+- [x] Subir `MAX_COMPLETION_TOKENS` de 1600 a 3200.
+- [x] Leer `RAG_DIL_ENABLED` y, con el flag encendido, agregar `response_format`
       con el schema y el bloque de instrucciones DIL al prompt de `generateAnswer`.
-- [ ] Parsear el JSON; si es ilegible o queda sin nodos, tratarlo como respuesta
+- [x] Parsear el JSON; si es ilegible o queda sin nodos, tratarlo como respuesta
       vacía (mismo camino que hoy, incluido el respaldo de evaluaciones).
-- [ ] En `chatWithContext`, aplicar `validateGroundedAnswer` y `answerRevealsOption`
+- [x] En `chatWithContext`, aplicar `validateGroundedAnswer` y `answerRevealsOption`
       sobre el texto canónico; `dil = null` si alguna protección rechaza.
-- [ ] Registrar `dil_nodes_dropped` sin contenido.
-- [ ] Tests: con el flag apagado el body enviado a Groq no cambia; con el flag
+- [x] Registrar `dil_nodes_dropped` sin contenido.
+- [x] Tests: con el flag apagado el body enviado a Groq no cambia; con el flag
       encendido, rechazo por citas, quiz que revela una opción, JSON cortado.
 
 ## U3 — API y documentación

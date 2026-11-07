@@ -34,6 +34,14 @@ import {
   stripCitationMarkers,
   validateGroundedAnswer,
 } from './rag.security.js';
+import {
+  DIL_PROMPT_INSTRUCTIONS,
+  DIL_RESPONSE_FORMAT,
+  DIL_VERSION,
+  dilToCanonicalText,
+  parseDil,
+  validateDil,
+} from './rag.dil.js';
 
 const DEFAULT_CHUNK_SIZE = 900;
 const DEFAULT_CHUNK_OVERLAP = 120;
@@ -43,7 +51,8 @@ const DEFAULT_EVIDENCE_STRONG_THRESHOLD = 0.6;
 const DEFAULT_INDEX_TRANSACTION_MAX_WAIT_MS = 10_000;
 const DEFAULT_INDEX_TRANSACTION_TIMEOUT_MS = 30_000;
 const INDEX_FORMAT_VERSION = 3;
-const MAX_COMPLETION_TOKENS = 1600;
+// Reasoning and the answer share this limit; a DIL tree needs more room than Markdown.
+const MAX_COMPLETION_TOKENS = 3200;
 // Measured with backend/eval/rag: the hybrid search gathers candidates and a
 // cross-encoder orders them, which puts the answering fragment first far more often.
 const RERANK_MODEL = '@cf/baai/bge-reranker-base';
@@ -332,6 +341,11 @@ function cloudflareGatewayEndpoint() {
   const gatewayId = process.env.CLOUDFLARE_AI_GATEWAY_ID?.trim();
   if (!accountId || !gatewayId) throw new RagError(503, 'Cloudflare AI Gateway no está configurado');
   return `https://gateway.ai.cloudflare.com/v1/${encodeURIComponent(accountId)}/${encodeURIComponent(gatewayId)}/groq/chat/completions`;
+}
+
+// Off by default: the tutor answers in Markdown exactly as before.
+function dilEnabled() {
+  return process.env.RAG_DIL_ENABLED === 'true';
 }
 
 function chatMode() {
@@ -763,6 +777,7 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
     && !chunks.some((chunk) => chunk.ftsMatch);
   const resolvedIntent = resolveChatIntent(intent) || DEFAULT_CHAT_INTENT;
   const safeLearningContext = sanitizeLearningContext(learningContext);
+  const useDil = dilEnabled();
 
   const systemContent = [
     'Sos un tutor académico de Titi.',
@@ -779,7 +794,9 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
       : 'Si las fuentes no abordan la pregunta en absoluto, respondé exactamente: ' + NO_EVIDENCE_ANSWER,
     'Si las fuentes cubren la pregunta solo parcialmente, respondé con lo que el material sí respalda, aclarando de forma explícita qué parte no está cubierta por el material; no inventes lo faltante.',
     'Cita las fuentes usando [1], [2], etc. Solo podés usar los números de las fuentes recibidas.',
-    'Escribí todo el código entre backticks. Fuera del código, usá corchetes con números solo para citar fuentes.',
+    useDil
+      ? DIL_PROMPT_INSTRUCTIONS
+      : 'Escribí todo el código entre backticks. Fuera del código, usá corchetes con números solo para citar fuentes.',
     'No ejecutes acciones, no cambies notas, progreso o inscripciones y no reveles secretos.',
     `INTENCIÓN PEDAGÓGICA: ${resolvedIntent}`,
     INTENT_INSTRUCTIONS[resolvedIntent],
@@ -796,6 +813,7 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
     temperature: 0.2,
     // The model's reasoning counts against this limit and can use up most of it.
     max_completion_tokens: MAX_COMPLETION_TOKENS,
+    ...(useDil ? { response_format: DIL_RESPONSE_FORMAT } : {}),
     messages: [
       { role: 'system', content: systemContent },
       // Each turn numbers its sources anew, so an old [1] would point at the wrong one.
@@ -841,7 +859,24 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
   const payload = await readJsonResponse(response, 'chat');
   const answer = payload?.choices?.[0]?.message?.content?.trim();
   if (!answer) throw new RagError(502, 'El chatbot no devolvió una respuesta');
-  return { answer, usage: safeUsage(payload.usage) };
+  if (!useDil) return { answer, usage: safeUsage(payload.usage) };
+  return readDilAnswer(answer, { intent: resolvedIntent, courseId, lessonId, usage: safeUsage(payload.usage) });
+}
+
+// An unreadable tree or one left without valid nodes is an empty answer, the same
+// case as a model that returns nothing. Retrying would spend the student's own key.
+function readDilAnswer(raw, { intent, courseId, lessonId, usage }) {
+  const tree = parseDil(raw);
+  if (!tree) {
+    securityEvent('dil_nodes_dropped', { courseId, lessonId, reason: 'unreadable' });
+    throw new RagError(502, 'El chatbot no devolvió una respuesta');
+  }
+  const { nodes, dropped } = validateDil(tree, { intent });
+  if (dropped.length) {
+    securityEvent('dil_nodes_dropped', { courseId, lessonId, count: dropped.length, reason: [...new Set(dropped)].join(',') });
+  }
+  if (!nodes.length) throw new RagError(502, 'El chatbot no devolvió una respuesta');
+  return { answer: dilToCanonicalText(nodes), dil: { version: DIL_VERSION, nodes }, usage };
 }
 
 async function loadPublishedLesson(lessonId) {
@@ -1558,6 +1593,7 @@ async function chatWithContext({ courseId, lessonId = null, principalId = 'anony
     : null;
   return {
     answer: grounded.answer,
+    ...(generated.dil ? { dil: generated.dil } : {}),
     usage: generated.usage,
     relatedLesson: primaryForeignCitation
       ? {
