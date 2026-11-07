@@ -3,6 +3,7 @@ import client from '../api/client.js';
 import { markPerformance } from '../lib/performance.js';
 import ConfirmModal from './ConfirmModal.jsx';
 import MarkdownContent from './MarkdownContent.jsx';
+import DilMessage from './tutor/DilMessage.jsx';
 import TitiMascot from './TitiMascot.jsx';
 import { useTutorAvailability } from '../hooks/useTutorAvailability.js';
 import { buildTutorHistory } from '../lib/tutorHistory.js';
@@ -12,6 +13,7 @@ import {
   resolveTutorIntent,
 } from '../lib/tutorPractice.js';
 import { usePopIn } from '../lib/motion.js';
+import { renderableNodes } from '../lib/dil.js';
 import {
   SparklesIcon,
   PlusIcon,
@@ -214,7 +216,8 @@ export default function TutorPanel({
           setTimeout(() => {
             if (!isCurrentRequest()) return;
             const relatedLesson = data.data?.relatedLesson ?? null;
-            onAppendMessages([{ role: 'tutor', content: answer, citations, relatedLesson }]);
+            const dil = data.data?.dil ?? null;
+            onAppendMessages([{ role: 'tutor', content: answer, citations, relatedLesson, dil }]);
             const nextPracticeState = practiceStateAfterResponse(requestIntent, citations.length);
             if (nextPracticeState !== undefined) onPracticeStateChange?.(nextPracticeState);
             activeRef.current = false;
@@ -405,6 +408,7 @@ export default function TutorPanel({
                 messageRef={index === conversation.length - 1 && msg.role === 'tutor' ? latestTutorMessageRef : undefined}
                 showActions={index === conversation.length - 1 && msg.role === 'tutor'}
                 onAsk={(prompt, options) => ask(prompt, options)}
+                onFocusInput={() => textareaRef.current?.focus()}
                 onNavigateToLesson={onNavigateToLesson}
               />
             ))}
@@ -863,7 +867,23 @@ function IndexingState() {
 }
 
 // ---- Burbujas de mensaje ----
-function MessageBubble({ msg, messageRef, showActions, onAsk, onNavigateToLesson }) {
+function MessageBubble({ msg, messageRef, showActions, onAsk, onFocusInput, onNavigateToLesson }) {
+  const [openCitations, setOpenCitations] = useState(() => new Set());
+  const citationRefs = useRef({});
+
+  const toggleCitation = (number) => setOpenCitations((current) => {
+    const next = new Set(current);
+    if (next.has(number)) next.delete(number);
+    else next.add(number);
+    return next;
+  });
+
+  // A badge inside the answer opens its source and brings it into view.
+  const showCitation = (number) => {
+    setOpenCitations((current) => new Set(current).add(number));
+    requestAnimationFrame(() => citationRefs.current[number]?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+  };
+
   if (msg.role === 'user') {
     return (
       <div className="self-end max-w-[85%] bg-titi-yellow text-titi-dark rounded-2xl rounded-br-md px-4 py-2.5 text-sm font-medium whitespace-pre-wrap">
@@ -873,11 +893,22 @@ function MessageBubble({ msg, messageRef, showActions, onAsk, onNavigateToLesson
   }
 
   const { relatedLesson } = msg;
+  const dilNodes = renderableNodes(msg.dil);
+  const citationNumbers = (msg.citations || []).map((citation) => citation.number);
 
   return (
     <div ref={messageRef} className="self-start w-full max-w-full">
       <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3">
-        <MarkdownContent content={msg.content} format="MARKDOWN" compact codeCopy />
+        {dilNodes.length ? (
+          <DilMessage
+            nodes={dilNodes}
+            citationNumbers={citationNumbers}
+            onCite={showCitation}
+            onFocusInput={showActions ? onFocusInput : undefined}
+          />
+        ) : (
+          <MarkdownContent content={msg.content} format="MARKDOWN" compact codeCopy />
+        )}
         {relatedLesson && (
           <div className="mt-3 rounded-xl border border-titi-yellow bg-titi-cream px-3 py-2.5">
             <p className="text-xs font-bold text-titi-dark">
@@ -904,6 +935,9 @@ function MessageBubble({ msg, messageRef, showActions, onAsk, onNavigateToLesson
                 <CitationCard
                   key={`${citation.lessonId}-${citation.number}`}
                   citation={citation}
+                  open={openCitations.has(citation.number)}
+                  onToggle={() => toggleCitation(citation.number)}
+                  cardRef={(element) => { citationRefs.current[citation.number] = element; }}
                   onNavigate={onNavigateToLesson}
                 />
               ))}
@@ -930,14 +964,12 @@ function MessageBubble({ msg, messageRef, showActions, onAsk, onNavigateToLesson
 }
 
 // ---- Fuente RAG expandible (datos reales del backend) ----
-function CitationCard({ citation, onNavigate }) {
-  const [open, setOpen] = useState(false);
-
+function CitationCard({ citation, open, onToggle, cardRef, onNavigate }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-titi-cream/60 overflow-hidden">
+    <div ref={cardRef} className="rounded-xl border border-gray-200 bg-titi-cream/60 overflow-hidden">
       <button
         type="button"
-        onClick={() => setOpen((v) => !v)}
+        onClick={onToggle}
         aria-expanded={open}
         className="w-full text-left px-3 py-2.5 flex items-start gap-2 hover:bg-titi-yellow-light/40 transition-colors"
       >

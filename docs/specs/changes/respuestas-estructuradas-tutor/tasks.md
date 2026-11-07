@@ -39,12 +39,12 @@
 
 ## U4 — Renderer DIL (frontend)
 
-- [ ] `frontend/src/components/tutor/DilMessage.jsx` + un componente por nodo:
+- [x] `frontend/src/components/tutor/DilMessage.jsx` + un componente por nodo:
       Text, Steps, Callout, Concepts, Table, Code, Check.
-- [ ] Insignias de cita `[n]` que despliegan la `CitationCard` correspondiente.
-- [ ] `MessageBubble` usa `DilMessage` si hay `dil`; guardar `dil` en el mensaje.
-- [ ] Revisar contra `frontend/design.md` §12 (plano, sombra dura, tonos).
-- [ ] Extender `scripts/check-rag-contract.mjs`: nodos desconocidos ignorados,
+- [x] Insignias de cita `[n]` que despliegan la `CitationCard` correspondiente.
+- [x] `MessageBubble` usa `DilMessage` si hay `dil`; guardar `dil` en el mensaje.
+- [x] Revisar contra `frontend/design.md` §12 (plano, sombra dura, tonos).
+- [x] Extender `scripts/check-rag-contract.mjs`: nodos desconocidos ignorados,
       mensaje sin `dil` cae a Markdown.
 
 ## U5 — Diagram

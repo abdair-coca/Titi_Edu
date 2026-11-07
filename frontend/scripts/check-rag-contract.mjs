@@ -5,6 +5,12 @@ import {
   practiceStateAfterResponse,
   resolveTutorIntent,
 } from '../src/lib/tutorPractice.js';
+import {
+  citationNumberFromHref,
+  linkCitations,
+  quizAnswerMessage,
+  renderableNodes,
+} from '../src/lib/dil.js';
 
 const learn = fs.readFileSync('src/pages/LearnCourse.jsx', 'utf8');
 const panel = fs.readFileSync('src/components/TutorPanel.jsx', 'utf8');
@@ -85,5 +91,19 @@ assert.deepEqual(practiceStateAfterResponse('PRACTICA', 1), { phase: PRACTICE_AW
 assert.equal(practiceStateAfterResponse('PRACTICA', 0), null);
 assert.equal(practiceStateAfterResponse('RETROALIMENTAR', 2), null);
 assert.equal(practiceStateAfterResponse('EXPLICAR', 2), undefined);
+
+// DIL: unknown components are skipped and a message without a tree keeps Markdown.
+const textNode = { c: 'Text', text: 'Una variable [1].' };
+assert.deepEqual(renderableNodes({ version: 1, nodes: [textNode, { c: 'Video' }, null] }), [textNode]);
+assert.deepEqual(renderableNodes(null), []);
+assert.deepEqual(renderableNodes({ version: 2, nodes: [textNode] }), []);
+assert.match(panel, /dil = data\.data\?\.dil \?\? null/);
+assert.match(panel, /dilNodes\.length \?/);
+assert.match(panel, /<MarkdownContent content=\{msg\.content\}/);
+assert.equal(linkCitations('Guarda un valor [1] y [7].', [1]), 'Guarda un valor [\\[1\\]](#cita-1) y [7].');
+assert.equal(linkCitations('Usá `arr[1]` o arr[1] [1]', [1]), 'Usá `arr[1]` o arr[1] [\\[1\\]](#cita-1)');
+assert.equal(citationNumberFromHref('#cita-3'), 3);
+assert.equal(citationNumberFromHref('https://evil.example/#cita-3'), null);
+assert.equal(quizAnswerMessage('  Un valor '), 'Mi respuesta: Un valor');
 
 console.log('RAG frontend contract: OK');
