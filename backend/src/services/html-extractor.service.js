@@ -270,8 +270,8 @@ const ASSESSMENT_SECRET_KEYS = new Set([
   'privado',
 ].map((key) => key.replace(/[-_\s]/g, '').toLowerCase()));
 
-const ASSESSMENT_SECRET_KEY_PATTERN = /^(?:(?:selected|expected|chosen|given|submitted|user|student|provided)?(?:answer|answers|respuesta|respuestas)|(?:selected|expected|chosen|given|submitted|user|student|provided|correct|right)?(?:option|options|choice|choices|opcion|opciones|alternativa|alternativas)|(?:is|es)?(?:correct|correcta|correcto|right)|solution|solucion|explicacion|explanation|feedback|pista|hint)(?:answer|answers|key|option|choice|value|text|index|id|respuesta|correcta|correcto|explicacion|explanation|feedback|pista|hint)*$/i;
-const ASSESSMENT_SECRET_TEXT_PATTERN = /\b(?:respuesta\s+(?:correcta|correcto|esperada|esperado)|(?:respuesta|answer|solution|soluci[oó]n)\s+(?:es|is)|(?:opci[oó]n|option)\s+(?:correcta|correct|seleccionada|selected)|correct\s+answer|expected\s+answer|(?:answer|respuesta|solution|soluci[oó]n)\s*[:=]|answer\s+(?:key|explanation)|clave\s+(?:de\s+)?respuesta|soluci[oó]n(?:\s+(?:correcta|answer|key))?|feedback|retroalimentaci[oó]n)\b/i;
+const ASSESSMENT_SECRET_KEY_PATTERN = /^(?:(?:selected|expected|chosen|given|submitted|user|student|provided)?(?:answer|answers|respuesta|respuestas)|(?:selected|expected|chosen|given|submitted|user|student|provided|correct|right)?(?:option|options|choice|choices|opcion|opciones|alternativa|alternativas)|(?:is|es)?(?:correct|correcta|correcto|right)|solutions?|solucion(?:es)?|explicacion(?:es)?|explanations?|feedbacks?|pistas?|hints?|tips?|referencia|reference)(?:answer|answers|key|option|choice|value|text|index|id|respuesta|correcta|correcto|explicacion|explanation|feedback|pista|hint|code|codigo)*$/i;
+const ASSESSMENT_SECRET_TEXT_PATTERN = /\b(?:respuesta\s+(?:correcta|correcto|esperada|esperado)|(?:respuesta|answer|solution|soluci[oó]n)\s+(?:es|is)|(?:opci[oó]n|option)\s+(?:correcta|correct|seleccionada|selected)|correct\s+answer|expected\s+answer|(?:answer|respuesta|solution|soluci[oó]n)\s*[:=]|answer\s+(?:key|explanation)|clave\s+(?:de\s+)?respuesta|soluci[oó]n(?:\s+(?:correcta|answer|key))?|c[oó]digo\s+(?:de\s+)?(?:referencia|soluci[oó]n)|reference\s+code|feedback|retroalimentaci[oó]n)\b/i;
 const HTML_VOID_ELEMENTS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr']);
 
 function normalizeKey(value) {
@@ -312,8 +312,48 @@ function isAssessmentSecretLiteral(value) {
   return ASSESSMENT_SECRET_TEXT_PATTERN.test(value);
 }
 
-function hasHiddenDomState(attributes) {
+// An unknown data-* name may hold the answer, so safe mode allows only known ones.
+const SAFE_DATA_ATTRIBUTES = new Set([
+  'question', 'pregunta', 'enunciado', 'consigna', 'title', 'titulo', 'text', 'texto', 'content', 'contenido',
+  'description', 'descripcion', 'concept', 'concepto', 'definition', 'definicion', 'flow', 'label', 'etiqueta',
+]);
+
+function isUnsafeAttribute(name) {
+  const normalized = normalizeKey(name);
+  return normalized.startsWith('data') && !SAFE_DATA_ATTRIBUTES.has(normalized.replace(/^data/, ''));
+}
+
+export function removeAssessmentSecretText(text) {
+  return String(text || '').split('\n')
+    .map((line) => line.split(/(?<=[.!?])\s+/).filter((sentence) => !isAssessmentSecretLiteral(sentence)).join(' '))
+    .join('\n');
+}
+
+const CSS_HIDING_DECLARATION = /(?:display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0(?:\.0+)?(?:\s*!\s*important)?\s*(?:;|$))/i;
+const CSS_LAST_SIMPLE_SELECTOR = /(?:^|[\s>+~])[a-z0-9-]*([.#])([\w-]+)$/i;
+
+// Only simple class or id selectors: a stylesheet can hide an answer without any
+// attribute on the element. Scripts that hide elements at runtime remain out of reach.
+function collectCssHiddenNames(html) {
+  const hidden = { classes: new Set(), ids: new Set() };
+  for (const [, css] of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
+    const rules = css.replace(/\/\*[\s\S]*?\*\//g, ' ').matchAll(/([^{}]+)\{([^{}]*)\}/g);
+    for (const [, selectors, declarations] of rules) {
+      if (!CSS_HIDING_DECLARATION.test(declarations)) continue;
+      for (const selector of selectors.split(',')) {
+        const match = selector.trim().match(CSS_LAST_SIMPLE_SELECTOR);
+        if (match) (match[1] === '.' ? hidden.classes : hidden.ids).add(match[2]);
+      }
+    }
+  }
+  return hidden;
+}
+
+function hasHiddenDomState(attributes, cssHidden) {
   if (/(?:^|\s)hidden(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+))?(?=\s|\/?>(?:$|\s))/i.test(attributes)) return true;
+
+  const idAttr = attributes.match(/\sid\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+  if (cssHidden.ids.has(idAttr?.[1] ?? idAttr?.[2] ?? idAttr?.[3])) return true;
 
   const ariaHidden = attributes.match(/\baria-hidden\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
   if (['true', '1', 'yes', 'on'].includes((ariaHidden?.[1] ?? ariaHidden?.[2] ?? ariaHidden?.[3] ?? '').trim().toLowerCase())) return true;
@@ -325,6 +365,7 @@ function hasHiddenDomState(attributes) {
   const classAttr = attributes.match(/\bclass\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
   const classValue = classAttr?.[1] ?? classAttr?.[2] ?? classAttr?.[3] ?? '';
   if (classValue.split(/\s+/).some((className) => /(?:hidden|ishidden|dnone|displaynone|invisible|visuallyhidden|sronly|opacity0|secret|answer|solution|feedback|correct)/i.test(normalizeKey(className)))) return true;
+  if (classValue.split(/\s+/).some((className) => cssHidden.classes.has(className))) return true;
 
   const dataHidden = attributes.match(/\bdata-hidden(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+)))?(?=\s|\/?>(?:$|\s))/i);
   const dataHiddenValue = dataHidden?.[1] ?? dataHidden?.[2] ?? dataHidden?.[3] ?? '';
@@ -342,6 +383,8 @@ function hasHiddenDomState(attributes) {
 }
 
 function maskUnsafeDomSubtrees(html) {
+  const cssHidden = collectCssHiddenNames(html);
+  const isHiddenTag = (tag) => hasHiddenDomState(tag, cssHidden);
   const tagRegex = /<\/?[a-z][^>]*>/gi;
   const stack = [];
   let cursor = 0;
@@ -354,7 +397,7 @@ function maskUnsafeDomSubtrees(html) {
     const name = tag.match(/^<\/?\s*([a-z0-9-]+)/i)?.[1]?.toLowerCase();
     const parentHidden = stack.some((entry) => entry.hidden);
 
-    if (!parentHidden && !(closing === false && (name === 'template' || hasHiddenDomState(tag)))) {
+    if (!parentHidden && !(closing === false && (name === 'template' || isHiddenTag(tag)))) {
       masked += html.slice(cursor, match.index);
     }
 
@@ -364,7 +407,7 @@ function maskUnsafeDomSubtrees(html) {
       if (stackIndex !== -1) stack.splice(stack.length - 1 - stackIndex, 1);
     } else {
       const selfClosing = /\/\s*>$/.test(tag) || HTML_VOID_ELEMENTS.has(name);
-      const hidden = parentHidden || name === 'template' || hasHiddenDomState(tag);
+      const hidden = parentHidden || name === 'template' || isHiddenTag(tag);
       if (!parentHidden && !hidden) masked += tag;
       if (!selfClosing) stack.push({ name, hidden });
     }
@@ -492,35 +535,141 @@ function isNaturalLanguageText(str) {
   return false;
 }
 
+const JS_STRING_ESCAPES = { n: '\n', t: '\t', r: '\r', b: '\b', f: '\f', v: '\v', 0: '\0' };
+
+function skipJsComment(source, index) {
+  if (source[index] !== '/') return index;
+  if (source[index + 1] === '/') {
+    const end = source.indexOf('\n', index);
+    return end === -1 ? source.length : end + 1;
+  }
+  if (source[index + 1] === '*') {
+    const end = source.indexOf('*/', index + 2);
+    return end === -1 ? source.length : end + 2;
+  }
+  return index;
+}
+
+// Returns the decoded value and the index after the closing quote, or null when the
+// string never closes or a template interpolates a runtime value.
+function readJsString(source, start) {
+  const quote = source[start];
+  let value = '';
+  for (let index = start + 1; index < source.length; index += 1) {
+    const char = source[index];
+    if (char === quote) return { value, end: index + 1 };
+    if (quote === '`' && char === '$' && source[index + 1] === '{') return null;
+    if (char !== '\\') {
+      value += char;
+      continue;
+    }
+    index += 1;
+    const escaped = source[index];
+    if (escaped === 'u' && /^[0-9a-fA-F]{4}$/.test(source.slice(index + 1, index + 5))) {
+      value += String.fromCharCode(Number.parseInt(source.slice(index + 1, index + 5), 16));
+      index += 4;
+    } else if (escaped !== '\n') {
+      value += JS_STRING_ESCAPES[escaped] ?? escaped;
+    }
+  }
+  return null;
+}
+
+const JS_QUOTES = new Set(['"', "'", '`']);
+const JS_NUMBER = /^-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
+
+// Converts a JS object or array literal to JSON. Strings are read as a unit, so a
+// `//` inside a URL is not a comment. Anything computed makes the literal unreadable.
+function jsLiteralToJson(source) {
+  let output = '';
+  let index = 0;
+  while (index < source.length) {
+    const char = source[index];
+    const afterComment = skipJsComment(source, index);
+    if (afterComment !== index) {
+      index = afterComment;
+    } else if (/\s/.test(char)) {
+      index += 1;
+    } else if (JS_QUOTES.has(char)) {
+      const string = readJsString(source, index);
+      if (!string) return null;
+      output += JSON.stringify(string.value);
+      index = string.end;
+    } else if ('{[:,'.includes(char)) {
+      output += char;
+      index += 1;
+    } else if ('}]'.includes(char)) {
+      output = output.replace(/,$/, '') + char;
+      index += 1;
+    } else {
+      const token = source.slice(index).match(/^[\w$.+-]+/)?.[0];
+      if (!token) return null;
+      index += token.length;
+      if (source.slice(index).match(/^\s*:/)) output += JSON.stringify(token);
+      else if (['true', 'false', 'null'].includes(token) || JS_NUMBER.test(token)) output += token;
+      else if (token === 'undefined') output += 'null';
+      else return null;
+    }
+  }
+  return output;
+}
+
 function parseRelaxedJson(raw) {
   if (!raw || typeof raw !== 'string') return null;
   const trimmed = raw.trim();
   if (!((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']')))) {
     return null;
   }
-
-  // 1. Intento directo JSON estándar
   try {
     return JSON.parse(trimmed);
   } catch {}
-
-  // 2. Intento relajando sintaxis de objetos JavaScript comunes
   try {
-    const relaxed = trimmed
-      // Comentarios de una línea y multilínea
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '')
-      // Quitar comas colgantes antes de ] o }
-      .replace(/,\s*([\]}])/g, '$1')
-      // Comillas en propiedades no entrecomilladas: { pregunta: "x" } -> { "pregunta": "x" }
-      .replace(/([{,]\s*)([a-zA-Z0-9_$]+)\s*:/g, '$1"$2":')
-      // Reemplazar comillas simples con dobles si no están escapadas
-      .replace(/'([^'\\]*(?:\\.[^'\\]*)*)'/g, (_, inner) => JSON.stringify(inner));
+    const json = jsLiteralToJson(trimmed);
+    return json === null ? null : JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
 
-    return JSON.parse(relaxed);
-  } catch {}
+// Finds where a literal ends by balancing brackets outside strings and comments,
+// so it does not depend on a trailing semicolon.
+function findLiteralEnd(source, start) {
+  let depth = 0;
+  let index = start;
+  while (index < source.length) {
+    const afterComment = skipJsComment(source, index);
+    if (afterComment !== index) {
+      index = afterComment;
+      continue;
+    }
+    const char = source[index];
+    if (JS_QUOTES.has(char)) {
+      const string = readJsString(source, index);
+      if (!string) return -1;
+      index = string.end;
+      continue;
+    }
+    if ('{['.includes(char)) depth += 1;
+    if ('}]'.includes(char)) {
+      depth -= 1;
+      if (depth === 0) return index + 1;
+    }
+    index += 1;
+  }
+  return -1;
+}
 
-  return null;
+function findAssignedLiterals(script) {
+  const literals = [];
+  const assignment = /(?:\b(?:const|let|var)\s+([\w$]+)|\bwindow\.([\w$]+))\s*=\s*(?=[[{])/g;
+  let match;
+  while ((match = assignment.exec(script)) !== null) {
+    const end = findLiteralEnd(script, assignment.lastIndex);
+    if (end === -1) continue;
+    literals.push({ name: match[1] ?? match[2], source: script.slice(assignment.lastIndex, end) });
+    assignment.lastIndex = end;
+  }
+  return literals;
 }
 
 function formatStructuredItem(item, { assessmentSafe = false } = {}) {
@@ -592,6 +741,7 @@ function extractStructuredData(data, results, seenStrings, options = {}) {
   if (typeof data === 'object') {
     if (options.assessmentSafe && isStructuredItemHidden(data)) return;
     const formatted = formatStructuredItem(data, options);
+    if (formatted && options.assessmentSafe && isAssessmentSecretLiteral(formatted)) return;
     if (formatted) {
       results.push(formatted);
       // Registrar las cadenas individuales como vistas para evitar duplicación
@@ -639,10 +789,9 @@ function extractScriptContent(html, seenStrings, { assessmentSafe = false } = {}
 
     // B. Buscar declaraciones de objetos o arrays asignados en JavaScript:
     // e.g. const questions = [...]; let cards = [...]; window.data = {...};
-    const varMatches = scriptBody.matchAll(/(?:const|let|var|window\.[a-zA-Z0-9_$]+)\s*[a-zA-Z0-9_$]*\s*=\s*(\[[\s\S]*?\]|\{[\s\S]*?\})\s*(?:;|$)/g);
-    for (const varMatch of varMatches) {
-      const literalCandidate = varMatch[1];
-      const parsed = parseRelaxedJson(literalCandidate);
+    for (const { name, source } of findAssignedLiterals(scriptBody)) {
+      if (assessmentSafe && isAssessmentSecretKey(name)) continue;
+      const parsed = parseRelaxedJson(source);
       if (parsed) {
         extractStructuredData(parsed, extracted, seenStrings, { assessmentSafe });
       }
@@ -681,6 +830,29 @@ function extractScriptContent(html, seenStrings, { assessmentSafe = false } = {}
   return extracted;
 }
 
+const HEADING_MARK = '\u0001';
+
+// Visible text flows into paragraphs and each heading opens a Markdown section, which
+// is the structure chunking understands.
+function formatDomBlocks(parts) {
+  const blocks = [];
+  let paragraph = [];
+  const flush = () => {
+    if (paragraph.length) blocks.push(normalizeText(paragraph.join(' ')));
+    paragraph = [];
+  };
+  for (const part of parts) {
+    if (part.startsWith(HEADING_MARK)) {
+      flush();
+      blocks.push(`## ${part.slice(HEADING_MARK.length)}`);
+    } else {
+      paragraph.push(part);
+    }
+  }
+  flush();
+  return blocks.join('\n\n');
+}
+
 function extractDomContent(html, seenStrings, { assessmentSafe = false } = {}) {
   const extracted = [];
 
@@ -698,7 +870,7 @@ function extractDomContent(html, seenStrings, { assessmentSafe = false } = {}) {
     const attrName = attrMatch[1] || '';
     const rawValue = attrMatch[2] ?? attrMatch[3] ?? attrMatch[4] ?? '';
     const cleaned = cleanString(rawValue);
-    if (assessmentSafe && (isAssessmentSecretKey(attrName) || isAssessmentSecretLiteral(cleaned))) continue;
+    if (assessmentSafe && (isUnsafeAttribute(attrName) || isAssessmentSecretKey(attrName) || isAssessmentSecretLiteral(cleaned))) continue;
     if (isNaturalLanguageText(cleaned) && !seenStrings.has(cleaned)) {
       extracted.push(cleaned);
       seenStrings.add(cleaned);
@@ -709,6 +881,7 @@ function extractDomContent(html, seenStrings, { assessmentSafe = false } = {}) {
   const withoutScripts = cleanedHtml.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, ' ');
   const domText = decodeHtmlEntities(
     withoutScripts
+      .replace(/<h[1-6]\b[^>]*>/gi, `\n${HEADING_MARK}`)
       .replace(/<br\s*\/?>/gi, '\n')
       .replace(/<\/(?:p|div|section|article|li|h[1-6]|tr|button|summary|details|td|th)>/gi, '\n')
       .replace(/<[^>]+>/g, ' '),
@@ -718,12 +891,13 @@ function extractDomContent(html, seenStrings, { assessmentSafe = false } = {}) {
     .filter(Boolean);
 
   for (const line of domText) {
-    const cleaned = cleanString(line);
+    const prefix = line.startsWith(HEADING_MARK) ? HEADING_MARK : '';
+    const cleaned = cleanString(line.replace(HEADING_MARK, ''));
     if (!cleaned || seenStrings.has(cleaned)) continue;
     if (isUiNoise(cleaned)) continue;
     if (CODE_EXCLUDE_TOKENS.has(cleaned) || CODE_EXCLUDE_TOKENS.has(cleaned.toLowerCase())) continue;
     if (isNaturalLanguageText(cleaned)) {
-      extracted.push(cleaned);
+      extracted.push(prefix + cleaned);
       seenStrings.add(cleaned);
       continue;
     }
@@ -731,7 +905,7 @@ function extractDomContent(html, seenStrings, { assessmentSafe = false } = {}) {
     // ej. "Actividad", "Variables", "Modelo OSI" corto pero válido
     if (cleaned.length >= 4 && cleaned.length <= 40 && /^[A-ZÁÉÍÓÚÑa-záéíóúñ0-9][A-Za-zÁÉÍÓÚÑa-záéíóúñ0-9\s\-:]+$/.test(cleaned)) {
       if (/[a-zA-ZáéíóúÁÉÍÓÚñÑ]/.test(cleaned) && !cleaned.includes('_') && !/^[A-Z0-9_]+$/.test(cleaned)) {
-        extracted.push(cleaned);
+        extracted.push(prefix + cleaned);
         seenStrings.add(cleaned);
       }
     }
@@ -762,7 +936,7 @@ export function extractLessonHtmlContent(html, { assessmentSafe = false } = {}) 
 
   // 3. Unir de forma estructurada para mantener coherencia semántica en los chunks
   // Preservamos \n\n entre bloques para que chunkText pueda mantener Pregunta+Opciones+Respuesta juntas
-  const domBlock = domParts.length > 0 ? normalizeText(domParts.join(' ')) : '';
+  const domBlock = formatDomBlocks(domParts);
   const scriptBlock = scriptParts.length > 0
     ? scriptParts.map((part) => normalizeText(part)).filter(Boolean).join('\n\n')
     : '';

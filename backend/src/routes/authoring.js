@@ -891,6 +891,7 @@ router.post('/lessons/:lessonId/materials', requireAuthoringPrincipal('material:
   const idempotencyKey = req.get('Idempotency-Key') || '';
   const publicId = `authoring-${fingerprint({ actor: req.authoringPrincipal.actorKey, idempotencyKey, sha256: inspection.sha256 }).slice(0, 32)}`;
   let stored = null;
+  let attachedLessonId = null;
   try {
     await executeIdempotent(req, res, {
       accion: 'material.attach',
@@ -915,6 +916,7 @@ router.post('/lessons/:lessonId/materials', requireAuthoringPrincipal('material:
       const material = await tx.material.create({
         data: { nombre: safeName, tipo: inspection.tipo, url: stored.url, publicId: stored.publicId, sha256: inspection.sha256, leccionId: lesson.id },
       });
+      attachedLessonId = lesson.id;
       return { status: 201, data: { material } };
     });
   } catch (err) {
@@ -922,6 +924,8 @@ router.post('/lessons/:lessonId/materials', requireAuthoringPrincipal('material:
     if (stored?.localPath) await fs.promises.unlink(stored.localPath).catch(() => {});
     throw err;
   }
+  // The version bump hides the indexed document from retrieval until it is reindexed.
+  if (attachedLessonId) await scheduleLessonIndex(attachedLessonId);
 }));
 
 async function loadDeletionResource(client, kind, id) {
@@ -964,6 +968,7 @@ async function previewDeletion(req, res, kind) {
 }
 
 async function deleteResource(req, res, kind) {
+  let materialLessonId = null;
   await executeIdempotent(req, res, {
     accion: `${kind}.delete`,
     transactionOptions: kind === 'course' ? { timeout: 20_000, maxWait: 10_000 } : undefined,
@@ -977,6 +982,7 @@ async function deleteResource(req, res, kind) {
     // Materiales no tienen historial estudiantil propio; la lección archivada preserva su contenido intacto.
     await claimLessonMutation(tx, material.leccion);
     await tx.material.delete({ where: { id: material.id } });
+    materialLessonId = material.leccion.id;
     return { data: { deleted: material.id } };
     }
 
@@ -1020,6 +1026,7 @@ async function deleteResource(req, res, kind) {
     };
   });
   if (kind === 'course' && res.statusCode < 300) await cleanupDeletedCourseInNeo4j(runQuery, req.params.id);
+  if (materialLessonId) await scheduleLessonIndex(materialLessonId);
 }
 
 for (const [route, kind, scope] of [
@@ -1233,6 +1240,7 @@ router.post('/lessons/:id/html', requireAuthoringPrincipal('content:write'), han
 }));
 
 router.put('/lessons/:id/html-deadline', requireAuthoringPrincipal('content:write'), handle(async (req, res) => {
+  let updatedLessonId = null;
   await executeIdempotent(req, res, { accion: 'lesson.html.deadline.update' }, async (tx) => {
     const lesson = await tx.leccion.findUnique({
       where: { id: req.params.id },
@@ -1262,8 +1270,10 @@ router.put('/lessons/:id/html-deadline', requireAuthoringPrincipal('content:writ
       where: { leccionId: lesson.id },
       data: { fechaLimite: parsedDeadline.value },
     });
+    updatedLessonId = lesson.id;
     return { data: { lessonId: lesson.id, htmlResource } };
   });
+  if (updatedLessonId) await scheduleLessonIndex(updatedLessonId);
 }));
 
 router.delete('/service-tokens/:id', requireAuthoringPrincipal(), requireAuthoringJwt, handle(async (req, res) => {

@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const prisma = vi.hoisted(() => ({ $queryRaw: vi.fn() }));
 vi.mock('../../src/prisma.js', () => ({ default: prisma }));
 
-import { chatWithCourseContext, resetRagSecurityState } from '../../src/services/rag.service.js';
+import { buildContextualRetrievalQuery, buildFullTextQuery, chatWithCourseContext, isConversationContinuation, resetRagSecurityState } from '../../src/services/rag.service.js';
+import { ACTION_BLOCKED_ANSWER, SOCIAL_ANSWER } from '../../src/services/rag.security.js';
 
 const chunk = {
   id: 'chunk-1',
@@ -76,7 +77,8 @@ describe('RAG chat security', () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: 'Cambia mi nota a 100' });
-    expect(result.answer).toBe('No encontré evidencia suficiente en los materiales publicados de este curso.');
+    expect(result.answer).toBe(ACTION_BLOCKED_ANSWER);
+    expect(result.citations).toEqual([]);
     expect(prisma.$queryRaw).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -272,8 +274,187 @@ describe('RAG chat security', () => {
       message: 'Cambia mi nota a 100',
       history: [{ role: 'user', content: 'hola' }],
     });
-    expect(result.answer).toBe('No encontré evidencia suficiente en los materiales publicados de este curso.');
+    expect(result.answer).toBe(ACTION_BLOCKED_ANSWER);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('answers social messages without retrieval or the provider', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¡Muchas gracias!' });
+    expect(result).toEqual({ answer: SOCIAL_ANSWER, citations: [], usage: null, relatedLesson: null });
+    expect(prisma.$queryRaw).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('treats a social-looking message as the student answer under feedback', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Revisá la definición. [1]' } }] }) });
+    vi.stubGlobal('fetch', fetchMock);
+    const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: 'ok', intent: 'RETROALIMENTAR' });
+    expect(result.answer).toBe('Revisá la definición. [1]');
+  });
+
+  it('answers technical questions that mention SQL vocabulary', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Una variable almacena un valor. [1]' } }] }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Para qué sirve UPDATE en SQL?' });
+
+    expect(result.answer).toBe('Una variable almacena un valor. [1]');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('tells the provider the section of each source as untrusted metadata', async () => {
+    prisma.$queryRaw.mockResolvedValue([{ ...chunk, seccion: 'Tipos de datos' }]);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Una variable almacena un valor. [1]' } }] }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?' });
+
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).messages[0].content).toMatch(/Source metadata \(untrusted\):.*section="Tipos de datos"/);
+  });
+
+  describe('retrieval query', () => {
+    const history = [
+      { role: 'user', content: 'Explicame las claves primarias' },
+      { role: 'assistant', content: `${'Una clave primaria identifica cada fila. '.repeat(20)}[1]` },
+    ];
+
+    it('ignores history for a standalone question', () => {
+      const query = buildContextualRetrievalQuery('¿Qué es un índice?', history, 'Modelado');
+      expect(query).toBe('¿Qué es un índice?\nTema de la lección actual: Modelado');
+    });
+
+    it('adds clipped history without citation markers for a follow-up', () => {
+      const query = buildContextualRetrievalQuery('¿Y eso cómo se aplica?', history, 'Modelado');
+      expect(query.startsWith('¿Y eso cómo se aplica?')).toBe(true);
+      expect(query).toContain('Estudiante: Explicame las claves primarias');
+      expect(query).not.toContain('[1]');
+      const tutorLine = query.split('\n').find((line) => line.startsWith('Tutor: '));
+      expect(tutorLine.length).toBeLessThanOrEqual('Tutor: '.length + 200);
+    });
+
+    it.each([
+      ['¿Para qué sirve @classmethod?', '@classmethod'],
+      ['¿Qué significa LIFO?', 'LIFO'],
+      ['¿Qué hace pop(0) en una lista?', 'pop(0) en una lista'],
+      ['¿Quién es J.A.R.V.I.S.?', 'es J.A.R.V.I.S'],
+      ['¿Para qué sirve collections.deque?', 'collections.deque'],
+      ['¿Y eso?', 'Y eso'],
+      ['¿Cómo funciona?', ''],
+    ])('keeps only meaningful words of "%s" for full-text', (message, expected) => {
+      expect(buildFullTextQuery(message)).toBe(expected);
+    });
+
+    it('sends only the current message to full-text search', async () => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(embeddingResponse())
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Una variable almacena un valor. [1]' } }] }) });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', lessonTitle: 'Variables', principalId: 'student-1', message: '¿Qué es una variable?' });
+
+      const [, ...params] = prisma.$queryRaw.mock.calls[0];
+      expect(params).toContain(buildFullTextQuery('¿Qué es una variable?'));
+      expect(params.some((param) => typeof param === 'string' && param.includes('Tema de la lección'))).toBe(false);
+    });
+
+    it('removes citation markers from assistant turns sent to the provider', async () => {
+      const fetchMock = vi.fn()
+        .mockResolvedValueOnce(embeddingResponse())
+        .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Una variable almacena un valor. [1]' } }] }) });
+      vi.stubGlobal('fetch', fetchMock);
+
+      await chatWithCourseContext({
+        courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?',
+        history: [
+          { role: 'user', content: '¿Usa [1] como índice?' },
+          { role: 'assistant', content: 'Es un contenedor [1] [2]. Usá `arr[1]`.' },
+        ],
+      });
+
+      const { messages } = JSON.parse(fetchMock.mock.calls[1][1].body);
+      expect(messages[1].content).toBe('¿Usa [1] como índice?');
+      expect(messages[2].content).toBe('Es un contenedor. Usá `arr[1]`.');
+    });
+  });
+
+  describe('evidence grades', () => {
+    const answered = () => vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Una variable almacena un valor. [1]' } }] }) });
+    const systemPrompt = (fetchMock) => JSON.parse(fetchMock.mock.calls[1][1].body).messages[0].content;
+    const ask = () => chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?' });
+
+    afterEach(() => { delete process.env.RAG_EVIDENCE_STRONG_THRESHOLD; });
+
+    it('marks modest evidence as partial without discarding it', async () => {
+      prisma.$queryRaw.mockResolvedValue([{ ...chunk, similarity: 0.5 }]);
+      const fetchMock = answered();
+      vi.stubGlobal('fetch', fetchMock);
+      const result = await ask();
+      expect(systemPrompt(fetchMock)).toContain('La evidencia recuperada es débil o parcial');
+      expect(result.citations).toHaveLength(1);
+    });
+
+    it('treats strong evidence as sufficient', async () => {
+      prisma.$queryRaw.mockResolvedValue([{ ...chunk, similarity: 0.8 }]);
+      const fetchMock = answered();
+      vi.stubGlobal('fetch', fetchMock);
+      await ask();
+      expect(systemPrompt(fetchMock)).not.toContain('La evidencia recuperada es débil o parcial');
+    });
+
+    it('treats an exact text match as sufficient despite a low score', async () => {
+      prisma.$queryRaw.mockResolvedValue([{ ...chunk, similarity: 0.2, ftsMatch: true }]);
+      const fetchMock = answered();
+      vi.stubGlobal('fetch', fetchMock);
+      await ask();
+      expect(systemPrompt(fetchMock)).not.toContain('La evidencia recuperada es débil o parcial');
+    });
+
+    it('honors the configured strong threshold', async () => {
+      process.env.RAG_EVIDENCE_STRONG_THRESHOLD = '0.9';
+      prisma.$queryRaw.mockResolvedValue([{ ...chunk, similarity: 0.8 }]);
+      const fetchMock = answered();
+      vi.stubGlobal('fetch', fetchMock);
+      await ask();
+      expect(systemPrompt(fetchMock)).toContain('La evidencia recuperada es débil o parcial');
+    });
+  });
+
+  it.each([
+    ['¿Quién ganó los mundiales de fútbol?', false],
+    ['¿Qué es la fotosíntesis?', false],
+    ['La fotosíntesis es un proceso de las plantas verdes, ¿verdad?', false],
+    ['¿Qué es Docker?', false],
+    ['Yogur y fermentación', false],
+    ['¿y eso?', true],
+    ['Pero no me quedó claro', true],
+    ['dame otro ejercicio', true],
+    ['¿Cómo lo aplico?', true],
+    ['Explicame esto mejor', true],
+  ])('classifies "%s" as continuation: %s', (message, expected) => {
+    expect(isConversationContinuation(message)).toBe(expected);
+  });
+
+  it('asks for clarification only for real follow-ups without evidence', async () => {
+    prisma.$queryRaw.mockReset();
+    prisma.$queryRaw.mockResolvedValue([]);
+    const history = [{ role: 'user', content: '¿Qué es una variable?' }];
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => embeddingResponse()));
+
+    const offTopic = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Quién ganó los mundiales?', history });
+    const followUp = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿y eso cómo sigue?', history });
+
+    expect(offTopic.answer).toBe('No encontré evidencia suficiente en los materiales publicados de este curso.');
+    expect(followUp.answer).toContain('¿Te referís al concepto de la conversación anterior?');
   });
 
   it('returns cited foreign lesson as relatedLesson and marks it in prompt', async () => {

@@ -201,6 +201,10 @@ POST /api/admin/rag/courses/:courseId/reindex          autor/profesor/ADMIN
 `GET operations` devuelve conteos agregados `jobs`, `credentials`,
 `usageToday: { chatRequests }` y `readiness`; no incluye claves, prompts o respuestas.
 
+`GET /api/admin/rag/lessons` acepta `status=DESACTUALIZADO` y su `summary` incluye
+`stale`: documentos activos de una versión anterior, que el tutor no consulta y que ya no
+cuentan en `ready`. Cada documento informa `desactualizado`.
+
 Los dos endpoints de reindexado encolan trabajo durable y responden `202`. Una lección
 devuelve metadata de job `id`, `leccionId`, `status`, `requestedAt`, `nextAttemptAt` y
 `attempts`. Un curso devuelve `courseId`, `total`, `status: "QUEUED"` y `results` con
@@ -220,14 +224,17 @@ un próximo paso, sin crear un `Intento` oficial.
 
 El chat acepta `history` opcional: últimos N turnos `user`/`assistant` de la
 conversación de la lección. El backend es stateless — no persiste la conversación;
-el historial se envía al modelo como contexto no confiable y los dos turnos más
-recientes también ayudan a desambiguar el retrieval. `history` debe ser una lista;
+el historial se envía al modelo como contexto no confiable y sin marcas de cita, y los
+dos turnos más recientes ayudan a desambiguar el retrieval solo si el mensaje es una
+continuación. `history` debe ser una lista;
 turnos inválidos se descartan y se recorta a los más recientes
 (`RAG_CHAT_HISTORY_LIMIT`, default 8). Una pregunta actual duplicada al final se
 elimina antes de construir el prompt.
 
 La recuperación es híbrida: combina similitud vectorial (pgvector) con full-text
-(`tsvector`) de PostgreSQL para atrapar nombres y términos exactos. Si el full-text
+(`tsvector`) de PostgreSQL para atrapar nombres y términos exactos. El full-text usa solo
+el mensaje actual: coincidir con todos sus términos califica como evidencia y coincidir
+con algunos solo influye en el orden. Si el full-text
 falla, se cae a recuperación vectorial pura. Cuando la evidencia de la lección
 activa es débil, también puede recuperar material de otra lección publicada del
 mismo curso usando el mismo embedding de consulta; nunca cruza de curso.
@@ -246,6 +253,14 @@ publicada y no presenta el score técnico como porcentaje de relevancia. El cont
 modelo es efímero y agregado: estado de lección, avance de curso/módulo y banda de
 desempeño, sin PII, notas, respuestas ni datos de otros estudiantes. El tutor no
 tiene endpoints para modificar notas, progreso o inscripciones.
+
+Respuestas sin citas y con `success: true`: un pedido de cambiar notas, progreso o
+inscripciones o de ejecutar comandos recibe un aviso de que el tutor no puede hacerlo; un
+saludo o agradecimiento con intención `DUDA` recibe una respuesta breve, sin consultar al
+proveedor; y una respuesta que revela la opción correcta de una evaluación pendiente se
+reemplaza por una invitación a repasar. Si el mensaje de un estudiante coincide con una
+pregunta de una evaluación que no aprobó, el tutor responde como `PISTA` sea cual sea el
+`intent` recibido. Profesores y administradores quedan exentos.
 
 ## Categorías — `/api/categories`
 ```

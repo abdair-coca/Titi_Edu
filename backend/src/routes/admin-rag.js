@@ -1,10 +1,11 @@
 import { Router } from 'express';
+import { Prisma } from '@prisma/client';
 import prisma from '../prisma.js';
 import { requireAuth } from '../middleware/auth.js';
 import { requireRole } from '../middleware/permissions.js';
 import {
   RagError,
-  searchCourseContext,
+  retrieveLessonContext,
 } from '../services/rag.service.js';
 import { enqueueLessonIndex } from '../services/rag.queue.js';
 import { readiness } from '../services/readiness.js';
@@ -53,6 +54,26 @@ router.get('/courses', async (req, res) => {
   }
 });
 
+// El chat exige d.version = l.version: un documento activo de otra versión está
+// listo en apariencia, pero el tutor no lo ve. Prisma no compara columnas entre tablas.
+export async function staleLessonIds(courseId) {
+  const rows = await prisma.$queryRaw`
+    SELECT l."id"
+    FROM "DocumentoRag" d
+    JOIN "Leccion" l ON l."id" = d."leccionId"
+    JOIN "Modulo" m ON m."id" = l."moduloId"
+    JOIN "Curso" c ON c."id" = m."cursoId"
+    WHERE d."activo" = true
+      AND d."estado" = 'LISTO'
+      AND d."version" <> l."version"
+      AND l."estado" = 'PUBLICADA'
+      AND m."estado" = 'PUBLICADO'
+      AND c."publicado" = true
+      ${courseId ? Prisma.sql`AND c."id" = ${courseId}` : Prisma.empty}
+  `;
+  return rows.map((row) => row.id);
+}
+
 // ---- GET /lessons — Listado paginado de lecciones publicadas con estado RAG y KPIs ----
 router.get('/lessons', async (req, res) => {
   try {
@@ -79,9 +100,13 @@ router.get('/lessons', async (req, res) => {
       } : {}),
     };
 
+    const staleIds = await staleLessonIds(courseId);
+
     let statusCondition = {};
     if (status === 'LISTO') {
-      statusCondition = { documentosRag: { some: { activo: true, estado: 'LISTO' } } };
+      statusCondition = { id: { notIn: staleIds }, documentosRag: { some: { activo: true, estado: 'LISTO' } } };
+    } else if (status === 'DESACTUALIZADO') {
+      statusCondition = { id: { in: staleIds } };
     } else if (status === 'FALLIDO') {
       statusCondition = { documentosRag: { some: { estado: 'FALLIDO' } } };
     } else if (status === 'PENDIENTE') {
@@ -183,6 +208,10 @@ router.get('/lessons', async (req, res) => {
       }),
     ]);
 
+    const staleSet = new Set(staleIds);
+    const staleCount = staleIds.length;
+    const currentReadyCount = Math.max(0, readyCount - staleCount);
+
     const formattedLessons = lessons.map((lesson) => {
       const activeDoc = lesson.documentosRag[0] || null;
       return {
@@ -196,6 +225,7 @@ router.get('/lessons', async (req, res) => {
           id: activeDoc.id,
           version: activeDoc.version,
           estado: activeDoc.estado,
+          desactualizado: staleSet.has(lesson.id),
            activo: activeDoc.activo,
            modelo: activeDoc.modelo,
            origen: activeDoc.origen || (lesson.contextoRag ? 'AUTOR' : 'HTML_FALLBACK'),
@@ -210,6 +240,7 @@ router.get('/lessons', async (req, res) => {
     });
 
     const unindexedCount = Math.max(0, totalLessons - (readyCount + failedCount + pendingCount));
+    // readyCount already includes stale documents, so unindexed needs no extra adjustment.
 
     res.json({
       success: true,
@@ -220,7 +251,8 @@ router.get('/lessons', async (req, res) => {
         pageSize,
         summary: {
           totalLessons,
-          ready: readyCount,
+          ready: currentReadyCount,
+          stale: staleCount,
           failed: failedCount,
           pending: pendingCount,
           unindexed: unindexedCount,
@@ -336,7 +368,12 @@ router.post('/lessons/:lessonId/test-query', async (req, res) => {
       return res.status(404).json({ success: false, message: 'Lección no encontrada' });
     }
 
-    const chunks = await searchCourseContext(lesson.modulo.cursoId, query, 5, { lessonId: lesson.id });
+    // Same query the chat would build for a first question in this lesson.
+    const chunks = await retrieveLessonContext(lesson.modulo.cursoId, {
+      message: query,
+      lessonId: lesson.id,
+      lessonTitle: lesson.titulo,
+    });
 
     res.json({
       success: true,

@@ -15,3 +15,11 @@ embedding-service/.venv/
 backend/.env.staging
 ai-gateway/.env.staging
 embedding-service/.env.staging
+
+# Caché de Vite generada en la raíz
+.vite/
+
+# Evaluación local del Tutor RAG: copia del curso, caché de embeddings y resultados
+backend/eval/rag/data/
+backend/eval/rag/.cache/
+backend/eval/rag/results/

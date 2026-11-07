@@ -154,6 +154,7 @@ describe('RAG lesson routes', () => {
       .send({ message: 'Explicá la lección' });
     expect(response.status).toBe(200);
     expect(mocks.chatWithCourseContext).toHaveBeenCalledWith(expect.objectContaining({
+      protectAssessments: false,
       learningContext: {
         lessonState: 'NO_INICIADA',
         courseProgress: { completedLessons: 0, totalLessons: 0 },

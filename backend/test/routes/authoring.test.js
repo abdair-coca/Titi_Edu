@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
 import { fingerprint, sha256 } from '../../src/services/authoring.service.js';
@@ -44,10 +44,14 @@ const mocks = vi.hoisted(() => {
     },
   };
   client.$transaction = vi.fn(async (callback) => callback(client));
-  return { client, operations };
+  return { client, operations, enqueueLessonIndex: vi.fn() };
 });
 
 vi.mock('../../src/prisma.js', () => ({ default: mocks.client }));
+vi.mock('../../src/services/rag.queue.js', async (importOriginal) => ({
+  ...await importOriginal(),
+  enqueueLessonIndex: mocks.enqueueLessonIndex,
+}));
 vi.mock('../../src/db.js', () => ({ runQuery: vi.fn(), toNumber: (value) => Number(value || 0), default: {} }));
 
 import app from '../../src/app.js';
@@ -139,6 +143,55 @@ describe('live lesson materials', () => {
 
     expect(deleted.status).toBe(200);
     expect(mocks.client.material.delete).toHaveBeenCalledWith({ where: { id: 'mat-live' } });
+  });
+
+  describe('reindexación del tutor', () => {
+    beforeEach(() => {
+      process.env.RAG_ENABLED = 'true';
+      process.env.RAG_COURSE_IDS = '*';
+      mocks.client.leccion.findUnique.mockResolvedValue(liveLesson);
+      mocks.client.material.create.mockImplementation(({ data }) => Promise.resolve({ id: 'mat-live', ...data }));
+    });
+
+    afterEach(() => {
+      delete process.env.RAG_ENABLED;
+      delete process.env.RAG_COURSE_IDS;
+    });
+
+    const attach = (key) => request(app).post('/api/authoring/lessons/l-live/materials')
+      .set(auth).set('Idempotency-Key', key)
+      .field('expectedFingerprint', expectedFingerprint)
+      .attach('file', Buffer.from('material vivo'), { filename: 'material.md', contentType: 'text/markdown' });
+
+    it('programa la reindexación al adjuntar material y no la repite en un reintento idempotente', async () => {
+      expect((await attach('material-reindex')).status).toBe(201);
+      expect(mocks.enqueueLessonIndex).toHaveBeenCalledTimes(1);
+      expect(mocks.enqueueLessonIndex).toHaveBeenCalledWith('l-live');
+
+      const replay = await attach('material-reindex');
+      expect(replay.headers['idempotency-replayed']).toBe('true');
+      expect(mocks.enqueueLessonIndex).toHaveBeenCalledTimes(1);
+    });
+
+    it('programa la reindexación al eliminar material', async () => {
+      mocks.client.material.findUnique.mockResolvedValue({
+        id: 'mat-live', nombre: 'material.md', tipo: 'otro', url: '/uploads/materials/material.md', publicId: null, sha256: 'a'.repeat(64), leccion: liveLesson,
+      });
+      const deleted = await request(app).delete('/api/authoring/materials/mat-live')
+        .set(auth).set('Idempotency-Key', 'material-reindex-delete').send({ expectedFingerprint });
+
+      expect(deleted.status).toBe(200);
+      expect(mocks.enqueueLessonIndex).toHaveBeenCalledWith('l-live');
+    });
+
+    it('un fallo al encolar no bloquea la operación principal', async () => {
+      mocks.enqueueLessonIndex.mockRejectedValueOnce(new Error('cola caída'));
+      const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      expect((await attach('material-reindex-failure')).status).toBe(201);
+
+      error.mockRestore();
+    });
   });
 
   it.each(['attach', 'delete'])('rechaza %s cuando la lección está archivada', async (operation) => {
@@ -812,12 +865,17 @@ describe('HTML lesson authoring', () => {
     const deadline = new Date('2030-01-01T00:00:00.000Z');
     mocks.client.leccion.findUnique.mockResolvedValue(lesson);
     mocks.client.recursoHtmlLeccion.update.mockResolvedValue({ ...lesson.recursoHtml, fechaLimite: deadline });
+    process.env.RAG_ENABLED = 'true';
+    process.env.RAG_COURSE_IDS = '*';
 
     const response = await request(app).put('/api/authoring/lessons/l-live-html/html-deadline')
       .set(auth).set('Idempotency-Key', 'html-deadline-update')
       .send({ fechaLimite: deadline.toISOString(), expectedFingerprint });
+    delete process.env.RAG_ENABLED;
+    delete process.env.RAG_COURSE_IDS;
 
     expect(response.status).toBe(200);
+    expect(mocks.enqueueLessonIndex).toHaveBeenCalledWith(lesson.id);
     expect(mocks.client.recursoHtmlLeccion.update).toHaveBeenCalledWith({
       where: { leccionId: lesson.id }, data: { fechaLimite: deadline },
     });

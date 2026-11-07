@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  chunkStructuredText,
   chunkText,
   createEmbedding,
   formatVector,
@@ -8,6 +9,7 @@ import {
   normalizeChatHistory,
   normalizeText,
   prepareEmbeddingText,
+  prepareLessonFragments,
   ragEnabledForCourse,
   ragUserAllowed,
   validateAuthorialContext,
@@ -104,6 +106,102 @@ describe('RAG text preparation', () => {
     expect(text).toContain('Opciones: Un contenedor, Un color');
     expect(text).not.toContain('Respuesta correcta:');
     expect(text).not.toContain('La respuesta es un contenedor.');
+  });
+
+  it('removes answer sentences from the text of evaluable lessons only', () => {
+    const contenido = 'La célula produce energía. La respuesta correcta es la mitocondria.';
+    const html = '<p>Actividad de repaso visible.</p>';
+    expect(lessonRagText({ titulo: 'T', contenido, recursoHtml: { html, evaluable: true } })).not.toContain('mitocondria');
+    expect(lessonRagText({ titulo: 'T', contenido, recursoHtml: { html, evaluable: false } })).toContain('mitocondria');
+  });
+
+  describe('chunking structure', () => {
+    const sentence = (index) => `Oración número ${index} sobre índices de bases de datos relacionales.`;
+
+    it('keeps Markdown sections from lesson content', () => {
+      const text = lessonRagText({ titulo: 'Índices', contenido: '# Introducción\r\n\r\nAceleran lecturas.\n\n\n\n## Costos\n\nEncarecen escrituras.' });
+      expect(chunkStructuredText(text).map(({ section, content }) => ({ section, content }))).toEqual([
+        { section: null, content: 'Índices' },
+        { section: 'Introducción', content: 'Introducción\n\nAceleran lecturas.' },
+        { section: 'Costos', content: 'Costos\n\nEncarecen escrituras.' },
+      ]);
+    });
+
+    it('turns HTML headings into sections', () => {
+      const text = lessonRagText({ titulo: 'Redes', contenido: '', recursoHtml: { html: '<h1>Modelo OSI</h1><p>Define siete capas de comunicación.</p><h2><b>Capa física</b></h2><p>Transmite bits por el medio.</p>' } });
+      expect(chunkStructuredText(text).map(({ section }) => section)).toEqual([null, 'Modelo OSI', 'Capa física']);
+    });
+
+    it('cuts on spaces instead of splitting words', () => {
+      const chunks = chunkText(`A\n\n${'palabra '.repeat(200).trim()}`);
+      for (const chunk of chunks) expect(chunk).toMatch(/^(?:A|palabra(?: palabra)*)$/);
+      expect(chunks.length).toBeGreaterThan(2);
+    });
+
+    it('keeps exact cuts for text without spaces', () => {
+      expect(chunkText('abcdefghijklmnopqrstuvwxyz', 10, 3)).toEqual(['abcdefghij', 'hijklmnopq', 'opqrstuvwx', 'vwxyz']);
+    });
+
+    it('overlaps long sections packed by sentences', () => {
+      const long = Array.from({ length: 40 }, (_, index) => sentence(index)).join(' ');
+      const [, first, second] = chunkText(`A\n\n${long}`);
+      const lastWords = first.split(' ').slice(-3).join(' ');
+      expect(second).toContain(lastWords);
+      expect(second.split(' ')[0]).toMatch(/^[\p{L}\p{N}.]+$/u);
+    });
+  });
+
+  describe('lesson fragments', () => {
+    const lesson = [
+      '# Pilas',
+      '## Propósito',
+      'Entender la pila.',
+      '## Objetivos de aprendizaje',
+      '- Usar push y pop.',
+      '## Conceptos clave',
+      '### LIFO',
+      'El último en entrar es el primero en salir.',
+      '## Errores frecuentes',
+      '- Hacer pop sobre una pila vacía.',
+      '- Olvidar',
+      '  que pop quita el elemento.',
+      '## Glosario',
+      'Términos de la lección:',
+      '- Tope: el último elemento.',
+      '- Pila: estructura LIFO.',
+    ].join('\n');
+    const fragments = () => prepareLessonFragments(lesson, 'Pilas').map(({ section, content }) => ({ section, content }));
+
+    it('joins purpose, objectives and context into one presentation fragment', () => {
+      expect(fragments()[0]).toEqual({
+        section: 'Presentación',
+        content: 'Propósito Entender la pila.\n\nObjetivos de aprendizaje - Usar push y pop.',
+      });
+    });
+
+    it('drops the bare title and headings without text of their own', () => {
+      const sections = fragments().map(({ section }) => section);
+      expect(sections).not.toContain('Pilas');
+      expect(sections).not.toContain('Conceptos clave');
+      expect(sections).toContain('LIFO');
+    });
+
+    it('splits common mistakes into one fragment per item', () => {
+      expect(fragments().filter(({ section }) => section === 'Errores frecuentes')).toEqual([
+        { section: 'Errores frecuentes', content: 'Errores frecuentes: Hacer pop sobre una pila vacía.' },
+        { section: 'Errores frecuentes', content: 'Errores frecuentes: Olvidar que pop quita el elemento.' },
+      ]);
+    });
+
+    it('keeps a list section whole when it has text before the list', () => {
+      expect(fragments().filter(({ section }) => section === 'Glosario')).toEqual([
+        { section: 'Glosario', content: 'Glosario Términos de la lección: - Tope: el último elemento. - Pila: estructura LIFO.' },
+      ]);
+    });
+
+    it('numbers the fragments in order', () => {
+      expect(prepareLessonFragments(lesson, 'Pilas').map(({ index }) => index)).toEqual([0, 1, 2, 3, 4]);
+    });
   });
 
   it('uses one retrieval preprocessing contract for queries and documents', () => {

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const prisma = vi.hoisted(() => ({ $queryRaw: vi.fn() }));
 vi.mock('../../src/prisma.js', () => ({ default: prisma }));
 
-import { searchCourseContext } from '../../src/services/rag.service.js';
+import { rerankContext, retrieveLessonContext, searchCourseContext } from '../../src/services/rag.service.js';
 
 const embeddingResponse = () => ({
   ok: true,
@@ -34,7 +34,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  for (const key of ['EMBEDDING_API_URL', 'EMBEDDING_API_KEY', 'EMBEDDING_MODEL', 'EMBEDDING_PROVIDER', 'RAG_LESSON_PRIORITY_LIMIT', 'RAG_EVIDENCE_THRESHOLD']) {
+  for (const key of ['EMBEDDING_API_URL', 'EMBEDDING_API_KEY', 'EMBEDDING_MODEL', 'EMBEDDING_PROVIDER', 'RAG_LESSON_PRIORITY_LIMIT', 'RAG_EVIDENCE_THRESHOLD', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_AI_API_TOKEN', 'RAG_RERANK_ENABLED']) {
     delete process.env[key];
   }
 });
@@ -135,7 +135,18 @@ describe('RAG lesson-prioritized retrieval', () => {
 
     const [hybridSql] = prisma.$queryRaw.mock.calls[0];
     const hybridSqlText = Array.isArray(hybridSql) ? hybridSql.join('?') : String(hybridSql?.text || hybridSql);
-    expect(hybridSqlText).toContain('WHERE "similarity" >= ? OR "ftsRank" > 0');
+    expect(hybridSqlText).toContain('WHERE "similarity" >= ? OR "ftsMatch"');
+  });
+
+  it('sends only the student words to full-text and the enriched query to the embedding', async () => {
+    prisma.$queryRaw.mockResolvedValueOnce([row({ id: 'f-1' })]);
+
+    await searchCourseContext('course-1', '¿Qué es NAT?\nTema de la lección actual: Redes', 5, { ftsQuery: '¿Qué es NAT?' });
+
+    expect(JSON.parse(fetch.mock.calls[0][1].body).input).toContain('Tema de la lección actual: Redes');
+    const [, ...params] = prisma.$queryRaw.mock.calls[0];
+    expect(params).toContain('¿Qué es NAT?');
+    expect(params).not.toContain('¿Qué es NAT?\nTema de la lección actual: Redes');
   });
 
   it('does not use vector results below the evidence threshold', async () => {
@@ -219,5 +230,88 @@ describe('RAG lesson-prioritized retrieval', () => {
     expect(sqlText).toContain('d."version" = l."version"');
     expect(sqlText).toContain('d."activo" = true');
     expect(sqlText).toContain('d."assessmentSafe"');
+  });
+});
+
+describe('RAG reranking', () => {
+  const chunk = (id, seccion = 'Conceptos clave') => ({ index: 0, chunkId: id, lessonId: 'lesson-1', seccion, content: `Contenido ${id}`, similarity: 0.7 });
+  const rerankResponse = (response) => ({ ok: true, status: 200, json: async () => ({ result: { response } }) });
+  const rerankCalls = () => fetch.mock.calls.filter(([url]) => String(url).includes('bge-reranker-base'));
+
+  beforeEach(() => {
+    process.env.CLOUDFLARE_ACCOUNT_ID = 'account-1';
+    process.env.CLOUDFLARE_AI_API_TOKEN = 'cf-token';
+  });
+
+  it('orders candidates by reranker score, keeps the limit and renumbers', async () => {
+    fetch.mockResolvedValueOnce(rerankResponse([{ id: 0, score: 0.1 }, { id: 1, score: 0.9 }, { id: 2, score: 0.5 }]));
+
+    const result = await rerankContext('¿Qué es LIFO?', [chunk('a'), chunk('b'), chunk('c')], 2);
+
+    expect(result.map((item) => [item.chunkId, item.index])).toEqual([['b', 1], ['c', 2]]);
+    expect(JSON.parse(rerankCalls()[0][1].body)).toEqual({
+      query: '¿Qué es LIFO?',
+      contexts: [{ text: 'Contenido a' }, { text: 'Contenido b' }, { text: 'Contenido c' }],
+    });
+  });
+
+  it('lowers Presentación and hints so the answering section comes first', async () => {
+    fetch.mockResolvedValueOnce(rerankResponse([{ id: 0, score: 0.9 }, { id: 1, score: 0.8 }, { id: 2, score: 0.5 }]));
+
+    const result = await rerankContext('q', [chunk('intro', 'Presentación'), chunk('hint', 'Pista 1'), chunk('answer')], 3);
+
+    expect(result.map((item) => item.chunkId)).toEqual(['answer', 'intro', 'hint']);
+  });
+
+  it('drops sources below 5 % of the best score, but always keeps the best one', async () => {
+    fetch.mockResolvedValueOnce(rerankResponse([{ id: 0, score: 0.004 }, { id: 1, score: 0.2 }, { id: 2, score: 0.02 }, { id: 3, score: 0.009 }]));
+
+    const result = await rerankContext('q', [chunk('a'), chunk('b'), chunk('c'), chunk('d')], 5);
+
+    expect(result.map((item) => [item.chunkId, item.index])).toEqual([['b', 1], ['c', 2]]);
+  });
+
+  it('keeps one source when every score is tiny', async () => {
+    fetch.mockResolvedValueOnce(rerankResponse([{ id: 0, score: 0.0001 }, { id: 1, score: 0.000001 }]));
+
+    const result = await rerankContext('q', [chunk('a'), chunk('b')], 5);
+
+    expect(result.map((item) => item.chunkId)).toEqual(['a']);
+  });
+
+  it('keeps the hybrid order when the reranker fails', async () => {
+    fetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const result = await rerankContext('q', [chunk('a'), chunk('b'), chunk('c')], 2);
+
+    expect(result.map((item) => [item.chunkId, item.index])).toEqual([['a', 1], ['b', 2]]);
+  });
+
+  it('reranks 15 candidates with the student question, without the lesson title', async () => {
+    prisma.$queryRaw
+      .mockResolvedValueOnce(Array.from({ length: 8 }, (_, index) => row({ id: `f-${index}`, similarity: 0.9 - index / 100 })))
+      .mockResolvedValueOnce([]);
+    fetch.mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce(rerankResponse(Array.from({ length: 8 }, (_, id) => ({ id, score: id / 10 }))));
+
+    const result = await retrieveLessonContext('course-1', { message: '¿Qué es LIFO?', lessonId: 'lesson-1', lessonTitle: 'Pilas' });
+
+    expect(result.map((item) => item.chunkId)).toEqual(['f-7', 'f-6', 'f-5', 'f-4', 'f-3']);
+    expect(JSON.parse(fetch.mock.calls[0][1].body).input).toContain('Tema de la lección actual: Pilas');
+    expect(JSON.parse(rerankCalls()[0][1].body).query).toBe('¿Qué es LIFO?');
+    // The current-lesson query asks for 15 candidates, not the 5 final sources.
+    expect(prisma.$queryRaw.mock.calls[0].at(-1)).toBe(15);
+  });
+
+  it('searches only the final sources when the reranker is off', async () => {
+    process.env.RAG_RERANK_ENABLED = 'false';
+    prisma.$queryRaw.mockResolvedValueOnce([row({ id: 'f-1' })]).mockResolvedValueOnce([]);
+
+    const result = await retrieveLessonContext('course-1', { message: '¿Qué es LIFO?', lessonId: 'lesson-1', lessonTitle: 'Pilas' });
+
+    expect(result.map((item) => item.chunkId)).toEqual(['f-1']);
+    expect(fetch).toHaveBeenCalledOnce();
+    expect(rerankCalls()).toHaveLength(0);
   });
 });
