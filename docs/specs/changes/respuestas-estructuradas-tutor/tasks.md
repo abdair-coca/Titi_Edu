@@ -1,0 +1,77 @@
+# Tasks — Respuestas estructuradas del Tutor IA (DIL)
+
+> Marcar `[x]` al avanzar. Un commit por unidad, sin push.
+> Change: `respuestas-estructuradas-tutor`
+> Verificación backend: `cd backend && npx vitest run test/services test/routes/rag.test.js`
+> Verificación frontend: `cd frontend && npm run test:rag && npm run build`
+
+## U1 — Contrato DIL v1 (backend)
+
+- [ ] Crear `backend/src/services/rag.dil.js` con el JSON Schema estricto (raíz +
+      `anyOf` de los 9 componentes, todos los campos `required`,
+      `additionalProperties: false`).
+- [ ] `validateDil(tree, { intent })`: aplica los límites de la spec §1, descarta
+      nodos inválidos o `Quiz` fuera de `PRACTICA` y devuelve `{ nodes, dropped }`.
+- [ ] `dilToCanonicalText(nodes)`: serializa a Markdown con `[n]`; código y
+      diagramas en bloques cercados.
+- [ ] Tests `test/services/rag.dil.test.js`: cada componente válido e inválido,
+      límites, `Quiz` por intención, árbol vacío y serialización estable.
+
+## U2 — Generación con structured outputs
+
+- [ ] Subir `MAX_COMPLETION_TOKENS` de 1600 a 3200.
+- [ ] Leer `RAG_DIL_ENABLED` y, con el flag encendido, agregar `response_format`
+      con el schema y el bloque de instrucciones DIL al prompt de `generateAnswer`.
+- [ ] Parsear el JSON; si es ilegible o queda sin nodos, tratarlo como respuesta
+      vacía (mismo camino que hoy, incluido el respaldo de evaluaciones).
+- [ ] En `chatWithContext`, aplicar `validateGroundedAnswer` y `answerRevealsOption`
+      sobre el texto canónico; `dil = null` si alguna protección rechaza.
+- [ ] Registrar `dil_nodes_dropped` sin contenido.
+- [ ] Tests: con el flag apagado el body enviado a Groq no cambia; con el flag
+      encendido, rechazo por citas, quiz que revela una opción, JSON cortado.
+
+## U3 — API y documentación
+
+- [ ] `data.dil` en `POST /api/lessons/:id/chat` (`null` en todas las respuestas fijas).
+- [ ] Test de ruta: forma de la respuesta con y sin DIL.
+- [ ] Actualizar `docs/api.md`, `docs/rag-security.md` (texto canónico como base de
+      las protecciones) y `.env.example` (`RAG_DIL_ENABLED`).
+
+## U4 — Renderer DIL (frontend)
+
+- [ ] `frontend/src/components/tutor/DilMessage.jsx` + un componente por nodo:
+      Text, Steps, Callout, Concepts, Table, Code, Check.
+- [ ] Insignias de cita `[n]` que despliegan la `CitationCard` correspondiente.
+- [ ] `MessageBubble` usa `DilMessage` si hay `dil`; guardar `dil` en el mensaje.
+- [ ] Revisar contra `frontend/design.md` §12 (plano, sombra dura, tonos).
+- [ ] Extender `scripts/check-rag-contract.mjs`: nodos desconocidos ignorados,
+      mensaje sin `dil` cae a Markdown.
+
+## U5 — Diagram
+
+- [ ] Extraer el loader de Mermaid de `HtmlLessonPlayer` a `lib/mermaid.js` y
+      reutilizarlo (misma config estricta).
+- [ ] `DiagramNode`: carga diferida, caption accesible, "Ver como texto" y
+      respaldo a código si falla.
+
+## U6 — Quiz interactivo
+
+- [ ] `QuizNode`: radiogroup con teclado, "Responder", bloqueo tras enviar y solo
+      lectura si no es el último mensaje.
+- [ ] Enviar `Mi respuesta: <opción>` con intención `RETROALIMENTAR`; mantener el
+      estado de práctica de `tutorPractice.js`.
+- [ ] Check en `scripts/check-tutor-history.mjs`: el historial usa `content` canónico.
+
+## U7 — Medición con Groq real
+
+- [ ] Script `backend/eval/rag/generation.mjs`: 20 preguntas del golden set en
+      ambos modos; reporta rechazos por motivo, nodos descartados, tokens, p50/p90
+      y JSON cortados. **Gasta cuota de Groq: correr solo con confirmación.**
+- [ ] Decidir el flag según la spec §5 y registrar en `HISTORIAL.md`.
+
+## U8 — Cierre
+
+- [ ] Prueba manual en el panel (desktop y mobile): explicar, ejemplo, quiz,
+      diagrama y fallo de Mermaid.
+- [ ] `verify-report.md` con comandos y resultados reales.
+- [ ] Actualizar el estado del change en el índice de `AGENTS.md`.
