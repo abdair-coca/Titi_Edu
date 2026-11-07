@@ -13,7 +13,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src test"
+    "lint": "eslint src test",
+    "eval:rag": "node eval/rag/retrieval.mjs"
   },
   "prisma": {
     "seed": "node prisma/seed.js"

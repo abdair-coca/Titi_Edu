@@ -12,9 +12,7 @@ const mockPrisma = vi.hoisted(() => ({
 
 const mockRagService = vi.hoisted(() => ({
   indexLesson: vi.fn(),
-  searchCourseContext: vi.fn(),
-  buildContextualRetrievalQuery: vi.fn((message, _history, title) => `${message}\nTema: ${title}`),
-  buildFullTextQuery: vi.fn((message) => `fts:${message}`),
+  retrieveLessonContext: vi.fn(),
   RagError: class RagError extends Error {
     constructor(status, message) {
       super(message);
@@ -35,8 +33,6 @@ const tokenFor = (neoId) => jwt.sign({ id: neoId }, JWT_SECRET, { expiresIn: '1h
 
 beforeEach(() => {
   vi.resetAllMocks();
-  mockRagService.buildContextualRetrievalQuery.mockImplementation((message, _history, title) => `${message}\nTema: ${title}`);
-  mockRagService.buildFullTextQuery.mockImplementation((message) => `fts:${message}`);
   mockPrisma.$queryRaw.mockResolvedValue([]);
   process.env.JWT_SECRET = JWT_SECRET;
 });
@@ -227,7 +223,7 @@ describe('RAG Admin Routes (/api/admin/rag)', () => {
       titulo: 'Cinemática',
       modulo: { cursoId: 'c1' },
     });
-    mockRagService.searchCourseContext.mockResolvedValue([
+    mockRagService.retrieveLessonContext.mockResolvedValue([
       {
         chunkId: 'chunk-1',
         index: 1,
@@ -248,12 +244,11 @@ describe('RAG Admin Routes (/api/admin/rag)', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.results).toHaveLength(1);
     expect(res.body.data.results[0].similarity).toBe(0.8842);
-    expect(mockRagService.searchCourseContext).toHaveBeenCalledWith(
-      'c1',
-      '¿Qué es la aceleración?\nTema: Cinemática',
-      5,
-      { lessonId: 'l1', ftsQuery: 'fts:¿Qué es la aceleración?' },
-    );
+    expect(mockRagService.retrieveLessonContext).toHaveBeenCalledWith('c1', {
+      message: '¿Qué es la aceleración?',
+      lessonId: 'l1',
+      lessonTitle: 'Cinemática',
+    });
   });
 
   it('POST /lessons/:lessonId/reindex queues durable work and returns 202', async () => {

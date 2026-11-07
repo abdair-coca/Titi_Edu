@@ -5,9 +5,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { requireRole } from '../middleware/permissions.js';
 import {
   RagError,
-  buildContextualRetrievalQuery,
-  buildFullTextQuery,
-  searchCourseContext,
+  retrieveLessonContext,
 } from '../services/rag.service.js';
 import { enqueueLessonIndex } from '../services/rag.queue.js';
 import { readiness } from '../services/readiness.js';
@@ -371,12 +369,11 @@ router.post('/lessons/:lessonId/test-query', async (req, res) => {
     }
 
     // Same query the chat would build for a first question in this lesson.
-    const chunks = await searchCourseContext(
-      lesson.modulo.cursoId,
-      buildContextualRetrievalQuery(query, [], lesson.titulo),
-      5,
-      { lessonId: lesson.id, ftsQuery: buildFullTextQuery(query) },
-    );
+    const chunks = await retrieveLessonContext(lesson.modulo.cursoId, {
+      message: query,
+      lessonId: lesson.id,
+      lessonTitle: lesson.titulo,
+    });
 
     res.json({
       success: true,

@@ -42,8 +42,22 @@ const DEFAULT_EVIDENCE_THRESHOLD = 0.45;
 const DEFAULT_EVIDENCE_STRONG_THRESHOLD = 0.6;
 const DEFAULT_INDEX_TRANSACTION_MAX_WAIT_MS = 10_000;
 const DEFAULT_INDEX_TRANSACTION_TIMEOUT_MS = 30_000;
-const INDEX_FORMAT_VERSION = 2;
+const INDEX_FORMAT_VERSION = 3;
 const MAX_COMPLETION_TOKENS = 1600;
+// Measured with backend/eval/rag: the hybrid search gathers candidates and a
+// cross-encoder orders them, which puts the answering fragment first far more often.
+const RERANK_MODEL = '@cf/baai/bge-reranker-base';
+const RERANK_CANDIDATES = 15;
+const DEFAULT_RERANK_TIMEOUT_MS = 10_000;
+// Presentación and the hints mention the whole topic, so the reranker scores them
+// above the section that actually answers. They still win when nothing else fits.
+const GENERIC_SECTION_PATTERN = /^(?:presentación|pistas?)(?![\p{L}\p{N}])/iu;
+const GENERIC_SECTION_FACTOR = 0.3;
+const PRESENTATION_SECTION = 'Presentación';
+const PRESENTATION_CHUNK_SIZE = 1400;
+const INTRO_SECTIONS = new Set(['proposito', 'objetivos de aprendizaje', 'contexto']);
+const LIST_SECTIONS = new Set(['errores frecuentes', 'glosario', 'resumen']);
+const MARKDOWN_HEADING = /^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/;
 export const VECTOR_DIMENSIONS = 768;
 export const DEFAULT_CHAT_INTENT = 'DUDA';
 export const CHAT_INTENTS = Object.freeze([
@@ -496,33 +510,81 @@ export function chunkText(value, chunkSize = DEFAULT_CHUNK_SIZE, overlap = DEFAU
   return splitLongText(text, chunkSize, overlap);
 }
 
-export function chunkStructuredText(value, chunkSize = DEFAULT_CHUNK_SIZE, overlap = DEFAULT_CHUNK_OVERLAP) {
+// One block per Markdown heading; text before the first heading has no section.
+function markdownSections(value) {
   const raw = String(value || '').replace(/\r\n?/g, '\n').trim();
   if (!raw) return [];
-
-  const sections = [];
-  let section = null;
-  let lines = [];
-  const flush = () => {
-    const body = lines.join('\n').trim();
-    if (body) sections.push({ section, text: body });
-    lines = [];
-  };
-
+  const blocks = [];
+  let current = { section: null, lines: [] };
   for (const line of raw.split('\n')) {
-    const heading = line.match(/^\s{0,3}#{1,6}\s+(.+?)\s*#*\s*$/);
-    if (heading) {
-      flush();
-      section = normalizeText(heading[1]);
-      lines.push(section);
-    } else {
-      lines.push(line);
+    const heading = line.match(MARKDOWN_HEADING);
+    if (!heading) {
+      current.lines.push(line);
+      continue;
     }
+    blocks.push(current);
+    current = { section: normalizeText(heading[1]), lines: [] };
   }
-  flush();
-  const blocks = sections.length ? sections : [{ section: null, text: raw }];
-  return blocks.flatMap(({ section: sectionName, text }) => chunkText(text, chunkSize, overlap)
-    .map((content) => ({ content, section: sectionName })));
+  blocks.push(current);
+  return blocks;
+}
+
+function chunkSection({ section, lines }, chunkSize, overlap) {
+  const text = (section ? [section, ...lines] : lines).join('\n').trim();
+  return chunkText(text, chunkSize, overlap).map((content) => ({ content, section }));
+}
+
+export function chunkStructuredText(value, chunkSize = DEFAULT_CHUNK_SIZE, overlap = DEFAULT_CHUNK_OVERLAP) {
+  return markdownSections(value).flatMap((block) => chunkSection(block, chunkSize, overlap));
+}
+
+function sectionKey(section) {
+  return fragmentContentKey(section || '').normalize('NFD').replace(/\p{M}/gu, '');
+}
+
+// Items of a plain bullet or numbered list. Null when the section has other text
+// before the list, so that text is never lost.
+function listItems(lines) {
+  const items = [];
+  for (const line of lines) {
+    const item = line.match(/^\s*(?:[-*]|\d+\.)\s+(.+)$/);
+    if (item) items.push(item[1]);
+    else if (items.length && line.trim()) items[items.length - 1] += ` ${line.trim()}`;
+    else if (line.trim()) return null;
+  }
+  return items;
+}
+
+// Each common mistake, glossary term or summary point answers a different question;
+// as one fragment they only add tokens to every answer that needs one of them.
+function lessonSectionFragments(block) {
+  const items = LIST_SECTIONS.has(sectionKey(block.section)) ? listItems(block.lines) : null;
+  if (items && items.length >= 2) {
+    return items.map((item) => ({ content: normalizeText(`${block.section}: ${item}`), section: block.section }));
+  }
+  return chunkSection(block, DEFAULT_CHUNK_SIZE, DEFAULT_CHUNK_OVERLAP);
+}
+
+// Purpose, objectives and context answer "what will I learn?" together; apart they
+// are short fragments that match almost any question about the lesson.
+function mergeIntroSections(fragments) {
+  const intro = fragments.filter((fragment) => INTRO_SECTIONS.has(sectionKey(fragment.section)));
+  if (!intro.length) return fragments;
+  const presentation = chunkText(intro.map((fragment) => fragment.content).join('\n\n'), PRESENTATION_CHUNK_SIZE, 0)
+    .map((content) => ({ content, section: PRESENTATION_SECTION }));
+  const firstIndex = fragments.indexOf(intro[0]);
+  const rest = fragments.filter((fragment) => !intro.includes(fragment));
+  return [...rest.slice(0, firstIndex), ...presentation, ...rest.slice(firstIndex)];
+}
+
+// A heading followed directly by a subheading leaves a fragment with only its title.
+function withoutHeadingOnly(fragments) {
+  return fragments.filter((fragment) => fragmentContentKey(fragment.content) !== fragmentContentKey(fragment.section || ''));
+}
+
+export function prepareLessonFragments(content, title) {
+  const fragments = markdownSections(content).flatMap(lessonSectionFragments);
+  return deduplicatePreparedFragments(withoutHeadingOnly(mergeIntroSections(withoutBareTitle(fragments, title))));
 }
 
 // Keeps paragraphs and Markdown headings, which chunking uses to find sections.
@@ -897,7 +959,7 @@ export async function indexLesson(lessonId, { force = false, lease = null } = {}
     return { status: 'REUSED', documentId: reusable.id, lessonId };
   }
 
-  const chunks = deduplicatePreparedFragments(withoutBareTitle(chunkStructuredText(content), lesson.titulo));
+  const chunks = prepareLessonFragments(content, lesson.titulo);
   const preparedFragments = [];
   try {
     for (let index = 0; index < chunks.length; index += 1) {
@@ -1196,6 +1258,57 @@ function mapContextRows(rows, limit) {
   }));
 }
 
+// Uses the same Cloudflare credentials as the embeddings. Without them, or with
+// RAG_RERANK_ENABLED=false, the search keeps the hybrid order.
+function rerankerEnabled() {
+  return process.env.RAG_RERANK_ENABLED?.trim().toLowerCase() !== 'false'
+    && Boolean(process.env.CLOUDFLARE_ACCOUNT_ID?.trim() && process.env.CLOUDFLARE_AI_API_TOKEN?.trim());
+}
+
+async function fetchRerankScores(query, chunks) {
+  const response = await fetch(cloudflareEndpoint(RERANK_MODEL), {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${process.env.CLOUDFLARE_AI_API_TOKEN.trim()}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query, contexts: chunks.map((chunk) => ({ text: chunk.content })) }),
+    signal: AbortSignal.timeout(Math.max(1000, Number(process.env.RAG_RERANK_TIMEOUT_MS) || DEFAULT_RERANK_TIMEOUT_MS)),
+  });
+  const payload = await readJsonResponse(response, 'reranker');
+  const scores = payload?.result?.response;
+  if (!Array.isArray(scores)) throw new RagError(502, 'El reranker devolvió una respuesta inválida');
+  return scores;
+}
+
+// Orders the candidates with the reranker and keeps the best `limit`. If the reranker
+// fails, the hybrid order stands: a worse order never blocks the answer.
+export async function rerankContext(query, chunks, limit = DEFAULT_RETRIEVAL_LIMIT) {
+  let ordered = chunks;
+  if (chunks.length > 1) {
+    try {
+      const scores = new Map();
+      for (const { id, score } of await fetchRerankScores(query, chunks)) {
+        if (Number.isInteger(id) && chunks[id] && Number.isFinite(score)) {
+          scores.set(chunks[id], GENERIC_SECTION_PATTERN.test(chunks[id].seccion || '') ? score * GENERIC_SECTION_FACTOR : score);
+        }
+      }
+      // Stable sort: candidates without a score keep their hybrid order, after the scored ones.
+      ordered = [...chunks].sort((a, b) => (scores.get(b) ?? -Infinity) - (scores.get(a) ?? -Infinity));
+    } catch (error) {
+      console.error('RAG reranker unavailable, keeping hybrid order', { message: error.message });
+    }
+  }
+  return ordered.slice(0, limit).map((chunk, index) => ({ ...chunk, index: index + 1 }));
+}
+
+// The retrieval the chat uses, shared with the admin preview so both show the same sources.
+export async function retrieveLessonContext(courseId, { message, history = [], lessonId = null, lessonTitle = null, limit = DEFAULT_RETRIEVAL_LIMIT }) {
+  const query = buildContextualRetrievalQuery(message, history, lessonTitle);
+  const options = { lessonId, ftsQuery: buildFullTextQuery(message) };
+  if (!rerankerEnabled()) return searchCourseContext(courseId, query, limit, options);
+  const candidates = await searchCourseContext(courseId, query, Math.max(limit, RERANK_CANDIDATES), options);
+  // The title helps the embedding stay in the lesson; the reranker was measured without it.
+  return rerankContext(buildContextualRetrievalQuery(message, history), candidates, limit);
+}
+
 const DEFAULT_CHAT_HISTORY_LIMIT = 8;
 const MAX_HISTORY_TURN_CHARS = 1000;
 const MAX_RETRIEVAL_HISTORY_TURNS = 2;
@@ -1380,9 +1493,8 @@ async function chatWithContext({ courseId, lessonId = null, principalId = 'anony
 
   // Explicita tema para consultas genéricas como "explícame este tema".
   const safeLessonTitle = normalizeText(lessonTitle).slice(0, 200);
-  const retrievalQuery = buildContextualRetrievalQuery(message, safeHistory, safeLessonTitle);
   // Prioriza la lección abierta (top-K de esa lección + fallback al curso).
-  let chunks = await searchCourseContext(courseId, retrievalQuery, DEFAULT_RETRIEVAL_LIMIT, { lessonId, ftsQuery: buildFullTextQuery(message) });
+  let chunks = await retrieveLessonContext(courseId, { message, history: safeHistory, lessonId, lessonTitle: safeLessonTitle });
   if (!chunks.length) {
     chunks = isConversationContinuation(message)
       ? await loadHistoricalChunks(courseId, safeHistory)

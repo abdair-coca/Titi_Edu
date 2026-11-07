@@ -1,0 +1,41 @@
+# Evaluación de la búsqueda del Tutor RAG
+
+Mide si la búsqueda del tutor encuentra el fragmento que responde cada pregunta del
+golden set. No llama al modelo de respuestas (Groq) y no corre en CI.
+
+## Preparar
+
+1. Postgres local con pgvector (cualquier puerto local):
+
+   ```bash
+   docker run -d --name titi-rag-eval -e POSTGRES_PASSWORD=test -p 127.0.0.1:55434:5432 pgvector/pgvector:pg16
+   ```
+
+2. Copia del curso piloto en `eval/rag/data/course.json` (fuera de git). Se exporta en
+   solo lectura desde la base real; contiene lecciones y contexto autoral, sin usuarios
+   ni notas.
+3. `backend/.env` con `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_AI_API_TOKEN` y
+   `EMBEDDING_MODEL`. El script no usa el `DATABASE_URL` de ese archivo.
+
+## Correr
+
+```bash
+npm run eval:rag -- --variants produccion,actual --split dev
+```
+
+- `--variants`: nombres de `variants.mjs`. `produccion` usa el código del tutor tal cual
+  (`prepareLessonFragments` y `retrieveLessonContext`); `actual` es la indexación anterior,
+  como referencia.
+- `--split`: `dev` (para ajustar), `holdout` y `holdout2` (solo para confirmar al final) o `all`.
+- `--db`: base local; rechaza cualquier host que no sea `localhost` o `127.0.0.1`.
+- Los embeddings quedan en `eval/rag/.cache/` y los resultados por pregunta en
+  `eval/rag/results/`.
+
+## Golden set
+
+`golden-set.json`: cada pregunta tiene la lección abierta, su categoría y grupos de
+evidencia. Cada grupo lista frases literales del material (`"L22: frase"`); un fragmento
+es útil si contiene alguna. Una pregunta sin `evidence` no tiene respuesta en el curso.
+Antes de medir, el script comprueba que cada frase exista en su lección.
+
+No ajustes nada mirando las preguntas `holdout` ni `holdout2`: se usan una sola vez para confirmar.

@@ -9,6 +9,7 @@ import {
   normalizeChatHistory,
   normalizeText,
   prepareEmbeddingText,
+  prepareLessonFragments,
   ragEnabledForCourse,
   ragUserAllowed,
   validateAuthorialContext,
@@ -147,6 +148,59 @@ describe('RAG text preparation', () => {
       const lastWords = first.split(' ').slice(-3).join(' ');
       expect(second).toContain(lastWords);
       expect(second.split(' ')[0]).toMatch(/^[\p{L}\p{N}.]+$/u);
+    });
+  });
+
+  describe('lesson fragments', () => {
+    const lesson = [
+      '# Pilas',
+      '## Propósito',
+      'Entender la pila.',
+      '## Objetivos de aprendizaje',
+      '- Usar push y pop.',
+      '## Conceptos clave',
+      '### LIFO',
+      'El último en entrar es el primero en salir.',
+      '## Errores frecuentes',
+      '- Hacer pop sobre una pila vacía.',
+      '- Olvidar',
+      '  que pop quita el elemento.',
+      '## Glosario',
+      'Términos de la lección:',
+      '- Tope: el último elemento.',
+      '- Pila: estructura LIFO.',
+    ].join('\n');
+    const fragments = () => prepareLessonFragments(lesson, 'Pilas').map(({ section, content }) => ({ section, content }));
+
+    it('joins purpose, objectives and context into one presentation fragment', () => {
+      expect(fragments()[0]).toEqual({
+        section: 'Presentación',
+        content: 'Propósito Entender la pila.\n\nObjetivos de aprendizaje - Usar push y pop.',
+      });
+    });
+
+    it('drops the bare title and headings without text of their own', () => {
+      const sections = fragments().map(({ section }) => section);
+      expect(sections).not.toContain('Pilas');
+      expect(sections).not.toContain('Conceptos clave');
+      expect(sections).toContain('LIFO');
+    });
+
+    it('splits common mistakes into one fragment per item', () => {
+      expect(fragments().filter(({ section }) => section === 'Errores frecuentes')).toEqual([
+        { section: 'Errores frecuentes', content: 'Errores frecuentes: Hacer pop sobre una pila vacía.' },
+        { section: 'Errores frecuentes', content: 'Errores frecuentes: Olvidar que pop quita el elemento.' },
+      ]);
+    });
+
+    it('keeps a list section whole when it has text before the list', () => {
+      expect(fragments().filter(({ section }) => section === 'Glosario')).toEqual([
+        { section: 'Glosario', content: 'Glosario Términos de la lección: - Tope: el último elemento. - Pila: estructura LIFO.' },
+      ]);
+    });
+
+    it('numbers the fragments in order', () => {
+      expect(prepareLessonFragments(lesson, 'Pilas').map(({ index }) => index)).toEqual([0, 1, 2, 3, 4]);
     });
   });
 
