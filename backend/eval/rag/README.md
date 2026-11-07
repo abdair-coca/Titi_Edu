@@ -26,7 +26,7 @@ npm run eval:rag -- --variants produccion,actual --split dev
 - `--variants`: nombres de `variants.mjs`. `produccion` usa el código del tutor tal cual
   (`prepareLessonFragments` y `retrieveLessonContext`); `actual` es la indexación anterior,
   como referencia.
-- `--split`: `dev` (para ajustar), `holdout` y `holdout2` (solo para confirmar al final) o `all`.
+- `--split`: `dev` (para ajustar), `holdout`, `holdout2` y `holdout3` (solo para confirmar al final) o `all`.
 - `--db`: base local; rechaza cualquier host que no sea `localhost` o `127.0.0.1`.
 - Los embeddings quedan en `eval/rag/.cache/` y los resultados por pregunta en
   `eval/rag/results/`.
@@ -38,4 +38,6 @@ evidencia. Cada grupo lista frases literales del material (`"L22: frase"`); un f
 es útil si contiene alguna. Una pregunta sin `evidence` no tiene respuesta en el curso.
 Antes de medir, el script comprueba que cada frase exista en su lección.
 
-No ajustes nada mirando las preguntas `holdout` ni `holdout2`: se usan una sola vez para confirmar.
+No ajustes nada mirando las preguntas `holdout`, `holdout2` ni `holdout3`: se usan una sola vez para confirmar.
+`holdout` y `holdout2` ya se usaron para elegir `op12-k5`, y `holdout3` para confirmar el número de fuentes variable;
+la próxima mejora necesita preguntas de confirmación nuevas.

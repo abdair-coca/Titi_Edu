@@ -234,6 +234,14 @@ export const VARIANTS = {
     demote: { pattern: GENERIC_SECTIONS, factor: 0.3 },
     limit: 5,
   },
+  'op12-k5-corte': {
+    description: 'op12-k5 + número de fuentes variable: quedan las que tienen al menos 5 % del mejor puntaje.',
+    chunk: (text, title) => splitLists(text, withoutHeadingOnly(mergeIntro(production(text, title, 900, 120)))),
+    rerank: { model: RERANKER, candidates: 15 },
+    demote: { pattern: GENERIC_SECTIONS, factor: 0.3 },
+    limit: 5,
+    cutoff: { ratio: 0.05 },
+  },
   'op125': {
     description: 'Opciones 1, 2 y 5 juntas sobre iu-rerank-k4.',
     chunk: (text, title) => splitLists(text, withoutHeadingOnly(mergeIntro(production(text, title, 900, 120)))),

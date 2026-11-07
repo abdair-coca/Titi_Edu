@@ -250,6 +250,8 @@ async function measure(question, variant) {
     }
     rerankTop = reranked[0]?.rerankScore ?? null;
     chunks = reranked.filter((chunk) => chunk.rerankScore >= (variant.rerank.minScore || 0)).slice(0, limit);
+    // Número de fuentes variable: además de la primera, quedan las que están cerca de su puntaje.
+    if (variant.cutoff) chunks = chunks.filter((chunk, index) => index === 0 || chunk.rerankScore >= rerankTop * variant.cutoff.ratio);
   }
   const useful = chunks.map((chunk) => question.groups.some((group) => group.some((alternative) => matches(chunk, alternative))));
   const groupRanks = question.groups.map((group) => {
@@ -270,6 +272,9 @@ async function measure(question, variant) {
     rerankTop,
     ftsMatches: chunks.filter((chunk) => chunk.ftsMatch).length,
     sources: chunks.map((chunk) => `${lessonKeyById[chunk.lessonId] ?? '?'}:${chunk.seccion ?? '-'}`),
+    // Por fuente, para simular cortes sin volver a correr la búsqueda.
+    sourceScores: chunks.map((chunk) => (chunk.rerankScore === undefined ? null : Number(chunk.rerankScore.toPrecision(4)))),
+    sourceUseful: useful,
   };
 }
 
