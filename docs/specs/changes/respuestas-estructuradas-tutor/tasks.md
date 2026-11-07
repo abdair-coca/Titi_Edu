@@ -7,14 +7,14 @@
 
 ## U1 — Contrato DIL v1 (backend)
 
-- [ ] Crear `backend/src/services/rag.dil.js` con el JSON Schema estricto (raíz +
+- [x] Crear `backend/src/services/rag.dil.js` con el JSON Schema estricto (raíz +
       `anyOf` de los 9 componentes, todos los campos `required`,
       `additionalProperties: false`).
-- [ ] `validateDil(tree, { intent })`: aplica los límites de la spec §1, descarta
+- [x] `validateDil(tree, { intent })`: aplica los límites de la spec §1, descarta
       nodos inválidos o `Quiz` fuera de `PRACTICA` y devuelve `{ nodes, dropped }`.
-- [ ] `dilToCanonicalText(nodes)`: serializa a Markdown con `[n]`; código y
+- [x] `dilToCanonicalText(nodes)`: serializa a Markdown con `[n]`; código y
       diagramas en bloques cercados.
-- [ ] Tests `test/services/rag.dil.test.js`: cada componente válido e inválido,
+- [x] Tests `test/services/rag.dil.test.js`: cada componente válido e inválido,
       límites, `Quiz` por intención, árbol vacío y serialización estable.
 
 ## U2 — Generación con structured outputs
