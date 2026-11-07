@@ -31,4 +31,12 @@ assert.deepEqual(buildTutorHistory(lessonOne, 'Seguimiento'), lessonOne.map(({ r
 assert.deepEqual(buildTutorHistory(lessonTwo, 'Seguimiento'), lessonTwo.map(({ role, content }) => ({ role, content })));
 assert.notDeepEqual(buildTutorHistory(lessonOne, 'Seguimiento'), buildTutorHistory(lessonTwo, 'Seguimiento'));
 
+// A DIL answer travels as its canonical text: the tree never goes back to the server.
+const dilTurn = {
+  role: 'tutor',
+  content: '**Pregunta:** ¿Qué guarda una variable? [1]\n- A) Un valor\n- B) Nada',
+  dil: { version: 1, nodes: [{ c: 'Quiz', question: '¿Qué guarda una variable? [1]', options: ['Un valor', 'Nada'] }] },
+};
+assert.deepEqual(buildTutorHistory([dilTurn], 'Mi respuesta: Un valor'), [{ role: 'assistant', content: dilTurn.content }]);
+
 console.log('Tutor history: OK');

@@ -3,6 +3,7 @@ import MarkdownContent from '../MarkdownContent.jsx';
 import { BookIcon, ChevronDownIcon, LightbulbIcon, PencilIcon } from '../icons.jsx';
 import { usePopIn } from '../../lib/motion.js';
 import DilDiagram from './DilDiagram.jsx';
+import DilQuiz from './DilQuiz.jsx';
 import InlineText from './InlineText.jsx';
 
 const CALLOUT_TONES = {
@@ -13,7 +14,7 @@ const CALLOUT_TONES = {
 };
 
 // Renders a DIL answer (see lib/dil.js). Text fields go through InlineText.
-export default function DilMessage({ nodes, citationNumbers, onCite, onFocusInput }) {
+export default function DilMessage({ nodes, citationNumbers, onCite, onFocusInput, quizEnabled = false, onQuizAnswer }) {
   const ref = usePopIn([]);
   const inline = { citationNumbers, onCite };
 
@@ -36,6 +37,8 @@ export default function DilMessage({ nodes, citationNumbers, onCite, onFocusInpu
             return <CodeNode key={key} node={node} inline={inline} />;
           case 'Diagram':
             return <DilDiagram key={key} node={node} inline={inline} />;
+          case 'Quiz':
+            return <DilQuiz key={key} node={node} inline={inline} interactive={quizEnabled} onAnswer={onQuizAnswer} />;
           case 'Check':
             return <CheckNode key={key} node={node} inline={inline} onFocusInput={onFocusInput} />;
           default:

@@ -56,11 +56,11 @@
 
 ## U6 — Quiz interactivo
 
-- [ ] `QuizNode`: radiogroup con teclado, "Responder", bloqueo tras enviar y solo
+- [x] `QuizNode`: radiogroup con teclado, "Responder", bloqueo tras enviar y solo
       lectura si no es el último mensaje.
-- [ ] Enviar `Mi respuesta: <opción>` con intención `RETROALIMENTAR`; mantener el
+- [x] Enviar `Mi respuesta: <opción>` con intención `RETROALIMENTAR`; mantener el
       estado de práctica de `tutorPractice.js`.
-- [ ] Check en `scripts/check-tutor-history.mjs`: el historial usa `content` canónico.
+- [x] Check en `scripts/check-tutor-history.mjs`: el historial usa `content` canónico.
 
 ## U7 — Medición con Groq real
 

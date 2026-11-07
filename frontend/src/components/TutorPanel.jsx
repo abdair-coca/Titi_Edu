@@ -13,7 +13,7 @@ import {
   resolveTutorIntent,
 } from '../lib/tutorPractice.js';
 import { usePopIn } from '../lib/motion.js';
-import { renderableNodes } from '../lib/dil.js';
+import { quizAnswerMessage, renderableNodes } from '../lib/dil.js';
 import {
   SparklesIcon,
   PlusIcon,
@@ -279,6 +279,7 @@ export default function TutorPanel({
       : STAGE_LABELS[pending?.stage] || 'Trabajando…';
 
   const canSend = ready && !pending && input.trim().length > 0;
+  const practiceHasQuiz = renderableNodes(conversation.at(-1)?.dil).some((node) => node.c === 'Quiz');
   const connectionLabel = ready
     ? 'Conectado'
     : lessonReady && credentialRequired
@@ -367,7 +368,7 @@ export default function TutorPanel({
           <div role="status" className="mt-2 rounded-xl border border-titi-yellow/50 bg-titi-yellow-light/40 px-3 py-2">
             <p className="text-xs font-bold text-titi-dark">Práctica en curso</p>
             <p className="text-xs font-medium text-gray-500 mt-0.5">
-              Respondé en el campo de abajo para recibir retroalimentación formativa. No es una calificación oficial.
+              {practiceHasQuiz ? 'Elegí una opción o respondé' : 'Respondé'} en el campo de abajo para recibir retroalimentación formativa. No es una calificación oficial.
             </p>
           </div>
         )}
@@ -407,6 +408,7 @@ export default function TutorPanel({
                 msg={msg}
                 messageRef={index === conversation.length - 1 && msg.role === 'tutor' ? latestTutorMessageRef : undefined}
                 showActions={index === conversation.length - 1 && msg.role === 'tutor'}
+                quizEnabled={index === conversation.length - 1 && msg.role === 'tutor' && !pending}
                 onAsk={(prompt, options) => ask(prompt, options)}
                 onFocusInput={() => textareaRef.current?.focus()}
                 onNavigateToLesson={onNavigateToLesson}
@@ -867,7 +869,7 @@ function IndexingState() {
 }
 
 // ---- Burbujas de mensaje ----
-function MessageBubble({ msg, messageRef, showActions, onAsk, onFocusInput, onNavigateToLesson }) {
+function MessageBubble({ msg, messageRef, showActions, quizEnabled, onAsk, onFocusInput, onNavigateToLesson }) {
   const [openCitations, setOpenCitations] = useState(() => new Set());
   const citationRefs = useRef({});
 
@@ -905,6 +907,8 @@ function MessageBubble({ msg, messageRef, showActions, onAsk, onFocusInput, onNa
             citationNumbers={citationNumbers}
             onCite={showCitation}
             onFocusInput={showActions ? onFocusInput : undefined}
+            quizEnabled={quizEnabled}
+            onQuizAnswer={(option) => onAsk(quizAnswerMessage(option), { intent: 'RETROALIMENTAR' })}
           />
         ) : (
           <MarkdownContent content={msg.content} format="MARKDOWN" compact codeCopy />

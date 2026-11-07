@@ -18,6 +18,7 @@ const comments = fs.readFileSync('src/components/LessonComments.jsx', 'utf8');
 const availability = fs.readFileSync('src/hooks/useTutorAvailability.js', 'utf8');
 const editor = fs.readFileSync('src/pages/teacher/ModulesEditor.jsx', 'utf8');
 const dilDiagram = fs.readFileSync('src/components/tutor/DilDiagram.jsx', 'utf8');
+const dilQuiz = fs.readFileSync('src/components/tutor/DilQuiz.jsx', 'utf8');
 const mermaidLoader = fs.readFileSync('src/lib/mermaid.js', 'utf8');
 const required = [
   'TutorPanel',
@@ -114,5 +115,12 @@ assert.match(mermaidLoader, /securityLevel: 'strict'/);
 assert.match(mermaidLoader, /suppressErrors: true/);
 assert.match(mermaidLoader, /script, foreignObject/);
 assert.match(mermaidLoader, /name\.startsWith\('on'\)/);
+
+// Quiz: the choice travels as the student's answer; the client never grades it.
+assert.match(panel, /onAsk\(quizAnswerMessage\(option\), \{ intent: 'RETROALIMENTAR' \}\)/);
+assert.match(panel, /quizEnabled=\{index === conversation\.length - 1 && msg\.role === 'tutor' && !pending\}/);
+assert.match(dilQuiz, /role="radiogroup"/);
+assert.match(dilQuiz, /type="radio"/);
+assert.doesNotMatch(dilQuiz, /isCorrect|esCorrecta|correctOption|answerKey|node\.answer/);
 
 console.log('RAG frontend contract: OK');
