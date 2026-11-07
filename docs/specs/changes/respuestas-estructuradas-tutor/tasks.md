@@ -32,9 +32,9 @@
 
 ## U3 — API y documentación
 
-- [ ] `data.dil` en `POST /api/lessons/:id/chat` (`null` en todas las respuestas fijas).
-- [ ] Test de ruta: forma de la respuesta con y sin DIL.
-- [ ] Actualizar `docs/api.md`, `docs/rag-security.md` (texto canónico como base de
+- [x] `data.dil` en `POST /api/lessons/:id/chat` (`null` en todas las respuestas fijas).
+- [x] Test de ruta: forma de la respuesta con y sin DIL.
+- [x] Actualizar `docs/api.md`, `docs/rag-security.md` (texto canónico como base de
       las protecciones) y `.env.example` (`RAG_DIL_ENABLED`).
 
 ## U4 — Renderer DIL (frontend)

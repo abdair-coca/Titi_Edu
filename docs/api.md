@@ -124,7 +124,7 @@ El retrieval usa únicamente documentos activos y publicados del curso.
 
 ```
 GET  /api/lessons/:id/chat/status          Estado de flag e indexado (auth)
-POST /api/lessons/:id/chat                 { message, intent?, history? } → { answer, citations, relatedLesson, usage }
+POST /api/lessons/:id/chat                 { message, intent?, history? } → { answer, dil, citations, relatedLesson, usage }
 ```
 
 El `GET status` conserva `enabled`, `indexed` y `status`, y agrega metadata segura:
@@ -147,7 +147,12 @@ El `GET status` conserva `enabled`, `indexed` y `status`, y agrega metadata segu
 ```
 
 `credential.status` es `VALID`, `INVALID` o `null`; `last4` es `null` si no existe.
-El body de `POST chat` no cambia. Errores relevantes: `400` body/intención/historial
+El body de `POST chat` no cambia. `answer` es siempre texto Markdown con citas `[n]`
+y es lo que el cliente reenvía como historial. `dil` es la misma respuesta declarada
+como árbol DIL v1 `{ version: 1, nodes: [...] }` (contrato en
+`docs/specs/changes/respuestas-estructuradas-tutor/spec.md` §1) o `null` con
+`RAG_DIL_ENABLED` apagado y en respuestas fijas: sin evidencia, evaluación, saludo,
+acción bloqueada o aclaración. Errores relevantes: `400` body/intención/historial
 inválido, `401` sin sesión, `403` sin acceso/audiencia, `404` lección o feature no
 habilitada, `409` credencial requerida ausente, `422` credencial inválida, `429`
 cuota, `502/504` proveedor y `503` configuración o chat apagado.

@@ -73,6 +73,11 @@ de otros estudiantes.
   no se envían al proveedor. Una paráfrasis puede evadir la comparación: frena el copiar y
   pegar, pero no reemplaza la supervisión de una evaluación. Si la consulta falla, el chat
   continúa sin esta protección y registra `assessment_guard_failed`.
+- Con `RAG_DIL_ENABLED=true` el modelo responde un árbol DIL en modo estricto. El backend
+  descarta nodos desconocidos o fuera de límites, acepta `Quiz` solo en `PRACTICA` (sin
+  respuesta correcta) y serializa el resto a texto canónico. Citas, respaldo, bloqueo de
+  evaluaciones e historial se aplican sobre ese texto, igual que con Markdown. Los
+  descartes se registran como `dil_nodes_dropped`, sin contenido.
 - El modelo no tiene tools, function calling ni acceso directo a APIs de negocio o DB.
 - Las citas se validan contra curso, lección publicada, documento activo y corpus
   `assessmentSafe`; un `chunkId` del cliente nunca se confía sin revalidación.

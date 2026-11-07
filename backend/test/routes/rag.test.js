@@ -96,6 +96,20 @@ describe('RAG lesson routes', () => {
     });
   });
 
+  it('always returns dil: null without a tree and the tree when there is one', async () => {
+    allowStudent();
+    const send = () => request(app).post('/api/lessons/l-1/chat')
+      .set('Authorization', `Bearer ${studentToken}`)
+      .send({ message: '¿Qué es una variable?' });
+    const markdown = await send();
+    expect(markdown.body.data.dil).toBeNull();
+
+    const dil = { version: 1, nodes: [{ c: 'Text', text: 'Las variables guardan valores. [1]' }] };
+    mocks.chatWithCourseContext.mockResolvedValueOnce({ answer: 'Las variables guardan valores. [1]', dil, citations: [], usage: null, relatedLesson: null });
+    const structured = await send();
+    expect(structured.body.data).toMatchObject({ answer: 'Las variables guardan valores. [1]', dil });
+  });
+
   it('forwards recent history turns to the chat service', async () => {
     allowStudent();
     const response = await request(app).post('/api/lessons/l-1/chat')

@@ -112,7 +112,7 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
       };
     }
     const result = await chatWithCourseContext(chatInput);
-    return res.json({ success: true, data: result });
+    return res.json({ success: true, data: { ...result, dil: result.dil ?? null } });
   } catch (error) {
     return handleRagError(res, error, 'POST /api/lessons/:id/chat error');
   }
