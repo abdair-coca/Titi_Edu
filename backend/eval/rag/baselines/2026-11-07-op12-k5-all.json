@@ -1,0 +1,6419 @@
+{
+ "savedAt": "2026-11-07T23:09:10.536Z",
+ "commit": "3e9d33b",
+ "note": "Reranker y listas por ítem, 5 fuentes fijas",
+ "goldenSet": {
+  "version": 2,
+  "hash": "53ca98f56fa3",
+  "questions": 194
+ },
+ "variant": "op12-k5",
+ "description": "Opciones 1 y 2, devolviendo 5 fuentes.",
+ "split": "all",
+ "summary": {
+  "fragmentos": 257,
+  "preguntas": 144,
+  "acierto@1": "68%",
+  "acierto@3": "88%",
+  "acierto@5": "92%",
+  "completa": "90%",
+  "MRR": "0.779",
+  "fuentes útiles": "27%",
+  "tokens contexto": 429,
+  "sin respuesta con fuentes": "45/50"
+ },
+ "categories": {
+  "directa": "32/33",
+  "parafrasis": "29/33",
+  "termino-exacto": "16/19",
+  "coloquial": "17/17",
+  "seguimiento": "7/7",
+  "varias-partes": "12/12",
+  "otra-leccion": "12/14",
+  "presentacion": "8/9",
+  "no-cubierta": "43/44 con fuentes",
+  "fuera-de-tema": "2/6 con fuentes"
+ },
+ "rows": [
+  {
+   "id": "l11-dir-1",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 496,
+   "topSimilarity": 0.7980779529763502,
+   "rerankTop": 0.999204695224762,
+   "ftsMatches": 1,
+   "sources": [
+    "L11:Caso base y caso recursivo",
+    "L11:Glosario",
+    "L11:Multiplicación con sumas sucesivas",
+    "L11:Ejemplo guiado",
+    "L11:Resumen"
+   ],
+   "sourceScores": [
+    0.9992,
+    0.9804,
+    0.9252,
+    0.7254,
+    0.6299
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l11-dir-2",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 684,
+   "topSimilarity": 0.6501109987563501,
+   "rerankTop": 0.7811367511749268,
+   "ftsMatches": 3,
+   "sources": [
+    "L11:Factorial y multiplicación acumulativa",
+    "L11:Errores frecuentes",
+    "L21:Ejemplo guiado",
+    "L11:Resumen",
+    "L11:Presentación"
+   ],
+   "sourceScores": [
+    0.7811,
+    0.4284,
+    0.2186,
+    0.01292,
+    0.00596
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l11-par-1",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 5,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 611,
+   "topSimilarity": 0.6004496812820435,
+   "rerankTop": 0.06733990460634232,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Glosario",
+    "L11:Glosario",
+    "L11:Presentación",
+    "L11:Errores frecuentes",
+    "L11:Caso base y caso recursivo"
+   ],
+   "sourceScores": [
+    0.06734,
+    0.04399,
+    0.03079,
+    0.02529,
+    0.008243
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    true
+   ]
+  },
+  {
+   "id": "l11-par-2",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 2,
+   "contextTokens": 166,
+   "topSimilarity": 0.5138994149029613,
+   "rerankTop": 0.16384375095367432,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Descomposición por división entera (`// 10`)",
+    "L11:Pista 3: detalle técnico"
+   ],
+   "sourceScores": [
+    0.1638,
+    0.0002495
+   ],
+   "sourceUseful": [
+    true,
+    false
+   ]
+  },
+  {
+   "id": "l11-ter-1",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 4,
+   "contextTokens": 368,
+   "topSimilarity": 0.6095921942227085,
+   "rerankTop": 0.7833748459815979,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Errores frecuentes",
+    "L21:Ejemplo guiado",
+    "L11:Saltos de paso ($n - 2$)",
+    "L11:Pista 1: orientación"
+   ],
+   "sourceScores": [
+    0.7834,
+    0.011,
+    0.001834,
+    0.00001726
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l11-ter-2",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 630,
+   "topSimilarity": 0.7358695707243438,
+   "rerankTop": 0.9790284037590028,
+   "ftsMatches": 1,
+   "sources": [
+    "L11:Errores frecuentes",
+    "L11:Caso base y caso recursivo",
+    "L11:Presentación",
+    "L11:Glosario",
+    "L11:Glosario"
+   ],
+   "sourceScores": [
+    0.979,
+    0.2505,
+    0.05448,
+    0.0005051,
+    0.0003501
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l11-col-1",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 653,
+   "topSimilarity": 0.7101717764036801,
+   "rerankTop": 0.3466850221157074,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Recursión múltiple (Fibonacci)",
+    "L11:Práctica guiada",
+    "L11:Glosario",
+    "L11:Presentación",
+    "L11:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.3467,
+    0.06402,
+    0.006501,
+    0.002402,
+    0.001941
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l11-seg-1",
+   "category": "seguimiento",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 524,
+   "topSimilarity": 0.6806519437224844,
+   "rerankTop": 0.7708971500396729,
+   "ftsMatches": 3,
+   "sources": [
+    "L11:Resumen",
+    "L11:Potenciación recursiva",
+    "L11:Explicación paso a paso",
+    "L11:Resumen",
+    "L11:Caso base y caso recursivo"
+   ],
+   "sourceScores": [
+    0.7709,
+    0.5674,
+    0.08708,
+    0.07469,
+    0.05956
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l11-mul-1",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 752,
+   "topSimilarity": 0.6192186616919829,
+   "rerankTop": 0.15219120681285858,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Ejemplo guiado",
+    "L11:Sumatoria y acumuladores recursivos",
+    "L11:Factorial y multiplicación acumulativa",
+    "L11:Glosario",
+    "L11:Presentación"
+   ],
+   "sourceScores": [
+    0.1522,
+    0.1459,
+    0.1402,
+    0.1033,
+    0.04655
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l11-dir-3",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 760,
+   "topSimilarity": 0.6846392154693604,
+   "rerankTop": 0.1042003482580185,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Multiplicación con sumas sucesivas",
+    "L11:Explicación paso a paso",
+    "L11:Resumen",
+    "L11:Ejemplo guiado",
+    "L11:Práctica guiada"
+   ],
+   "sourceScores": [
+    0.1042,
+    0.03543,
+    0.03448,
+    0.02438,
+    0.0122
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    true
+   ]
+  },
+  {
+   "id": "l12-dir-1",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 4,
+   "contextTokens": 342,
+   "topSimilarity": 0.6895525044469545,
+   "rerankTop": 0.998749017715454,
+   "ftsMatches": 2,
+   "sources": [
+    "L12:Selección simple y doble",
+    "L12:Glosario",
+    "L12:Presentación",
+    "L12:Glosario"
+   ],
+   "sourceScores": [
+    0.9987,
+    0.215,
+    0.03634,
+    0.0277
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l12-dir-2",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 491,
+   "topSimilarity": 0.6602970755277333,
+   "rerankTop": 0.7390590310096741,
+   "ftsMatches": 2,
+   "sources": [
+    "L12:Diagrama de flujo de decisión",
+    "L12:Presentación",
+    "L12:Resumen",
+    "L12:Pista 1: orientación",
+    "L12:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.7391,
+    0.2054,
+    0.1118,
+    0.01262,
+    0.001377
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l12-par-1",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 0,
+   "contextTokens": 0,
+   "topSimilarity": null,
+   "rerankTop": null,
+   "ftsMatches": 0,
+   "sources": [],
+   "sourceScores": [],
+   "sourceUseful": []
+  },
+  {
+   "id": "l12-par-2",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 363,
+   "topSimilarity": 0.5788367296651965,
+   "rerankTop": 0.025236334651708603,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Selección múltiple",
+    "L12:Explicación paso a paso",
+    "L13:Estructura selectiva",
+    "L12:Resumen",
+    "L12:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.02524,
+    0.008907,
+    0.001903,
+    0.001861,
+    0.001572
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l12-ter-1",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 220,
+   "topSimilarity": 0.5791147100397782,
+   "rerankTop": 0.22783486545085907,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Errores frecuentes",
+    "L12:Resumen",
+    "L12:Explicación paso a paso",
+    "L12:Glosario",
+    "L12:Glosario"
+   ],
+   "sourceScores": [
+    0.2278,
+    0.03903,
+    0.004957,
+    0.002659,
+    0.002208
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l12-ter-2",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 1,
+   "contextTokens": 103,
+   "topSimilarity": 0.45900276792016736,
+   "rerankTop": 0.2768164575099945,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Selección simple y doble"
+   ],
+   "sourceScores": [
+    0.2768
+   ],
+   "sourceUseful": [
+    false
+   ]
+  },
+  {
+   "id": "l12-col-1",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 3,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 224,
+   "topSimilarity": 0.6164355461727248,
+   "rerankTop": 0.005402431823313236,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Resumen",
+    "L12:Explicación paso a paso",
+    "L12:Glosario",
+    "L12:Glosario",
+    "L12:Glosario"
+   ],
+   "sourceScores": [
+    0.005402,
+    0.004947,
+    0.004024,
+    0.00185,
+    0.001712
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l12-dir-3",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 418,
+   "topSimilarity": 0.589910626411438,
+   "rerankTop": 0.24950967729091644,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Selección múltiple",
+    "L13:Estructura selectiva",
+    "L12:Errores frecuentes",
+    "L12:Selección simple y doble",
+    "L12:Condicionales anidados"
+   ],
+   "sourceScores": [
+    0.2495,
+    0.04295,
+    0.02927,
+    0.02641,
+    0.01578
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l12-par-3",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 3,
+   "complete": true,
+   "useful": 1,
+   "returned": 3,
+   "contextTokens": 187,
+   "topSimilarity": 0.5482636151628074,
+   "rerankTop": 0.347570538520813,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Ejemplo guiado",
+    "L12:Pista 2: estrategia",
+    "L12:Pista 3: detalle técnico"
+   ],
+   "sourceScores": [
+    0.3476,
+    0.01027,
+    0.003816
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    true
+   ]
+  },
+  {
+   "id": "l13-dir-1",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 272,
+   "topSimilarity": 0.7326149663192074,
+   "rerankTop": 0.9933308959007264,
+   "ftsMatches": 1,
+   "sources": [
+    "L13:Parámetro, argumento y retorno",
+    "L13:Resumen",
+    "L13:Glosario",
+    "L13:Glosario",
+    "L13:Función"
+   ],
+   "sourceScores": [
+    0.9933,
+    0.02539,
+    0.007674,
+    0.00342,
+    0.002584
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l13-dir-2",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 493,
+   "topSimilarity": 0.6847818714120283,
+   "rerankTop": 0.9073578715324402,
+   "ftsMatches": 1,
+   "sources": [
+    "L13:Parámetro, argumento y retorno",
+    "L13:Explicación paso a paso",
+    "L13:Función",
+    "L21:Explicación paso a paso",
+    "L13:Resumen"
+   ],
+   "sourceScores": [
+    0.9074,
+    0.4017,
+    0.3826,
+    0.004292,
+    0.0004659
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "l13-par-1",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 386,
+   "topSimilarity": 0.6649899879091983,
+   "rerankTop": 0.0654258206486702,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Errores frecuentes",
+    "L13:Resumen",
+    "L13:Parámetro, argumento y retorno",
+    "L13:Explicación paso a paso",
+    "L13:Función"
+   ],
+   "sourceScores": [
+    0.06543,
+    0.03747,
+    0.004007,
+    0.003412,
+    0.002483
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "l13-par-2",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 465,
+   "topSimilarity": 0.6551852411252594,
+   "rerankTop": 0.03525154888629913,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Presentación",
+    "L13:Explicación paso a paso",
+    "L13:Errores frecuentes",
+    "L13:Función",
+    "L13:Resumen"
+   ],
+   "sourceScores": [
+    0.03525,
+    0.01431,
+    0.001645,
+    0.001025,
+    0.000791
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l13-ter-1",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 382,
+   "topSimilarity": 0.7013927520151599,
+   "rerankTop": 0.9368489384651184,
+   "ftsMatches": 2,
+   "sources": [
+    "L13:Explicación paso a paso",
+    "L13:Función",
+    "L13:Glosario",
+    "L13:Resumen",
+    "L13:Parámetro, argumento y retorno"
+   ],
+   "sourceScores": [
+    0.9368,
+    0.8981,
+    0.00148,
+    0.001118,
+    0.0009535
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l13-col-1",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 382,
+   "topSimilarity": 0.6760960011367797,
+   "rerankTop": 0.03224862739443779,
+   "ftsMatches": 4,
+   "sources": [
+    "L13:Parámetro, argumento y retorno",
+    "L13:Resumen",
+    "L13:Función",
+    "L13:Explicación paso a paso",
+    "L13:Glosario"
+   ],
+   "sourceScores": [
+    0.03225,
+    0.02091,
+    0.009259,
+    0.004705,
+    0.001748
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l13-par-3",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 353,
+   "topSimilarity": 0.6932737437866257,
+   "rerankTop": 0.053357336670160294,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Diagrama de flujo",
+    "L13:Presentación",
+    "L13:Resumen",
+    "L13:Glosario",
+    "L13:Glosario"
+   ],
+   "sourceScores": [
+    0.05336,
+    0.02712,
+    0.0004939,
+    0.0003982,
+    0.0003285
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l14-dir-1",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 228,
+   "topSimilarity": 0.768998920917511,
+   "rerankTop": 0.98240464925766,
+   "ftsMatches": 5,
+   "sources": [
+    "L14:Glosario",
+    "L14:Glosario",
+    "L14:Acumulador y contador",
+    "L14:Resumen",
+    "L14:Práctica guiada"
+   ],
+   "sourceScores": [
+    0.9824,
+    0.9715,
+    0.5834,
+    0.2803,
+    0.1254
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l14-dir-2",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 552,
+   "topSimilarity": 0.7424138256085362,
+   "rerankTop": 0.0827648252248764,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Pista 2: estrategia",
+    "L14:Resumen",
+    "L14:Explicación paso a paso",
+    "L14:Presentación",
+    "L14:Bucle while con módulo y división entera"
+   ],
+   "sourceScores": [
+    0.08276,
+    0.07253,
+    0.03915,
+    0.005158,
+    0.001747
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l14-par-1",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 343,
+   "topSimilarity": 0.5926498174667401,
+   "rerankTop": 0.00542624294757843,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Errores frecuentes",
+    "L14:Práctica guiada",
+    "L14:Resumen",
+    "L14:Presentación",
+    "L14:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.005426,
+    0.0007128,
+    0.0007026,
+    0.0002364,
+    0.0001538
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l14-par-2",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 399,
+   "topSimilarity": 0.6244428343904865,
+   "rerankTop": 0.02284622378647327,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Ejemplo guiado",
+    "L14:Acumulador y contador",
+    "L14:Explicación paso a paso",
+    "L14:Glosario",
+    "L14:Glosario"
+   ],
+   "sourceScores": [
+    0.02285,
+    0.00358,
+    0.001464,
+    0.0007002,
+    0.0003268
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l14-ter-1",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 195,
+   "topSimilarity": 0.5193938612937927,
+   "rerankTop": 0.01326190773397684,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Glosario",
+    "L14:Glosario",
+    "L14:Acumulador y contador",
+    "L14:Glosario",
+    "L14:Resumen"
+   ],
+   "sourceScores": [
+    0.01326,
+    0.004136,
+    0.001241,
+    0.001145,
+    0.0008745
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l14-col-1",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 3,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 552,
+   "topSimilarity": 0.6457780792050984,
+   "rerankTop": 0.0030949499923735857,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Explicación paso a paso",
+    "L14:Resumen",
+    "L14:Bucle while con módulo y división entera",
+    "L14:Pista 2: estrategia",
+    "L14:Presentación"
+   ],
+   "sourceScores": [
+    0.003095,
+    0.001573,
+    0.001166,
+    0.0005253,
+    0.0003766
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l14-dir-3",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 509,
+   "topSimilarity": 0.7655557482441442,
+   "rerankTop": 0.3160161077976227,
+   "ftsMatches": 5,
+   "sources": [
+    "L14:Casos de frontera",
+    "L14:Glosario",
+    "L14:Resumen",
+    "L14:Presentación",
+    "L14:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.316,
+    0.1503,
+    0.1194,
+    0.01317,
+    0.002601
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l14-par-3",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 4,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 333,
+   "topSimilarity": 0.6752297073328892,
+   "rerankTop": 0.7140657901763916,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Resumen",
+    "L16:Resumen",
+    "L16:Herencia",
+    "L14:Funciones que colaboran",
+    "L13:Función"
+   ],
+   "sourceScores": [
+    0.7141,
+    0.05789,
+    0.02961,
+    0.01744,
+    0.001142
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "l14-col-2",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 4,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 552,
+   "topSimilarity": 0.5866090408926641,
+   "rerankTop": 0.0016631768085062504,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Explicación paso a paso",
+    "L14:Resumen",
+    "L14:Pista 2: estrategia",
+    "L14:Bucle while con módulo y división entera",
+    "L14:Presentación"
+   ],
+   "sourceScores": [
+    0.001663,
+    0.0004298,
+    0.0002898,
+    0.0001629,
+    0.0001024
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "l15-dir-1",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 331,
+   "topSimilarity": 0.7617288089828987,
+   "rerankTop": 0.9974876642227172,
+   "ftsMatches": 5,
+   "sources": [
+    "L15:Clase y objeto",
+    "L15:Resumen",
+    "L15:Glosario",
+    "L15:Composición",
+    "L15:Atributo de clase y método de clase"
+   ],
+   "sourceScores": [
+    0.9975,
+    0.9975,
+    0.8005,
+    0.4576,
+    0.265
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l15-dir-2",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 449,
+   "topSimilarity": 0.7502126842610441,
+   "rerankTop": 0.6769311428070068,
+   "ftsMatches": 5,
+   "sources": [
+    "L15:Constructor __init__ y self",
+    "L15:Glosario",
+    "L15:Resumen",
+    "L15:Presentación",
+    "L15:Atributos y métodos"
+   ],
+   "sourceScores": [
+    0.6769,
+    0.1411,
+    0.1019,
+    0.07579,
+    0.05174
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l15-par-1",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 320,
+   "topSimilarity": 0.5618833638360131,
+   "rerankTop": 0.035396773368120193,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Explicación paso a paso",
+    "L15:Método __str__",
+    "L15:Pista 2: estrategia",
+    "L15:Resumen",
+    "L15:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.0354,
+    0.01072,
+    0.003044,
+    0.0003064,
+    0.0001579
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l15-par-2",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 3,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 465,
+   "topSimilarity": 0.6162907709902077,
+   "rerankTop": 0.011019566096365452,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Explicación paso a paso",
+    "L15:Pista 2: estrategia",
+    "L15:Encapsulamiento y atributo privado",
+    "L15:Glosario",
+    "L15:Clase y objeto"
+   ],
+   "sourceScores": [
+    0.01102,
+    0.006751,
+    0.005392,
+    0.001516,
+    0.0006949
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l15-ter-1",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 418,
+   "topSimilarity": 0.7467526419983105,
+   "rerankTop": 0.9080643653869628,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Atributo de clase y método de clase",
+    "L15:Glosario",
+    "L15:Constructor __init__ y self",
+    "L15:Explicación paso a paso",
+    "L15:Glosario"
+   ],
+   "sourceScores": [
+    0.9081,
+    0.7362,
+    0.002532,
+    0.0005152,
+    0.0002578
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l15-ter-2",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 244,
+   "topSimilarity": 0.6480888724327087,
+   "rerankTop": 0.3604077994823456,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Encapsulamiento y atributo privado",
+    "L15:Glosario",
+    "L15:Pista 2: estrategia",
+    "L15:Glosario",
+    "L15:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.3604,
+    0.01061,
+    0.002681,
+    0.001705,
+    0.001042
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l15-col-1",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 277,
+   "topSimilarity": 0.7218872739009438,
+   "rerankTop": 0.04468754678964615,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Constructor __init__ y self",
+    "L15:Resumen",
+    "L15:Glosario",
+    "L15:Glosario",
+    "L15:Ejemplo guiado"
+   ],
+   "sourceScores": [
+    0.04469,
+    0.01606,
+    0.01435,
+    0.01084,
+    0.008483
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "l15-dir-3",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 3,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 461,
+   "topSimilarity": 0.6651568611012957,
+   "rerankTop": 0.049099624156951904,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Clase y objeto",
+    "L15:Resumen",
+    "L15:Atributo de clase y método de clase",
+    "L15:Pista 3: detalle técnico",
+    "L15:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.0491,
+    0.04757,
+    0.02627,
+    0.01043,
+    0.009076
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l15-seg-1",
+   "category": "seguimiento",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 332,
+   "topSimilarity": 0.7945694449800598,
+   "rerankTop": 0.7983637452125549,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Atributo de clase y método de clase",
+    "L15:Glosario",
+    "L15:Explicación paso a paso",
+    "L15:Glosario",
+    "L15:Resumen"
+   ],
+   "sourceScores": [
+    0.7984,
+    0.4605,
+    0.02807,
+    0.02341,
+    0.01188
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l16-dir-1",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 183,
+   "topSimilarity": 0.7334619005597783,
+   "rerankTop": 0.741036057472229,
+   "ftsMatches": 3,
+   "sources": [
+    "L16:Herencia",
+    "L16:Glosario",
+    "L16:Glosario",
+    "L16:Resumen",
+    "L16:Glosario"
+   ],
+   "sourceScores": [
+    0.741,
+    0.2743,
+    0.00149,
+    0.001313,
+    0.00009411
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l16-dir-2",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 460,
+   "topSimilarity": 0.8228004925608521,
+   "rerankTop": 0.9225510358810424,
+   "ftsMatches": 3,
+   "sources": [
+    "L16:Polimorfismo puro",
+    "L16:Resumen",
+    "L16:Presentación",
+    "L16:Glosario",
+    "L16:Práctica guiada"
+   ],
+   "sourceScores": [
+    0.9226,
+    0.1623,
+    0.03258,
+    0.02196,
+    0.0002243
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l16-par-1",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 564,
+   "topSimilarity": 0.6795261108734048,
+   "rerankTop": 0.2659227252006531,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Herencia",
+    "L16:Presentación",
+    "L16:Explicación paso a paso",
+    "L16:Resumen",
+    "L16:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.2659,
+    0.04487,
+    0.02745,
+    0.01877,
+    0.01395
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l16-par-2",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 518,
+   "topSimilarity": 0.6036886809057794,
+   "rerankTop": 0.31513845920562744,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Polimorfismo puro",
+    "L16:Pista 2: estrategia",
+    "L16:Errores frecuentes",
+    "L16:Explicación paso a paso",
+    "L16:Atributo de clase y método de clase"
+   ],
+   "sourceScores": [
+    0.3151,
+    0.0053,
+    0.00525,
+    0.003255,
+    0.003038
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l16-ter-1",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 578,
+   "topSimilarity": 0.8007561803089438,
+   "rerankTop": 0.9777528643608092,
+   "ftsMatches": 5,
+   "sources": [
+    "L16:Constructor con super()",
+    "L16:Explicación paso a paso",
+    "L16:Resumen",
+    "L16:Práctica guiada",
+    "L16:Ejemplo guiado"
+   ],
+   "sourceScores": [
+    0.9778,
+    0.9575,
+    0.9191,
+    0.893,
+    0.8354
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l16-dir-3",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 400,
+   "topSimilarity": 0.7223227024078369,
+   "rerankTop": 0.24621808528900144,
+   "ftsMatches": 1,
+   "sources": [
+    "L16:Glosario",
+    "L16:Sobrescritura y __str__",
+    "L16:Resumen",
+    "L16:Errores frecuentes",
+    "L16:Presentación"
+   ],
+   "sourceScores": [
+    0.2462,
+    0.08831,
+    0.04707,
+    0.02303,
+    0.00939
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l16-col-1",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 3,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 319,
+   "topSimilarity": 0.5907905941730394,
+   "rerankTop": 0.06735805422067642,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Herencia",
+    "L16:Errores frecuentes",
+    "L16:Errores frecuentes",
+    "L16:Atributo de clase y método de clase",
+    "L16:Resumen"
+   ],
+   "sourceScores": [
+    0.06736,
+    0.05056,
+    0.003539,
+    0.0009392,
+    0.0005598
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l16-par-3",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 289,
+   "topSimilarity": 0.6613427794780016,
+   "rerankTop": 0.00703014899045229,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Resumen",
+    "L16:Errores frecuentes",
+    "L16:Herencia",
+    "L16:Glosario",
+    "L16:Pista 2: estrategia"
+   ],
+   "sourceScores": [
+    0.00703,
+    0.002007,
+    0.001558,
+    0.0006544,
+    0.0005462
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l16-seg-1",
+   "category": "seguimiento",
+   "answerable": true,
+   "firstHit": 5,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 404,
+   "topSimilarity": 0.5779626197230058,
+   "rerankTop": 0.0024333910550922155,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Glosario",
+    "L16:Glosario",
+    "L16:Sobrescritura y __str__",
+    "L16:Polimorfismo puro",
+    "L16:Ejemplo guiado"
+   ],
+   "sourceScores": [
+    0.002433,
+    0.0004462,
+    0.0003879,
+    0.0002463,
+    0.0001444
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    true
+   ]
+  },
+  {
+   "id": "l21-dir-1",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 666,
+   "topSimilarity": 0.7670356631278992,
+   "rerankTop": 0.989510715007782,
+   "ftsMatches": 5,
+   "sources": [
+    "L21:Recursión múltiple y memoización",
+    "L21:Glosario",
+    "L21:Resumen",
+    "L21:Presentación",
+    "L21:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.9895,
+    0.9736,
+    0.4983,
+    0.01001,
+    0.008516
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l21-dir-2",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 346,
+   "topSimilarity": 0.7946134683259423,
+   "rerankTop": 0.9911461472511292,
+   "ftsMatches": 4,
+   "sources": [
+    "L21:Flood Fill y Backtracking",
+    "L21:Glosario",
+    "L21:Resumen",
+    "L21:Errores frecuentes",
+    "L21:Glosario"
+   ],
+   "sourceScores": [
+    0.9911,
+    0.9793,
+    0.3287,
+    0.03842,
+    0.00557
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l21-par-1",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 746,
+   "topSimilarity": 0.6535161125823387,
+   "rerankTop": 0.0065323542803525925,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Errores frecuentes",
+    "L21:Recursión múltiple y memoización",
+    "L21:Ejemplo guiado",
+    "L21:Descomposición por slicing de secuencias",
+    "L21:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.006532,
+    0.002809,
+    0.0003906,
+    0.0002104,
+    0.0001366
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l21-par-2",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 639,
+   "topSimilarity": 0.6313036052558072,
+   "rerankTop": 0.04326328635215759,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Descomposición por slicing de secuencias",
+    "L21:Presentación",
+    "L21:Recursión en objetos anidados (POO)",
+    "L21:Resumen",
+    "L21:Resumen"
+   ],
+   "sourceScores": [
+    0.04326,
+    0.01527,
+    0.01316,
+    0.007366,
+    0.003957
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "l21-ter-1",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 637,
+   "topSimilarity": 0.7191480398178152,
+   "rerankTop": 0.8914816379547119,
+   "ftsMatches": 4,
+   "sources": [
+    "L21:Glosario",
+    "L21:Descomposición por slicing de secuencias",
+    "L21:Presentación",
+    "L21:Recursión en objetos anidados (POO)",
+    "L21:Resumen"
+   ],
+   "sourceScores": [
+    0.8915,
+    0.3011,
+    0.03124,
+    0.01742,
+    0.01693
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l21-ter-2",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 610,
+   "topSimilarity": 0.8102856519903441,
+   "rerankTop": 0.9830502867698668,
+   "ftsMatches": 5,
+   "sources": [
+    "L21:Flood Fill y Backtracking",
+    "L21:Glosario",
+    "L21:Práctica guiada",
+    "L21:Presentación",
+    "L21:Resumen"
+   ],
+   "sourceScores": [
+    0.9831,
+    0.9732,
+    0.2411,
+    0.1296,
+    0.02373
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l21-col-1",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 830,
+   "topSimilarity": 0.626514196395874,
+   "rerankTop": 0.02893754839897156,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Flood Fill y Backtracking",
+    "L21:Caso base y caso recursivo",
+    "L21:Práctica guiada",
+    "L21:Presentación",
+    "L21:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.02894,
+    0.009714,
+    0.005115,
+    0.002451,
+    0.000622
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    true
+   ]
+  },
+  {
+   "id": "l21-col-2",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 508,
+   "topSimilarity": 0.7199795460694897,
+   "rerankTop": 0.47357890009880066,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Resumen",
+    "L21:Glosario",
+    "L21:Explicación paso a paso",
+    "L21:Presentación",
+    "L21:Glosario"
+   ],
+   "sourceScores": [
+    0.4736,
+    0.3119,
+    0.004392,
+    0.002329,
+    0.0006811
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l21-dir-3",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 834,
+   "topSimilarity": 0.579987602829564,
+   "rerankTop": 0.11642752587795258,
+   "ftsMatches": 1,
+   "sources": [
+    "L21:Recursión en objetos anidados (POO)",
+    "L21:Práctica guiada",
+    "L21:Ejemplo guiado",
+    "L21:Pista 3: detalle técnico",
+    "L21:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.1164,
+    0.01129,
+    0.009972,
+    0.008369,
+    0.0009648
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l21-par-3",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 398,
+   "topSimilarity": 0.6671582460842952,
+   "rerankTop": 0.012992363423109056,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Glosario",
+    "L21:Descomposición por slicing de secuencias",
+    "L21:Caso base y caso recursivo",
+    "L21:Resumen",
+    "L21:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.01299,
+    0.01043,
+    0.009462,
+    0.003534,
+    0.0022
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l21-seg-1",
+   "category": "seguimiento",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 572,
+   "topSimilarity": 0.6850614956057975,
+   "rerankTop": 0.23145759105682373,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Glosario",
+    "L21:Recursión múltiple y memoización",
+    "L21:Resumen",
+    "L21:Presentación",
+    "L21:Glosario"
+   ],
+   "sourceScores": [
+    0.2315,
+    0.1644,
+    0.03901,
+    0.001642,
+    0.001319
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l22-mul-1",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 146,
+   "topSimilarity": 0.6947551551607171,
+   "rerankTop": 0.8095411658287048,
+   "ftsMatches": 2,
+   "sources": [
+    "L22:Resumen",
+    "L22:Resumen",
+    "L22:Glosario",
+    "L22:Resumen",
+    "L22:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.8095,
+    0.6627,
+    0.4043,
+    0.3716,
+    0.3344
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "l22-dir-1",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 662,
+   "topSimilarity": 0.6649158993313264,
+   "rerankTop": 0.6887050271034241,
+   "ftsMatches": 1,
+   "sources": [
+    "L22:Paso 5: pila con lista",
+    "L22:Índice",
+    "L22:Lista",
+    "L22:Presentación",
+    "L22:Glosario"
+   ],
+   "sourceScores": [
+    0.6887,
+    0.6258,
+    0.4297,
+    0.2238,
+    0.09947
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l22-par-1",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 389,
+   "topSimilarity": 0.693500420257462,
+   "rerankTop": 0.1193561926484108,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Práctica guiada",
+    "L22:Cola (FIFO)",
+    "L22:Pila (LIFO)",
+    "L22:Lista",
+    "L22:Glosario"
+   ],
+   "sourceScores": [
+    0.1194,
+    0.05945,
+    0.006946,
+    0.003246,
+    0.00295
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l22-par-2",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 459,
+   "topSimilarity": 0.6728928089141846,
+   "rerankTop": 0.530762791633606,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Errores frecuentes",
+    "L22:Presentación",
+    "L22:Errores frecuentes",
+    "L22:Resumen",
+    "L22:Resumen"
+   ],
+   "sourceScores": [
+    0.5308,
+    0.09049,
+    0.002966,
+    0.002676,
+    0.001015
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l22-ter-1",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 465,
+   "topSimilarity": 0.500256359577179,
+   "rerankTop": 0.4533945918083191,
+   "ftsMatches": 2,
+   "sources": [
+    "L22:Paso 6: cola con lista",
+    "L22:Ejemplo guiado",
+    "L22:Paso 5: pila con lista",
+    "L22:Errores frecuentes",
+    "L22:Cola (FIFO)"
+   ],
+   "sourceScores": [
+    0.4534,
+    0.2899,
+    0.0002761,
+    0.0002577,
+    0.0001227
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l22-ter-2",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 325,
+   "topSimilarity": 0.7802783846855164,
+   "rerankTop": 0.7810690402984619,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Errores frecuentes",
+    "L22:Resumen",
+    "L22:Errores frecuentes",
+    "L22:Paso 7: verificar listas vacías",
+    "L22:Lista"
+   ],
+   "sourceScores": [
+    0.7811,
+    0.05127,
+    0.04574,
+    0.03685,
+    0.01796
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l22-ter-3",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 355,
+   "topSimilarity": 0.6734637812695645,
+   "rerankTop": 0.03449264168739319,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Errores frecuentes",
+    "L22:Paso 3: modificar la lista",
+    "L22:Errores frecuentes",
+    "L22:Resumen",
+    "L22:Lista"
+   ],
+   "sourceScores": [
+    0.03449,
+    0.03346,
+    0.002374,
+    0.002198,
+    0.001224
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l22-col-1",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 734,
+   "topSimilarity": 0.6022350070196382,
+   "rerankTop": 0.17469564080238342,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Paso 6: cola con lista",
+    "L22:Práctica guiada",
+    "L22:Glosario",
+    "L22:Resumen",
+    "L22:Presentación"
+   ],
+   "sourceScores": [
+    0.1747,
+    0.156,
+    0.002097,
+    0.0003252,
+    0.0001413
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l22-mul-2",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 3,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 556,
+   "topSimilarity": 0.6486707925796509,
+   "rerankTop": 0.17088466882705688,
+   "ftsMatches": 3,
+   "sources": [
+    "L22:Resumen",
+    "L22:Presentación",
+    "L22:Paso 3: modificar la lista",
+    "L22:Errores frecuentes",
+    "L22:Glosario"
+   ],
+   "sourceScores": [
+    0.1709,
+    0.03199,
+    0.02983,
+    0.02008,
+    0.0008005
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l22-seg-1",
+   "category": "seguimiento",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 571,
+   "topSimilarity": 0.7702011143921478,
+   "rerankTop": 0.9957520961761476,
+   "ftsMatches": 1,
+   "sources": [
+    "L22:Paso 5: pila con lista",
+    "L22:Pila (LIFO)",
+    "L22:Práctica guiada",
+    "L22:Cola (FIFO)",
+    "L22:Glosario"
+   ],
+   "sourceScores": [
+    0.9958,
+    0.9873,
+    0.8633,
+    0.5265,
+    0.4016
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "l22-mul-3",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 732,
+   "topSimilarity": 0.7069477649613551,
+   "rerankTop": 0.28943148255348206,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Paso 7: verificar listas vacías",
+    "L22:Errores frecuentes",
+    "L22:Errores frecuentes",
+    "L22:Presentación",
+    "L22:Práctica guiada"
+   ],
+   "sourceScores": [
+    0.2894,
+    0.08922,
+    0.06183,
+    0.04855,
+    0.01651
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "otra-1",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 281,
+   "topSimilarity": 0.5416528632227019,
+   "rerankTop": 0.9895108342170716,
+   "ftsMatches": 1,
+   "sources": [
+    "L21:Recursión múltiple y memoización",
+    "L22:Glosario",
+    "L22:Glosario",
+    "L22:Resumen",
+    "L22:Glosario"
+   ],
+   "sourceScores": [
+    0.9895,
+    0.000125,
+    0.00008717,
+    0.00003744,
+    0.00003744
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "otra-2",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 609,
+   "topSimilarity": 0.6620968177433989,
+   "rerankTop": 0.8151525259017944,
+   "ftsMatches": 4,
+   "sources": [
+    "L22:Resumen",
+    "L22:Cola (FIFO)",
+    "L22:Presentación",
+    "L22:Glosario",
+    "L22:Paso 6: cola con lista"
+   ],
+   "sourceScores": [
+    0.8152,
+    0.2547,
+    0.117,
+    0.01131,
+    0.005555
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "otra-3",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 364,
+   "topSimilarity": 0.5989363193511963,
+   "rerankTop": 0.9306952953338624,
+   "ftsMatches": 1,
+   "sources": [
+    "L16:Constructor con super()",
+    "L15:Explicación paso a paso",
+    "L15:Glosario",
+    "L15:Resumen",
+    "L15:Resumen"
+   ],
+   "sourceScores": [
+    0.9307,
+    0.002279,
+    0.001774,
+    0.000942,
+    0.0006608
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "otra-4",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 419,
+   "topSimilarity": 0.5912017822265625,
+   "rerankTop": 0.0010252505308017137,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Errores frecuentes",
+    "L16:Presentación",
+    "L16:Errores frecuentes",
+    "L16:Sobrescritura y __str__",
+    "L16:Glosario"
+   ],
+   "sourceScores": [
+    0.001025,
+    0.0009242,
+    0.000467,
+    0.0004368,
+    0.0003015
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "otra-5",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 1,
+   "contextTokens": 121,
+   "topSimilarity": 0.5203559374384955,
+   "rerankTop": 0.9967002272605896,
+   "ftsMatches": 1,
+   "sources": [
+    "L13:Parámetro, argumento y retorno"
+   ],
+   "sourceScores": [
+    0.9967
+   ],
+   "sourceUseful": [
+    true
+   ]
+  },
+  {
+   "id": "otra-6",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 395,
+   "topSimilarity": 0.6516047508481008,
+   "rerankTop": 0.9972394704818726,
+   "ftsMatches": 1,
+   "sources": [
+    "L22:Paso 1: crear y recorrer una lista",
+    "L13:Práctica guiada",
+    "L13:Explicación paso a paso",
+    "L13:Ejemplo guiado",
+    "L13:Resumen"
+   ],
+   "sourceScores": [
+    0.9972,
+    0.001229,
+    0.001189,
+    0.0002502,
+    0.0002152
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "otra-7",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 482,
+   "topSimilarity": 0.6002994417965756,
+   "rerankTop": 0.0014336405787616967,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Presentación",
+    "L14:Bucle for con range",
+    "L21:Glosario",
+    "L21:Resumen",
+    "L21:Resumen"
+   ],
+   "sourceScores": [
+    0.001434,
+    0.001404,
+    0.001072,
+    0.0005725,
+    0.0002606
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "otra-8",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 364,
+   "topSimilarity": 0.5997448325005085,
+   "rerankTop": 0.9864293336868286,
+   "ftsMatches": 1,
+   "sources": [
+    "L21:Recursión múltiple y memoización",
+    "L14:Resumen",
+    "L14:Glosario",
+    "L14:Resumen",
+    "L14:Acumulador y contador"
+   ],
+   "sourceScores": [
+    0.9864,
+    0.6111,
+    0.05586,
+    0.03744,
+    0.01166
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "otra-9",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 202,
+   "topSimilarity": 0.6029770970344543,
+   "rerankTop": 0.6297480463981628,
+   "ftsMatches": 3,
+   "sources": [
+    "L16:Glosario",
+    "L16:Polimorfismo puro",
+    "L22:Glosario",
+    "L22:Glosario",
+    "L16:Resumen"
+   ],
+   "sourceScores": [
+    0.6297,
+    0.2438,
+    0.07553,
+    0.01679,
+    0.008113
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "otra-10",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 471,
+   "topSimilarity": 0.5888125826846885,
+   "rerankTop": 0.6786482334136963,
+   "ftsMatches": 1,
+   "sources": [
+    "L21:Práctica guiada",
+    "L13:Presentación",
+    "L13:Explicación paso a paso",
+    "L13:Práctica guiada",
+    "L13:Resumen"
+   ],
+   "sourceScores": [
+    0.6786,
+    0.00007241,
+    0.00004509,
+    0.00003745,
+    0.00003745
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "mul-1",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": false,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 577,
+   "topSimilarity": 0.6465502170652292,
+   "rerankTop": 0.01740100234746933,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Ejemplo guiado",
+    "L21:Resumen",
+    "L21:Errores frecuentes",
+    "L21:Recursión múltiple y memoización",
+    "L21:Recursión en objetos anidados (POO)"
+   ],
+   "sourceScores": [
+    0.0174,
+    0.007863,
+    0.002239,
+    0.001587,
+    0.0008538
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "mul-2",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 3,
+   "returned": 5,
+   "contextTokens": 243,
+   "topSimilarity": 0.6441226005554199,
+   "rerankTop": 0.6640098690986633,
+   "ftsMatches": 1,
+   "sources": [
+    "L15:Composición",
+    "L16:Glosario",
+    "L16:Herencia",
+    "L16:Resumen",
+    "L16:Resumen"
+   ],
+   "sourceScores": [
+    0.664,
+    0.1894,
+    0.1227,
+    0.05666,
+    0.001152
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "mul-3",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 3,
+   "complete": false,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 344,
+   "topSimilarity": 0.625400181895511,
+   "rerankTop": 0.2800605893135071,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Errores frecuentes",
+    "L13:Explicación paso a paso",
+    "L13:Diagrama de flujo",
+    "L13:Pista 1: orientación",
+    "L13:Práctica guiada"
+   ],
+   "sourceScores": [
+    0.2801,
+    0.09558,
+    0.04366,
+    0.01301,
+    0.007504
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "mul-4",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": false,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 521,
+   "topSimilarity": 0.6815335154533386,
+   "rerankTop": 0.6357958912849426,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Acumulador y contador",
+    "L14:Glosario",
+    "L14:Explicación paso a paso",
+    "L14:Glosario",
+    "L14:Presentación"
+   ],
+   "sourceScores": [
+    0.6358,
+    0.1293,
+    0.02301,
+    0.02216,
+    0.006908
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "mul-5",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 448,
+   "topSimilarity": 0.7060320587763806,
+   "rerankTop": 0.5665859580039978,
+   "ftsMatches": 3,
+   "sources": [
+    "L15:Resumen",
+    "L15:Glosario",
+    "L15:Presentación",
+    "L15:Explicación paso a paso",
+    "L15:Glosario"
+   ],
+   "sourceScores": [
+    0.5666,
+    0.3877,
+    0.04409,
+    0.04157,
+    0.007579
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    false,
+    true
+   ]
+  },
+  {
+   "id": "pres-1",
+   "category": "presentacion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 561,
+   "topSimilarity": 0.582565690126081,
+   "rerankTop": 0.03995308130979538,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Presentación",
+    "L22:Práctica guiada",
+    "L22:Pistas progresivas",
+    "L22:Glosario",
+    "L22:Resumen"
+   ],
+   "sourceScores": [
+    0.03995,
+    0.0006817,
+    0.00003771,
+    0.00003744,
+    0.00003743
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "pres-2",
+   "category": "presentacion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 490,
+   "topSimilarity": 0.6951700267297057,
+   "rerankTop": 0.09689457714557648,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Presentación",
+    "L14:Práctica guiada",
+    "L14:Explicación paso a paso",
+    "L14:Pista 1: orientación",
+    "L14:Resumen"
+   ],
+   "sourceScores": [
+    0.09689,
+    0.01457,
+    0.002601,
+    0.001318,
+    0.000401
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "pres-3",
+   "category": "presentacion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 3,
+   "contextTokens": 324,
+   "topSimilarity": 0.5314205568182147,
+   "rerankTop": 0.0010879762703552842,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Presentación",
+    "L16:Práctica guiada",
+    "L16:Resumen"
+   ],
+   "sourceScores": [
+    0.001088,
+    0.00003868,
+    0.00003741
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "pres-4",
+   "category": "presentacion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 689,
+   "topSimilarity": 0.662934979025426,
+   "rerankTop": 0.2695939242839813,
+   "ftsMatches": 1,
+   "sources": [
+    "L11:Presentación",
+    "L11:Glosario",
+    "L11:Resumen",
+    "L11:Resumen",
+    "L11:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.2696,
+    0.06756,
+    0.01262,
+    0.005134,
+    0.001183
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "pres-5",
+   "category": "presentacion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 385,
+   "topSimilarity": 0.6649160781452714,
+   "rerankTop": 0.10008442103862762,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Presentación",
+    "L15:Resumen",
+    "L15:Clase y objeto",
+    "L15:Práctica guiada",
+    "L15:Glosario"
+   ],
+   "sourceScores": [
+    0.1001,
+    0.0003031,
+    0.0001345,
+    0.00005989,
+    0.0000374
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-1",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 295,
+   "topSimilarity": 0.6121524207501171,
+   "rerankTop": 0.05683927610516548,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Resumen",
+    "L22:Paso 1: crear y recorrer una lista",
+    "L22:Lista",
+    "L22:Glosario",
+    "L22:Glosario"
+   ],
+   "sourceScores": [
+    0.05684,
+    0.03668,
+    0.0113,
+    0.01088,
+    0.001537
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-2",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 370,
+   "topSimilarity": 0.47538158150801635,
+   "rerankTop": 0.0004587307048495859,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Paso 2: acceder por índice",
+    "L14:Ejemplo guiado",
+    "L14:Práctica guiada",
+    "L15:Ejemplo guiado",
+    "L14:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.0004587,
+    0.0001271,
+    0.00005306,
+    0.0000494,
+    0.0000374
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-3",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 127,
+   "topSimilarity": 0.5952065828319452,
+   "rerankTop": 0.06260720640420914,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Errores frecuentes",
+    "L14:Errores frecuentes",
+    "L13:Errores frecuentes",
+    "L13:Errores frecuentes",
+    "L15:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.06261,
+    0.009064,
+    0.006624,
+    0.005789,
+    0.00521
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-4",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 308,
+   "topSimilarity": 0.5665271798935915,
+   "rerankTop": 0.01605049893260002,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Función",
+    "L13:Resumen",
+    "L13:Parámetro, argumento y retorno",
+    "L13:Práctica guiada",
+    "L13:Glosario"
+   ],
+   "sourceScores": [
+    0.01605,
+    0.003265,
+    0.0005167,
+    0.0004118,
+    0.0002868
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-5",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 183,
+   "topSimilarity": 0.6530789526151998,
+   "rerankTop": 0.06284432858228683,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Resumen",
+    "L16:Herencia",
+    "L16:Glosario",
+    "L16:Glosario",
+    "L16:Glosario"
+   ],
+   "sourceScores": [
+    0.06284,
+    0.01169,
+    0.002354,
+    0.0009807,
+    0.000366
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-6",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 393,
+   "topSimilarity": 0.6463044689206963,
+   "rerankTop": 0.00047991075552999973,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Resumen",
+    "L15:Atributo de clase y método de clase",
+    "L15:Método __str__",
+    "L15:Glosario",
+    "L15:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.0004799,
+    0.0004504,
+    0.0003271,
+    0.0002692,
+    0.0002328
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-7",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 440,
+   "topSimilarity": 0.6170946727451498,
+   "rerankTop": 0.562840461730957,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Resumen",
+    "L21:Glosario",
+    "L21:Recursión en objetos anidados (POO)",
+    "L21:Flood Fill y Backtracking",
+    "L21:Glosario"
+   ],
+   "sourceScores": [
+    0.5628,
+    0.277,
+    0.2201,
+    0.1487,
+    0.07272
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-8",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 132,
+   "topSimilarity": 0.5517908334732095,
+   "rerankTop": 0.03333210572600365,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Errores frecuentes",
+    "L22:Resumen",
+    "L22:Resumen",
+    "L22:Resumen",
+    "L22:Glosario"
+   ],
+   "sourceScores": [
+    0.03333,
+    0.000889,
+    0.0004044,
+    0.0003019,
+    0.0002862
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-9",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 594,
+   "topSimilarity": 0.5565046833903996,
+   "rerankTop": 0.00031307811150327325,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Recursión múltiple y memoización",
+    "L21:Presentación",
+    "L21:Resumen",
+    "L21:Resumen",
+    "L21:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.0003131,
+    0.0001927,
+    0.00003741,
+    0.0000374,
+    0.00003735
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-10",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 460,
+   "topSimilarity": 0.5789035386173885,
+   "rerankTop": 0.015884574502706528,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Resumen",
+    "L22:Cola (FIFO)",
+    "L22:Errores frecuentes",
+    "L22:Práctica guiada",
+    "L22:Práctica guiada"
+   ],
+   "sourceScores": [
+    0.01588,
+    0.009055,
+    0.008923,
+    0.005229,
+    0.003425
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-11",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 552,
+   "topSimilarity": 0.5858742522484889,
+   "rerankTop": 0.0007705230731517076,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Pista 2: estrategia",
+    "L14:Explicación paso a paso",
+    "L14:Bucle while con módulo y división entera",
+    "L14:Resumen",
+    "L14:Presentación"
+   ],
+   "sourceScores": [
+    0.0007705,
+    0.000494,
+    0.000335,
+    0.0002147,
+    0.0001157
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-12",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 0,
+   "contextTokens": 0,
+   "topSimilarity": null,
+   "rerankTop": null,
+   "ftsMatches": 0,
+   "sources": [],
+   "sourceScores": [],
+   "sourceUseful": []
+  },
+  {
+   "id": "nc-13",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 3,
+   "contextTokens": 309,
+   "topSimilarity": 0.5038354546974737,
+   "rerankTop": 0.005926686711609363,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Presentación",
+    "L12:Ejemplo guiado",
+    "L12:Resumen"
+   ],
+   "sourceScores": [
+    0.005927,
+    0.00003838,
+    0.00003756
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-14",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 404,
+   "topSimilarity": 0.6527204902601546,
+   "rerankTop": 0.02003324031829834,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Clase y objeto",
+    "L15:Composición",
+    "L15:Explicación paso a paso",
+    "L15:Glosario",
+    "L15:Resumen"
+   ],
+   "sourceScores": [
+    0.02003,
+    0.002704,
+    0.002058,
+    0.001583,
+    0.0007698
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-1",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 468,
+   "topSimilarity": 0.6051464025807147,
+   "rerankTop": 0.8808737397193909,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Saltos de paso ($n - 2$)",
+    "L11:Multiplicación con sumas sucesivas",
+    "L11:Sumatoria y acumuladores recursivos",
+    "L11:Práctica guiada",
+    "L11:Resumen"
+   ],
+   "sourceScores": [
+    0.8809,
+    0.0827,
+    0.04864,
+    0.03684,
+    0.03045
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "h2-2",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 496,
+   "topSimilarity": 0.5988847374251339,
+   "rerankTop": 0.9273309707641602,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Errores frecuentes",
+    "L11:Errores frecuentes",
+    "L11:Caso base y caso recursivo",
+    "L11:Glosario",
+    "L11:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.9273,
+    0.8715,
+    0.04458,
+    0.003016,
+    0.001555
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-3",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 354,
+   "topSimilarity": 0.6931742429733276,
+   "rerankTop": 0.2566503584384918,
+   "ftsMatches": 3,
+   "sources": [
+    "L12:Condición lógica",
+    "L12:Explicación paso a paso",
+    "L12:Resumen",
+    "L12:Glosario",
+    "L13:Estructura selectiva"
+   ],
+   "sourceScores": [
+    0.2567,
+    0.1143,
+    0.02719,
+    0.02033,
+    0.003139
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "h2-4",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 124,
+   "topSimilarity": 0.640486478805542,
+   "rerankTop": 0.002140641212463379,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Errores frecuentes",
+    "L12:Errores frecuentes",
+    "L12:Errores frecuentes",
+    "L12:Resumen",
+    "L16:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.002141,
+    0.001224,
+    0.0007024,
+    0.0004122,
+    0.0001524
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-5",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 376,
+   "topSimilarity": 0.6843283584313619,
+   "rerankTop": 0.6849601864814758,
+   "ftsMatches": 2,
+   "sources": [
+    "L13:Parámetro, argumento y retorno",
+    "L13:Resumen",
+    "L13:Resumen",
+    "L13:Glosario",
+    "L13:Presentación"
+   ],
+   "sourceScores": [
+    0.685,
+    0.0006887,
+    0.0004411,
+    0.0002735,
+    0.0001912
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "h2-6",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 296,
+   "topSimilarity": 0.6150917548050588,
+   "rerankTop": 0.015080940909683704,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Paso 4: acumuladores sobre listas",
+    "L14:Errores frecuentes",
+    "L14:Glosario",
+    "L14:Casos de frontera",
+    "L14:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.01508,
+    0.008701,
+    0.001138,
+    0.001001,
+    0.0009106
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-7",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 5,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 243,
+   "topSimilarity": 0.6803593635559082,
+   "rerankTop": 0.0852920189499855,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Atributos y métodos",
+    "L15:Glosario",
+    "L15:Composición",
+    "L15:Glosario",
+    "L15:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.08529,
+    0.03446,
+    0.01904,
+    0.019,
+    0.01129
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    true
+   ]
+  },
+  {
+   "id": "h2-8",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 423,
+   "topSimilarity": 0.681390643119812,
+   "rerankTop": 0.14351345598697662,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Errores frecuentes",
+    "L16:Explicación paso a paso",
+    "L16:Atributo de clase y método de clase",
+    "L16:Pista 3: detalle técnico",
+    "L16:Glosario"
+   ],
+   "sourceScores": [
+    0.1435,
+    0.0003257,
+    0.0001483,
+    0.0001123,
+    0.00007705
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-9",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 691,
+   "topSimilarity": 0.7249731257541864,
+   "rerankTop": 0.9477638006210328,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Recursión múltiple y memoización",
+    "L21:Presentación",
+    "L21:Errores frecuentes",
+    "L21:Resumen",
+    "L21:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.9478,
+    0.008283,
+    0.001117,
+    0.0004667,
+    0.0004452
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-10",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 382,
+   "topSimilarity": 0.6851825747220364,
+   "rerankTop": 0.09724807739257812,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Errores frecuentes",
+    "L21:Flood Fill y Backtracking",
+    "L21:Glosario",
+    "L21:Práctica guiada",
+    "L21:Resumen"
+   ],
+   "sourceScores": [
+    0.09725,
+    0.04139,
+    0.004229,
+    0.001766,
+    0.00116
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-11",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 650,
+   "topSimilarity": 0.7745319873652473,
+   "rerankTop": 0.8336566686630249,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Resumen",
+    "L22:Errores frecuentes",
+    "L22:Resumen",
+    "L22:Presentación",
+    "L22:Práctica guiada"
+   ],
+   "sourceScores": [
+    0.8337,
+    0.4423,
+    0.07029,
+    0.06773,
+    0.05376
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-12",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 364,
+   "topSimilarity": 0.7624531529871744,
+   "rerankTop": 0.986644208431244,
+   "ftsMatches": 5,
+   "sources": [
+    "L22:Cola (FIFO)",
+    "L22:Paso 6: cola con lista",
+    "L22:Glosario",
+    "L22:Resumen",
+    "L22:Ejemplo guiado"
+   ],
+   "sourceScores": [
+    0.9866,
+    0.915,
+    0.9082,
+    0.7769,
+    0.06367
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-13",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 370,
+   "topSimilarity": 0.5922318873474567,
+   "rerankTop": 0.991534948348999,
+   "ftsMatches": 4,
+   "sources": [
+    "L12:Glosario",
+    "L12:Condicionales anidados",
+    "L12:Resumen",
+    "L12:Presentación",
+    "L11:Glosario"
+   ],
+   "sourceScores": [
+    0.9915,
+    0.9299,
+    0.1894,
+    0.02393,
+    0.002062
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-14",
+   "category": "presentacion",
+   "answerable": true,
+   "firstHit": 3,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 406,
+   "topSimilarity": 0.739129863355454,
+   "rerankTop": 0.010559364221990108,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Glosario",
+    "L21:Glosario",
+    "L21:Presentación",
+    "L21:Resumen",
+    "L21:Glosario"
+   ],
+   "sourceScores": [
+    0.01056,
+    0.006298,
+    0.000785,
+    0.0005818,
+    0.0002715
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-15",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 384,
+   "topSimilarity": 0.6155942311528881,
+   "rerankTop": 0.15061885118484497,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Paso 1: crear y recorrer una lista",
+    "L22:Errores frecuentes",
+    "L22:Lista",
+    "L22:Índice",
+    "L22:Resumen"
+   ],
+   "sourceScores": [
+    0.1506,
+    0.1022,
+    0.09258,
+    0.06328,
+    0.053
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h2-16",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 282,
+   "topSimilarity": 0.6578676496665281,
+   "rerankTop": 0.020250990986824036,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Glosario",
+    "L16:Glosario",
+    "L16:Herencia",
+    "L16:Glosario",
+    "L16:Atributo de clase y método de clase"
+   ],
+   "sourceScores": [
+    0.02025,
+    0.00238,
+    0.001019,
+    0.0009515,
+    0.0005502
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "ft-1",
+   "category": "fuera-de-tema",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 0,
+   "contextTokens": 0,
+   "topSimilarity": null,
+   "rerankTop": null,
+   "ftsMatches": 0,
+   "sources": [],
+   "sourceScores": [],
+   "sourceUseful": []
+  },
+  {
+   "id": "ft-2",
+   "category": "fuera-de-tema",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 2,
+   "contextTokens": 159,
+   "topSimilarity": 0.49118679761886597,
+   "rerankTop": 0.00003730868411366828,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Resumen",
+    "L22:Presentación"
+   ],
+   "sourceScores": [
+    0.00003731,
+    0.00001119
+   ],
+   "sourceUseful": [
+    false,
+    false
+   ]
+  },
+  {
+   "id": "ft-3",
+   "category": "fuera-de-tema",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 0,
+   "contextTokens": 0,
+   "topSimilarity": null,
+   "rerankTop": null,
+   "ftsMatches": 0,
+   "sources": [],
+   "sourceScores": [],
+   "sourceUseful": []
+  },
+  {
+   "id": "ft-4",
+   "category": "fuera-de-tema",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 0,
+   "contextTokens": 0,
+   "topSimilarity": null,
+   "rerankTop": null,
+   "ftsMatches": 0,
+   "sources": [],
+   "sourceScores": [],
+   "sourceUseful": []
+  },
+  {
+   "id": "h3-1",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 417,
+   "topSimilarity": 0.6369414329528809,
+   "rerankTop": 0.07002436369657516,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Errores frecuentes",
+    "L21:Errores frecuentes",
+    "L11:Factorial y multiplicación acumulativa",
+    "L21:Ejemplo guiado",
+    "L11:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.07002,
+    0.03416,
+    0.003434,
+    0.001813,
+    0.000259
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-2",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 560,
+   "topSimilarity": 0.7303336262702942,
+   "rerankTop": 0.9982426166534424,
+   "ftsMatches": 5,
+   "sources": [
+    "L11:Glosario",
+    "L21:Glosario",
+    "L11:Factorial y multiplicación acumulativa",
+    "L11:Explicación paso a paso",
+    "L11:Caso base y caso recursivo"
+   ],
+   "sourceScores": [
+    0.9982,
+    0.997,
+    0.07003,
+    0.02693,
+    0.01177
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-3",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 486,
+   "topSimilarity": 0.5197598206782184,
+   "rerankTop": 0.060197558254003525,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Descomposición por división entera (`// 10`)",
+    "L11:Pista 3: detalle técnico",
+    "L11:Práctica guiada",
+    "L11:Ejemplo guiado",
+    "L11:Resumen"
+   ],
+   "sourceScores": [
+    0.0602,
+    0.01171,
+    0.006376,
+    0.004464,
+    0.003929
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-4",
+   "category": "seguimiento",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 578,
+   "topSimilarity": 0.6879467964172363,
+   "rerankTop": 0.7611157298088074,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Recursión múltiple (Fibonacci)",
+    "L11:Ejemplo guiado",
+    "L11:Caso base y caso recursivo",
+    "L11:Sumatoria y acumuladores recursivos",
+    "L11:Resumen"
+   ],
+   "sourceScores": [
+    0.7611,
+    0.3868,
+    0.1121,
+    0.09215,
+    0.06973
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-5",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 457,
+   "topSimilarity": 0.6680608193910622,
+   "rerankTop": 0.996831238269806,
+   "ftsMatches": 3,
+   "sources": [
+    "L12:Selección múltiple",
+    "L12:Explicación paso a paso",
+    "L12:Glosario",
+    "L12:Selección simple y doble",
+    "L12:Condicionales anidados"
+   ],
+   "sourceScores": [
+    0.9968,
+    0.8535,
+    0.2183,
+    0.159,
+    0.1155
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-6",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 4,
+   "contextTokens": 264,
+   "topSimilarity": 0.6579530631275823,
+   "rerankTop": 0.6979098320007324,
+   "ftsMatches": 3,
+   "sources": [
+    "L12:Glosario",
+    "L12:Condición lógica",
+    "L12:Explicación paso a paso",
+    "L12:Glosario"
+   ],
+   "sourceScores": [
+    0.6979,
+    0.01744,
+    0.002583,
+    0.001397
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "h3-7",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 258,
+   "topSimilarity": 0.6223282178337793,
+   "rerankTop": 0.21516110002994537,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Condicionales anidados",
+    "L12:Resumen",
+    "L13:Resumen",
+    "L13:Estructura selectiva",
+    "L12:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.2152,
+    0.1122,
+    0.07754,
+    0.02272,
+    0.0189
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-8",
+   "category": "presentacion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 2,
+   "contextTokens": 292,
+   "topSimilarity": 0.6318768639491119,
+   "rerankTop": 0.28401989936828614,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Presentación",
+    "L13:Estructura selectiva"
+   ],
+   "sourceScores": [
+    0.284,
+    0.00521
+   ],
+   "sourceUseful": [
+    true,
+    false
+   ]
+  },
+  {
+   "id": "h3-9",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 393,
+   "topSimilarity": 0.6965113670673587,
+   "rerankTop": 0.13511647284030914,
+   "ftsMatches": 5,
+   "sources": [
+    "L13:Función",
+    "L13:Resumen",
+    "L13:Diagrama de flujo",
+    "L13:Práctica guiada",
+    "L13:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.1351,
+    0.1184,
+    0.0317,
+    0.01724,
+    0.01009
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-10",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 104,
+   "topSimilarity": 0.6069458307905745,
+   "rerankTop": 0.02369414269924164,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Errores frecuentes",
+    "L13:Glosario",
+    "L13:Resumen",
+    "L13:Glosario",
+    "L13:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.02369,
+    0.01666,
+    0.0008096,
+    0.0007493,
+    0.0007088
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-11",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 3,
+   "returned": 5,
+   "contextTokens": 386,
+   "topSimilarity": 0.6568334502925467,
+   "rerankTop": 0.343946248292923,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Parámetro, argumento y retorno",
+    "L13:Explicación paso a paso",
+    "L13:Función",
+    "L13:Resumen",
+    "L13:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.3439,
+    0.2675,
+    0.174,
+    0.09405,
+    0.05654
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    true
+   ]
+  },
+  {
+   "id": "h3-12",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 381,
+   "topSimilarity": 0.6994203687405147,
+   "rerankTop": 0.028300816193223,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Resumen",
+    "L13:Parámetro, argumento y retorno",
+    "L13:Glosario",
+    "L13:Explicación paso a paso",
+    "L13:Ejemplo guiado"
+   ],
+   "sourceScores": [
+    0.0283,
+    0.01355,
+    0.003518,
+    0.003314,
+    0.002245
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-13",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 134,
+   "topSimilarity": 0.6429734230041504,
+   "rerankTop": 0.015059629455208778,
+   "ftsMatches": 1,
+   "sources": [
+    "L14:Glosario",
+    "L14:Glosario",
+    "L14:Práctica guiada",
+    "L14:Glosario",
+    "L14:Glosario"
+   ],
+   "sourceScores": [
+    0.01506,
+    0.01046,
+    0.001732,
+    0.001719,
+    0.001663
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-14",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 4,
+   "contextTokens": 201,
+   "topSimilarity": 0.48635764379375135,
+   "rerankTop": 0.04755090922117233,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Bucle while con módulo y división entera",
+    "L14:Pista 2: estrategia",
+    "L14:Glosario",
+    "L14:Resumen"
+   ],
+   "sourceScores": [
+    0.04755,
+    0.0004491,
+    0.000403,
+    0.0000536
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-15",
+   "category": "seguimiento",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 399,
+   "topSimilarity": 0.7631684769144204,
+   "rerankTop": 0.9611612558364868,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Acumulador y contador",
+    "L14:Glosario",
+    "L14:Explicación paso a paso",
+    "L14:Glosario",
+    "L14:Ejemplo guiado"
+   ],
+   "sourceScores": [
+    0.9612,
+    0.6219,
+    0.166,
+    0.08478,
+    0.01866
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-16",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 2,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 576,
+   "topSimilarity": 0.7105172449042068,
+   "rerankTop": 0.987825334072113,
+   "ftsMatches": 4,
+   "sources": [
+    "L22:Resumen",
+    "L22:Glosario",
+    "L22:Pila (LIFO)",
+    "L22:Presentación",
+    "L22:Paso 5: pila con lista"
+   ],
+   "sourceScores": [
+    0.9878,
+    0.9583,
+    0.225,
+    0.121,
+    0.002371
+   ],
+   "sourceUseful": [
+    false,
+    true,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-17",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 334,
+   "topSimilarity": 0.756306529045105,
+   "rerankTop": 0.9947946667671204,
+   "ftsMatches": 4,
+   "sources": [
+    "L15:Atributo de clase y método de clase",
+    "L15:Glosario",
+    "L15:Clase y objeto",
+    "L15:Composición",
+    "L15:Glosario"
+   ],
+   "sourceScores": [
+    0.9948,
+    0.9868,
+    0.8539,
+    0.2504,
+    0.2031
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-18",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 214,
+   "topSimilarity": 0.5602352619171143,
+   "rerankTop": 0.04521336778998375,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Atributos y métodos",
+    "L15:Práctica guiada",
+    "L15:Glosario",
+    "L15:Errores frecuentes",
+    "L15:Resumen"
+   ],
+   "sourceScores": [
+    0.04521,
+    0.002162,
+    0.001064,
+    0.0003647,
+    0.000302
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-19",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 3,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 426,
+   "topSimilarity": 0.6639110646300885,
+   "rerankTop": 0.019978942349553108,
+   "ftsMatches": 3,
+   "sources": [
+    "L15:Explicación paso a paso",
+    "L15:Glosario",
+    "L15:Encapsulamiento y atributo privado",
+    "L15:Glosario",
+    "L15:Composición"
+   ],
+   "sourceScores": [
+    0.01998,
+    0.005939,
+    0.003585,
+    0.001,
+    0.0006825
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-20",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 303,
+   "topSimilarity": 0.6767186531471029,
+   "rerankTop": 0.3478196859359741,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Errores frecuentes",
+    "L15:Errores frecuentes",
+    "L15:Errores frecuentes",
+    "L15:Pista 3: detalle técnico",
+    "L15:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.3478,
+    0.1451,
+    0.03954,
+    0.02593,
+    0.02371
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-21",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 292,
+   "topSimilarity": 0.7942848915712442,
+   "rerankTop": 0.8118175268173218,
+   "ftsMatches": 5,
+   "sources": [
+    "L16:Glosario",
+    "L16:Herencia",
+    "L16:Sobrescritura y __str__",
+    "L16:Glosario",
+    "L16:Resumen"
+   ],
+   "sourceScores": [
+    0.8118,
+    0.2975,
+    0.04984,
+    0.03334,
+    0.0255
+   ],
+   "sourceUseful": [
+    true,
+    true,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-22",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 4,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 289,
+   "topSimilarity": 0.6312451142814834,
+   "rerankTop": 0.008128063753247261,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Glosario",
+    "L16:Herencia",
+    "L16:Errores frecuentes",
+    "L16:Pista 2: estrategia",
+    "L16:Resumen"
+   ],
+   "sourceScores": [
+    0.008128,
+    0.005212,
+    0.00408,
+    0.001396,
+    0.001158
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    true,
+    false
+   ]
+  },
+  {
+   "id": "h3-23",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 463,
+   "topSimilarity": 0.7126598954200745,
+   "rerankTop": 0.8785822987556458,
+   "ftsMatches": 2,
+   "sources": [
+    "L16:Sobrescritura y __str__",
+    "L16:Resumen",
+    "L16:Glosario",
+    "L16:Pista 3: detalle técnico",
+    "L16:Presentación"
+   ],
+   "sourceScores": [
+    0.8786,
+    0.437,
+    0.3438,
+    0.1617,
+    0.02515
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-24",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 357,
+   "topSimilarity": 0.589325487613678,
+   "rerankTop": 0.08973074704408646,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Resumen",
+    "L16:Glosario",
+    "L16:Sobrescritura y __str__",
+    "L16:Resumen",
+    "L16:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.08973,
+    0.003427,
+    0.0007322,
+    0.0007096,
+    0.0005964
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-25",
+   "category": "termino-exacto",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 696,
+   "topSimilarity": 0.6964476316108597,
+   "rerankTop": 0.4896945059299469,
+   "ftsMatches": 1,
+   "sources": [
+    "L21:Explicación paso a paso",
+    "L21:Explicación paso a paso",
+    "L21:Errores frecuentes",
+    "L21:Resumen",
+    "L21:Presentación"
+   ],
+   "sourceScores": [
+    0.4897,
+    0.003096,
+    0.000962,
+    0.000543,
+    0.0004344
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-26",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 2,
+   "returned": 5,
+   "contextTokens": 571,
+   "topSimilarity": 0.6226618475515203,
+   "rerankTop": 0.05009494349360466,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Flood Fill y Backtracking",
+    "L21:Práctica guiada",
+    "L21:Glosario",
+    "L21:Pista 3: detalle técnico",
+    "L21:Glosario"
+   ],
+   "sourceScores": [
+    0.05009,
+    0.004104,
+    0.003034,
+    0.002192,
+    0.001818
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    true,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-27",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 846,
+   "topSimilarity": 0.621963731401635,
+   "rerankTop": 0.026667799800634384,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Descomposición por slicing de secuencias",
+    "L21:Recursión múltiple y memoización",
+    "L21:Ejemplo guiado",
+    "L21:Explicación paso a paso",
+    "L21:Recursión en objetos anidados (POO)"
+   ],
+   "sourceScores": [
+    0.02667,
+    0.01284,
+    0.008958,
+    0.004045,
+    0.003557
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-28",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 315,
+   "topSimilarity": 0.7569478975816938,
+   "rerankTop": 0.28979793190956116,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Pista 2: estrategia",
+    "L21:Glosario",
+    "L21:Caso base y caso recursivo",
+    "L21:Resumen",
+    "L21:Glosario"
+   ],
+   "sourceScores": [
+    0.2898,
+    0.009811,
+    0.001262,
+    0.0005079,
+    0.0002077
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-33",
+   "category": "presentacion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 686,
+   "topSimilarity": 0.7958256480589895,
+   "rerankTop": 0.08936666250228882,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Presentación",
+    "L21:Recursión en objetos anidados (POO)",
+    "L21:Glosario",
+    "L21:Flood Fill y Backtracking",
+    "L21:Práctica guiada"
+   ],
+   "sourceScores": [
+    0.08937,
+    0.008955,
+    0.0031,
+    0.002478,
+    0.001398
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-29",
+   "category": "directa",
+   "answerable": true,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 363,
+   "topSimilarity": 0.6944371461868286,
+   "rerankTop": 0.6067655086517334,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Glosario",
+    "L22:Resumen",
+    "L22:Índice",
+    "L22:Lista",
+    "L22:Paso 1: crear y recorrer una lista"
+   ],
+   "sourceScores": [
+    0.6068,
+    0.3462,
+    0.1793,
+    0.1491,
+    0.1331
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-30",
+   "category": "parafrasis",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 339,
+   "topSimilarity": 0.581589689065255,
+   "rerankTop": 0.03708210587501526,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Pila (LIFO)",
+    "L22:Glosario",
+    "L22:Resumen",
+    "L22:Paso 7: verificar listas vacías",
+    "L22:Cola (FIFO)"
+   ],
+   "sourceScores": [
+    0.03708,
+    0.002716,
+    0.002214,
+    0.002188,
+    0.0009988
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-31",
+   "category": "coloquial",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 903,
+   "topSimilarity": 0.6971476285799634,
+   "rerankTop": 0.9222161173820496,
+   "ftsMatches": 2,
+   "sources": [
+    "L22:Paso 7: verificar listas vacías",
+    "L22:Errores frecuentes",
+    "L22:Práctica guiada",
+    "L22:Práctica guiada",
+    "L22:Presentación"
+   ],
+   "sourceScores": [
+    0.9222,
+    0.8896,
+    0.6715,
+    0.5567,
+    0.2532
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-32",
+   "category": "varias-partes",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 533,
+   "topSimilarity": 0.5863065370138574,
+   "rerankTop": 0.9684962630271912,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Paso 4: acumuladores sobre listas",
+    "L22:Práctica guiada",
+    "L22:Resumen",
+    "L22:Lista",
+    "L22:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.9685,
+    0.3126,
+    0.1544,
+    0.1138,
+    0.04266
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-34",
+   "category": "presentacion",
+   "answerable": true,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 92,
+   "topSimilarity": 0.5906217030246591,
+   "rerankTop": 0.000060813163145212457,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Glosario",
+    "L13:Resumen",
+    "L13:Resumen",
+    "L13:Glosario",
+    "L13:Glosario"
+   ],
+   "sourceScores": [
+    0.00006081,
+    0.0000381,
+    0.00003745,
+    0.00003744,
+    0.00003744
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-35",
+   "category": "otra-leccion",
+   "answerable": true,
+   "firstHit": 1,
+   "complete": true,
+   "useful": 1,
+   "returned": 5,
+   "contextTokens": 393,
+   "topSimilarity": 0.5946102142334027,
+   "rerankTop": 0.9901220202445984,
+   "ftsMatches": 1,
+   "sources": [
+    "L15:Glosario",
+    "L13:Función",
+    "L13:Resumen",
+    "L13:Práctica guiada",
+    "L13:Presentación"
+   ],
+   "sourceScores": [
+    0.9901,
+    0.00007514,
+    0.00007475,
+    0.00005095,
+    0.00004045
+   ],
+   "sourceUseful": [
+    true,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-17",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 612,
+   "topSimilarity": 0.568298969763457,
+   "rerankTop": 0.005538808647543192,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Potenciación recursiva",
+    "L11:Errores frecuentes",
+    "L11:Caso base y caso recursivo",
+    "L11:Explicación paso a paso",
+    "L11:Recursión múltiple (Fibonacci)"
+   ],
+   "sourceScores": [
+    0.005539,
+    0.003413,
+    0.003146,
+    0.003113,
+    0.002763
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-18",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 373,
+   "topSimilarity": 0.5524388222432849,
+   "rerankTop": 0.0027659761253744364,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Glosario",
+    "L11:Resumen",
+    "L11:Caso base y caso recursivo",
+    "L11:Glosario",
+    "L11:Recursión múltiple (Fibonacci)"
+   ],
+   "sourceScores": [
+    0.002766,
+    0.001103,
+    0.0009175,
+    0.0009153,
+    0.0008979
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-19",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 481,
+   "topSimilarity": 0.5890985061912396,
+   "rerankTop": 0.14525634050369263,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Explicación paso a paso",
+    "L12:Glosario",
+    "L12:Selección simple y doble",
+    "L12:Resumen",
+    "L12:Presentación"
+   ],
+   "sourceScores": [
+    0.1453,
+    0.008921,
+    0.002428,
+    0.002037,
+    0.00008978
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-20",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 4,
+   "contextTokens": 390,
+   "topSimilarity": 0.5006130039326555,
+   "rerankTop": 0.030176781117916107,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Paso 7: verificar listas vacías",
+    "L11:Errores frecuentes",
+    "L12:Errores frecuentes",
+    "L12:Presentación"
+   ],
+   "sourceScores": [
+    0.03018,
+    0.0005551,
+    0.0001503,
+    0.00005276
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-21",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 272,
+   "topSimilarity": 0.6055635448954387,
+   "rerankTop": 0.0020898249931633472,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Glosario",
+    "L13:Función",
+    "L13:Parámetro, argumento y retorno",
+    "L13:Glosario",
+    "L13:Resumen"
+   ],
+   "sourceScores": [
+    0.00209,
+    0.000614,
+    0.0001392,
+    0.000125,
+    0.0001042
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-22",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 382,
+   "topSimilarity": 0.6097529399689507,
+   "rerankTop": 0.004889415111392736,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Resumen",
+    "L13:Parámetro, argumento y retorno",
+    "L13:Función",
+    "L13:Glosario",
+    "L13:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.004889,
+    0.004446,
+    0.001546,
+    0.0006886,
+    0.0005641
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-23",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 640,
+   "topSimilarity": 0.6746232301445974,
+   "rerankTop": 0.07534727454185486,
+   "ftsMatches": 1,
+   "sources": [
+    "L14:Bucle while con módulo y división entera",
+    "L14:Presentación",
+    "L14:Acumulador y contador",
+    "L14:Explicación paso a paso",
+    "L14:Pista 1: orientación"
+   ],
+   "sourceScores": [
+    0.07535,
+    0.02133,
+    0.01329,
+    0.002867,
+    0.001079
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-24",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 217,
+   "topSimilarity": 0.5538600087165871,
+   "rerankTop": 0.03376138582825661,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Resumen",
+    "L14:Glosario",
+    "L14:Glosario",
+    "L14:Resumen",
+    "L14:Acumulador y contador"
+   ],
+   "sourceScores": [
+    0.03376,
+    0.02248,
+    0.02059,
+    0.002924,
+    0.002547
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-25",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 335,
+   "topSimilarity": 0.6054364442825317,
+   "rerankTop": 0.00009885675535770132,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Clase y objeto",
+    "L15:Errores frecuentes",
+    "L15:Composición",
+    "L15:Glosario",
+    "L15:Atributos y métodos"
+   ],
+   "sourceScores": [
+    0.00009886,
+    0.00009007,
+    0.00008119,
+    0.00007152,
+    0.00006812
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-26",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 153,
+   "topSimilarity": 0.5396571320193153,
+   "rerankTop": 0.08885939419269562,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Glosario",
+    "L15:Resumen",
+    "L15:Resumen",
+    "L15:Composición",
+    "L15:Glosario"
+   ],
+   "sourceScores": [
+    0.08886,
+    0.06771,
+    0.01081,
+    0.008222,
+    0.007685
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-27",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 555,
+   "topSimilarity": 0.47244301602584104,
+   "rerankTop": 0.00840076245367527,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Polimorfismo puro",
+    "L16:Sobrescritura y __str__",
+    "L16:Resumen",
+    "L21:Presentación",
+    "L16:Resumen"
+   ],
+   "sourceScores": [
+    0.008401,
+    0.001036,
+    0.0008275,
+    0.0007094,
+    0.0003042
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-28",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 551,
+   "topSimilarity": 0.5785999894142151,
+   "rerankTop": 0.0002961140125989914,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Explicación paso a paso",
+    "L16:Atributo de clase y método de clase",
+    "L16:Práctica guiada",
+    "L16:Constructor con super()",
+    "L16:Glosario"
+   ],
+   "sourceScores": [
+    0.0002961,
+    0.00004159,
+    0.00004122,
+    0.00003752,
+    0.00003748
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-29",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 269,
+   "topSimilarity": 0.5078708236140512,
+   "rerankTop": 0.026190171018242836,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Descomposición por slicing de secuencias",
+    "L21:Resumen",
+    "L21:Glosario",
+    "L21:Glosario",
+    "L21:Resumen"
+   ],
+   "sourceScores": [
+    0.02619,
+    0.002375,
+    0.002297,
+    0.002037,
+    0.0009779
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-30",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 318,
+   "topSimilarity": 0.6327311804076703,
+   "rerankTop": 0.007172965444624424,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Lista",
+    "L22:Resumen",
+    "L22:Glosario",
+    "L22:Paso 4: acumuladores sobre listas",
+    "L22:Resumen"
+   ],
+   "sourceScores": [
+    0.007173,
+    0.002034,
+    0.0008925,
+    0.0002719,
+    0.0002498
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "nc-31",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 429,
+   "topSimilarity": 0.5077950954437256,
+   "rerankTop": 0.02419726736843586,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Lista",
+    "L22:Errores frecuentes",
+    "L22:Paso 1: crear y recorrer una lista",
+    "L22:Glosario",
+    "L22:Pistas progresivas"
+   ],
+   "sourceScores": [
+    0.0242,
+    0.009175,
+    0.00347,
+    0.001102,
+    0.001064
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-36",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 558,
+   "topSimilarity": 0.5146809816360474,
+   "rerankTop": 0.025444507598876953,
+   "ftsMatches": 0,
+   "sources": [
+    "L11:Recursión múltiple (Fibonacci)",
+    "L21:Ejemplo guiado",
+    "L11:Resumen",
+    "L11:Pista 2: estrategia",
+    "L11:Explicación paso a paso"
+   ],
+   "sourceScores": [
+    0.02544,
+    0.009262,
+    0.009151,
+    0.008223,
+    0.007565
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-37",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 1,
+   "contextTokens": 20,
+   "topSimilarity": 0.4554039537906647,
+   "rerankTop": 0.05675602704286575,
+   "ftsMatches": 0,
+   "sources": [
+    "L12:Glosario"
+   ],
+   "sourceScores": [
+    0.05676
+   ],
+   "sourceUseful": [
+    false
+   ]
+  },
+  {
+   "id": "h3-38",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 91,
+   "topSimilarity": 0.5382831096649208,
+   "rerankTop": 0.0010100543731823564,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Resumen",
+    "L13:Glosario",
+    "L13:Resumen",
+    "L13:Glosario",
+    "L13:Glosario"
+   ],
+   "sourceScores": [
+    0.00101,
+    0.00003745,
+    0.00003745,
+    0.00003744,
+    0.00003739
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-39",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 188,
+   "topSimilarity": 0.5877481594385953,
+   "rerankTop": 0.01050765160471201,
+   "ftsMatches": 0,
+   "sources": [
+    "L13:Glosario",
+    "L13:Glosario",
+    "L13:Pista 1: orientación",
+    "L13:Glosario",
+    "L13:Diagrama de flujo"
+   ],
+   "sourceScores": [
+    0.01051,
+    0.007289,
+    0.002193,
+    0.0006042,
+    0.0005878
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-40",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 133,
+   "topSimilarity": 0.5580261682287565,
+   "rerankTop": 0.005517794750630856,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Glosario",
+    "L14:Resumen",
+    "L14:Errores frecuentes",
+    "L14:Pista 2: estrategia",
+    "L14:Resumen"
+   ],
+   "sourceScores": [
+    0.005518,
+    0.005077,
+    0.00345,
+    0.002412,
+    0.002166
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-41",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 523,
+   "topSimilarity": 0.6278503502473551,
+   "rerankTop": 0.11264252662658691,
+   "ftsMatches": 0,
+   "sources": [
+    "L14:Explicación paso a paso",
+    "L14:Bucle while con módulo y división entera",
+    "L14:Presentación",
+    "L14:Resumen",
+    "L13:Resumen"
+   ],
+   "sourceScores": [
+    0.1126,
+    0.01024,
+    0.007068,
+    0.003342,
+    0.00196
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-42",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 312,
+   "topSimilarity": 0.5407624840736389,
+   "rerankTop": 0.10040991008281708,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Glosario",
+    "L15:Pista 2: estrategia",
+    "L15:Pista 1: orientación",
+    "L15:Atributos y métodos",
+    "L15:Constructor __init__ y self"
+   ],
+   "sourceScores": [
+    0.1004,
+    0.03508,
+    0.01178,
+    0.007838,
+    0.006873
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-43",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 86,
+   "topSimilarity": 0.6237957105758374,
+   "rerankTop": 0.028661934658885,
+   "ftsMatches": 0,
+   "sources": [
+    "L15:Resumen",
+    "L15:Glosario",
+    "L15:Glosario",
+    "L15:Glosario",
+    "L15:Glosario"
+   ],
+   "sourceScores": [
+    0.02866,
+    0.01599,
+    0.003491,
+    0.003162,
+    0.002984
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-44",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 167,
+   "topSimilarity": 0.5566420555114746,
+   "rerankTop": 0.00045181511086411774,
+   "ftsMatches": 0,
+   "sources": [
+    "L16:Glosario",
+    "L16:Glosario",
+    "L16:Resumen",
+    "L16:Práctica guiada",
+    "L16:Resumen"
+   ],
+   "sourceScores": [
+    0.0004518,
+    0.0001957,
+    0.0001541,
+    0.00003989,
+    0.00003742
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-45",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 731,
+   "topSimilarity": 0.5464667785346469,
+   "rerankTop": 0.06866332143545151,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Explicación paso a paso",
+    "L21:Resumen",
+    "L21:Presentación",
+    "L21:Explicación paso a paso",
+    "L21:Pista 3: detalle técnico"
+   ],
+   "sourceScores": [
+    0.06866,
+    0.0032,
+    0.002696,
+    0.002439,
+    0.001649
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-46",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 685,
+   "topSimilarity": 0.6070512352272525,
+   "rerankTop": 0.0010688669979572298,
+   "ftsMatches": 0,
+   "sources": [
+    "L21:Presentación",
+    "L21:Explicación paso a paso",
+    "L21:Explicación paso a paso",
+    "L21:Resumen",
+    "L21:Resumen"
+   ],
+   "sourceScores": [
+    0.001069,
+    0.0009669,
+    0.0002589,
+    0.0001312,
+    0.0001212
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-47",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 295,
+   "topSimilarity": 0.5992635966225152,
+   "rerankTop": 0.05763309821486473,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Lista",
+    "L22:Paso 1: crear y recorrer una lista",
+    "L22:Glosario",
+    "L22:Glosario",
+    "L22:Resumen"
+   ],
+   "sourceScores": [
+    0.05763,
+    0.04891,
+    0.03923,
+    0.03752,
+    0.03498
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-48",
+   "category": "no-cubierta",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 5,
+   "contextTokens": 227,
+   "topSimilarity": 0.6698170900344896,
+   "rerankTop": 0.003201874438673258,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Lista",
+    "L22:Glosario",
+    "L22:Glosario",
+    "L22:Resumen",
+    "L22:Errores frecuentes"
+   ],
+   "sourceScores": [
+    0.003202,
+    0.0003887,
+    0.0003638,
+    0.0002917,
+    0.0001877
+   ],
+   "sourceUseful": [
+    false,
+    false,
+    false,
+    false,
+    false
+   ]
+  },
+  {
+   "id": "h3-49",
+   "category": "fuera-de-tema",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 0,
+   "contextTokens": 0,
+   "topSimilarity": null,
+   "rerankTop": null,
+   "ftsMatches": 0,
+   "sources": [],
+   "sourceScores": [],
+   "sourceUseful": []
+  },
+  {
+   "id": "h3-50",
+   "category": "fuera-de-tema",
+   "answerable": false,
+   "firstHit": 0,
+   "complete": false,
+   "useful": 0,
+   "returned": 1,
+   "contextTokens": 134,
+   "topSimilarity": 0.5686219077480986,
+   "rerankTop": 0.00005581943696597591,
+   "ftsMatches": 0,
+   "sources": [
+    "L22:Presentación"
+   ],
+   "sourceScores": [
+    0.00005582
+   ],
+   "sourceUseful": [
+    false
+   ]
+  }
+ ]
+}
