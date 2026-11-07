@@ -8,8 +8,13 @@
 
 Implementado y verificado en código, con Postgres y pgvector locales y con los proveedores
 reales de Cloudflare (embeddings y reranker) sobre una copia local del curso piloto.
-Producción no se tocó. Falta reindexar producción, junto con `correcciones-tutor-rag`, con
-confirmación del usuario.
+Desplegado en Render con el merge `4906e0b` el 2026-11-07, junto con `correcciones-tutor-rag`.
+Todos los cursos con RAG se reindexaron y sus lecciones quedaron en `LISTO`; el usuario probó
+el tutor en producción y funciona bien.
+
+Las mediciones quedaron guardadas para comparar cambios futuros:
+`backend/eval/rag/baselines/2026-11-07-produccion-all.json` es la referencia de lo desplegado.
+Ver `backend/eval/rag/HISTORIAL.md`.
 
 | Comprobación | Resultado |
 |---|---|

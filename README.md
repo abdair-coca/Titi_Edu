@@ -155,7 +155,7 @@ Lesson (titulo + contenido + RecursoHtmlLeccion.html)
 
 **`html-extractor.service.js:17`** — `CODE_EXCLUDE_TOKENS` blocklist (`addEventListener`, `postMessage`, …) + `isNaturalLanguageText` filter prevents indexing boilerplate JS/CSS as knowledge.
 
-**`rag.service.js:193`** — `lessonRagText` is the single source for indexing: `titulo + contenido + extracted HTML`. No notes, progress or PII ever indexed.
+**`rag.service.js` → `lessonRagSource`** — the lesson's authorial context (`contextoRag`) is indexed when present; otherwise `lessonRagText` (`titulo + contenido + extracted HTML`). No notes, progress or PII ever indexed.
 
 ### Storage
 
@@ -179,7 +179,7 @@ model FragmentoRag {
 }
 ```
 
-Only `activo=true AND estado=LISTO AND leccion.estado=PUBLICADA AND modulo.estado=PUBLICADO AND curso.publicado=true` are retrievable (`rag.service.js:475`).
+Only `activo=true AND estado=LISTO AND leccion.estado=PUBLICADA AND modulo.estado=PUBLICADO AND curso.publicado=true` documents of the lesson's current `version` are retrievable; lessons with an evaluable HTML only serve documents marked `assessmentSafe` (`searchFragmentsHybrid`).
 
 ### Indexing
 
@@ -190,18 +190,26 @@ Only `activo=true AND estado=LISTO AND leccion.estado=PUBLICADA AND modulo.estad
 
 ### Retrieval
 
-```sql
-SELECT f.contenido, l.titulo, m.titulo,
-       1 - (f.embedding <=> $embedding::vector) AS similarity
-FROM "FragmentoRag" f
-JOIN "DocumentoRag" d ON d.id = f."documentoId"
-JOIN "Leccion" l ON l.id = d."leccionId"
-JOIN "Modulo" m ON m.id = l."moduloId"
-WHERE c.id = $courseId AND d.activo AND d.estado='LISTO' …
-ORDER BY f.embedding <=> $embedding::vector LIMIT 5
-```
+`retrieveLessonContext` (`rag.service.js`) is shared by the chat and the admin test query:
 
-Lesson-prioritized: `RAG_LESSON_PRIORITY_LIMIT` (default = `LIMIT`) splits `only(currentLesson)` + `exclude(currentLesson)` fills remainder (`rag.service.js:487`).
+1. **Two queries.** The embedding query is the message, plus the last 2 turns only when it
+   is a follow-up, plus the lesson title. The full-text query is only the student's words,
+   without question-framing words ("qué", "cómo", "sirve"…).
+2. **Hybrid search (pgvector + `tsvector`).** A fragment qualifies with
+   `similarity ≥ RAG_EVIDENCE_THRESHOLD` (0.45) or a full match of every term; vector and
+   full-text ranks are fused with RRF (`0.7 / (60 + rank)` + `0.3 / (60 + rank)`). Falls
+   back to vector-only if full-text fails.
+3. **Lesson priority.** The open lesson is searched first and other lessons of the same
+   course fill the remaining slots (`RAG_LESSON_PRIORITY_LIMIT`); never crosses courses.
+4. **Reranker.** With `RAG_RERANK_ENABLED` and Cloudflare credentials, 15 candidates are
+   scored by `@cf/baai/bge-reranker-base` against the student's question (without the
+   lesson title). Presentación and Pistas are scored ×0.3.
+5. **Variable source count.** The best source always stays; the rest only if they score at
+   least 5 % of it (`RERANK_MIN_RELATIVE_SCORE`), up to 5. If the reranker fails or times
+   out (`RAG_RERANK_TIMEOUT_MS`), the hybrid order is kept without the cut.
+
+Measured with the golden set in `backend/eval/rag/` (results history in
+`backend/eval/rag/HISTORIAL.md`).
 
 ### Generation
 

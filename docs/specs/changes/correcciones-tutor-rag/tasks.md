@@ -78,6 +78,6 @@
 - [x] `npm --prefix frontend run build`
 - [x] Actualizar `docs/api.md`, `docs/rag-security.md`, variables de entorno de ejemplo e índice de `AGENTS.md`.
 - [x] Escribir `verify-report.md`.
-- [ ] Confirmar con el usuario la reindexación de producción (pendiente, no se ejecuta en este change sin su aprobación).
+- [x] Confirmar con el usuario la reindexación de producción: desplegado `4906e0b` y todos los cursos con RAG reindexados el 2026-11-07 (lecciones en `LISTO`).
 - [x] Comparar con Groq y Cloudflare reales sobre una copia local del curso piloto.
 - [ ] Medir la versión final con el modelo (pendiente por el límite diario de Groq).

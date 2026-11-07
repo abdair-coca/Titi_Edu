@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "description": "Preguntas de referencia para medir la búsqueda del tutor sobre el curso piloto. evidence: grupos que la respuesta necesita; cada grupo lista alternativas 'LECCIÓN: frase literal'. Sin evidence = el curso no responde la pregunta.",
   "lessons": {
     "L11": "74a73003-22b1-4f62-8675-52a23263f995",

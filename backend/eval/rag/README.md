@@ -41,3 +41,29 @@ Antes de medir, el script comprueba que cada frase exista en su lección.
 No ajustes nada mirando las preguntas `holdout`, `holdout2` ni `holdout3`: se usan una sola vez para confirmar.
 `holdout` y `holdout2` ya se usaron para elegir `op12-k5`, y `holdout3` para confirmar el número de fuentes variable;
 la próxima mejora necesita preguntas de confirmación nuevas.
+
+Si agregas o cambias preguntas, sube `version` en `golden-set.json`: las mediciones con
+otro golden set no son comparables una a una.
+
+## Guardar y comparar mediciones
+
+`results/` se sobrescribe en cada corrida y no está en git. Para conservar una medición:
+
+```bash
+npm run eval:rag -- --variants produccion --split all --save --note "qué cambió"
+```
+
+- Escribe `baselines/AAAA-MM-DD-variante-split.json`: métricas, aciertos por categoría,
+  el resultado de cada pregunta (fuentes, puntajes, utilidad), el commit y el golden set.
+- Agrega una fila a [HISTORIAL.md](HISTORIAL.md). Guarda desde un commit limpio: con
+  cambios sin commit en `src/` o `eval/rag/`, el commit queda marcado `+cambios`.
+
+Para medir un cambio contra una medición guardada:
+
+```bash
+npm run eval:rag -- --variants produccion --split all --compare 2026-11-07-produccion-all
+```
+
+Muestra antes, ahora y la diferencia de cada métrica, y las preguntas que mejoraron o
+empeoraron. Si el golden set cambió, compara solo las preguntas en común y lo avisa.
+Hay variación de ±1 pregunta entre corridas por empates de orden.

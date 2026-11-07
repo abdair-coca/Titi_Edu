@@ -250,3 +250,10 @@ Como en la Etapa 6: cada subfase cierra con un **MINOR**; el cierre corta el **M
   login + inscripción vía `middleware/permissions.js`. Interceptor axios maneja
   401 global; login/registro devuelven al usuario a la página de origen.
   Commits: `5d3270b`, `ca4afdd`, `4ff7e76`, `cbd74f2`.
+- **Tutor RAG: correcciones y búsqueda medida (sin tag):** ✅ en producción desde el
+  2026-11-07 (merge `4906e0b`, todos los cursos con RAG reindexados). Auditoría del
+  tutor (`correcciones-tutor-rag`) y golden set de 194 preguntas con reranker y número
+  de fuentes variable (`evaluacion-busqueda-rag`): respuesta en la 1.ª fuente 56 % → 68 %,
+  fuentes útiles 26 % → 38 %, tokens de contexto −51 %. Mediciones guardadas para comparar
+  cambios futuros en `backend/eval/rag/HISTORIAL.md`. Pendiente: medir la versión final
+  con Groq y que las preguntas fuera del curso dejen de recibir fuentes (45/50).
