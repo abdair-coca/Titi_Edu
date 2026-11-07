@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
 import MarkdownContent from '../MarkdownContent.jsx';
 import { BookIcon, ChevronDownIcon, LightbulbIcon, PencilIcon } from '../icons.jsx';
 import { usePopIn } from '../../lib/motion.js';
-import { citationNumberFromHref, linkCitations } from '../../lib/dil.js';
-
-const INLINE_ELEMENTS = ['p', 'strong', 'em', 'code', 'a'];
+import DilDiagram from './DilDiagram.jsx';
+import InlineText from './InlineText.jsx';
 
 const CALLOUT_TONES = {
   definicion: { label: 'Definición', box: 'border-blue-200 bg-blue-50', badge: 'bg-blue-500 text-white', Icon: BookIcon },
@@ -14,8 +12,7 @@ const CALLOUT_TONES = {
   nota: { label: 'Nota', box: 'border-gray-200 bg-gray-50', badge: 'bg-gray-500 text-white', Icon: PencilIcon },
 };
 
-// Renders a DIL answer (see lib/dil.js). Every text field is inline Markdown
-// without HTML, links or images; [n] becomes a badge that opens its source.
+// Renders a DIL answer (see lib/dil.js). Text fields go through InlineText.
 export default function DilMessage({ nodes, citationNumbers, onCite, onFocusInput }) {
   const ref = usePopIn([]);
   const inline = { citationNumbers, onCite };
@@ -37,6 +34,8 @@ export default function DilMessage({ nodes, citationNumbers, onCite, onFocusInpu
             return <TableNode key={key} node={node} inline={inline} />;
           case 'Code':
             return <CodeNode key={key} node={node} inline={inline} />;
+          case 'Diagram':
+            return <DilDiagram key={key} node={node} inline={inline} />;
           case 'Check':
             return <CheckNode key={key} node={node} inline={inline} onFocusInput={onFocusInput} />;
           default:
@@ -44,40 +43,6 @@ export default function DilMessage({ nodes, citationNumbers, onCite, onFocusInpu
         }
       })}
     </div>
-  );
-}
-
-export function InlineText({ text, citationNumbers, onCite, paragraphs = false }) {
-  return (
-    <ReactMarkdown
-      allowedElements={INLINE_ELEMENTS}
-      unwrapDisallowed
-      skipHtml
-      components={{
-        p: ({ children }) => (paragraphs ? <p className="mb-2 last:mb-0">{children}</p> : <>{children} </>),
-        strong: ({ children }) => <strong className="font-bold text-titi-dark">{children}</strong>,
-        code: ({ children }) => <code className="rounded bg-titi-cream px-1 py-0.5 text-xs font-semibold text-titi-dark">{children}</code>,
-        a: ({ href, children }) => {
-          const number = citationNumberFromHref(href);
-          return number ? <CitationBadge number={number} onCite={onCite} /> : <span>{children}</span>;
-        },
-      }}
-    >
-      {linkCitations(text, citationNumbers)}
-    </ReactMarkdown>
-  );
-}
-
-function CitationBadge({ number, onCite }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onCite?.(number)}
-      aria-label={`Ver fuente ${number}`}
-      className="mx-0.5 inline-flex min-w-[1.25rem] justify-center rounded-md bg-titi-yellow-light px-1 text-xs font-bold text-titi-dark align-baseline hover:bg-titi-yellow active:scale-95 transition-colors duration-150"
-    >
-      {number}
-    </button>
   );
 }
 

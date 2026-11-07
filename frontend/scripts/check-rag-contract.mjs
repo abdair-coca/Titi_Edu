@@ -17,6 +17,8 @@ const panel = fs.readFileSync('src/components/TutorPanel.jsx', 'utf8');
 const comments = fs.readFileSync('src/components/LessonComments.jsx', 'utf8');
 const availability = fs.readFileSync('src/hooks/useTutorAvailability.js', 'utf8');
 const editor = fs.readFileSync('src/pages/teacher/ModulesEditor.jsx', 'utf8');
+const dilDiagram = fs.readFileSync('src/components/tutor/DilDiagram.jsx', 'utf8');
+const mermaidLoader = fs.readFileSync('src/lib/mermaid.js', 'utf8');
 const required = [
   'TutorPanel',
   '/api/lessons/${lessonId}/chat/status',
@@ -105,5 +107,12 @@ assert.equal(linkCitations('Usá `arr[1]` o arr[1] [1]', [1]), 'Usá `arr[1]` o 
 assert.equal(citationNumberFromHref('#cita-3'), 3);
 assert.equal(citationNumberFromHref('https://evil.example/#cita-3'), null);
 assert.equal(quizAnswerMessage('  Un valor '), 'Mi respuesta: Un valor');
+
+// Model-made diagrams land in the app document: strict Mermaid plus a second clean-up.
+assert.match(dilDiagram, /renderMermaidSvg\(node\.source\)/);
+assert.match(mermaidLoader, /securityLevel: 'strict'/);
+assert.match(mermaidLoader, /suppressErrors: true/);
+assert.match(mermaidLoader, /script, foreignObject/);
+assert.match(mermaidLoader, /name\.startsWith\('on'\)/);
 
 console.log('RAG frontend contract: OK');

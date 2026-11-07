@@ -49,9 +49,9 @@
 
 ## U5 — Diagram
 
-- [ ] Extraer el loader de Mermaid de `HtmlLessonPlayer` a `lib/mermaid.js` y
+- [x] Extraer el loader de Mermaid de `HtmlLessonPlayer` a `lib/mermaid.js` y
       reutilizarlo (misma config estricta).
-- [ ] `DiagramNode`: carga diferida, caption accesible, "Ver como texto" y
+- [x] `DiagramNode`: carga diferida, caption accesible, "Ver como texto" y
       respaldo a código si falla.
 
 ## U6 — Quiz interactivo

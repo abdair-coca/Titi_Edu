@@ -3,6 +3,7 @@ import client from '../api/client.js';
 import TitiMascot from './TitiMascot.jsx';
 import { isDeadlineExpired } from '../lib/deadline.js';
 import { CalendarIcon, CheckIcon, RefreshIcon, StarIcon } from './icons.jsx';
+import { loadMermaid, nextMermaidId } from '../lib/mermaid.js';
 
 const DEADLINE_DATE = new Intl.DateTimeFormat('es-BO', { day: '2-digit', month: 'short', year: 'numeric' });
 const DEADLINE_TIME = new Intl.DateTimeFormat('es-BO', { hour: 'numeric', minute: '2-digit', timeZoneName: 'short' });
@@ -18,25 +19,6 @@ function activityStatus({ bestScore, deadlineExpired, attemptsExhausted }) {
   if (deadlineExpired) return { label: 'Plazo vencido', tone: 'bg-red-50 text-red-600 border-red-200' };
   if (attemptsExhausted) return { label: 'Intentos agotados', tone: 'bg-gray-100 text-gray-600 border-gray-200' };
   return { label: 'Pendiente', tone: 'bg-gray-100 text-gray-600 border-gray-200' };
-}
-
-let mermaidPromise;
-let mermaidRenderId = 0;
-
-function loadMermaid() {
-  if (!mermaidPromise) {
-    mermaidPromise = import('mermaid').then((module) => {
-      const mermaid = module.default || module.mermaid || module;
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: 'strict',
-        theme: 'base',
-        flowchart: { curve: 'basis', padding: 10, nodeSpacing: 32, rankSpacing: 40, htmlLabels: false },
-      });
-      return mermaid;
-    });
-  }
-  return mermaidPromise;
 }
 
 function decodeMermaidDefinition(value) {
@@ -63,7 +45,7 @@ async function renderHtmlDiagrams(html) {
     const rawDefinition = diagram.dataset.flow || diagram.textContent.trim();
     const definition = decodeMermaidDefinition(rawDefinition).trim();
     if (!definition) continue;
-    const { svg } = await mermaid.render(`titi-diagram-${++mermaidRenderId}`, definition);
+    const { svg } = await mermaid.render(nextMermaidId(), definition);
     const wrapper = parsedDocument.createElement('div');
     wrapper.className = 'mermaid titi-mermaid-rendered';
     const svgDocument = new DOMParser().parseFromString(svg, 'image/svg+xml');
