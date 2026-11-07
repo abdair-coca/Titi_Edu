@@ -53,6 +53,9 @@ const DEFAULT_RERANK_TIMEOUT_MS = 10_000;
 // above the section that actually answers. They still win when nothing else fits.
 const GENERIC_SECTION_PATTERN = /^(?:presentación|pistas?)(?![\p{L}\p{N}])/iu;
 const GENERIC_SECTION_FACTOR = 0.3;
+// Sources far below the best one rarely answer and only add tokens. Measured with
+// backend/eval/rag: from 0.06 up, answering sources start to drop.
+const RERANK_MIN_RELATIVE_SCORE = 0.05;
 const PRESENTATION_SECTION = 'Presentación';
 const PRESENTATION_CHUNK_SIZE = 1400;
 const INTRO_SECTIONS = new Set(['proposito', 'objetivos de aprendizaje', 'contexto']);
@@ -1278,7 +1281,7 @@ async function fetchRerankScores(query, chunks) {
   return scores;
 }
 
-// Orders the candidates with the reranker and keeps the best `limit`. If the reranker
+// Orders the candidates with the reranker and keeps up to `limit`. If the reranker
 // fails, the hybrid order stands: a worse order never blocks the answer.
 export async function rerankContext(query, chunks, limit = DEFAULT_RETRIEVAL_LIMIT) {
   let ordered = chunks;
@@ -1292,6 +1295,11 @@ export async function rerankContext(query, chunks, limit = DEFAULT_RETRIEVAL_LIM
       }
       // Stable sort: candidates without a score keep their hybrid order, after the scored ones.
       ordered = [...chunks].sort((a, b) => (scores.get(b) ?? -Infinity) - (scores.get(a) ?? -Infinity));
+      // The best source always stays; the rest only if they score close enough to it.
+      const top = scores.get(ordered[0]);
+      if (Number.isFinite(top)) {
+        ordered = ordered.filter((chunk, index) => index === 0 || (scores.get(chunk) ?? -Infinity) >= top * RERANK_MIN_RELATIVE_SCORE);
+      }
     } catch (error) {
       console.error('RAG reranker unavailable, keeping hybrid order', { message: error.message });
     }

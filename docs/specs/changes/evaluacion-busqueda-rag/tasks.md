@@ -25,6 +25,14 @@
 - [x] El chat y la vista previa del admin usan la misma recuperación.
 - [x] Variante `produccion` en la evaluación: mismo resultado que `op12-k5`.
 
+## Fase C — Número de fuentes variable
+
+- [x] `holdout3` (35 preguntas) y 30 preguntas sin respuesta más (15 de ajuste, 15 reservadas), escritas antes de medir.
+- [x] El script guarda el puntaje y la utilidad de cada fuente.
+- [x] Simular el corte con las preguntas de ajuste: 0.05 del mejor puntaje (desde 0.06 se pierden respuestas).
+- [x] Confirmar `op12-k5-corte` con `holdout3`: fuentes útiles 26 % → 34 %, sin perder aciertos.
+- [x] Aplicarlo en `rerankContext` con tests; la variante `produccion` da lo mismo que `op12-k5-corte`.
+
 ## Cierre
 
 - [x] `npm --prefix backend test` y `npm --prefix backend run lint`.

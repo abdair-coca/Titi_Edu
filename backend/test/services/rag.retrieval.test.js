@@ -263,6 +263,22 @@ describe('RAG reranking', () => {
     expect(result.map((item) => item.chunkId)).toEqual(['answer', 'intro', 'hint']);
   });
 
+  it('drops sources below 5 % of the best score, but always keeps the best one', async () => {
+    fetch.mockResolvedValueOnce(rerankResponse([{ id: 0, score: 0.004 }, { id: 1, score: 0.2 }, { id: 2, score: 0.02 }, { id: 3, score: 0.009 }]));
+
+    const result = await rerankContext('q', [chunk('a'), chunk('b'), chunk('c'), chunk('d')], 5);
+
+    expect(result.map((item) => [item.chunkId, item.index])).toEqual([['b', 1], ['c', 2]]);
+  });
+
+  it('keeps one source when every score is tiny', async () => {
+    fetch.mockResolvedValueOnce(rerankResponse([{ id: 0, score: 0.0001 }, { id: 1, score: 0.000001 }]));
+
+    const result = await rerankContext('q', [chunk('a'), chunk('b')], 5);
+
+    expect(result.map((item) => item.chunkId)).toEqual(['a']);
+  });
+
   it('keeps the hybrid order when the reranker fails', async () => {
     fetch.mockResolvedValueOnce({ ok: false, status: 500, json: async () => ({}) });
     vi.spyOn(console, 'error').mockImplementation(() => {});

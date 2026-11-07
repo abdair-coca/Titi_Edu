@@ -30,7 +30,7 @@ confirmación del usuario.
   - `@cf/baai/bge-reranker-base` los ordena con la pregunta del alumno, sin el título de
     la lección.
   - Presentación y Pistas multiplican su puntaje por 0.3.
-  - Se devuelven 5 fuentes.
+  - Se devuelven hasta 5 fuentes (ver "Número de fuentes variable").
 - **Respaldo**: si el reranker falla o tarda más de `RAG_RERANK_TIMEOUT_MS`, se usa el orden
   híbrido. Sin credenciales de Cloudflare, o con `RAG_RERANK_ENABLED=false`, la búsqueda
   es la de antes (5 fuentes, sin reranker).
@@ -67,10 +67,45 @@ Las preguntas `holdout2` se escribieron antes de medir las opciones finales.
 | Reranker apagado: búsqueda anterior | `rag.retrieval.test.js` | PASS |
 | Vista previa del admin usa la misma recuperación | `admin-rag.test.js` | PASS |
 
+## Número de fuentes variable (2026-11-07)
+
+`rerankContext` conserva siempre la mejor fuente y, de las demás, solo las que tienen al
+menos el 5 % de su puntaje (`RERANK_MIN_RELATIVE_SCORE`). Si el reranker falla, no hay
+corte. El valor se eligió con las preguntas de ajuste: desde 0.06 se pierden respuestas.
+
+El golden set pasó a 194 preguntas: `holdout3` (35 con respuesta) y 30 sin respuesta más,
+temas de Python cercanos al curso que el material no explica.
+
+Confirmación con `holdout3` (35 preguntas, usadas una sola vez):
+
+| | 5 fuentes fijas | Fuentes variables |
+|---|---|---|
+| Respuesta en la 1.ª fuente | 74 % | 74 % |
+| Entre las 5 | 86 % | 86 % |
+| Evidencia completa | 86 % | 86 % |
+| Fuentes útiles | 26 % | 34 % |
+| Tokens de contexto por pregunta | 409 | 299 (−27 %) |
+| Sin respuesta que reciben fuentes | 14/15 | 14/15 |
+
+Todas las preguntas (144 con respuesta, 50 sin respuesta), código del tutor:
+
+| | Antes (`op12-k5`) | Ahora (`produccion`) |
+|---|---|---|
+| Respuesta en la 1.ª fuente | 67 % | 68 % |
+| Entre las 5 | 92 % | 91 % |
+| Evidencia completa | 90 % | 88 % |
+| MRR | 0.772 | 0.774 |
+| Fuentes útiles | 27 % | 38 % |
+| Tokens de contexto por pregunta | 430 | 304 (−29 %) |
+| Sin respuesta que reciben fuentes | 45/50 | 45/50 |
+
+`npm --prefix backend test` (564 tests, PASS), SQL real (17 tests, PASS) y lint (PASS).
+
 ## Límites conocidos
 
-- Las preguntas que el curso no cubre siguen recibiendo fuentes (16/20). La búsqueda no lo
-  separa; lo debe manejar el modelo de respuestas.
+- Las preguntas que el curso no cubre siguen recibiendo fuentes (45/50 con el golden set
+  ampliado). Ni la similitud ni el puntaje del reranker las separan de las que sí tienen
+  respuesta; lo debe manejar el modelo de respuestas.
 - Hay variación de ±1 pregunta entre corridas por empates de orden.
 - El reranker suma una llamada a Cloudflare Workers AI por pregunta, que cuenta en la cuota
   de la cuenta.
