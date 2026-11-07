@@ -1,8 +1,9 @@
 // Mide la búsqueda del Tutor RAG con el golden set. Manual: no corre en CI ni llama a Groq.
 // Uso: npm run eval:rag -- [--variants actual,sin-intro] [--split dev|holdout|all]
 //      [--course eval/rag/data/course.json] [--db postgresql://...@127.0.0.1/...] [--env .env]
+//      [--save --note "qué cambió"] [--compare 2026-11-07-produccion-all]
 import { createHash, randomUUID } from 'node:crypto';
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,7 +18,7 @@ const PARTIAL_MATCH = 0.7;
 const { values: args } = parseArgs({
   options: {
     variants: { type: 'string' }, split: { type: 'string' }, course: { type: 'string' }, db: { type: 'string' }, env: { type: 'string' },
-    check: { type: 'boolean' },
+    check: { type: 'boolean' }, save: { type: 'boolean' }, note: { type: 'string' }, compare: { type: 'string' },
   },
 });
 const dbUrl = args.db || DEFAULT_DB;
@@ -130,7 +131,21 @@ const plain = (value) => String(value || '').normalize('NFD').replace(/\p{M}/gu,
   .replace(/[`*_$\\#>]/g, '').replace(/\s+/g, ' ').trim();
 const words = (value) => plain(value).split(' ').filter(Boolean);
 
-const golden = JSON.parse(readFileSync(path.join(here, 'golden-set.json'), 'utf8'));
+const goldenText = readFileSync(path.join(here, 'golden-set.json'), 'utf8');
+const golden = JSON.parse(goldenText);
+// Dos mediciones solo son comparables con el mismo golden set: se identifica por su contenido.
+const goldenHash = createHash('sha256').update(goldenText.replace(/\r\n/g, '\n')).digest('hex').slice(0, 12);
+
+// Mediciones guardadas (en git) para comparar cambios futuros.
+const baselinesDir = path.join(here, 'baselines');
+const historyFile = path.join(here, 'HISTORIAL.md');
+let baseline = null;
+if (args.compare) {
+  const name = args.compare.endsWith('.json') ? args.compare : `${args.compare}.json`;
+  const comparePath = [path.resolve(name), path.join(baselinesDir, name)].find((candidate) => existsSync(candidate));
+  if (!comparePath) throw new Error(`No existe la medición guardada: ${args.compare} (buscada también en eval/rag/baselines/)`);
+  baseline = JSON.parse(readFileSync(comparePath, 'utf8'));
+}
 const lessonIdByKey = golden.lessons;
 const lessonKeyById = Object.fromEntries(Object.entries(lessonIdByKey).map(([lessonKey, id]) => [id, lessonKey]));
 const textByLessonId = Object.fromEntries(lessons.map((lesson) => [lesson.id, plain(lessonText(lesson).text)]));
@@ -297,6 +312,82 @@ function summarize(rows) {
   };
 }
 
+// --- Guardar y comparar -----------------------------------------------------------------
+function codeVersion() {
+  try {
+    const git = (...gitArgs) => execFileSync('git', gitArgs, { cwd: backendDir }).toString().trim();
+    const commit = git('rev-parse', '--short', 'HEAD');
+    // Con cambios sin commit en el tutor o en la evaluación, el commit no describe lo medido.
+    const dirty = git('status', '--porcelain', '--', 'src', 'eval/rag', ':(exclude)eval/rag/baselines', ':(exclude)eval/rag/HISTORIAL.md');
+    return dirty ? `${commit}+cambios` : commit;
+  } catch {
+    return 'desconocido';
+  }
+}
+
+const HISTORY_HEADER = [
+  '| Fecha | Variante | Split | Commit | Golden set | Acierto@1 | Acierto@5 | MRR | Fuentes útiles | Tokens | Sin respuesta con fuentes | Nota | Archivo |',
+  '|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+].join('\n');
+
+function saveBaseline(name, variant, rows, summary, categories) {
+  mkdirSync(baselinesDir, { recursive: true });
+  const date = new Date().toLocaleDateString('sv-SE');
+  const base = `${date}-${name}-${split}`;
+  let file = base;
+  for (let copy = 2; existsSync(path.join(baselinesDir, `${file}.json`)); copy += 1) file = `${base}-${copy}`;
+  const commit = codeVersion();
+  writeFileSync(path.join(baselinesDir, `${file}.json`), `${JSON.stringify({
+    savedAt: new Date().toISOString(), commit, note: args.note || null,
+    goldenSet: { version: golden.version, hash: goldenHash, questions: questions.length },
+    variant: name, description: variant.description, split, summary, categories, rows,
+  }, null, 1)}\n`);
+  if (!existsSync(historyFile)) writeFileSync(historyFile, `# Historial de la evaluación RAG\n\n${HISTORY_HEADER}\n`);
+  const cell = (value) => String(value ?? '-').replace(/\|/g, '\\|').replace(/\s+/g, ' ');
+  appendFileSync(historyFile, `| ${date} | ${cell(name)} | ${split} | ${commit} | v${golden.version} (${goldenHash}) | ${summary['acierto@1']} | ${summary['acierto@5']} | ${summary.MRR} | ${summary['fuentes útiles']} | ${summary['tokens contexto']} | ${summary['sin respuesta con fuentes']} | ${cell(args.note)} | [${file}](baselines/${file}.json) |\n`);
+  console.log(`  guardada en eval/rag/baselines/${file}.json y en HISTORIAL.md`);
+}
+
+const LOWER_IS_BETTER = new Set(['tokens contexto', 'sin respuesta con fuentes']);
+const asNumber = (value) => Number.parseFloat(String(value));
+
+// Compara solo las preguntas que existen en ambas mediciones.
+function compareWithBaseline(name, rows) {
+  const before = new Map(baseline.rows.map((row) => [row.id, row]));
+  const common = rows.filter((row) => before.has(row.id));
+  console.log(`\nComparación: ${name} contra ${baseline.variant} (${baseline.split}, ${baseline.savedAt.slice(0, 10)}, commit ${baseline.commit})`);
+  if (baseline.goldenSet.hash !== goldenHash) {
+    console.log(`  aviso: el golden set cambió (${baseline.goldenSet.hash} → ${goldenHash}); se comparan las ${common.length} preguntas en común`);
+  }
+  const old = summarize(common.map((row) => before.get(row.id)));
+  const now = summarize(common);
+  const table = {};
+  for (const metric of Object.keys(now)) {
+    const delta = asNumber(now[metric]) - asNumber(old[metric]);
+    const better = LOWER_IS_BETTER.has(metric) ? delta < 0 : delta > 0;
+    const change = !Number.isFinite(delta) || delta === 0
+      ? '='
+      : `${delta > 0 ? '+' : ''}${Number(delta.toFixed(3))} (${better ? 'mejora' : 'empeora'})`;
+    table[metric] = { antes: old[metric], ahora: now[metric], cambio: change };
+  }
+  console.table(table);
+  const position = (row) => (row.firstHit ? `fuente ${row.firstHit}` : 'sin evidencia');
+  const changes = common.flatMap((row) => {
+    const previous = before.get(row.id);
+    if (row.answerable && previous.firstHit !== row.firstHit) {
+      const improved = row.firstHit > 0 && (!previous.firstHit || row.firstHit < previous.firstHit);
+      return [`${improved ? '+' : '-'} ${row.id} [${row.category}]: ${position(previous)} → ${position(row)}`];
+    }
+    if (!row.answerable && (previous.returned > 0) !== (row.returned > 0)) {
+      return [`${row.returned ? '-' : '+'} ${row.id} [${row.category}]: ${previous.returned} → ${row.returned} fuentes`];
+    }
+    return [];
+  });
+  console.log(changes.length
+    ? `  preguntas que cambiaron (+ mejora, - empeora):\n    ${changes.join('\n    ')}`
+    : '  ninguna pregunta cambió de resultado');
+}
+
 const selected = (args.variants || 'actual').split(',').map((name) => name.trim()).filter(Boolean);
 const unknown = selected.filter((name) => !VARIANTS[name]);
 if (unknown.length) throw new Error(`Variantes desconocidas: ${unknown.join(', ')}. Disponibles: ${Object.keys(VARIANTS).join(', ')}`);
@@ -305,6 +396,7 @@ const resultsDir = path.join(here, 'results');
 mkdirSync(resultsDir, { recursive: true });
 const summaries = {};
 const byCategory = {};
+const rowsByVariant = {};
 for (const name of selected) {
   const variant = VARIANTS[name];
   const fragments = await indexVariant(variant);
@@ -319,6 +411,11 @@ for (const name of selected) {
       : `${inCategory.filter((row) => row.returned > 0).length}/${inCategory.length} con fuentes`;
   }
   writeFileSync(path.join(resultsDir, `${name}-${split}.json`), JSON.stringify({ variant: name, split, summary: summaries[name], rows }, null, 1));
+  rowsByVariant[name] = rows;
+  if (args.save) {
+    const categories = Object.fromEntries(Object.entries(byCategory).filter(([, value]) => value[name]).map(([category, value]) => [category, value[name]]));
+    saveBaseline(name, variant, rows, summaries[name], categories);
+  }
   const misses = rows.filter((row) => row.answerable && !row.firstHit);
   console.log(`\n${name} (${split}): ${variant.description}`);
   if (misses.length) console.log(`  sin evidencia en las fuentes: ${misses.map((row) => `${row.id} [${row.sources.join(' | ')}]`).join('\n    ')}`);
@@ -335,5 +432,6 @@ console.log('\nResumen');
 console.table(summaries);
 console.log('Aciertos por categoría (preguntas con evidencia entre las fuentes devueltas)');
 console.table(byCategory);
+if (baseline) for (const name of selected) compareWithBaseline(name, rowsByVariant[name]);
 console.log(`embeddings: ${stats.fetched} pedidos al proveedor, ${stats.cached} desde caché`);
 await prisma.$disconnect();
