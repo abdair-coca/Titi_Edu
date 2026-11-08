@@ -1,5 +1,6 @@
 // Mermaid is heavy: it loads only when a diagram appears, once, with strict
-// security and text labels (no HTML inside the SVG).
+// security. Mermaid 11 still draws node labels as sanitized HTML inside
+// <foreignObject>; the flowchart option below does not change that.
 let mermaidPromise;
 let renderId = 0;
 
@@ -24,7 +25,9 @@ export function nextMermaidId(prefix = 'titi-diagram') {
   return `${prefix}-${renderId}`;
 }
 
-const UNSAFE_SVG_ELEMENTS = 'script, foreignObject, iframe, object, embed, style[src]';
+// Labels live in <foreignObject>, so it stays; anything that runs code, loads a
+// document or takes input goes.
+const UNSAFE_SVG_ELEMENTS = 'script, iframe, frame, object, embed, link, meta, base, form, input, button, textarea, select';
 
 // The tutor's diagrams come from a model and land in the app document, so the
 // SVG is cleaned again after Mermaid: no scripts, handlers or external links.

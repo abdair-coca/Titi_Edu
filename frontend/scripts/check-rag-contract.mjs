@@ -113,7 +113,7 @@ assert.equal(quizAnswerMessage('  Un valor '), 'Mi respuesta: Un valor');
 assert.match(dilDiagram, /renderMermaidSvg\(node\.source\)/);
 assert.match(mermaidLoader, /securityLevel: 'strict'/);
 assert.match(mermaidLoader, /suppressErrors: true/);
-assert.match(mermaidLoader, /script, foreignObject/);
+assert.match(mermaidLoader, /'script, iframe, frame, object, embed/);
 assert.match(mermaidLoader, /name\.startsWith\('on'\)/);
 
 // Quiz: the choice travels as the student's answer; the client never grades it.
