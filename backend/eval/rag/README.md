@@ -1,7 +1,8 @@
 # Evaluación de la búsqueda del Tutor RAG
 
 Mide si la búsqueda del tutor encuentra el fragmento que responde cada pregunta del
-golden set. No llama al modelo de respuestas (Groq) y no corre en CI.
+golden set. No llama al modelo de respuestas (Groq) y no corre en CI. Para medir las
+respuestas, ver "Medir respuestas con Groq" al final.
 
 ## Preparar
 
@@ -67,3 +68,18 @@ npm run eval:rag -- --variants produccion --split all --compare 2026-11-07-produ
 Muestra antes, ahora y la diferencia de cada métrica, y las preguntas que mejoraron o
 empeoraron. Si el golden set cambió, compara solo las preguntas en común y lo avisa.
 Hay variación de ±1 pregunta entre corridas por empates de orden.
+
+## Medir respuestas con Groq
+
+`generation.mjs` compara las respuestas en Markdown y en DIL sobre las mismas preguntas:
+rechazos por motivo, nodos descartados, componentes usados, tokens de salida y latencia.
+**Cada pregunta gasta una llamada a Groq por modo** con la `GROQ_API_KEY` de `backend/.env`.
+
+```bash
+npm run eval:rag -- --variants produccion --split dev   # deja la base local indexada
+npm run eval:rag:generation -- --limit 20 --modes markdown,dil
+npm run eval:rag:generation -- --modes dil --ids l21-col-1   # repetir preguntas sueltas
+```
+
+El detalle queda en `results/generation-<split>-<modos>.json`, con el cuerpo de los errores
+de Groq. Los resultados se registran a mano en [HISTORIAL.md](HISTORIAL.md).

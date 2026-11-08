@@ -22,3 +22,15 @@ por pregunta, así que no se pueden usar con `--compare`.
 | 2026-11-07 | actual | all | 3e9d33b | v2 (53ca98f56fa3) | 56% | 91% | 0.686 | 26% | 616 | 45/50 | Búsqueda original: sin reranker, una sección por fragmento | [2026-11-07-actual-all](baselines/2026-11-07-actual-all.json) |
 | 2026-11-07 | op12-k5 | all | 3e9d33b | v2 (53ca98f56fa3) | 68% | 92% | 0.779 | 27% | 429 | 45/50 | Reranker y listas por ítem, 5 fuentes fijas | [2026-11-07-op12-k5-all](baselines/2026-11-07-op12-k5-all.json) |
 | 2026-11-07 | produccion | all | 3e9d33b | v2 (53ca98f56fa3) | 68% | 91% | 0.775 | 38% | 302 | 45/50 | Desplegado 2026-11-07: reranker + fuentes variables (5 %) | [2026-11-07-produccion-all](baselines/2026-11-07-produccion-all.json) |
+
+## Mediciones de respuestas con Groq
+
+Hechas con `npm run eval:rag:generation` (20 preguntas con respuesta del split `dev`,
+intenciones rotadas). "Rechazo" excluye fallos de red y cuota. Detalle en
+`docs/specs/changes/respuestas-estructuradas-tutor/verify-report.md`.
+
+| Fecha | Modo | Commit | Respondidas | Rechazo | Tokens salida (prom./máx.) | p50 / p90 | Nota |
+|---|---|---|---|---|---|---|---|
+| 2026-11-07 | Markdown | 8179ba2 | 19/20 | 5 % | 434 / 865 | 1787 / 2410 ms | Referencia |
+| 2026-11-07 | DIL | 8179ba2 | 16/20 | 11 % (2/18) | 773 / 1999 | 2172 / 3688 ms | 1 `json_validate_failed`; 2 fallos de red |
+| 2026-11-07 | DIL | 3683d58 | 14/20 | 12,5 % (2/16) | 794 / 1242 | 2524 / 4225 ms | Prompt corto + quiz por intención; 1 `json_validate_failed`; cuota diaria agotada. Flag apagado |

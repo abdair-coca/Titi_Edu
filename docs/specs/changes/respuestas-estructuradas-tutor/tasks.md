@@ -64,14 +64,20 @@
 
 ## U7 — Medición con Groq real
 
-- [ ] Script `backend/eval/rag/generation.mjs`: 20 preguntas del golden set en
+- [x] Script `backend/eval/rag/generation.mjs`: 20 preguntas del golden set en
       ambos modos; reporta rechazos por motivo, nodos descartados, tokens, p50/p90
       y JSON cortados. **Gasta cuota de Groq: correr solo con confirmación.**
-- [ ] Decidir el flag según la spec §5 y registrar en `HISTORIAL.md`.
+- [x] Decidir el flag según la spec §5 y registrar en `HISTORIAL.md`.
 
 ## U8 — Cierre
 
-- [ ] Prueba manual en el panel (desktop y mobile): explicar, ejemplo, quiz,
-      diagrama y fallo de Mermaid.
-- [ ] `verify-report.md` con comandos y resultados reales.
-- [ ] Actualizar el estado del change en el índice de `AGENTS.md`.
+- [x] Prueba manual en el panel (desktop y mobile): explicar, ejemplo, quiz,
+      diagrama y fallo de Mermaid. Hecha con una vista aislada del renderer y respuestas
+      reales del modelo; el flujo completo en `LearnCourse` queda sin probar.
+- [x] `verify-report.md` con comandos y resultados reales.
+- [x] Actualizar el estado del change en el índice de `AGENTS.md`.
+
+## Pendiente (fuera del plan original)
+
+- [ ] Resolver `json_validate_failed` de Groq (rescatar nodos de `failed_generation` u
+      otra opción; cambia R2) y volver a medir antes de encender `RAG_DIL_ENABLED`.
