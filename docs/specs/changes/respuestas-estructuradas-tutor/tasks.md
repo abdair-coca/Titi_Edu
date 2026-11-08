@@ -81,4 +81,5 @@
 
 - [x] Rescatar los nodos de `failed_generation` cuando Groq responde
       `json_validate_failed` (`salvageDil` + spec R2) y probarlo con las formas reales.
-- [ ] Volver a medir antes de encender `RAG_DIL_ENABLED`.
+- [x] Volver a medir antes de encender `RAG_DIL_ENABLED` (18/20, cumple §5).
+- [ ] Encender `RAG_DIL_ENABLED=true` en Render y probar en el panel real.

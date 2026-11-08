@@ -34,3 +34,4 @@ intenciones rotadas). "Rechazo" excluye fallos de red y cuota. Detalle en
 | 2026-11-07 | Markdown | 8179ba2 | 19/20 | 5 % | 434 / 865 | 1787 / 2410 ms | Referencia |
 | 2026-11-07 | DIL | 8179ba2 | 16/20 | 11 % (2/18) | 773 / 1999 | 2172 / 3688 ms | 1 `json_validate_failed`; 2 fallos de red |
 | 2026-11-07 | DIL | 3683d58 | 14/20 | 12,5 % (2/16) | 794 / 1242 | 2524 / 4225 ms | Prompt corto + quiz por intención; 1 `json_validate_failed`; cuota diaria agotada. Flag apagado |
+| 2026-11-08 | DIL | ee59c1c | 18/20 | 10 % (2/20) | 805 / 1581 | 2386 / 3320 ms | Rescate de `failed_generation`: 2 respuestas rescatadas, sin errores de proveedor. Cumple §5 (+5 puntos) |

@@ -5,10 +5,10 @@
 
 ## Resultado
 
-Implementado y verificado en código y en el navegador. **El flag `RAG_DIL_ENABLED` queda
-apagado**: con Groq real, DIL rechaza más respuestas que Markdown y no cumple el criterio
-de la spec §5. Con el flag apagado el tutor responde como antes; el único cambio activo es
-el límite de salida, que pasó de 1600 a 3200 tokens.
+Implementado y verificado en código y en el navegador. Con el rescate de
+`failed_generation` (2026-11-08), DIL cumple el criterio de la spec §5 y
+`RAG_DIL_ENABLED` se puede encender. Con el flag apagado el tutor responde como antes; el
+único cambio activo es el límite de salida, que pasó de 1600 a 3200 tokens.
 
 | Comprobación | Resultado |
 |---|---|
@@ -85,13 +85,30 @@ curso piloto.
 - **Muestra chica y ruidosa:** la cuota diaria de tokens de Groq se agotó a mitad de la
   segunda corrida y no se pudo repetir.
 
-**Decisión (spec §5):** el rechazo sube 6 a 7 puntos sobre Markdown (criterio: ≤ 5), así que
-el flag queda apagado. Para encenderlo hace falta una solución al `json_validate_failed`.
-Groq devuelve la generación fallida en `failed_generation`; se podrían rescatar sus nodos y
-pasarlos por la misma validación, sin otra llamada. Es un cambio de spec (R2) que requiere
-decisión aparte.
+**Decisión del 2026-11-07 (spec §5):** el rechazo subía 6 a 7 puntos sobre Markdown
+(criterio: ≤ 5), así que el flag quedó apagado.
+
+### Rescate de `failed_generation` (2026-11-08)
+
+Groq devuelve la salida rechazada en `failed_generation`. `salvageDil` (`ee59c1c`) toma sus
+nodos en orden, tanto si quedaron mezclados en el objeto raíz como si quedaron después de
+él, y los pasa por la misma validación, citas y bloqueo de evaluaciones. No gasta otra
+llamada. Spec R2 actualizada.
+
+| Corrida | Respondidas | Sin evidencia | Rechazo por citas | Rescatadas | Errores | Rechazo | Tokens salida (prom./máx.) | p50 / p90 |
+|---|---|---|---|---|---|---|---|---|
+| DIL con rescate | 18/20 | 1 (la misma que Markdown) | 1 (`missing_citation`, `l14-par-1`) | 2 (ambas respondidas) | 0 | 10 % | 805 / 1581 | 2386 / 3320 ms |
+
+- Las dos preguntas que antes fallaban con `json_validate_failed` (`l11-par-2`,
+  `l21-col-1`) se respondieron con 4 y 3 nodos rescatados.
+- El quiz aparece en 2 de las 3 prácticas respondidas.
+
+**Decisión (spec §5):** el rechazo queda 5 puntos sobre Markdown (10 % contra 5 %), justo en
+el límite, y no hubo JSON cortados. Cumple. El flag se puede encender en producción; la
+muestra es de 20 preguntas, así que conviene vigilar `dil_salvaged` y
+`ungrounded_answer_rejected` en los logs las primeras semanas.
 
 ## Pendiente para cerrar el change
 
-- Decidir cómo tratar `json_validate_failed` y volver a medir con cuota disponible.
-- Encender `RAG_DIL_ENABLED` en producción solo si la nueva medición cumple §5.
+- Encender `RAG_DIL_ENABLED=true` en Render y probar en el panel real.
+- Archivar el change cuando la prueba en producción esté hecha.
