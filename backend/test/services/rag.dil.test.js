@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DIL_JSON_SCHEMA,
   DIL_MAX_NODES,
+  dilPromptInstructions,
   dilToCanonicalText,
   parseDil,
   validateDil,
@@ -44,6 +45,14 @@ describe('DIL schema', () => {
   it('declares one branch per component', () => {
     const components = DIL_JSON_SCHEMA.properties.nodes.items.anyOf.map((branch) => branch.properties.c.enum[0]);
     expect(components).toEqual(Object.keys(valid));
+  });
+});
+
+describe('dilPromptInstructions', () => {
+  it('asks for a quiz only in practice', () => {
+    expect(dilPromptInstructions('PRACTICA')).toContain('presentá la consigna como un nodo Quiz');
+    expect(dilPromptInstructions('PRACTICA')).not.toContain('No uses Quiz');
+    expect(dilPromptInstructions('EXPLICAR')).toContain('No uses Quiz en esta respuesta.');
   });
 });
 

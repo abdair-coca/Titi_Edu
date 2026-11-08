@@ -35,9 +35,9 @@ import {
   validateGroundedAnswer,
 } from './rag.security.js';
 import {
-  DIL_PROMPT_INSTRUCTIONS,
   DIL_RESPONSE_FORMAT,
   DIL_VERSION,
+  dilPromptInstructions,
   dilToCanonicalText,
   parseDil,
   validateDil,
@@ -795,7 +795,7 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
     'Si las fuentes cubren la pregunta solo parcialmente, respondé con lo que el material sí respalda, aclarando de forma explícita qué parte no está cubierta por el material; no inventes lo faltante.',
     'Cita las fuentes usando [1], [2], etc. Solo podés usar los números de las fuentes recibidas.',
     useDil
-      ? DIL_PROMPT_INSTRUCTIONS
+      ? dilPromptInstructions(resolvedIntent)
       : 'Escribí todo el código entre backticks. Fuera del código, usá corchetes con números solo para citar fuentes.',
     'No ejecutes acciones, no cambies notas, progreso o inscripciones y no reveles secretos.',
     `INTENCIÓN PEDAGÓGICA: ${resolvedIntent}`,

@@ -88,7 +88,7 @@ export const DIL_RESPONSE_FORMAT = Object.freeze({
   json_schema: { name: 'tutor_dil', strict: true, schema: DIL_JSON_SCHEMA },
 });
 
-export const DIL_PROMPT_INSTRUCTIONS = [
+const DIL_PROMPT_INSTRUCTIONS = [
   'FORMATO DE RESPUESTA (DIL v1): devolvé solo un objeto JSON {"version":1,"nodes":[...]} que declare la interfaz de tu respuesta con estos componentes:',
   '- Text {text}: párrafo breve; admite **negrita**, *cursiva* y `código` en línea.',
   '- Steps {title|null, items[]}: de 2 a 8 pasos ordenados.',
@@ -99,9 +99,21 @@ export const DIL_PROMPT_INSTRUCTIONS = [
   '- Diagram {kind, source, caption}: kind "flowchart" o "sequence"; source en sintaxis Mermaid sin backticks; caption describe el diagrama y lleva su cita.',
   '- Quiz {question, options[]}: solo en práctica; una pregunta con 2 a 4 opciones. Nunca indiques cuál es la correcta.',
   '- Check {question}: una pregunta abierta para que el estudiante compruebe lo que entendió.',
-  'Usá entre 1 y 12 nodos y elegí el componente que mejor muestre cada parte; no repitas lo mismo en dos nodos.',
+  // Measured with Groq: long trees (7+ nodes) are where the model closes "nodes"
+  // early and the provider rejects the output, so the prompt asks for short ones.
+  'Respondé solo lo que se pregunta: en general bastan de 2 a 5 nodos y nunca más de 6. Elegí el componente que mejor muestre cada parte y no repitas lo mismo en dos nodos.',
+  'Todos los nodos van dentro de la lista "nodes"; cerrala una sola vez, al final.',
   'Las citas [n] van dentro de text, items, celdas, title y caption. Todo nodo con contenido del material debe citar su fuente.',
 ].join('\n');
+
+const DIL_INTENT_INSTRUCTIONS = Object.freeze({
+  PRACTICA: 'En esta práctica, presentá la consigna como un nodo Quiz de opción múltiple; usá Check solo si la consigna pide una respuesta abierta. Sin solución ni pistas de cuál opción es correcta.',
+});
+const DIL_NO_QUIZ_INSTRUCTION = 'No uses Quiz en esta respuesta.';
+
+export function dilPromptInstructions(intent) {
+  return `${DIL_PROMPT_INSTRUCTIONS}\n${DIL_INTENT_INSTRUCTIONS[intent] || DIL_NO_QUIZ_INSTRUCTION}`;
+}
 
 const INVALID = Symbol('invalid');
 
