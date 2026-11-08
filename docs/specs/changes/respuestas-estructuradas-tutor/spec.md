@@ -47,6 +47,11 @@ cuentan como citas, igual que hoy el código no cuenta.
 - Un JSON que no se puede leer, por ejemplo cortado por el límite de tokens, se
   trata como respuesta vacía. No se reintenta: cada reintento gasta la clave del
   estudiante.
+- Si Groq rechaza la salida con `400 json_validate_failed` (el modelo rompió el
+  schema), se leen los nodos de `failed_generation` que devuelve el error y pasan por
+  la misma validación y protecciones. No hay llamada extra. Se registra
+  `dil_salvaged` con la cantidad de nodos; si no se rescata ninguno, el error sigue
+  siendo 502 como hoy. *(Agregado el 2026-11-08 tras la medición de U7.)*
 - Los descartes se registran con `securityEvent('dil_nodes_dropped', { count, reason })`
   y sin contenido.
 
@@ -123,6 +128,7 @@ cuentan como citas, igual que hoy el código no cuenta.
 |---|---|
 | Flag apagado | Idéntico a hoy; `dil = null` |
 | Groq rechaza el `response_format` (400) | Error 502 como hoy; el flag se puede apagar |
+| Groq rechaza la salida (`json_validate_failed`) | Se rescatan los nodos de `failed_generation` y se validan; sin nodos, 502 |
 | JSON cortado por límite de tokens | Respuesta vacía → mismo manejo que hoy |
 | Todos los nodos inválidos | Respuesta vacía → mismo manejo que hoy |
 | Respuesta sin citas o con citas inventadas | `NO_EVIDENCE_ANSWER`, `dil = null` |

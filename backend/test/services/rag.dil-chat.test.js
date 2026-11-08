@@ -50,6 +50,14 @@ function stubProvider(content) {
   return fetchMock;
 }
 
+function stubRejection(error) {
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ data: [{ embedding: Array.from({ length: 768 }, () => 0.01) }] }) })
+    .mockResolvedValueOnce({ ok: false, status: 400, json: async () => ({ error }) });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
 function chatBody(fetchMock) {
   return JSON.parse(fetchMock.mock.calls[1][1].body);
 }
@@ -110,6 +118,50 @@ describe('tutor answers with DIL', () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     stubProvider(content);
     await expect(chatWithCourseContext(input)).rejects.toMatchObject({ status: 502 });
+  });
+
+  describe('when Groq rejects the tree with json_validate_failed', () => {
+    const steps = { c: 'Steps', title: null, items: ['Declarás la variable [1]', 'Le asignás un valor [1]'] };
+    // Same shape as Groq's: the root closed early and a node written after it.
+    const failedGeneration = `[\n{"version":1,"nodes":[${JSON.stringify(textNode)}]},${JSON.stringify(steps)}\n]`;
+
+    beforeEach(() => {
+      process.env.RAG_DIL_ENABLED = 'true';
+    });
+
+    it('recovers the rejected tree without another call and validates it', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const fetchMock = stubRejection({ code: 'json_validate_failed', failed_generation: failedGeneration });
+      const result = await chatWithCourseContext({ ...input, intent: 'EXPLICAR' });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(result.dil).toEqual({ version: 1, nodes: [textNode, steps] });
+      expect(result.citations.map((citation) => citation.number)).toEqual([1]);
+      expect(result.usage).toBeNull();
+      expect(warn).toHaveBeenCalledWith('RAG security event', expect.objectContaining({ type: 'dil_salvaged', count: '2' }));
+    });
+
+    it('still rejects a recovered tree with invented citations', async () => {
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      stubRejection({ code: 'json_validate_failed', failed_generation: '[{"version":1,"nodes":[{"c":"Text","text":"Dato inventado [9]."}]}]' });
+      const result = await chatWithCourseContext(input);
+      expect(result).toEqual({ answer: NO_EVIDENCE_ANSWER, citations: [], usage: null, relatedLesson: null });
+    });
+
+    it.each([
+      ['another 400', { code: 'invalid_request_error', message: 'bad' }],
+      ['an unreadable generation', { code: 'json_validate_failed', failed_generation: '{"version":1,"nodes":[{"c":"Te' }],
+    ])('keeps the provider error for %s', async (_, error) => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      stubRejection(error);
+      await expect(chatWithCourseContext(input)).rejects.toMatchObject({ status: 502 });
+    });
+
+    it('does not read failed generations with the flag off', async () => {
+      delete process.env.RAG_DIL_ENABLED;
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      stubRejection({ code: 'json_validate_failed', failed_generation: failedGeneration });
+      await expect(chatWithCourseContext(input)).rejects.toMatchObject({ status: 502 });
+    });
   });
 
   describe('with a pending assessment question', () => {

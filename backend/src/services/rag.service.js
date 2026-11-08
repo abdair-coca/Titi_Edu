@@ -40,6 +40,7 @@ import {
   dilPromptInstructions,
   dilToCanonicalText,
   parseDil,
+  salvageDil,
   validateDil,
 } from './rag.dil.js';
 
@@ -856,6 +857,9 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
     throw new RagError(502, 'El gateway del tutor IA rechazó la solicitud; intenta más tarde');
   }
   if (response.status === 429) throw new RagError(429, 'Groq limitó temporalmente las consultas; intenta más tarde');
+  if (useDil && response.status === 400) {
+    return salvageRejectedDil(response, { intent: resolvedIntent, courseId, lessonId });
+  }
   const payload = await readJsonResponse(response, 'chat');
   const answer = payload?.choices?.[0]?.message?.content?.trim();
   if (!answer) throw new RagError(502, 'El chatbot no devolvió una respuesta');
@@ -871,6 +875,24 @@ function readDilAnswer(raw, { intent, courseId, lessonId, usage }) {
     securityEvent('dil_nodes_dropped', { courseId, lessonId, reason: 'unreadable' });
     throw new RagError(502, 'El chatbot no devolvió una respuesta');
   }
+  return readDilTree(tree, { intent, courseId, lessonId, usage });
+}
+
+// Groq's schema check fails on some long trees (see salvageDil). The rejected reply
+// comes back in the error, so it is recovered without spending another call.
+async function salvageRejectedDil(response, { intent, courseId, lessonId }) {
+  const payload = await response.json().catch(() => null);
+  const failed = payload?.error?.code === 'json_validate_failed' ? payload.error.failed_generation : null;
+  const tree = salvageDil(failed);
+  if (!tree) {
+    console.error('RAG chat error', { status: response.status });
+    throw new RagError(502, 'El proveedor de chat no respondió correctamente');
+  }
+  securityEvent('dil_salvaged', { courseId, lessonId, count: tree.nodes.length });
+  return readDilTree(tree, { intent, courseId, lessonId, usage: null });
+}
+
+function readDilTree(tree, { intent, courseId, lessonId, usage }) {
   const { nodes, dropped } = validateDil(tree, { intent });
   if (dropped.length) {
     securityEvent('dil_nodes_dropped', { courseId, lessonId, count: dropped.length, reason: [...new Set(dropped)].join(',') });

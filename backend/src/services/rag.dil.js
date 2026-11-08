@@ -232,6 +232,32 @@ export function parseDil(raw) {
   return tree;
 }
 
+function isNodeLike(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value) && typeof value.c === 'string';
+}
+
+// Groq rejects a reply that breaks the schema with `json_validate_failed` and returns
+// it as `failed_generation`. Measured: the model closes "nodes" early and keeps writing
+// nodes after it, either as fields merged into the root object or as siblings of the
+// root inside an outer array. Their order is kept; validateDil and the citation and
+// assessment checks then treat them like any other reply, so nothing is trusted more.
+export function salvageDil(raw) {
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+  let parsed;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  const nodes = [];
+  for (const item of Array.isArray(parsed) ? parsed : [parsed]) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+    if (Array.isArray(item.nodes)) nodes.push(...item.nodes.filter(isNodeLike));
+    if (isNodeLike(item)) nodes.push(item);
+  }
+  return nodes.length ? { version: DIL_VERSION, nodes } : null;
+}
+
 export function validateDil(tree, { intent } = {}) {
   const nodes = [];
   const dropped = [];

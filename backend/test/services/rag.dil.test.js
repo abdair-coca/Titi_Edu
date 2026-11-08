@@ -5,6 +5,7 @@ import {
   dilPromptInstructions,
   dilToCanonicalText,
   parseDil,
+  salvageDil,
   validateDil,
 } from '../../src/services/rag.dil.js';
 import { extractCitationNumbers } from '../../src/services/rag.security.js';
@@ -69,6 +70,40 @@ describe('parseDil', () => {
     ['empty', ''],
   ])('returns null for %s', (_, raw) => {
     expect(parseDil(raw)).toBeNull();
+  });
+});
+
+describe('salvageDil', () => {
+  // Shapes captured from Groq json_validate_failed errors (texts shortened).
+  const mergedIntoRoot = '[\n{"version":1,"nodes":[{"c":"Text","text":"Marcá las casillas visitadas [1]"},{"c":"Steps","title":null,"items":["Verificá límites [1]","Registrá la casilla [1]"]}],'
+    + '"c":"Callout","tone":"advertencia","title":null,"text":"Sin registro hay ciclos [1]"},'
+    + '{"c":"Concepts","items":[{"term":"Backtracking","text":"Retrocede ante un callejón [1]"}]},'
+    + '{"c":"Check","question":"¿Cómo verificás los límites?"}\n]';
+  const closedRoot = '[\n{"version":1,"nodes":[{"c":"Text","text":"Registrá las casillas [1]"},{"c":"Code","language":"python","code":"visitado = set()","caption":null}]},'
+    + '{"c":"Diagram","kind":"flowchart","source":"flowchart TD\\n A --> B","caption":"Flujo [1]"}\n]';
+
+  it('recovers nodes merged into the root object, in order', () => {
+    const tree = salvageDil(mergedIntoRoot);
+    expect(tree.nodes.map((node) => node.c)).toEqual(['Text', 'Steps', 'Callout', 'Concepts', 'Check']);
+    expect(validateDil(tree, { intent: 'DUDA' })).toMatchObject({ dropped: [] });
+  });
+
+  it('recovers nodes written after a closed root', () => {
+    expect(salvageDil(closedRoot).nodes.map((node) => node.c)).toEqual(['Text', 'Code', 'Diagram']);
+  });
+
+  it('reads a single object as well as an array', () => {
+    expect(salvageDil(JSON.stringify({ version: 1, nodes: [valid.Text] }))).toEqual({ version: 1, nodes: [valid.Text] });
+  });
+
+  it.each([
+    ['cut JSON', '[{"version":1,"nodes":[{"c":"Text","text":"Una'],
+    ['no nodes', '[{"version":1,"nodes":[]}]'],
+    ['nothing node-like', '[1, "texto", null, {"term":"x"}]'],
+    ['empty', ''],
+    ['missing', undefined],
+  ])('returns null for %s', (_, raw) => {
+    expect(salvageDil(raw)).toBeNull();
   });
 });
 

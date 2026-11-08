@@ -79,5 +79,6 @@
 
 ## Pendiente (fuera del plan original)
 
-- [ ] Resolver `json_validate_failed` de Groq (rescatar nodos de `failed_generation` u
-      otra opción; cambia R2) y volver a medir antes de encender `RAG_DIL_ENABLED`.
+- [x] Rescatar los nodos de `failed_generation` cuando Groq responde
+      `json_validate_failed` (`salvageDil` + spec R2) y probarlo con las formas reales.
+- [ ] Volver a medir antes de encender `RAG_DIL_ENABLED`.

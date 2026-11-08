@@ -78,6 +78,9 @@ de otros estudiantes.
   respuesta correcta) y serializa el resto a texto canónico. Citas, respaldo, bloqueo de
   evaluaciones e historial se aplican sobre ese texto, igual que con Markdown. Los
   descartes se registran como `dil_nodes_dropped`, sin contenido.
+  Si Groq rechaza la salida por romper el schema (`json_validate_failed`), los nodos de
+  `failed_generation` se rescatan y pasan por esa misma validación (`dil_salvaged`); el
+  rescate no confía más en esa salida que en una respuesta normal.
 - El modelo no tiene tools, function calling ni acceso directo a APIs de negocio o DB.
 - Las citas se validan contra curso, lección publicada, documento activo y corpus
   `assessmentSafe`; un `chunkId` del cliente nunca se confía sin revalidación.
