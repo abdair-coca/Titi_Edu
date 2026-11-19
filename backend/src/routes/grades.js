@@ -120,10 +120,12 @@ router.get('/courses/:courseId/grades', requireAuth, async (req, res) => {
       return acc;
     }, {});
 
-    // mejor intento por (usuario, evaluacion)
+    // mejor intento y cantidad de intentos por (usuario, evaluacion)
     const mejorIntento = new Map();
+    const intentosPorClave = new Map();
     for (const i of intentos) {
       const key = `${i.usuarioId}:${i.evaluacionId}`;
+      intentosPorClave.set(key, (intentosPorClave.get(key) ?? 0) + 1);
       const prev = mejorIntento.get(key);
       if (!prev || i.nota > prev.nota) mejorIntento.set(key, i);
     }
@@ -148,7 +150,8 @@ router.get('/courses/:courseId/grades', requireAuth, async (req, res) => {
       const leccionesCompletadas = progresoPorUser.get(uid)?.size ?? 0;
       const totalLecciones = Object.keys(leccionesPorModulo).length;
       const evaluacionesResumen = evaluaciones.map((e) => {
-        const intento = mejorIntento.get(`${uid}:${e.id}`);
+        const key = `${uid}:${e.id}`;
+        const intento = mejorIntento.get(key);
         return {
           id: e.id,
           titulo: e.titulo,
@@ -158,7 +161,7 @@ router.get('/courses/:courseId/grades', requireAuth, async (req, res) => {
           fechaLimite: e.fechaLimite ?? null,
           mejorNota: intento?.nota ?? null,
           aprobado: intento?.aprobado ?? false,
-          intentosUsados: intento?.numero ?? 0,
+          intentosUsados: intentosPorClave.get(key) ?? 0,
         };
       });
       const htmlResumen = Object.entries(leccionesPorModulo)

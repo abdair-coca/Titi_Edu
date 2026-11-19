@@ -101,6 +101,21 @@ describe('GET /api/courses/:courseId/grades', () => {
     expect(res.body.data.estudiantes.find((e) => e.usuario.id === 'u-s2').progreso).toBe(100);
   });
 
+  it('cuenta los intentos usados aunque el mejor no sea el último', async () => {
+    mocks.client.intento.findMany.mockResolvedValue([
+      { usuarioId: 'u-s1', evaluacionId: 'e-1', nota: 90, aprobado: true, numero: 1 },
+      { usuarioId: 'u-s1', evaluacionId: 'e-1', nota: 60, aprobado: false, numero: 2 },
+    ]);
+    const res = await request(app).get('/api/courses/c-1/grades').set(authTeacher);
+    expect(res.status).toBe(200);
+    const alumno1 = res.body.data.estudiantes.find((e) => e.usuario.id === 'u-s1');
+    expect(alumno1.evaluaciones[0].mejorNota).toBe(90);
+    expect(alumno1.evaluaciones[0].aprobado).toBe(true);
+    expect(alumno1.evaluaciones[0].intentosUsados).toBe(2);
+    const alumno2 = res.body.data.estudiantes.find((e) => e.usuario.id === 'u-s2');
+    expect(alumno2.evaluaciones[0].intentosUsados).toBe(0);
+  });
+
   it('permite admin ver notas de cualquier curso', async () => {
     const res = await request(app).get('/api/courses/c-1/grades').set(authAdmin);
     expect(res.status).toBe(200);
