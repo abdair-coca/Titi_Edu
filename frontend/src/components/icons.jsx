@@ -550,3 +550,67 @@ export function categoryIcon(nombre) {
   if (/(music|músic)/.test(n)) return MusicIcon;
   return BookIcon;
 }
+
+// Sobre — campo de email (login/registro).
+export function MailIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <rect x="3" y="5" width="18" height="14" rx="3" />
+      <path d="m4 7 8 6 8-6" />
+    </NavSvg>
+  );
+}
+
+// Candado — campo de contraseña.
+export function LockIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <rect x="4" y="10.5" width="16" height="10.5" rx="3" />
+      <path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" />
+      <circle cx="12" cy="15.75" r="1.25" fill="currentColor" stroke="none" />
+    </NavSvg>
+  );
+}
+
+// Ojo — mostrar contraseña.
+export function EyeIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </NavSvg>
+  );
+}
+
+// Ojo tachado — ocultar contraseña.
+export function EyeOffIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M10.6 5.6A9.8 9.8 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.6 3.4" />
+      <path d="M6.6 6.6C4 8.3 2.5 12 2.5 12S6 18.5 12 18.5a9.3 9.3 0 0 0 5.4-1.7" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      <path d="m3 3 18 18" />
+    </NavSvg>
+  );
+}
+
+// Alerta — errores de formulario.
+export function AlertIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7.5v5.5" />
+      <circle cx="12" cy="16.25" r="0.6" fill="currentColor" />
+    </NavSvg>
+  );
+}
+
+// Flecha derecha — CTA de avanzar.
+export function ArrowRightIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M5 12h14" />
+      <path d="m13 6 6 6-6 6" />
+    </NavSvg>
+  );
+}
