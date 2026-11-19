@@ -93,9 +93,11 @@ el cierre tenga qué animar.
 | Barra de progreso | "llenado": monta en 0 y anima el `width` hasta el % real, ease neutro | CSS `transition-[width]` + estado en `rAF` (`EnrolledCard` de `MyCourses`) |
 | Count-up de números | cuenta del último valor mostrado al nuevo, easeOut ~700ms (visualización de dato, como las barras) | `useCountUp` en `lib/motion.js` (stats de `MyCourses`) — siempre con `tabular-nums` |
 | Mascota Titi | pop al montar | `usePopIn` en `TitiMascot` |
-| Entrada del login | panel → titular → subrayado dibujado → chips → features, y el formulario escalonado en paralelo; cada tramo ≤ 400ms | timeline `useGSAP` en `Login.jsx` (ganchos `.auth-*`) |
-| Ambiente del login | chips que flotan (`titi-float`, 4.8s) y anillo punteado que gira lento (`titi-spin-slow`); loops ambientales, no entradas | CSS en `index.css` |
-| Error en un campo | shake horizontal 300ms al reintentar enviar, sin re-montar el input | `.titi-shake` en `AuthField` |
+| Entrada del login | fondo → escena de Titi → chips → doodles, subrayado dibujado y formulario escalonado en paralelo; cada tramo ≤ 400ms | timeline `useGSAP` en `Login.jsx` (ganchos `.auth-*`) |
+| Ambiente del login | chips y doodles que flotan (`titi-float`, se pausa al hover) y anillo punteado que gira lento (`titi-spin-slow`); loops ambientales, no entradas | CSS en `index.css` |
+| Titi en el login | mira al puntero (±6°, `gsap.quickTo`, solo mouse), saltito por tecla, al tocarlo festeja y suelta 3 gotas (≤ 400ms), chips rebotan al tocarlos | `AuthScene` |
+| Campos de auth | wiggle del ícono al enfocar, barra de foco que crece, check con pop al validar, shake 300ms en error | `AuthField` + keyframes `titi-wiggle`, `.titi-pop-in`, `.titi-shake` |
+| Botón de login | barrido sólido al hover, se hunde al press, loader de 3 gotas (`titi-hop`) y shake si falla | `Login.jsx` |
 | Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
 
 ### Cobertura — `useStaggerReveal` en toda lista/grid
