@@ -208,3 +208,33 @@ body {
   color: #1A1A2E !important;
   font-family: 'Nunito', system-ui, sans-serif !important;
 }
+
+/* ---- Auth (login): ambiente del panel de marca + shake de error ---- */
+@keyframes titi-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-8px); }
+}
+.titi-float {
+  animation: titi-float 4.8s ease-in-out infinite;
+}
+@keyframes titi-spin-slow {
+  to { transform: rotate(360deg); }
+}
+.titi-spin-slow {
+  animation: titi-spin-slow 48s linear infinite;
+}
+@keyframes titi-shake {
+  0%, 100% { transform: translateX(0); }
+  20%      { transform: translateX(-6px); }
+  40%      { transform: translateX(5px); }
+  60%      { transform: translateX(-3px); }
+  80%      { transform: translateX(2px); }
+}
+.titi-shake {
+  animation: titi-shake 0.3s ease-in-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .titi-float,
+  .titi-spin-slow,
+  .titi-shake { animation: none; }
+}
