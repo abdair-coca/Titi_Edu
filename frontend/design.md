@@ -893,7 +893,11 @@ cada pantalla: si el bloque no celebra, motiva o explica, no lleva mascota.
 
 ### Cuándo NO aparece Titi
 
-- En pantallas de auth (login / register) — solo el logo
+- En registro — solo el logo. **Excepción: login**, donde Titi es el protagonista
+  del panel de marca y reacciona al formulario (`saludo` → `idle` al escribir el
+  email → `pensando` en la contraseña o mientras entra → `triste` si falla). Uno
+  solo montado a la vez (panel en desktop, cabecera en móvil). Sin emojis en sus
+  burbujas.
 - En el catálogo de cursos navegando normalmente
 - En el perfil de otros usuarios
 - En el panel admin
@@ -1173,6 +1177,8 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `PostCard.jsx`, `CreatePost.jsx`, `CommentSection.jsx`, `LessonComments.jsx`, `EditPostModal.jsx`, `OptionsPosts.jsx` | social: post, composer, comentarios, edición |
 | `EvaluationQuiz.jsx` | quiz de evaluación en Learn |
 | `ConfirmModal.jsx` | confirmación destructiva — **nunca** `window.confirm` |
+| `auth/AuthField.jsx` | campo de auth: label flotante, ícono, error con shake, slot `trailing` (ej. mostrar contraseña) |
+| `auth/AuthBrandPanel.jsx` | panel de marca del login (`AuthBrandPanel`) y su cabecera móvil (`AuthMobileHeader`), con Titi reactivo y burbuja |
 | `GotaToast.jsx`, `StreakToast.jsx`, `AchievementToast.jsx`, `PurchaseToast.jsx`, `WeeklyPrizeCelebration.jsx` | toasts/celebraciones (animaciones cerradas, no tocar) |
 
 ### Hooks y lib

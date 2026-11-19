@@ -93,6 +93,9 @@ el cierre tenga qué animar.
 | Barra de progreso | "llenado": monta en 0 y anima el `width` hasta el % real, ease neutro | CSS `transition-[width]` + estado en `rAF` (`EnrolledCard` de `MyCourses`) |
 | Count-up de números | cuenta del último valor mostrado al nuevo, easeOut ~700ms (visualización de dato, como las barras) | `useCountUp` en `lib/motion.js` (stats de `MyCourses`) — siempre con `tabular-nums` |
 | Mascota Titi | pop al montar | `usePopIn` en `TitiMascot` |
+| Entrada del login | panel → titular → subrayado dibujado → chips → features, y el formulario escalonado en paralelo; cada tramo ≤ 400ms | timeline `useGSAP` en `Login.jsx` (ganchos `.auth-*`) |
+| Ambiente del login | chips que flotan (`titi-float`, 4.8s) y anillo punteado que gira lento (`titi-spin-slow`); loops ambientales, no entradas | CSS en `index.css` |
+| Error en un campo | shake horizontal 300ms al reintentar enviar, sin re-montar el input | `.titi-shake` en `AuthField` |
 | Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
 
 ### Cobertura — `useStaggerReveal` en toda lista/grid
