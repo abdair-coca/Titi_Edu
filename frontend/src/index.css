@@ -233,8 +233,30 @@ body {
 .titi-shake {
   animation: titi-shake 0.3s ease-in-out;
 }
+@keyframes titi-wiggle {
+  0%, 100% { transform: rotate(0deg) scale(1); }
+  30%      { transform: rotate(-12deg) scale(1.12); }
+  60%      { transform: rotate(8deg) scale(1.05); }
+}
+@keyframes titi-pop-in {
+  0%   { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.titi-pop-in {
+  animation: titi-pop-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+/* Loader de 3 gotas que saltan (botón "Entrando…"). */
+@keyframes titi-hop {
+  0%, 80%, 100% { transform: translateY(0); }
+  40%           { transform: translateY(-6px); }
+}
+.titi-hop {
+  animation: titi-hop 0.9s ease-in-out infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   .titi-float,
   .titi-spin-slow,
-  .titi-shake { animation: none; }
+  .titi-shake,
+  .titi-pop-in,
+  .titi-hop { animation: none; }
 }
