@@ -893,12 +893,13 @@ cada pantalla: si el bloque no celebra, motiva o explica, no lleva mascota.
 
 ### Cuándo NO aparece Titi
 
-- En registro — solo el logo. **Excepción: login**, donde Titi es el protagonista
-  de la escena (misma superficie que el formulario, sin paneles) y reacciona:
-  `saludo` al entrar → `idle` al escribir el email → `pensando` en la contraseña
-  o mientras entra → `triste` si falla. Se puede tocar (festeja y suelta gotas) y
-  los chips de la escena lo hacen comentar (`racha`, `celebra`, `saludo`). Un solo
-  Titi montado, sin emojis en sus burbujas.
+- **Excepción: login y registro** (`AuthLayout`), donde Titi es el protagonista
+  de la escena (misma superficie que el formulario, sin paneles) y acompaña cada
+  campo: `saludo` al entrar → `idle` en usuario/email → `pensando` en la
+  contraseña → `celebra` cuando la contraseña es fuerte, coinciden o todo está
+  listo → `triste` si falla. Se puede tocar (festeja y suelta gotas) y los chips
+  de la escena lo hacen comentar (`racha`, `celebra`, `saludo`). Un solo Titi
+  montado, sin emojis en sus burbujas.
 - En el catálogo de cursos navegando normalmente
 - En el perfil de otros usuarios
 - En el panel admin
@@ -1179,6 +1180,8 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `EvaluationQuiz.jsx` | quiz de evaluación en Learn |
 | `ConfirmModal.jsx` | confirmación destructiva — **nunca** `window.confirm` |
 | `auth/AuthField.jsx` | campo de auth: label flotante, ícono con wiggle al enfocar, barra de foco, check animado (`valid`), error con shake, slot `trailing` |
+| `auth/AuthLayout.jsx` | superficie compartida de login/registro (fondo, encabezado, escena, entrada GSAP) + piezas: `AuthHeading`, `AuthSubmitButton`, `PasswordToggle`, `ErrorBanner`, `AuthSwitchLink`, `CapsLockHint` |
+| `auth/PasswordStrength.jsx` | medidor de fuerza (4 segmentos) + checklist con checks que hacen pop (registro) |
 | `auth/AuthScene.jsx` | escena del login: Titi interactivo (mira al puntero, salta al escribir, se toca), burbuja y chips sociales tocables; mismo componente en móvil y desktop |
 | `GotaToast.jsx`, `StreakToast.jsx`, `AchievementToast.jsx`, `PurchaseToast.jsx`, `WeeklyPrizeCelebration.jsx` | toasts/celebraciones (animaciones cerradas, no tocar) |
 
