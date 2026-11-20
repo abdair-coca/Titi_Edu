@@ -35,3 +35,15 @@ intenciones rotadas). "Rechazo" excluye fallos de red y cuota. Detalle en
 | 2026-11-07 | DIL | 8179ba2 | 16/20 | 11 % (2/18) | 773 / 1999 | 2172 / 3688 ms | 1 `json_validate_failed`; 2 fallos de red |
 | 2026-11-07 | DIL | 3683d58 | 14/20 | 12,5 % (2/16) | 794 / 1242 | 2524 / 4225 ms | Prompt corto + quiz por intención; 1 `json_validate_failed`; cuota diaria agotada. Flag apagado |
 | 2026-11-08 | DIL | ee59c1c | 18/20 | 10 % (2/20) | 805 / 1581 | 2386 / 3320 ms | Rescate de `failed_generation`: 2 respuestas rescatadas, sin errores de proveedor. Cumple §5 (+5 puntos) |
+
+## Charla del tutor con Groq (`--set conversacion`)
+
+10 mensajes en Markdown: 3 saludos, 3 temas no cubiertos, 2 temas ajenos y 2 preguntas
+con respuesta en el curso. "Como se esperaba" cuenta charla donde se espera charla y citas
+donde el material responde; si orienta o explica de memoria se revisa leyendo cada respuesta.
+
+| Fecha | Commit | Como se esperaba | Tokens salida (prom./máx.) | p50 / p90 | Nota |
+|---|---|---|---|---|---|
+| 2026-11-20 | 14188a0 | 10/10 | 256 / 552 | 1815 / 2206 ms | Inventó una sección del curso, "¡Hola!" en casi todo, llamó "Titi" al estudiante, declinó los temas ajenos |
+| 2026-11-20 | 3f45621 | 10/10 | 259 / 593 | 1641 / 2669 ms | Sin secciones inventadas, saludo solo ante un saludo; el mundial sigue en "el material no lo cubre" |
+

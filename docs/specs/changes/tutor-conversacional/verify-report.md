@@ -29,12 +29,29 @@ El frontend no tiene ESLint configurado, así que no hay lint para `TutorPanel.j
   respuesta sin citas se reemplaza por la guía (R2, R3).
 - La ruta pasa el título del curso al servicio (R4).
 
+## Con Groq real
+
+`npm run eval:rag:generation -- --set conversacion` (10 llamadas, Markdown, `openai/gpt-oss-20b`,
+sin límites de Groq alcanzados). Registro en
+[`backend/eval/rag/HISTORIAL.md`](../../../../backend/eval/rag/HISTORIAL.md).
+
+| | Corrida 1 (`14188a0`) | Corrida 2 (`3f45621`, prompt ajustado) |
+|---|---|---|
+| Como se esperaba | 10/10 | 10/10 |
+| Saludos | Naturales; uno llamó "Titi" al estudiante | Naturales, sin ponerle nombre |
+| Tema no cubierto (tupla, archivos, try/except) | Orientó sin explicar; **inventó una sección** "de manejo de excepciones" | Orientó sin explicar; solo nombró lo que estaba en las fuentes |
+| Tema ajeno (mundial, salteñas) | Declinó en frío | Salteñas: breve y amable. Mundial: sigue diciendo "el material no lo cubre" |
+| Con respuesta en el curso | Citó [1][2] y [1][2][3] | Citó [1][2][5] y [1][2][3] |
+| "¡Hola!" sin que el estudiante salude | 5 de 7 | 0 |
+
+Las 25 preguntas no cubiertas del split `dev` recuperan fuentes igual (no relacionadas), así
+que el modelo tuvo que elegir orientar en vez de citar: lo hizo en los 3 casos.
+
 ## Pendiente
 
-- **Medir con Groq real.** Los tests usan un modelo simulado. Falta comprobar con el
-  modelo real que (a) en un tema del curso no cubierto orienta y no explica de memoria,
-  (b) con fuentes disponibles sigue citando en vez de charlar, y (c) el tono suena
-  natural. `npm run eval:rag:generation` ya cuenta la charla como `conversacion`, separada
-  de `respondida`, para ver si el modelo deja de usar el material.
-- Probar el panel a mano: "hola", "¿cómo estás?", "¿qué es una tupla?" (curso de Python
-  sin ese tema) y "¿quién ganó el mundial?".
+- Temas ajenos: el modelo tiende a declinar ("el material no lo cubre") en vez de charlar
+  una frase. No es alucinación; mejorarlo pide otra iteración de prompt y otra medición.
+- Fuera de este change: en una respuesta con material el modelo escribió fórmulas LaTeX
+  (`\[ … \]`) y explicó primero de memoria y citó al final; el respaldo de términos la
+  dejó pasar.
+- Probar el panel a mano con la clave propia después del deploy.
