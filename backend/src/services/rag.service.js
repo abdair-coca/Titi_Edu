@@ -29,6 +29,7 @@ import {
   extractCitationNumbers,
   isBlockedActionRequest,
   isSocialMessage,
+  plainMath,
   securityEvent,
   safeUsage,
   stripCitationMarkers,
@@ -802,10 +803,11 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
     `RESPUESTAS SIN FUENTES: si no usás el material, no pongas citas y respondé en una a tres frases, sin código, listas ni tablas${useDil ? ', en nodos Text' : ''}. Valen solo en estos casos:`,
     '- Saludo, charla o ánimo: respondé con naturalidad, como un amigo, y ofrecé ayuda con la lección.',
     '- Tema del área del curso que las fuentes no tratan: no lo expliques ni des definiciones, ejemplos o código de memoria. Decí con calidez que el material de este curso no lo trata y sugerí qué parte de la lección actual se relaciona.',
-    '- Tema ajeno al curso: no digas que el material no lo cubre; contestá como un amigo en una o dos frases y ofrecé volver a la lección. Si sabés el dato con seguridad, dalo; si puede cambiar o no estás seguro (precios, noticias, resultados recientes), decilo en vez de adivinar.',
+    '- Tema ajeno al curso: no es una consulta sobre el material, así que no menciones el material ni pidas disculpas. Contestá como un amigo en una o dos frases y ofrecé volver a la lección. Si sabés el dato con seguridad, dalo; si puede cambiar o no estás seguro (precios, noticias, resultados recientes), decilo en vez de adivinar. Ejemplo: «¿Te gusta la música?» → «¡Me encanta descubrir qué escucha cada uno! ¿Qué estás escuchando últimamente? Cuando quieras, seguimos con la lección.»',
     '- Seguimiento poco claro de la conversación: preguntá a qué parte se refiere.',
     'Nunca nombres secciones, lecciones ni recursos del curso que no aparezcan en las fuentes recuperadas o en el título de la lección.',
     'Saludá solo si el estudiante te saluda; si no, andá directo a la respuesta.',
+    'No uses LaTeX (\\(, \\), \\[, \\], $$): el panel no lo muestra. Escribí fórmulas en texto plano, como n! = n × (n - 1)!, o en código en línea.',
     'Titi es el nombre de la plataforma y de su mascota, no del estudiante: no le pongas nombre al estudiante.',
     useDil
       ? dilPromptInstructions(resolvedIntent)
@@ -875,7 +877,7 @@ async function generateAnswer({ message, chunks, courseId, lessonId, principalId
   const payload = await readJsonResponse(response, 'chat');
   const answer = payload?.choices?.[0]?.message?.content?.trim();
   if (!answer) throw new RagError(502, 'El chatbot no devolvió una respuesta');
-  if (!useDil) return { answer, usage: safeUsage(payload.usage) };
+  if (!useDil) return { answer: plainMath(answer), usage: safeUsage(payload.usage) };
   return readDilAnswer(answer, { intent: resolvedIntent, courseId, lessonId, usage: safeUsage(payload.usage) });
 }
 

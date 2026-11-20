@@ -52,6 +52,32 @@ function mapProse(text, transform) {
     .join('');
 }
 
+const LATEX_SYMBOLS = Object.freeze({
+  times: '×', cdot: '·', div: '÷', pm: '±', dots: '…', ldots: '…', cdots: '…', le: '≤', leq: '≤', ge: '≥', geq: '≥',
+  ne: '≠', neq: '≠', approx: '≈', infty: '∞', to: '→', rightarrow: '→', Rightarrow: '⇒', in: '∈', sum: 'Σ',
+});
+
+function latexToPlain(math) {
+  return math
+    .replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '($1)/($2)')
+    .replace(/\\sqrt\s*\{([^{}]*)\}/g, '√($1)')
+    .replace(/\\(?:text|mathrm|mathbf|operatorname)\s*\{([^{}]*)\}/g, '$1')
+    .replace(/\\([a-zA-Z]+)/g, (command, name) => LATEX_SYMBOLS[name] ?? command)
+    .replace(/\\[,;:! ]/g, ' ')
+    .replace(/[{}]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// The panel has no math renderer and the model writes LaTeX even when told not to,
+// so delimited formulas become plain text. Lone `$` is left alone: it is usually money.
+export function plainMath(text) {
+  return mapProse(text, (prose) => prose
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_, math) => `\n${latexToPlain(math)}\n`)
+    .replace(/\$\$([\s\S]*?)\$\$/g, (_, math) => `\n${latexToPlain(math)}\n`)
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_, math) => latexToPlain(math)));
+}
+
 export function normalizeCitationMarkers(answer) {
   return mapProse(answer, (prose) => prose
     .replace(WIDE_CITATION, '[$1]')

@@ -2,7 +2,7 @@
 // of known components and the frontend builds the interface. Groq strict mode
 // guarantees the shape; sizes and counts are enforced here, because the schema
 // subset it accepts does not cover them.
-import { normalizeCitationMarkers } from './rag.security.js';
+import { normalizeCitationMarkers, plainMath } from './rag.security.js';
 
 export const DIL_VERSION = 1;
 export const DIL_MAX_NODES = 12;
@@ -119,7 +119,7 @@ const INVALID = Symbol('invalid');
 
 function cleanText(value, max) {
   if (typeof value !== 'string') return INVALID;
-  const text = normalizeCitationMarkers(value.replace(/\r\n?/g, '\n')).trim();
+  const text = normalizeCitationMarkers(plainMath(value.replace(/\r\n?/g, '\n'))).trim();
   return text && text.length <= max ? text : INVALID;
 }
 
@@ -130,7 +130,7 @@ function cleanOptionalText(value, max) {
 
 function cleanCell(value) {
   if (typeof value !== 'string') return INVALID;
-  const cell = normalizeCitationMarkers(value.replace(/\s+/g, ' ')).trim();
+  const cell = normalizeCitationMarkers(plainMath(value).replace(/\s+/g, ' ')).trim();
   return cell.length <= LIMITS.cell ? cell : INVALID;
 }
 

@@ -7,6 +7,7 @@ import {
   isBlockedActionRequest,
   isSocialMessage,
   normalizeCitationMarkers,
+  plainMath,
   stripCitationMarkers,
   validateConversationalAnswer,
   validateGroundedAnswer,
@@ -173,5 +174,20 @@ describe('conversational answers', () => {
     expect(validateConversationalAnswer('Hola', { dilNodes: [text, text, text] }).valid).toBe(true);
     expect(validateConversationalAnswer('Hola', { dilNodes: [text, text, text, text] }).reason).toBe('conversation_with_structure');
     expect(validateConversationalAnswer('Hola', { dilNodes: [text, { c: 'Check', question: '¿Seguimos?' }] }).reason).toBe('conversation_with_structure');
+  });
+});
+
+describe('plain math', () => {
+  it('turns inline and display LaTeX into plain text', () => {
+    const answer = String.raw`Para \(n = 0\) vale 1: \[ n! = n \times (n-1) \times \dots \times 1 \] como dice [1].`;
+    expect(plainMath(answer)).toBe('Para n = 0 vale 1: \nn! = n × (n-1) × … × 1\n como dice [1].');
+    expect(plainMath(String.raw`$$\frac{a}{b} \le 2$$`)).toBe('\n(a)/(b) ≤ 2\n');
+  });
+
+  it('leaves code, unknown commands and money alone', () => {
+    const code = String.raw`Usá ${'`'}\(x\)${'`'} en el regex.`;
+    expect(plainMath(code)).toBe(code);
+    expect(plainMath('Cuesta $5 y $10.')).toBe('Cuesta $5 y $10.');
+    expect(plainMath(String.raw`\(\alpha + 1\)`)).toBe(String.raw`\alpha + 1`);
   });
 });
