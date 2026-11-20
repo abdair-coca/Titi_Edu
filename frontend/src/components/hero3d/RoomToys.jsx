@@ -11,6 +11,7 @@ import { MOTION } from '../../lib/motion.js';
 import { COLORS, ROOM } from './roomLayout.js';
 import { Blob, Part } from './RoomShell.jsx';
 import { useRoomInput } from './RoomRig.jsx';
+import { makeDropGeometry } from './dropGeometry.js';
 
 const { half: H, deskHeight: DH } = ROOM;
 const TAU = Math.PI * 2;
@@ -189,23 +190,9 @@ function Clock() {
 }
 
 // Gota (la moneda de Titi) de juguete: rebota con estirón y aplastón.
-function useDropGeometry() {
-  const geometry = useMemo(() => {
-    const pts = [];
-    for (let i = 0; i <= 24; i += 1) {
-      const t = Math.PI - (i / 24) * Math.PI;
-      pts.push(new THREE.Vector2(0.17 * Math.sin(t) * Math.sin(t / 2), 0.21 * Math.cos(t) + 0.21));
-    }
-    pts[0].x = 0;
-    pts[pts.length - 1].x = 0;
-    return new THREE.LatheGeometry(pts, 28);
-  }, []);
-  return geometry;
-}
-
 function GotaToy() {
   const body = useRef(null);
-  const geometry = useDropGeometry();
+  const geometry = useMemo(makeDropGeometry, []);
   const bounce = () => {
     const b = body.current;
     gsap.timeline({ overwrite: true })
