@@ -1043,6 +1043,26 @@ cada pantalla: si el bloque no celebra, motiva o explica, no lleva mascota.
 - `slide-in-right` solo toasts · `bounce-in` solo logros/celebraciones de Titi
   · `fade-up` solo cards al cargar.
 
+### 3D (three.js) — reglas
+
+Hoy solo existe en el hero de `/courses` (`components/hero3d/`, change
+`hero-3d-cursos`). Si se suma 3D en otro lado, sigue estas reglas:
+
+- **Plano también en 3D:** `MeshToonMaterial` con rampa de 3 tonos y los colores
+  del propio modelo; sin reflejos, PBR, sombras proyectadas, bloom ni
+  postprocesado. El fondo de la escena es HTML plano (disco `bg-titi-yellow-light`
+  + anillo punteado `titi-spin-slow`), no geometría.
+- **Titi sigue siendo `<TitiMascot>`** superpuesto en HTML, nunca un modelo 3D.
+- **Modelos:** low-poly de terceros solo CC0/CC-BY, comprimidos con
+  `gltf-transform optimize` (meshopt), registrados en `public/models/CREDITS.md`.
+- **Chunk diferido:** three/R3F/drei solo dentro de un componente cargado con
+  `lazy()`; el componente del chunk principal no los importa (lo vigila
+  `npm run test:hero-3d`).
+- **Respaldo a imagen:** reduced-motion, sin WebGL, ahorro de datos, error,
+  pérdida de contexto o rendimiento bajo sostenido → imagen estática (una
+  captura de la propia escena, candidata a LCP).
+- **Cámara fija:** sin drag, zoom ni scroll capturado (`touch-action: pan-y`).
+
 ---
 
 ## 11. Convenciones de código CSS/Tailwind
@@ -1107,6 +1127,7 @@ Claude Code debe verificar esto antes de dar un componente por terminado:
 - [ ] ¿Cumple los mínimos de legibilidad (≥`text-xs`, ≥`font-medium`, gris legible)?
 - [ ] ¿Sin vacíos muertos: secciones a `mb-6`, cards `p-4/p-5`, columnas emparejadas (§4 Densidad)?
 - [ ] ¿Cumple las 8 reglas del estándar de experiencia (§1)?
+- [ ] Si usa 3D: ¿toon plano, chunk diferido, respaldo a imagen y cámara fija (§10, "3D")?
 
 ---
 
@@ -1183,6 +1204,8 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `auth/AuthLayout.jsx` | superficie compartida de login/registro (fondo, encabezado, escena, entrada GSAP) + piezas: `AuthHeading`, `AuthSubmitButton`, `PasswordToggle`, `ErrorBanner`, `AuthSwitchLink`, `CapsLockHint` |
 | `auth/PasswordStrength.jsx` | medidor de fuerza (4 segmentos) + checklist con checks que hacen pop (registro) |
 | `auth/AuthScene.jsx` | escena del login: Titi interactivo (mira al puntero, salta al escribir, se toca), burbuja y chips sociales tocables; mismo componente en móvil y desktop |
+| `hero3d/Hero3D.jsx` | hero 3D de `/courses`: decide 3D o imagen, carga diferida de `HeroScene`, pausa fuera de pantalla (§10, "3D") |
+| `hero3d/HeroScene.jsx` / `hero3d/HeroObject.jsx` | escena three.js (chunk diferido): objetos de categoría toon que flotan, hover con etiqueta, click filtra; `heroModels.js` mapea categoría → modelo |
 | `GotaToast.jsx`, `StreakToast.jsx`, `AchievementToast.jsx`, `PurchaseToast.jsx`, `WeeklyPrizeCelebration.jsx` | toasts/celebraciones (animaciones cerradas, no tocar) |
 
 ### Hooks y lib

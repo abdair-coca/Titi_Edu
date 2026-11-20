@@ -99,6 +99,7 @@ el cierre tenga qué animar.
 | Titi en el login | mira al puntero (±6°, `gsap.quickTo`, solo mouse), saltito por tecla, al tocarlo festeja y suelta 3 gotas (≤ 400ms), chips rebotan al tocarlos | `AuthScene` |
 | Campos de auth | wiggle del ícono al enfocar, barra de foco que crece, check con pop al validar, shake 300ms en error | `AuthField` + keyframes `titi-wiggle`, `.titi-pop-in`, `.titi-shake` |
 | Botón de login/registro | barrido sólido al hover, se hunde al press, loader de 3 gotas (`titi-hop`) y shake si falla | `AuthSubmitButton` + `shake()` en `AuthLayout` |
+| Hero 3D de `/courses` | la imagen hace fade (300ms) a la escena; objetos con pop escalonado (300ms, 0.1s entre cada uno → ≤ 3 a la vez); flotación ambiental en loop (`Float` de drei); hover: crece 1.18 y sube con `ease.pop`; con mouse la escena se inclina ±6° hacia el puntero | GSAP sobre `object.scale/position` de three con tokens `MOTION` en `HeroObject`; `PointerTilt` en `HeroScene` |
 | Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
 
 ### Cobertura — `useStaggerReveal` en toda lista/grid
@@ -130,6 +131,9 @@ contenido abajo), `AchievementsSection`, `AdminDashboard` (stats + paneles),
   `table-row` renderiza inconsistente entre navegadores.
 - **Landing (`Home`) y `VerifyCertificate`**: fuera del shell de la app (no hay
   navegación in-app hacia ellas) → sin `PageTransition`.
+- **Hero 3D (`/courses`)**: la flotación de los objetos es un loop ambiental,
+  como `titi-float` en el login, no una entrada; por eso no tiene tope de 400ms.
+  Con `prefers-reduced-motion` no se monta la escena: queda la imagen estática.
 - **Salida de modales**: `if(!open) return null` desmonta al instante, así que la
   salida no anima. Aceptable; animarla requiere mantener montado.
 

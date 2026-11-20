@@ -8,6 +8,8 @@ import { sanitizeMarkdownUrl } from '../lib/markdown.js';
 import { resolveMediaUrl } from '../lib/format.js';
 import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
+import Hero3D from '../components/hero3d/Hero3D.jsx';
+import { HERO_MODELS } from '../components/hero3d/heroModels.js';
 import { GotaIcon, BookIcon, BoltIcon, AwardIcon } from '../components/icons.jsx';
 
 // Copys estáticos de los paneles de comunidad (marketing, sin backend).
@@ -304,6 +306,20 @@ export default function Courses() {
   }, [allCursos]);
   const popularRef = useStaggerReveal([popularCats.length]);
 
+  // Objetos del hero 3D: todas las categorías con modelo (como las pills), las
+  // de más cursos primero (en mobile solo entran las primeras 4). Espera al
+  // catálogo para que el orden no cambie con los objetos ya en escena.
+  const heroItems = useMemo(
+    () =>
+      loading
+        ? []
+        : categorias
+            .map((c) => ({ id: c.id, nombre: c.nombre, slug: categoriaSlug(c.nombre), count: coursesByCat[c.id]?.length || 0 }))
+            .filter((c) => HERO_MODELS[c.slug])
+            .sort((a, b) => b.count - a.count),
+    [loading, categorias, coursesByCat],
+  );
+
   // Total de lecciones del catálogo (para el stat strip).
   const lessonsTotal = useMemo(
     () =>
@@ -482,19 +498,19 @@ export default function Courses() {
           </div>
         </div>
 
-        {/* Visual del hero — ilustración de la comunidad (Titi protagonista) */}
-        <div className="rounded-2xl overflow-hidden bg-titi-cream">
-          <img
-            src="/hero/community.webp"
-            alt="Titi guiando a la comunidad Titi mientras aprenden juntos"
-            width={1448}
-            height={1086}
-            loading="eager"
-            fetchpriority="high"
-            className="w-full h-auto object-cover select-none"
-            draggable={false}
-          />
-        </div>
+        {/* Visual del hero — escena 3D de las categorías, con imagen de respaldo */}
+        <Hero3D
+          items={heroItems}
+          onSelect={(id) => {
+            setCategoria(id);
+            setQuery('');
+            goToTrending();
+          }}
+          poster="/hero/hero-3d-poster.webp"
+          alt="Titi rodeado de objetos de las categorías: laptop, matraz, paleta, libros, globo, calculadora, guitarra y maletín"
+          width={1176}
+          height={882}
+        />
       </section>
 
       {/* Featured — habilidades esenciales (3 categorías destacadas) */}
@@ -990,9 +1006,12 @@ function StripStat({ num, label }) {
 
 // Mapea el nombre de una categoría a su ilustración en /public/categories/
 // (slug = nombre sin acentos/ñ ni símbolos). Ej: "Diseño" → /categories/diseno.webp
+function categoriaSlug(nombre) {
+  return normalizeText(nombre).replace(/[^a-z0-9]/g, '');
+}
+
 function categoriaImg(nombre) {
-  const slug = normalizeText(nombre).replace(/[^a-z0-9]/g, '');
-  return `/categories/${slug}.webp`;
+  return `/categories/${categoriaSlug(nombre)}.webp`;
 }
 
 // ---- Card de categoría destacada (Featured) ----
