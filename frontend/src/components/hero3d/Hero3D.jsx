@@ -6,8 +6,8 @@
 //
 // Respaldo a imagen (spec H5): reduced-motion, sin WebGL, ahorro de datos, sin
 // categorías con modelo, error de carga, pérdida de contexto o rendimiento bajo.
-import { Component, Suspense, lazy, useEffect, useRef, useState } from 'react';
-import { HERO_MAX_OBJECTS } from './heroModels.js';
+import { Component, Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { HandIcon } from '../icons.jsx';
 
 const HeroScene = lazy(() => import('./HeroScene.jsx'));
 
@@ -71,10 +71,11 @@ export default function Hero3D({ items, onSelect, poster, alt, width, height }) 
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
   const [active, setActive] = useState(true);
+  const [dragged, setDragged] = useState(false);
   const mobile = useIsMobile();
+  const onFirstDrag = useCallback(() => setDragged(true), []);
 
-  const visibleItems = items.slice(0, mobile ? HERO_MAX_OBJECTS.mobile : HERO_MAX_OBJECTS.desktop);
-  const wants3D = allowed && !failed && visibleItems.length > 0;
+  const wants3D = allowed && !failed && items.length > 0;
 
   // Descarga diferida: cuando el navegador está libre después de la carga, así
   // el chunk 3D no compite con la imagen del hero (LCP).
@@ -149,26 +150,32 @@ export default function Hero3D({ items, onSelect, poster, alt, width, height }) 
             sceneOn ? 'opacity-100' : 'opacity-0',
           ].join(' ')}
         >
-          {/* Fondo plano de la escena: disco amarillo y anillo punteado (como el login). */}
-          <div className="absolute inset-0 grid place-items-center pointer-events-none">
-            <div className="w-[62%] aspect-square rounded-full bg-titi-yellow-light" />
-          </div>
-          <div className="absolute inset-0 grid place-items-center pointer-events-none">
-            <div className="w-[78%] aspect-square rounded-full border-2 border-dashed border-titi-dark/15 titi-spin-slow" />
-          </div>
-
           <SceneBoundary onFail={fail}>
             <Suspense fallback={null}>
               <HeroScene
-                items={visibleItems}
+                items={items}
                 mobile={mobile}
                 active={active}
                 onSelect={onSelect}
                 onReady={() => setReady(true)}
                 onFail={fail}
+                onFirstDrag={onFirstDrag}
               />
             </Suspense>
           </SceneBoundary>
+
+          {/* Pista de arrastre: se va con el primer giro. */}
+          <span
+            className={[
+              'absolute left-3 bottom-3 inline-flex items-center gap-1.5 pointer-events-none',
+              'px-3 py-1.5 bg-white border-2 border-titi-dark rounded-full shadow-[0_3px_0px_#1A1A2E]',
+              'text-xs font-extrabold text-titi-dark transition-opacity duration-300 ease-out',
+              sceneOn && !dragged ? 'opacity-100' : 'opacity-0',
+            ].join(' ')}
+          >
+            <HandIcon className="w-4 h-4" />
+            Arrastrá para girar
+          </span>
         </div>
       )}
     </div>

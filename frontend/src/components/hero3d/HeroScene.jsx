@@ -1,70 +1,124 @@
-// HeroScene — escena 3D del hero de /courses (chunk diferido, lo carga Hero3D).
+// HeroScene — habitación de estudio 3D del hero de /courses (chunk diferido,
+// lo carga Hero3D).
 //
-// Objetos low-poly de las categorías flotando en un anillo alrededor del
-// centro. Cámara fija: sin drag, zoom ni nada que capture el scroll (spec H3).
-// Con mouse, la escena se inclina levemente hacia el puntero (±6°).
-import { useEffect, useRef, useState } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { PerformanceMonitor } from '@react-three/drei';
+// Vista isométrica de un cuarto cortado (piso + dos paredes) con los objetos de
+// las categorías en su lugar natural. Luz suave tipo "horneada": luz de
+// ambiente generada en el navegador (sin HDR externo), una luz principal con
+// sombras suaves y oclusión pintada en los rincones.
+//
+// Interacción: arrastrar gira el cuarto (RoomRig), el mouse da paralaje, los
+// objetos de categoría filtran el catálogo y los adornos tienen sorpresas.
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import * as THREE from 'three';
+import { Canvas, useThree } from '@react-three/fiber';
+import { PerformanceMonitor, SoftShadows } from '@react-three/drei';
 import HeroObject from './HeroObject.jsx';
-import TitiMascot from '../TitiMascot.jsx';
+import RoomRig from './RoomRig.jsx';
+import RoomShell from './RoomShell.jsx';
+import RoomToys from './RoomToys.jsx';
+import { CATEGORY_SLOTS, COLORS, ROOM } from './roomLayout.js';
+import { useRoomTextures } from './roomTextures.js';
 
-// Titi en el centro del anillo: solo si se ve bien en el hero (decisión del
-// change). Apagar acá si no aporta.
-const SHOW_TITI = true;
+const CAMERA_DIR = new THREE.Vector3(1, 0.86, 1).normalize();
+const CAMERA_TARGET = new THREE.Vector3(-0.1, 1.55, -0.1);
+const HINT_EVERY_MS = 4500;
 
-// Posiciones [x, y, z] en unidades de mundo. La cámara (z=10, fov 35) ve unas
-// ±4.2 en x y ±3.1 en y; el centro queda libre para Titi.
-const SLOTS = {
-  desktop: [
-    [-3.0, 1.55, 0.3],
-    [-1.0, 2.2, -0.4],
-    [1.1, 2.2, 0.2],
-    [3.05, 1.5, -0.3],
-    [3.15, -0.7, 0.4],
-    [1.75, -2.15, -0.2],
-    [-1.75, -2.15, 0.3],
-    [-3.15, -0.65, -0.4],
-  ],
-  mobile: [
-    [-2.55, 1.45, 0],
-    [2.55, 1.45, 0],
-    [2.55, -1.55, 0],
-    [-2.55, -1.55, 0],
-  ],
-};
+// Esquinas de la habitación, para encuadrarla según el tamaño del lienzo.
+const ROOM_CORNERS = (() => {
+  const { half: h, wallHeight: wh, wallThickness: t, floorThickness: f } = ROOM;
+  const pts = [];
+  for (const x of [-h - t, h]) for (const y of [-f, wh]) for (const z of [-h - t, h]) pts.push(new THREE.Vector3(x, y, z));
+  return pts;
+})();
 
-const MAX_TILT = 0.105; // ±6° en radianes, igual que Titi en el login
+// Cámara ortográfica isométrica que encuadra todo el cuarto con margen.
+function FitCamera({ margin = 0.94 }) {
+  const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
+  useLayoutEffect(() => {
+    camera.position.copy(CAMERA_TARGET).addScaledVector(CAMERA_DIR, 30);
+    camera.lookAt(CAMERA_TARGET);
+    camera.updateMatrixWorld();
+    const inv = camera.matrixWorldInverse;
+    const min = new THREE.Vector2(Infinity, Infinity);
+    const max = new THREE.Vector2(-Infinity, -Infinity);
+    for (const c of ROOM_CORNERS) {
+      const v = c.clone().applyMatrix4(inv);
+      min.min(v);
+      max.max(v);
+    }
+    // Centra el cuarto en el lienzo moviendo la cámara en su propio plano.
+    const right = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+    const up = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+    camera.position.addScaledVector(right, (min.x + max.x) / 2).addScaledVector(up, (min.y + max.y) / 2);
+    camera.zoom = Math.min(size.width / (max.x - min.x), size.height / (max.y - min.y)) * margin;
+    camera.updateProjectionMatrix();
+  }, [camera, size, margin]);
+  return null;
+}
 
-const hasFinePointer = () =>
-  typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-
-// Inclina el grupo hacia el puntero (solo mouse). El puntero se lee de la
-// ventana para que la escena reaccione aunque el mouse esté sobre el texto.
-function PointerTilt({ children }) {
-  const group = useRef(null);
-  const target = useRef({ x: 0, y: 0 });
-
+// Luz de ambiente hecha con paneles emisivos (como los Lightformer de drei),
+// procesada una sola vez: reflejos y relleno suaves sin descargar un HDR.
+function SoftEnvironment({ intensity = 0.7 }) {
+  const gl = useThree((s) => s.gl);
+  const scene = useThree((s) => s.scene);
   useEffect(() => {
-    if (!hasFinePointer()) return undefined;
-    const onMove = (e) => {
-      if (e.pointerType !== 'mouse') return;
-      target.current.x = (e.clientX / window.innerWidth) * 2 - 1;
-      target.current.y = (e.clientY / window.innerHeight) * 2 - 1;
+    const env = new THREE.Scene();
+    env.background = new THREE.Color('#5A4A3A');
+    const panels = [
+      { color: '#FFF4DC', strength: 3, size: [10, 10], pos: [0, 6, 0], rot: [Math.PI / 2, 0, 0] },
+      { color: '#FFE9B0', strength: 2, size: [8, 5], pos: [6, 2, 6], rot: [0, Math.PI / 4, 0] },
+      { color: '#DDEEFF', strength: 1.4, size: [5, 4], pos: [-6, 2, 1], rot: [0, Math.PI / 2, 0] },
+    ];
+    const disposables = [];
+    for (const p of panels) {
+      const geometry = new THREE.PlaneGeometry(...p.size);
+      const material = new THREE.MeshBasicMaterial({ color: new THREE.Color(p.color).multiplyScalar(p.strength), side: THREE.DoubleSide });
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(...p.pos);
+      mesh.lookAt(0, 0, 0);
+      env.add(mesh);
+      disposables.push(geometry, material);
+    }
+    const pmrem = new THREE.PMREMGenerator(gl);
+    const target = pmrem.fromScene(env, 0.04);
+    scene.environment = target.texture;
+    scene.environmentIntensity = intensity;
+    return () => {
+      scene.environment = null;
+      target.dispose();
+      pmrem.dispose();
+      disposables.forEach((d) => d.dispose());
     };
-    window.addEventListener('pointermove', onMove, { passive: true });
-    return () => window.removeEventListener('pointermove', onMove);
-  }, []);
+  }, [gl, scene, intensity]);
+  return null;
+}
 
-  useFrame((_, delta) => {
-    const g = group.current;
-    if (!g) return;
-    const k = Math.min(1, delta * 4);
-    g.rotation.y += (target.current.x * MAX_TILT - g.rotation.y) * k;
-    g.rotation.x += (target.current.y * MAX_TILT - g.rotation.x) * k;
-  });
-
-  return <group ref={group}>{children}</group>;
+function Lights({ mobile }) {
+  const shadowSize = mobile ? 1024 : 2048;
+  return (
+    <>
+      <hemisphereLight args={['#FFF6E5', COLORS.wood, 0.6]} />
+      <directionalLight
+        castShadow
+        position={[4.5, 9, 6.5]}
+        intensity={2.8}
+        color="#FFF1DA"
+        shadow-mapSize={[shadowSize, shadowSize]}
+        shadow-bias={-0.0004}
+        shadow-normalBias={0.025}
+        shadow-radius={6}
+        shadow-camera-left={-6}
+        shadow-camera-right={6}
+        shadow-camera-top={6}
+        shadow-camera-bottom={-6}
+        shadow-camera-near={1}
+        shadow-camera-far={30}
+      />
+      {/* Relleno frío desde la ventana */}
+      <directionalLight position={[-6, 4, 1.5]} intensity={0.35} color="#DDEEFF" />
+    </>
+  );
 }
 
 // Pérdida del contexto WebGL → imagen. El listener se quita al desmontar,
@@ -94,6 +148,24 @@ function useWarmup(active, ms = 3000) {
   return ready;
 }
 
+// Cada tanto un objeto de categoría da un saltito: pista de que se puede tocar.
+function useHint(items, active) {
+  const [hint, setHint] = useState({ slug: null, n: 0 });
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  useEffect(() => {
+    if (!active || items.length === 0) return undefined;
+    const id = window.setInterval(() => {
+      setHint((h) => {
+        const list = itemsRef.current;
+        return { slug: list[h.n % list.length].slug, n: h.n + 1 };
+      });
+    }, HINT_EVERY_MS);
+    return () => window.clearInterval(id);
+  }, [items.length, active]);
+  return hint;
+}
+
 // Avisa a Hero3D cuando todos los modelos ya cargaron (sale del Suspense).
 function ReadySignal({ onReady }) {
   useEffect(() => {
@@ -102,62 +174,70 @@ function ReadySignal({ onReady }) {
   return null;
 }
 
-export default function HeroScene({ items, mobile, active, onSelect, onReady, onFail }) {
-  const [dpr, setDpr] = useState(mobile ? 1 : 1.5);
+function Room({ items, mobile, onSelect, onFirstDrag, hint }) {
+  const tx = useRoomTextures();
+  return (
+    <RoomRig onFirstDrag={onFirstDrag}>
+      <Lights mobile={mobile} />
+      <RoomShell tx={tx} />
+      <RoomToys tx={tx} />
+      {items.map((item, i) => (
+        <HeroObject
+          key={item.slug}
+          item={item}
+          slot={CATEGORY_SLOTS[item.slug]}
+          index={i}
+          hopSignal={hint.slug === item.slug ? hint.n : 0}
+          onSelect={onSelect}
+        />
+      ))}
+    </RoomRig>
+  );
+}
+
+export default function HeroScene({ items, mobile, active, onSelect, onReady, onFail, onFirstDrag }) {
+  // Calidad alta solo en desktop: más resolución y sombras con penumbra (PCSS).
+  const [high, setHigh] = useState(!mobile);
   const declines = useRef(0);
   const measuring = useWarmup(active);
-  const slots = mobile ? SLOTS.mobile : SLOTS.desktop;
-  const size = mobile ? 1.75 : 1.35;
+  const placed = useMemo(() => items.filter((item) => CATEGORY_SLOTS[item.slug]), [items]);
+  const hint = useHint(placed, active);
 
-  // Rendimiento bajo (spec H6): primero baja la resolución; si sigue cayendo
-  // de forma sostenida, vuelve a la imagen.
+  // Rendimiento bajo (spec H6): primero baja la calidad; si sigue cayendo de
+  // forma sostenida, vuelve a la imagen.
   const handleDecline = () => {
     declines.current += 1;
-    if (dpr > 1) setDpr(1);
+    if (high) setHigh(false);
     else if (declines.current >= 3) onFail('rendimiento bajo');
   };
 
   return (
-    <>
-      <Canvas
-        dpr={dpr}
-        frameloop={active ? 'always' : 'demand'}
-        camera={{ position: [0, 0, 10], fov: 35 }}
-        gl={{ antialias: !mobile, alpha: true, powerPreference: 'low-power' }}
-        // En mobile el gesto vertical siempre scrollea la página.
-        style={{ touchAction: 'pan-y' }}
-      >
-        <ContextLossGuard onFail={onFail} />
-        {measuring && (
-          <PerformanceMonitor
-            bounds={() => (mobile ? [30, 60] : [40, 60])}
-            onDecline={handleDecline}
-            flipflops={6}
-            onFallback={() => onFail('rendimiento inestable')}
-          />
-        )}
-        <ambientLight intensity={1.4} />
-        <directionalLight position={[3, 5, 6]} intensity={1.8} />
-        <PointerTilt>
-          {items.map((item, i) => (
-            <HeroObject
-              key={item.slug}
-              item={item}
-              index={i}
-              position={slots[i]}
-              size={size}
-              onSelect={onSelect}
-            />
-          ))}
-        </PointerTilt>
-        <ReadySignal onReady={onReady} />
-      </Canvas>
-
-      {SHOW_TITI && (
-        <div className="absolute inset-0 grid place-items-center pointer-events-none">
-          <TitiMascot state="idle" size={mobile ? 'lg' : 'xl'} message="" />
-        </div>
+    <Canvas
+      orthographic
+      shadows="soft"
+      dpr={high ? 1.5 : 1}
+      frameloop={active ? 'always' : 'demand'}
+      camera={{ near: 0.1, far: 100, zoom: 60 }}
+      gl={{ antialias: !mobile, alpha: true, powerPreference: 'low-power' }}
+      // Tono neutro: respeta los colores de la marca (ACES los lava y tira al naranja).
+      onCreated={({ gl }) => {
+        gl.toneMapping = THREE.NeutralToneMapping;
+      }}
+      // El gesto vertical siempre scrollea la página; el horizontal gira el cuarto.
+      style={{ touchAction: 'pan-y' }}
+    >
+      {/* Sombras con penumbra suave (PCSS) solo en calidad alta; si no, PCF. */}
+      {high && <SoftShadows size={18} samples={10} focus={0.35} />}
+      <ContextLossGuard onFail={onFail} />
+      {measuring && (
+        // Sin tope superior: en pantallas de 120/144 Hz el monitor contaba cada
+        // "mejora" como vaivén y terminaba volviendo a la imagen sin motivo.
+        <PerformanceMonitor bounds={() => [mobile ? 30 : 40, Infinity]} onDecline={handleDecline} />
       )}
-    </>
+      <FitCamera />
+      <SoftEnvironment intensity={mobile ? 0.8 : 0.9} />
+      <Room items={placed} mobile={mobile} onSelect={onSelect} onFirstDrag={onFirstDrag} hint={hint} />
+      <ReadySignal onReady={onReady} />
+    </Canvas>
   );
 }
