@@ -99,7 +99,7 @@ el cierre tenga qué animar.
 | Titi en el login | mira al puntero (±6°, `gsap.quickTo`, solo mouse), saltito por tecla, al tocarlo festeja y suelta 3 gotas (≤ 400ms), chips rebotan al tocarlos | `AuthScene` |
 | Campos de auth | wiggle del ícono al enfocar, barra de foco que crece, check con pop al validar, shake 300ms en error | `AuthField` + keyframes `titi-wiggle`, `.titi-pop-in`, `.titi-shake` |
 | Botón de login/registro | barrido sólido al hover, se hunde al press, loader de 3 gotas (`titi-hop`) y shake si falla | `AuthSubmitButton` + `shake()` en `AuthLayout` |
-| Hero 3D de `/courses` | la imagen hace fade (300ms) a la escena; objetos con pop escalonado (300ms, 0.1s entre cada uno → ≤ 3 a la vez); flotación ambiental en loop (`Float` de drei); hover: crece 1.18 y sube con `ease.pop`; con mouse la escena se inclina ±6° hacia el puntero | GSAP sobre `object.scale/position` de three con tokens `MOTION` en `HeroObject`; `PointerTilt` en `HeroScene` |
+| Habitación 3D de `/courses` | la imagen hace fade (300ms) a la escena; los objetos de categoría saludan con un saltito escalonado (≤ 380ms, 0.12s entre cada uno → ≤ 3 a la vez) y cada 4,5 s uno repite el saltito como pista; hover: crece 1.14 y sube con `ease.pop` + pill con el nombre; arrastrar gira el cuarto ±35° (vuelve al frente tras 4 s); paralaje leve con el mouse; adornos con sorpresa ≤ 400ms (lámpara, planta, reloj, gota, pelota, silla, puf) | GSAP con tokens `MOTION` en `HeroObject` y `RoomToys`; giro y paralaje amortiguados en `useFrame` de `RoomRig` |
 | Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
 
 ### Cobertura — `useStaggerReveal` en toda lista/grid
@@ -131,8 +131,15 @@ contenido abajo), `AchievementsSection`, `AdminDashboard` (stats + paneles),
   `table-row` renderiza inconsistente entre navegadores.
 - **Landing (`Home`) y `VerifyCertificate`**: fuera del shell de la app (no hay
   navegación in-app hacia ellas) → sin `PageTransition`.
-- **Hero 3D (`/courses`)**: la flotación de los objetos es un loop ambiental,
-  como `titi-float` en el login, no una entrada; por eso no tiene tope de 400ms.
+- **Habitación 3D (`/courses`)**: tres excepciones acotadas al canvas.
+  1. **Arrastre para girar:** es manipulación directa (sigue al dedo/mouse),
+     no una animación; la vuelta al frente es amortiguada y no cuenta como
+     entrada. Nunca captura la rueda ni el scroll vertical (`touch-action: pan-y`).
+  2. **Paralaje:** solo dentro del canvas y solo con mouse (±3,4°), no es
+     parallax de scroll; la regla "sin parallax" sigue valiendo para la página.
+  3. **Loops ambientales:** el segundero del reloj y el saltito periódico de
+     pista son ambiente, como `titi-float`. Cada sorpresa al tocar un adorno
+     dura ≤ 400ms.
   Con `prefers-reduced-motion` no se monta la escena: queda la imagen estática.
 - **Salida de modales**: `if(!open) return null` desmonta al instante, así que la
   salida no anima. Aceptable; animarla requiere mantener montado.

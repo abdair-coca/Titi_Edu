@@ -3,8 +3,12 @@
 Modelos de terceros usados en la app. Solo se aceptan licencias CC0 o CC-BY;
 los CC-BY exigen mantener este crédito. Todos se descargaron de
 [Poly Pizza](https://poly.pizza) y se comprimieron con `gltf-transform optimize`
-(meshopt + texturas WebP de 128 px). En la app sus materiales se pasan a toon
-plano con los mismos colores.
+(meshopt + texturas WebP de 128 px). En la app sus materiales se pasan a
+estándar mate con los mismos colores, para que reciban la luz suave de la
+habitación del hero (change `habitacion-3d-cursos`).
+
+El resto de la habitación (paredes, muebles, adornos) se arma con figuras
+básicas en código: no usa modelos de terceros.
 
 ## Hero de /courses (`hero/`)
 

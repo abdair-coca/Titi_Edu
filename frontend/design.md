@@ -1045,23 +1045,35 @@ cada pantalla: si el bloque no celebra, motiva o explica, no lleva mascota.
 
 ### 3D (three.js) — reglas
 
-Hoy solo existe en el hero de `/courses` (`components/hero3d/`, change
-`hero-3d-cursos`). Si se suma 3D en otro lado, sigue estas reglas:
+Hoy solo existe en el hero de `/courses`: la habitación de estudio de Titi
+(`components/hero3d/`, change `habitacion-3d-cursos`, que reemplazó la escena
+de `hero-3d-cursos`). Si se suma 3D en otro lado, sigue estas reglas:
 
-- **Plano también en 3D:** `MeshToonMaterial` con rampa de 3 tonos y los colores
-  del propio modelo; sin reflejos, PBR, sombras proyectadas, bloom ni
-  postprocesado. El fondo de la escena es HTML plano (disco `bg-titi-yellow-light`
-  + anillo punteado `titi-spin-slow`), no geometría.
-- **Titi sigue siendo `<TitiMascot>`** superpuesto en HTML, nunca un modelo 3D.
+- **Luz suave solo dentro del render:** el WebGL puede tener luz y sombras
+  suaves (materiales estándar mate, sombras con penumbra, oclusión pintada en
+  rincones), como un diorama horneado. La UI alrededor sigue **plana**: nada
+  de `bg-gradient-*` ni `blur-*` en Tailwind/CSS. Sin bloom ni postprocesado.
+- **Paleta Titi también en 3D:** amarillos, crema, oscuros y acentos de rol
+  (racha, logro, certificado) más maderas cálidas; colores centralizados en
+  `hero3d/roomLayout.js` (`COLORS`). Tono neutro (`NeutralToneMapping`) para
+  no lavar el amarillo.
+- **Entorno de luz solo con paneles emisivos** generados en el navegador
+  (equivalente a `Lightformer`): nunca `Environment preset=` ni HDR externos.
+- **Titi no va dentro de la habitación.** La mascota sigue siendo
+  `<TitiMascot>` en HTML donde corresponda (§7), nunca un modelo 3D.
 - **Modelos:** low-poly de terceros solo CC0/CC-BY, comprimidos con
   `gltf-transform optimize` (meshopt), registrados en `public/models/CREDITS.md`.
+  Presupuesto total ≤ 600 KB (hoy 87 KB); lo demás, figuras básicas en código.
 - **Chunk diferido:** three/R3F/drei solo dentro de un componente cargado con
   `lazy()`; el componente del chunk principal no los importa (lo vigila
   `npm run test:hero-3d`).
 - **Respaldo a imagen:** reduced-motion, sin WebGL, ahorro de datos, error,
   pérdida de contexto o rendimiento bajo sostenido → imagen estática (una
   captura de la propia escena, candidata a LCP).
-- **Cámara fija:** sin drag, zoom ni scroll capturado (`touch-action: pan-y`).
+- **Interacción acotada:** se puede girar arrastrando (con tope) pero nunca
+  capturar la rueda ni el scroll: el lienzo usa `touch-action: pan-y`.
+  Lo que navega (objetos de categoría) siempre tiene un camino por teclado
+  fuera del canvas (las pills).
 
 ---
 
@@ -1127,7 +1139,7 @@ Claude Code debe verificar esto antes de dar un componente por terminado:
 - [ ] ¿Cumple los mínimos de legibilidad (≥`text-xs`, ≥`font-medium`, gris legible)?
 - [ ] ¿Sin vacíos muertos: secciones a `mb-6`, cards `p-4/p-5`, columnas emparejadas (§4 Densidad)?
 - [ ] ¿Cumple las 8 reglas del estándar de experiencia (§1)?
-- [ ] Si usa 3D: ¿toon plano, chunk diferido, respaldo a imagen y cámara fija (§10, "3D")?
+- [ ] Si usa 3D: ¿luz suave solo en el render y UI plana, entorno sin HDR externo, chunk diferido, respaldo a imagen y scroll libre (§10, "3D")?
 
 ---
 
@@ -1204,8 +1216,10 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `auth/AuthLayout.jsx` | superficie compartida de login/registro (fondo, encabezado, escena, entrada GSAP) + piezas: `AuthHeading`, `AuthSubmitButton`, `PasswordToggle`, `ErrorBanner`, `AuthSwitchLink`, `CapsLockHint` |
 | `auth/PasswordStrength.jsx` | medidor de fuerza (4 segmentos) + checklist con checks que hacen pop (registro) |
 | `auth/AuthScene.jsx` | escena del login: Titi interactivo (mira al puntero, salta al escribir, se toca), burbuja y chips sociales tocables; mismo componente en móvil y desktop |
-| `hero3d/Hero3D.jsx` | hero 3D de `/courses`: decide 3D o imagen, carga diferida de `HeroScene`, pausa fuera de pantalla (§10, "3D") |
-| `hero3d/HeroScene.jsx` / `hero3d/HeroObject.jsx` | escena three.js (chunk diferido): objetos de categoría toon que flotan, hover con etiqueta, click filtra; `heroModels.js` mapea categoría → modelo |
+| `hero3d/Hero3D.jsx` | hero 3D de `/courses`: decide 3D o imagen, carga diferida de `HeroScene`, pausa fuera de pantalla, chip "Arrastrá para girar" (§10, "3D") |
+| `hero3d/HeroScene.jsx` | habitación de estudio (chunk diferido): cámara isométrica, luz suave, entorno con paneles emisivos, monitor de rendimiento |
+| `hero3d/HeroObject.jsx` | objeto de categoría dentro del cuarto: hover con etiqueta, click filtra, saltito de pista; `heroModels.js` mapea categoría → modelo y `roomLayout.js` su lugar |
+| `hero3d/RoomRig.jsx` / `RoomShell.jsx` / `RoomToys.jsx` | giro por arrastre + paralaje + sombras bajo demanda · cuarto y muebles fijos · adornos con sorpresa |
 | `GotaToast.jsx`, `StreakToast.jsx`, `AchievementToast.jsx`, `PurchaseToast.jsx`, `WeeklyPrizeCelebration.jsx` | toasts/celebraciones (animaciones cerradas, no tocar) |
 
 ### Hooks y lib
