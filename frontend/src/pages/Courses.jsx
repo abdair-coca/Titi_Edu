@@ -307,8 +307,8 @@ export default function Courses() {
   const popularRef = useStaggerReveal([popularCats.length]);
 
   // Objetos del hero 3D: todas las categorías con modelo (como las pills), las
-  // de más cursos primero (en mobile solo entran las primeras 4). Espera al
-  // catálogo para que el orden no cambie con los objetos ya en escena.
+  // de más cursos primero (orden del saludo de entrada). Espera al catálogo
+  // para que el orden no cambie con los objetos ya en escena.
   const heroItems = useMemo(
     () =>
       loading
@@ -507,7 +507,7 @@ export default function Courses() {
             goToTrending();
           }}
           poster="/hero/hero-3d-poster.webp"
-          alt="Titi rodeado de objetos de las categorías: laptop, matraz, paleta, libros, globo, calculadora, guitarra y maletín"
+          alt="Habitación de estudio de Titi con los objetos de las categorías: laptop y calculadora en el escritorio, libros, globo y matraz en las repisas, guitarra, paleta y maletín"
           width={1176}
           height={882}
         />
