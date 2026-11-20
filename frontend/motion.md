@@ -100,6 +100,7 @@ el cierre tenga qué animar.
 | Campos de auth | wiggle del ícono al enfocar, barra de foco que crece, check con pop al validar, shake 300ms en error | `AuthField` + keyframes `titi-wiggle`, `.titi-pop-in`, `.titi-shake` |
 | Botón de login/registro | barrido sólido al hover, se hunde al press, loader de 3 gotas (`titi-hop`) y shake si falla | `AuthSubmitButton` + `shake()` en `AuthLayout` |
 | Habitación 3D de `/courses` | la imagen hace fade (300ms) a la escena; los objetos de categoría saludan con un saltito escalonado (≤ 380ms, 0.12s entre cada uno → ≤ 3 a la vez) y cada 4,5 s uno repite el saltito como pista; hover: crece 1.14 y sube con `ease.pop` + pill con el nombre; arrastrar gira el cuarto ±35° (vuelve al frente tras 4 s); paralaje leve con el mouse; adornos con sorpresa ≤ 400ms (lámpara, planta, reloj, gota, pelota, silla, puf) | GSAP con tokens `MOTION` en `HeroObject` y `RoomToys`; giro y paralaje amortiguados en `useFrame` de `RoomRig` |
+| Cielo 3D del header de `/courses` | loops ambientales **vivos** detrás de la barra amarilla y el texto: dron repartidor cruza la fila del badge cada 5–7 s (hélices, librito que se balancea), dron chico ronda en ocho a la derecha del párrafo, avión de papel con rizo cada ~8 s y estela punteada, 3 gotas que suben, nubes que cruzan en ~20–30 s; mouse: el repartidor esquiva y el dron chico mira; toque: rizo del repartidor o voltereta del dron chico (0,8 s) + gota que cae y rebota sobre el buscador, tirabuzón del avión (0,65 s), salpicadura de la gota, aplastón de la nube (0,45 s). En celular solo repartidor + avión | `useFrame` con tiempo del reloj del Canvas en `components/heroSky/` (sin GSAP); la escena aparece con fade de 300ms |
 | Toasts (racha/logros/flama) | keyframes CSS existentes | `index.css` — **no tocar** |
 
 ### Cobertura — `useStaggerReveal` en toda lista/grid
@@ -141,6 +142,17 @@ contenido abajo), `AchievementsSection`, `AdminDashboard` (stats + paneles),
      pista son ambiente, como `titi-float`. Cada sorpresa al tocar un adorno
      dura ≤ 400ms.
   Con `prefers-reduced-motion` no se monta la escena: queda la imagen estática.
+- **Cielo 3D del header (`/courses`)**: excepción acotada al lienzo detrás del
+  texto (change `cielo-hero-cursos`).
+  1. **Loops ambientales continuos** (más de 3 objetos moviéndose a la vez, hasta
+     5 en desktop y 2 en celular): son ambiente, como `titi-float`, no entradas;
+     se pausan fuera de pantalla o con la pestaña oculta.
+  2. **Respuestas al toque de hasta 0,8 s** (rizo del dron, caída de la gota):
+     son maniobras de vuelo, no feedback de UI; el resto de la página sigue con
+     el tope de 400ms.
+  3. **Esquivar/mirar al mouse** solo con puntero fino y solo dentro del hero.
+  Con `prefers-reduced-motion`, sin WebGL, ahorro de datos o rendimiento bajo
+  no se monta: el header queda como siempre.
 - **Salida de modales**: `if(!open) return null` desmonta al instante, así que la
   salida no anima. Aceptable; animarla requiere mantener montado.
 

@@ -1045,9 +1045,11 @@ cada pantalla: si el bloque no celebra, motiva o explica, no lleva mascota.
 
 ### 3D (three.js) — reglas
 
-Hoy solo existe en el hero de `/courses`: la habitación de estudio de Titi
+Hoy solo existe en `/courses`: la habitación de estudio de Titi en el hero
 (`components/hero3d/`, change `habitacion-3d-cursos`, que reemplazó la escena
-de `hero-3d-cursos`). Si se suma 3D en otro lado, sigue estas reglas:
+de `hero-3d-cursos`) y el cielo del header detrás del texto
+(`components/heroSky/`, change `cielo-hero-cursos`). Si se suma 3D en otro
+lado, sigue estas reglas:
 
 - **Luz suave solo dentro del render:** el WebGL puede tener luz y sombras
   suaves (materiales estándar mate, sombras con penumbra, oclusión pintada en
@@ -1074,6 +1076,16 @@ de `hero-3d-cursos`). Si se suma 3D en otro lado, sigue estas reglas:
   capturar la rueda ni el scroll: el lienzo usa `touch-action: pan-y`.
   Lo que navega (objetos de categoría) siempre tiene un camino por teclado
   fuera del canvas (las pills).
+- **3D detrás de texto (cielo del header):** el lienzo va detrás del texto
+  (`-z-10` dentro de un contenedor `isolate`), con `aria-hidden` y sin
+  eventos propios: los toma del contenedor (`eventSource` de R3F) y un toque
+  sobre el buscador, un botón o un link **nunca** llega al 3D. Es decoración:
+  no navega, no da gotas reales y, si el 3D no conviene, no pinta nada (sin
+  imagen de respaldo). Si el rendimiento cae, se apaga primero el cielo.
+  Las trayectorias salen de medir el texto real (`data-sky="…"`) para
+  esquivar el buscador. Única excepción visual: en desktop el borde derecho
+  del lienzo se funde con una **máscara** (`mask-image`) para que los objetos
+  no se corten en seco junto al cuarto; no es un fondo degradado.
 
 ---
 
@@ -1139,7 +1151,7 @@ Claude Code debe verificar esto antes de dar un componente por terminado:
 - [ ] ¿Cumple los mínimos de legibilidad (≥`text-xs`, ≥`font-medium`, gris legible)?
 - [ ] ¿Sin vacíos muertos: secciones a `mb-6`, cards `p-4/p-5`, columnas emparejadas (§4 Densidad)?
 - [ ] ¿Cumple las 8 reglas del estándar de experiencia (§1)?
-- [ ] Si usa 3D: ¿luz suave solo en el render y UI plana, entorno sin HDR externo, chunk diferido, respaldo a imagen y scroll libre (§10, "3D")?
+- [ ] Si usa 3D: ¿luz suave solo en el render y UI plana, entorno sin HDR externo, chunk diferido, respaldo a imagen y scroll libre (§10, "3D")? Si va detrás de texto: ¿`aria-hidden`, la UI gana los toques y no tapa el buscador?
 
 ---
 
@@ -1220,6 +1232,9 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `hero3d/HeroScene.jsx` | habitación de estudio (chunk diferido): cámara isométrica, luz suave, entorno con paneles emisivos, monitor de rendimiento |
 | `hero3d/HeroObject.jsx` | objeto de categoría dentro del cuarto: hover con etiqueta, click filtra, saltito de pista; `heroModels.js` mapea categoría → modelo y `roomLayout.js` su lugar |
 | `hero3d/RoomRig.jsx` / `RoomShell.jsx` / `RoomToys.jsx` | giro por arrastre + paralaje + sombras bajo demanda · cuarto y muebles fijos · adornos con sorpresa |
+| `hero3d/support.js` · `sceneKit.jsx` · `dropGeometry.js` | compartido por las escenas 3D: decidir 3D (`canShow3D`), carga diferida, pausa fuera de pantalla, `SceneBoundary` · luz de ambiente, guardia de contexto, calentamiento del monitor · forma de la gota |
+| `heroSky/HeroSky.jsx` | cielo 3D del header de `/courses` (detrás de barra amarilla + texto): mide carriles (`skyLayout.js`), carga diferida de `SkyScene`, sin respaldo (§10, "3D") |
+| `heroSky/SkyScene.jsx` | escena del cielo (chunk diferido): dron repartidor, dron chico, avión de papel, gotas y nubes (`Drone`, `PaperPlane`, `SkyDrops`, `Clouds`); en celular solo repartidor + avión |
 | `GotaToast.jsx`, `StreakToast.jsx`, `AchievementToast.jsx`, `PurchaseToast.jsx`, `WeeklyPrizeCelebration.jsx` | toasts/celebraciones (animaciones cerradas, no tocar) |
 
 ### Hooks y lib
