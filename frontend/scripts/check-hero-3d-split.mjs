@@ -16,6 +16,15 @@ for (const file of mainChunkFiles) {
   if (/import\s+HeroScene\s+from/.test(src)) throw new Error(`Hero 3D: ${file} importa HeroScene de forma estática`);
 }
 
+// Las piezas de la habitación (change habitacion-3d-cursos) importan three:
+// solo las puede traer HeroScene, nunca el chunk principal.
+const ROOM_FILES = /from\s+['"]\.\/(HeroScene|HeroObject|RoomRig|RoomShell|RoomToys|roomTextures|roomLayout)(\.jsx?)?['"]/;
+for (const file of mainChunkFiles) {
+  if (ROOM_FILES.test(fs.readFileSync(file, 'utf8'))) {
+    throw new Error(`Hero 3D: ${file} importa una pieza de la habitación de forma estática`);
+  }
+}
+
 const hero = fs.readFileSync('src/components/hero3d/Hero3D.jsx', 'utf8');
 for (const token of ["lazy(() => import('./HeroScene.jsx'))", 'prefers-reduced-motion', 'saveData', 'webgl']) {
   if (!hero.includes(token)) throw new Error(`Hero 3D: falta el contrato ${token}`);
