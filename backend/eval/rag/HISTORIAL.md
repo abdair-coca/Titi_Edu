@@ -44,7 +44,7 @@ donde el material responde; si orienta o explica de memoria se revisa leyendo ca
 
 | Fecha | Commit | Como se esperaba | Tokens salida (prom./máx.) | p50 / p90 | Nota |
 |---|---|---|---|---|---|
-| 2026-11-20 | 14188a0 | 10/10 | 256 / 552 | 1815 / 2206 ms | Inventó una sección del curso, "¡Hola!" en casi todo, llamó "Titi" al estudiante, declinó los temas ajenos |
-| 2026-11-20 | 3f45621 | 10/10 | 259 / 593 | 1641 / 2669 ms | Sin secciones inventadas, saludo solo ante un saludo; el mundial sigue en "el material no lo cubre" |
+| 2026-11-20 | daa8b17 | 10/10 | 256 / 552 | 1815 / 2206 ms | Inventó una sección del curso, "¡Hola!" en casi todo, llamó "Titi" al estudiante, declinó los temas ajenos |
+| 2026-11-20 | 80c1b59 | 10/10 | 259 / 593 | 1641 / 2669 ms | Sin secciones inventadas, saludo solo ante un saludo; el mundial sigue en "el material no lo cubre" |
 
-| 2026-11-20 | 0788f26 | 10/10 | 219 / 457 | 1622 / 2213 ms | Mundial: "Argentina ganó el Mundial de 2022" y vuelve a la lección. El LaTeX que el modelo sigue escribiendo ahora se pasa a texto plano en el servidor |
+| 2026-11-20 | 046ad1d | 10/10 | 219 / 457 | 1622 / 2213 ms | Mundial: "Argentina ganó el Mundial de 2022" y vuelve a la lección. El LaTeX que el modelo sigue escribiendo ahora se pasa a texto plano en el servidor |

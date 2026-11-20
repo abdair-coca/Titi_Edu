@@ -35,7 +35,7 @@ El frontend no tiene ESLint configurado, así que no hay lint para `TutorPanel.j
 sin límites de Groq alcanzados). Registro en
 [`backend/eval/rag/HISTORIAL.md`](../../../../backend/eval/rag/HISTORIAL.md).
 
-| | Corrida 1 (`14188a0`) | Corrida 2 (`3f45621`, prompt ajustado) |
+| | Corrida 1 (`daa8b17`) | Corrida 2 (`80c1b59`, prompt ajustado) |
 |---|---|---|
 | Como se esperaba | 10/10 | 10/10 |
 | Saludos | Naturales; uno llamó "Titi" al estudiante | Naturales, sin ponerle nombre |
@@ -47,7 +47,7 @@ sin límites de Groq alcanzados). Registro en
 Las 25 preguntas no cubiertas del split `dev` recuperan fuentes igual (no relacionadas), así
 que el modelo tuvo que elegir orientar en vez de citar: lo hizo en los 3 casos.
 
-### Corrida 3 (`0788f26`)
+### Corrida 3 (`046ad1d`)
 
 - Tema ajeno: el prompt dice que no mencione el material ni pida disculpas, con un ejemplo
   de charla. El mundial pasó a *"Argentina ganó el Mundial de 2022. Si quieres seguir
