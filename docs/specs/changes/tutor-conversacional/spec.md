@@ -48,6 +48,10 @@ Si no cumple, el estudiante recibe el texto de rechazo y se registra el evento
   frases y ofrecer volver a la lección, sin adivinar datos que cambian (precios,
   noticias, resultados recientes).
 - Recibe el título del curso como metadato no confiable.
+- No nombra secciones ni recursos que no estén en las fuentes, saluda solo si el
+  estudiante saluda y no le pone nombre al estudiante.
+- Las fórmulas LaTeX delimitadas (`\( \)`, `\[ \]`, `$$ $$`) se convierten a texto plano
+  en el servidor, porque el panel no las muestra.
 
 ### R5. Texto de rechazo
 - Más cálido: "No encontré esto en los materiales del curso y prefiero no inventarte

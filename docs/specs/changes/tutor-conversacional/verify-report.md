@@ -47,11 +47,19 @@ sin límites de Groq alcanzados). Registro en
 Las 25 preguntas no cubiertas del split `dev` recuperan fuentes igual (no relacionadas), así
 que el modelo tuvo que elegir orientar en vez de citar: lo hizo en los 3 casos.
 
+### Corrida 3 (`0788f26`)
+
+- Tema ajeno: el prompt dice que no mencione el material ni pida disculpas, con un ejemplo
+  de charla. El mundial pasó a *"Argentina ganó el Mundial de 2022. Si quieres seguir
+  charlando o volver a la lección…"*. 10/10 como se esperaba.
+- LaTeX: el modelo siguió escribiendo `\(n\)` y `\[ … \]` aunque el prompt lo prohíbe, y el
+  panel no tiene un renderizador de matemáticas. `plainMath` (en `rag.security.js`) lo pasa a
+  texto plano en el servidor, en Markdown y en los textos DIL, sin tocar el código. Aplicado
+  a la respuesta real de esa corrida queda `n! = n × (n-1) × … × 1` y "si el caso base fuera 0".
+- Suite backend: 639 pasan.
+
 ## Pendiente
 
-- Temas ajenos: el modelo tiende a declinar ("el material no lo cubre") en vez de charlar
-  una frase. No es alucinación; mejorarlo pide otra iteración de prompt y otra medición.
-- Fuera de este change: en una respuesta con material el modelo escribió fórmulas LaTeX
-  (`\[ … \]`) y explicó primero de memoria y citó al final; el respaldo de términos la
-  dejó pasar.
+- Las salteñas todavía reciben un "Lo siento, no tengo una receta" seco; aceptable.
+- El modelo mezcla tú y vos según la respuesta; no se fijó un registro.
 - Probar el panel a mano con la clave propia después del deploy.
