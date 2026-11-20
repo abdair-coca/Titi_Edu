@@ -9,6 +9,7 @@ import { resolveMediaUrl } from '../lib/format.js';
 import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
 import Hero3D from '../components/hero3d/Hero3D.jsx';
+import HeroSky from '../components/heroSky/HeroSky.jsx';
 import { HERO_MODELS } from '../components/hero3d/heroModels.js';
 import { GotaIcon, BookIcon, BoltIcon, AwardIcon } from '../components/icons.jsx';
 
@@ -253,6 +254,8 @@ export default function Courses() {
   // Bloques sueltos (no-lista) que también deben entrar (motion.md §4).
   const promoRef = usePopIn([]);
   const heroRef = usePopIn([]);
+  const skyRegionRef = useRef(null);
+  const skyTextRef = useRef(null);
   const darkPromoRef = usePopIn([]);
   const footerRef = usePopIn([]);
 
@@ -384,134 +387,139 @@ export default function Courses() {
 
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
-      {/* Promo bar */}
-      <div ref={promoRef} className="flex items-center justify-center gap-2 bg-titi-yellow text-titi-dark rounded-xl px-4 py-2.5 text-center text-sm font-bold">
-        <svg
-          viewBox="0 0 16 16"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-4 h-4 shrink-0"
-          aria-hidden="true"
-        >
-          <path d="M8 1.5 9.5 6l4.5 1.5L9.5 9 8 13.5 6.5 9 2 7.5 6.5 6Z" />
-        </svg>
-        Cursos nuevos cada semana, creados por la comunidad Titi
-      </div>
+      {/* Header: barra amarilla + hero, con el cielo 3D detrás (change cielo-hero-cursos) */}
+      <div ref={skyRegionRef} className="relative isolate flex flex-col gap-8 sm:gap-10">
+        <HeroSky regionRef={skyRegionRef} textRef={skyTextRef} />
 
-      {/* Hero */}
-      <section ref={heroRef} className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-center">
-        <div>
-          {/* Badge */}
-          <span className="inline-flex items-center gap-2 bg-white border border-gray-100 rounded-full pl-1.5 pr-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] mb-5">
-            <span className="w-5 h-5 rounded-full bg-titi-yellow grid place-items-center shrink-0">
-              <svg
-                viewBox="0 0 12 12"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="w-3 h-3 text-titi-dark"
-                aria-hidden="true"
-              >
-                <path d="M2 6 5 9l5-6" />
-              </svg>
-            </span>
-            <span className="text-xs font-bold text-titi-dark">
-              Comunidad de aprendizaje
-            </span>
-          </span>
-
-          {/* Título */}
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-titi-dark leading-[1.05] tracking-tight mb-4">
-            Aprendé algo nuevo, <span className="text-titi-streak">hoy</span>.
-          </h1>
-          <p className="text-base sm:text-lg font-medium text-gray-500 leading-relaxed mb-6 max-w-md">
-            Cursos creados por personas como vos. Sumá lecciones cortas, ganá
-            gotas y seguí tu propio ritmo en la comunidad Titi.
-          </p>
-
-          {/* Search grande */}
-          <div className="relative max-w-lg mb-6">
-            <input
-              type="text"
-              value={query}
-              onChange={handleSearchChange}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="¿Qué querés aprender hoy?"
-              aria-label="Buscar cursos"
-              className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-12 py-5 text-base font-medium text-titi-dark placeholder:text-gray-400 shadow-[0_4px_14px_rgba(0,0,0,0.06)] focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
-            />
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-              aria-hidden="true"
-            >
-              <circle cx="11" cy="11" r="7" />
-              <line x1="21" y1="21" x2="16.5" y2="16.5" />
-            </svg>
-            {query && (
-              <button
-                type="button"
-                onClick={() => {
-                  setQuery('');
-                  setDebouncedQuery('');
-                }}
-                aria-label="Limpiar búsqueda"
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:text-titi-dark hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow transition-colors"
-              >
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-4 h-4"
-                  aria-hidden="true"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className="flex items-center gap-5 flex-wrap">
-            <HeroStat num={allCursos.length} label="cursos" />
-            <span className="w-px h-5 bg-gray-200" aria-hidden="true" />
-            <HeroStat num={categorias.length} label="categorías" />
-            <span className="w-px h-5 bg-gray-200" aria-hidden="true" />
-            <HeroStat
-              num={profesCount}
-              label={profesCount === 1 ? 'profe de la comunidad' : 'profes de la comunidad'}
-            />
-          </div>
+        {/* Promo bar */}
+        <div ref={promoRef} data-sky="promo" className="flex items-center justify-center gap-2 bg-titi-yellow text-titi-dark rounded-xl px-4 py-2.5 text-center text-sm font-bold">
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="w-4 h-4 shrink-0"
+            aria-hidden="true"
+          >
+            <path d="M8 1.5 9.5 6l4.5 1.5L9.5 9 8 13.5 6.5 9 2 7.5 6.5 6Z" />
+          </svg>
+          Cursos nuevos cada semana, creados por la comunidad Titi
         </div>
 
-        {/* Visual del hero — escena 3D de las categorías, con imagen de respaldo */}
-        <Hero3D
-          items={heroItems}
-          onSelect={(id) => {
-            setCategoria(id);
-            setQuery('');
-            goToTrending();
-          }}
-          poster="/hero/hero-3d-poster.webp"
-          alt="Habitación de estudio de Titi con los objetos de las categorías: laptop y calculadora en el escritorio, libros, globo y matraz en las repisas, guitarra, paleta y maletín"
-          width={1176}
-          height={882}
-        />
-      </section>
+        {/* Hero */}
+        <section ref={heroRef} className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-center">
+          <div ref={skyTextRef}>
+            {/* Badge */}
+            <span className="inline-flex items-center gap-2 bg-white border border-gray-100 rounded-full pl-1.5 pr-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] mb-5">
+              <span className="w-5 h-5 rounded-full bg-titi-yellow grid place-items-center shrink-0">
+                <svg
+                  viewBox="0 0 12 12"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="w-3 h-3 text-titi-dark"
+                  aria-hidden="true"
+                >
+                  <path d="M2 6 5 9l5-6" />
+                </svg>
+              </span>
+              <span className="text-xs font-bold text-titi-dark">
+                Comunidad de aprendizaje
+              </span>
+            </span>
+
+            {/* Título */}
+            <h1 data-sky="title" className="text-4xl sm:text-5xl font-extrabold text-titi-dark leading-[1.05] tracking-tight mb-4">
+              Aprendé algo nuevo, <span className="text-titi-streak">hoy</span>.
+            </h1>
+            <p data-sky="paragraph" className="text-base sm:text-lg font-medium text-gray-500 leading-relaxed mb-6 max-w-md">
+              Cursos creados por personas como vos. Sumá lecciones cortas, ganá
+              gotas y seguí tu propio ritmo en la comunidad Titi.
+            </p>
+
+            {/* Search grande */}
+            <div data-sky="search" className="relative max-w-lg mb-6">
+              <input
+                type="text"
+                value={query}
+                onChange={handleSearchChange}
+                onKeyDown={handleSearchKeyDown}
+                placeholder="¿Qué querés aprender hoy?"
+                aria-label="Buscar cursos"
+                className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-12 py-5 text-base font-medium text-titi-dark placeholder:text-gray-400 shadow-[0_4px_14px_rgba(0,0,0,0.06)] focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
+              />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <line x1="21" y1="21" x2="16.5" y2="16.5" />
+              </svg>
+              {query && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuery('');
+                    setDebouncedQuery('');
+                  }}
+                  aria-label="Limpiar búsqueda"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:text-titi-dark hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow transition-colors"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-4 h-4"
+                    aria-hidden="true"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+              )}
+            </div>
+
+            {/* Stats */}
+            <div data-sky="stats" className="flex items-center gap-5 flex-wrap">
+              <HeroStat num={allCursos.length} label="cursos" />
+              <span className="w-px h-5 bg-gray-200" aria-hidden="true" />
+              <HeroStat num={categorias.length} label="categorías" />
+              <span className="w-px h-5 bg-gray-200" aria-hidden="true" />
+              <HeroStat
+                num={profesCount}
+                label={profesCount === 1 ? 'profe de la comunidad' : 'profes de la comunidad'}
+              />
+            </div>
+          </div>
+
+          {/* Visual del hero — escena 3D de las categorías, con imagen de respaldo */}
+          <Hero3D
+            items={heroItems}
+            onSelect={(id) => {
+              setCategoria(id);
+              setQuery('');
+              goToTrending();
+            }}
+            poster="/hero/hero-3d-poster.webp"
+            alt="Habitación de estudio de Titi con los objetos de las categorías: laptop y calculadora en el escritorio, libros, globo y matraz en las repisas, guitarra, paleta y maletín"
+            width={1176}
+            height={882}
+          />
+        </section>
+      </div>
 
       {/* Featured — habilidades esenciales (3 categorías destacadas) */}
       {categorias.length > 0 && (
