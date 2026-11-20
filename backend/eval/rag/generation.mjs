@@ -2,7 +2,10 @@
 // preguntas. Manual y con costo: cada pregunta gasta una llamada a Groq por modo.
 // Requisito: la base local indexada con `npm run eval:rag -- --variants produccion`.
 // Uso: npm run eval:rag:generation -- [--limit 20] [--split dev] [--modes markdown,dil] [--ids a,b]
-//      [--db postgresql://...@127.0.0.1/...] [--env .env] [--course eval/rag/data/course.json]
+//      [--set conversacion] [--delay 20] [--db postgresql://...@127.0.0.1/...] [--env .env]
+//      [--course eval/rag/data/course.json]
+// --set conversacion: 10 mensajes (saludos, temas no cubiertos, temas ajenos y dos con respuesta
+// en el curso) con el resultado esperado de cada uno. Por defecto solo Markdown y 20 s entre llamadas.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,11 +23,14 @@ const { values: args } = parseArgs({
   options: {
     limit: { type: 'string' }, split: { type: 'string' }, modes: { type: 'string' }, ids: { type: 'string' },
     db: { type: 'string' }, env: { type: 'string' }, course: { type: 'string' },
+    set: { type: 'string' }, delay: { type: 'string' },
   },
 });
+const conversationSet = args.set === 'conversacion';
+if (args.set && !conversationSet) throw new Error('--set acepta solo conversacion');
 const limit = Math.max(1, Number(args.limit) || 20);
 const split = args.split || 'dev';
-const modes = (args.modes || 'markdown,dil').split(',').map((mode) => mode.trim());
+const modes = (args.modes || (conversationSet ? 'markdown' : 'markdown,dil')).split(',').map((mode) => mode.trim());
 const dbUrl = args.db || DEFAULT_DB;
 const envPath = path.resolve(backendDir, args.env || '.env');
 const coursePath = path.resolve(backendDir, args.course || 'eval/rag/data/course.json');
@@ -96,6 +102,21 @@ const questions = answerable.filter((_, index) => index % step === 0).slice(0, l
   .map((question, index) => ({ ...question, lessonId: golden.lessons[question.lesson], intent: INTENTS[index % INTENTS.length] }))
   // --ids repeats some questions with the intent they get in the full run.
   .filter((question) => !args.ids || args.ids.split(',').includes(question.id));
+// Saludos y charla: no hay pregunta del golden set que los cubra.
+const GREETINGS = ['hola', 'hola, ¿cómo estás?', 'estoy medio cansado, ¿me das ánimo para seguir?'];
+const EXPECTED = { saludo: 'conversacion', 'no-cubierta': 'conversacion', 'fuera-de-tema': 'conversacion' };
+if (conversationSet) {
+  const pick = (category, count) => golden.questions.filter((question) => question.split === split && question.category === category).slice(0, count);
+  const withAnswer = pick('directa', 2);
+  questions.splice(0, questions.length, ...[
+    ...GREETINGS.map((query, index) => ({ id: `saludo-${index + 1}`, category: 'saludo', query, lesson: withAnswer[0].lesson })),
+    ...pick('no-cubierta', 3),
+    ...pick('fuera-de-tema', 2),
+    ...withAnswer,
+  ].map((question) => ({ ...question, lessonId: golden.lessons[question.lesson], intent: 'DUDA', expected: EXPECTED[question.category] || 'respondida' })));
+}
+const delayMs = Math.max(0, Number(args.delay ?? (conversationSet ? 20 : 0)) * 1000);
+const courseTitle = course.titulo || null;
 const lessonTitle = Object.fromEntries(course.modulos.flatMap((module) => module.lecciones).map((lesson) => [lesson.id, lesson.titulo]));
 
 const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
@@ -110,6 +131,7 @@ async function ask(question) {
         courseId: course.id,
         lessonId: question.lessonId,
         lessonTitle: lessonTitle[question.lessonId],
+        courseTitle,
         principalId: 'eval-generation',
         message: question.query,
         history: question.history || [],
@@ -160,6 +182,7 @@ for (const mode of modes) {
   process.env.RAG_DIL_ENABLED = mode === 'dil' ? 'true' : 'false';
   const rows = [];
   for (const [index, question] of questions.entries()) {
+    if (index > 0 && delayMs) await sleep(delayMs);
     const run = await ask(question);
     const outcome = outcomeOf(run);
     const dropped = run.events.filter((event) => event.type === 'dil_nodes_dropped' && event.reason !== 'unreadable');
@@ -168,6 +191,7 @@ for (const mode of modes) {
       category: question.category,
       intent: question.intent,
       outcome,
+      ...(question.expected ? { expected: question.expected, asExpected: outcome === question.expected } : {}),
       ms: Math.round(run.ms),
       completionTokens: run.result?.usage?.completion_tokens ?? null,
       components: run.result?.dil?.nodes.map((node) => node.c) || [],
@@ -179,6 +203,11 @@ for (const mode of modes) {
       error: run.error,
     });
     console.log(`[${mode}] ${index + 1}/${questions.length} ${question.id} (${question.intent}) → ${outcome} ${Math.round(run.ms)}ms`);
+    // The orient-or-explain call needs a human eye: print what the student would read.
+    if (conversationSet) {
+      const shown = (run.result?.answer ?? run.error?.message ?? '').replace(/\n/g, '\n  ');
+      console.log(`  esperado: ${question.expected} · «${question.query}»\n  ${shown}\n`);
+    }
   }
   const tokens = rows.map((row) => row.completionTokens).filter((value) => value != null);
   const latencies = rows.filter((row) => !row.error).map((row) => row.ms);
@@ -186,6 +215,7 @@ for (const mode of modes) {
   report.modes[mode] = {
     summary: {
       respondidas: answered,
+      ...(conversationSet ? { comoSeEsperaba: rows.filter((row) => row.asExpected).length } : {}),
       tasaRechazo: Number((1 - answered / rows.length).toFixed(3)),
       resultados: count(rows.map((row) => row.outcome)),
       jsonCortados: rows.filter((row) => row.outcome === 'json_cortado').length,
@@ -204,7 +234,7 @@ for (const mode of modes) {
 
 const resultsDir = path.join(here, 'results');
 mkdirSync(resultsDir, { recursive: true });
-const outFile = path.join(resultsDir, `generation-${split}-${modes.join('+')}.json`);
+const outFile = path.join(resultsDir, `generation-${conversationSet ? 'conversacion-' : ''}${split}-${modes.join('+')}.json`);
 writeFileSync(outFile, `${JSON.stringify(report, null, 2)}\n`);
 console.log('\nResumen');
 for (const [mode, { summary }] of Object.entries(report.modes)) console.log(mode, JSON.stringify(summary, null, 2));
