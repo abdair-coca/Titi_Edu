@@ -28,7 +28,7 @@ async function loadLessonAccess(req, res) {
       id: true,
       titulo: true,
       moduloId: true,
-      modulo: { select: { titulo: true, cursoId: true, estado: true } },
+      modulo: { select: { titulo: true, cursoId: true, estado: true, curso: { select: { titulo: true } } } },
       estado: true,
     },
   });
@@ -95,6 +95,7 @@ router.post('/lessons/:id/chat', requireAuth, async (req, res) => {
       courseId: loaded.lesson.modulo.cursoId,
       lessonId: loaded.lesson.id,
       lessonTitle: loaded.lesson.titulo,
+      courseTitle: loaded.lesson.modulo.curso?.titulo ?? null,
       principalId: loaded.access.usuario.id,
       message,
       history,

@@ -26,15 +26,16 @@ import {
   ExternalLinkIcon,
 } from './icons.jsx';
 
-// Secuencia de estados de carga: visual, honesta. Las etapas 1–2 se ejecutan
-// con temporizador corto; la 3 usa el conteo REAL de fuentes de la respuesta
-// y la 4 precede al reveal. El backend responde en un solo turno, así que no
-// se afirma ninguna operación que no ocurra.
+// Secuencia de estados de carga: visual, honesta. Las etapas 1–2 corren con
+// temporizador y no nombran la búsqueda, porque una charla no busca nada. La 3
+// solo aparece si la respuesta cita fuentes, con su conteo real; la 4 precede
+// al reveal. Una respuesta sin citas se muestra sin la etapa 3 ni su espera.
 const STAGE_LABELS = {
-  1: 'Analizando tu pregunta…',
-  2: 'Buscando en los materiales del curso…',
+  1: 'Leyendo tu mensaje…',
+  2: 'Pensando…',
   4: 'Preparando tu respuesta…',
 };
+const CONVERSATION_REVEAL_MS = 400;
 
 const QUICK_ACTIONS = [
   {
@@ -202,15 +203,18 @@ export default function TutorPanel({
         const citations = Array.isArray(data.data?.citations) ? data.data.citations : [];
         const answer = data.data?.answer || 'No encontré evidencia suficiente.';
 
-        timersRef.current.push(
-          setTimeout(() => {
-            if (isCurrentRequest()) setPending((p) => (p ? { ...p, stage: 3, count: citations.length } : p));
-          }, 450),
-        );
+        const usedSources = citations.length > 0;
+        if (usedSources) {
+          timersRef.current.push(
+            setTimeout(() => {
+              if (isCurrentRequest()) setPending((p) => (p ? { ...p, stage: 3, count: citations.length } : p));
+            }, 450),
+          );
+        }
         timersRef.current.push(
           setTimeout(() => {
             if (isCurrentRequest()) setPending((p) => (p ? { ...p, stage: 4 } : p));
-          }, 1350),
+          }, usedSources ? 1350 : 0),
         );
         timersRef.current.push(
           setTimeout(() => {
@@ -224,7 +228,7 @@ export default function TutorPanel({
             if (controllerRef.current === controller) controllerRef.current = null;
             clearTimers();
             setPending(null);
-          }, 2000),
+          }, usedSources ? 2000 : CONVERSATION_REVEAL_MS),
         );
       })
       .catch((err) => {
@@ -273,9 +277,7 @@ export default function TutorPanel({
 
   const pendingText =
     pending?.stage === 3
-      ? pending.count > 0
-        ? `Encontré ${pending.count} fuente${pending.count === 1 ? '' : 's'} relevante${pending.count === 1 ? '' : 's'}`
-        : 'No encontré fuentes relevantes'
+      ? `Encontré ${pending.count} fuente${pending.count === 1 ? '' : 's'} relevante${pending.count === 1 ? '' : 's'}`
       : STAGE_LABELS[pending?.stage] || 'Trabajando…';
 
   const canSend = ready && !pending && input.trim().length > 0;

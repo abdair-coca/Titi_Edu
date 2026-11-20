@@ -38,7 +38,7 @@ const teacherToken = jwt.sign({ id: 'neo-teacher' }, process.env.JWT_SECRET, { e
 function allowStudent() {
   mocks.client.usuario.findUnique.mockResolvedValue({ id: 'u-student', email: 'student@gmail.com', rol: 'ESTUDIANTE' });
   mocks.client.leccion.findUnique.mockResolvedValue({
-    id: 'l-1', titulo: 'Variables', estado: 'PUBLICADA', modulo: { titulo: 'Fundamentos', cursoId: 'c-1', estado: 'PUBLICADO' },
+    id: 'l-1', titulo: 'Variables', estado: 'PUBLICADA', modulo: { titulo: 'Fundamentos', cursoId: 'c-1', estado: 'PUBLICADO', curso: { titulo: 'Python desde cero' } },
   });
   mocks.client.curso.findUnique.mockResolvedValue({ creadorId: 'u-teacher', publicado: true, profesores: [] });
   mocks.client.inscripcion.findUnique.mockResolvedValue({ id: 'i-1' });
@@ -90,6 +90,7 @@ describe('RAG lesson routes', () => {
       courseId: 'c-1',
       lessonId: 'l-1',
       lessonTitle: 'Variables',
+      courseTitle: 'Python desde cero',
       principalId: 'u-student',
       message: '¿Qué es una variable?',
       history: undefined,

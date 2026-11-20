@@ -61,9 +61,16 @@ de otros estudiantes.
 - Se detectan señales de prompt injection y se bloquean pedidos de modificar notas,
   progreso o inscripciones y órdenes de ejecutar SQL. El vocabulario técnico no se bloquea:
   el modelo no tiene herramientas, así que preguntar qué hace `UPDATE` no entraña riesgo.
-- Una respuesta debe citar fuentes recuperadas y compartir términos con ellas. Es una
-  heurística contra respuestas sin relación con la fuente, no una verificación de cada
+- Una respuesta que cita debe citar fuentes recuperadas y compartir términos con ellas. Es
+  una heurística contra respuestas sin relación con la fuente, no una verificación de cada
   afirmación.
+- Una respuesta sin citas es charla (saludo, ánimo, orientar hacia la lección o una o dos
+  frases sobre un tema ajeno) y solo pasa si tiene hasta 600 caracteres, sin código ni
+  listas, y en DIL hasta 3 nodos `Text`. El prompt le prohíbe explicar de memoria temas del
+  curso que el material no cubre; la forma corta limita el daño si lo hace, pero no lo
+  prueba. Si no cumple, se rechaza con `ungrounded_answer_rejected` y un motivo
+  `conversation_*`. Los saludos van al modelo sin búsqueda; un mensaje sin fuentes
+  recuperadas también llega al modelo, avisándole que no hay fuentes.
 - En HTML evaluable se excluye lo oculto por atributos o por reglas simples de `<style>`,
   y de `data-*` solo se leen nombres pedagógicos permitidos. No se detecta lo que un script
   oculta en ejecución ni los selectores complejos: para material sensible, usar contexto
@@ -71,7 +78,9 @@ de otros estudiantes.
 - Si un mensaje coincide con una pregunta de una evaluación no aprobada, el tutor solo da
   una pista y se rechaza la respuesta que contenga la opción correcta. Las opciones correctas
   no se envían al proveedor. Una paráfrasis puede evadir la comparación: frena el copiar y
-  pegar, pero no reemplaza la supervisión de una evaluación. Si la consulta falla, el chat
+  pegar, pero no reemplaza la supervisión de una evaluación. Ante esa coincidencia no se
+  acepta una respuesta sin citas y, si no hay fuentes, se da la guía sin llamar al modelo.
+  Si la consulta falla, el chat
   continúa sin esta protección y registra `assessment_guard_failed`.
 - Con `RAG_DIL_ENABLED=true` el modelo responde un árbol DIL en modo estricto. El backend
   descarta nodos desconocidos o fuera de límites, acepta `Quiz` solo en `PRACTICA` (sin

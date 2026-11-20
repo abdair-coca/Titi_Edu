@@ -151,8 +151,8 @@ El body de `POST chat` no cambia. `answer` es siempre texto Markdown con citas `
 y es lo que el cliente reenvía como historial. `dil` es la misma respuesta declarada
 como árbol DIL v1 `{ version: 1, nodes: [...] }` (contrato en
 `docs/specs/changes/respuestas-estructuradas-tutor/spec.md` §1) o `null` con
-`RAG_DIL_ENABLED` apagado y en respuestas fijas: sin evidencia, evaluación, saludo,
-acción bloqueada o aclaración. Errores relevantes: `400` body/intención/historial
+`RAG_DIL_ENABLED` apagado y en respuestas fijas: rechazo, evaluación, saludo de
+respaldo o acción bloqueada. Errores relevantes: `400` body/intención/historial
 inválido, `401` sin sesión, `403` sin acceso/audiencia, `404` lección o feature no
 habilitada, `409` credencial requerida ausente, `422` credencial inválida, `429`
 cuota, `502/504` proveedor y `503` configuración o chat apagado.
@@ -252,8 +252,11 @@ falla o tarda más de `RAG_RERANK_TIMEOUT_MS`, se usa el orden híbrido sin cort
 `citations` puede tener menos de 5 fuentes aunque el material tenga más fragmentos
 parecidos.
 
-El chat devuelve `No encontré evidencia suficiente...` cuando no hay fragmentos
-recuperables. Con evidencia parcial responde lo respaldado y aclara qué parte no
+Una respuesta sin citas es charla: saludo, ánimo, orientación hacia la lección cuando
+el material no cubre el tema, o una o dos frases sobre un tema ajeno al curso. Llega
+con `citations: []` y `relatedLesson: null`; el backend la acepta solo si es corta y
+sin código ni listas. Si la rechaza, `answer` es `No encontré esto en los materiales
+del curso...`. Con evidencia parcial responde lo respaldado y aclara qué parte no
 cubre el material. `citations` identifica `number`, `chunkId`, `lessonId`, `title`,
 `moduleTitle`, `excerpt`, `similarity` y `reusedFromHistory`. `relatedLesson` es
 `null` salvo que la respuesta cite realmente una fuente de otra lección del mismo

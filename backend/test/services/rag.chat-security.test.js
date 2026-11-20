@@ -4,7 +4,7 @@ const prisma = vi.hoisted(() => ({ $queryRaw: vi.fn() }));
 vi.mock('../../src/prisma.js', () => ({ default: prisma }));
 
 import { buildContextualRetrievalQuery, buildFullTextQuery, chatWithCourseContext, isConversationContinuation, resetRagSecurityState } from '../../src/services/rag.service.js';
-import { ACTION_BLOCKED_ANSWER, SOCIAL_ANSWER } from '../../src/services/rag.security.js';
+import { ACTION_BLOCKED_ANSWER, NO_EVIDENCE_ANSWER, SOCIAL_ANSWER } from '../../src/services/rag.security.js';
 
 const chunk = {
   id: 'chunk-1',
@@ -40,6 +40,14 @@ function embeddingResponse() {
   return { ok: true, status: 200, json: async () => ({ data: [{ embedding: Array.from({ length: 768 }, () => 0.01) }] }) };
 }
 
+function chatResponse(content) {
+  return { ok: true, status: 200, json: async () => ({ choices: [{ message: { content } }] }) };
+}
+
+function systemPromptOf(fetchMock, call) {
+  return JSON.parse(fetchMock.mock.calls[call][1].body).messages[0].content;
+}
+
 describe('RAG chat security', () => {
   it('rejects an answer with a citation outside retrieved context', async () => {
     const fetchMock = vi.fn()
@@ -47,14 +55,16 @@ describe('RAG chat security', () => {
       .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ choices: [{ message: { content: 'Dato inventado [9]' } }] }) });
     vi.stubGlobal('fetch', fetchMock);
     const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?' });
-    expect(result.answer).toBe('No encontré evidencia suficiente en los materiales publicados de este curso.');
+    expect(result.answer).toBe(NO_EVIDENCE_ANSWER);
     expect(result.citations).toEqual([]);
   });
 
-  it('returns no-evidence answer without invoking chat provider', async () => {
+  it('sends a message without sources to the model, which answers as conversation', async () => {
     prisma.$queryRaw.mockReset();
     prisma.$queryRaw.mockResolvedValue([]);
-    const fetchMock = vi.fn().mockResolvedValueOnce(embeddingResponse());
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce(chatResponse('El material de este curso no trata ese tema, pero la lección de variables te puede servir de base.'));
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await chatWithCourseContext({
@@ -65,12 +75,46 @@ describe('RAG chat security', () => {
     });
 
     expect(result).toEqual({
-      answer: 'No encontré evidencia suficiente en los materiales publicados de este curso.',
+      answer: 'El material de este curso no trata ese tema, pero la lección de variables te puede servir de base.',
       citations: [],
       usage: null,
       relatedLesson: null,
     });
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(systemPromptOf(fetchMock, 1)).toContain('no se recuperaron fuentes del curso');
+    expect(systemPromptOf(fetchMock, 1)).toContain('FUENTES RECUPERADAS: ninguna.');
+  });
+
+  it.each([
+    ['too long', `Te cuento. ${'Una tupla es una secuencia inmutable de valores. '.repeat(15)}`, 'conversation_too_long'],
+    ['with code', 'Mirá:\n```python\nt = (1, 2)\n```', 'conversation_with_code'],
+    ['with a list', 'Tenés dos opciones:\n- usar una tupla\n- usar una lista', 'conversation_with_structure'],
+  ])('rejects an uncited answer %s', async (_label, content, reason) => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce(chatResponse(content)));
+
+    const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una tupla?' });
+
+    expect(result).toMatchObject({ answer: NO_EVIDENCE_ANSWER, citations: [] });
+    expect(warn).toHaveBeenCalledWith('RAG security event', expect.objectContaining({ type: 'ungrounded_answer_rejected', reason }));
+  });
+
+  it('never accepts an uncited verdict on a practice answer', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce(chatResponse('¡Correcto, muy bien!')));
+    const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: 'Es un valor guardado', intent: 'RETROALIMENTAR' });
+    expect(result).toMatchObject({ answer: NO_EVIDENCE_ANSWER, citations: [] });
+  });
+
+  it('accepts a short uncited answer even when sources were retrieved', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce(chatResponse('¡Todo bien por acá! ¿Seguimos con las variables?')));
+    const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: 'hola, ¿cómo estás hoy?' });
+    expect(result).toMatchObject({ answer: '¡Todo bien por acá! ¿Seguimos con las variables?', citations: [] });
   });
 
   it('does not call retrieval or the provider for state-changing requests', async () => {
@@ -278,13 +322,20 @@ describe('RAG chat security', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('answers social messages without retrieval or the provider', async () => {
-    const fetchMock = vi.fn();
+  it('answers social messages through the model without retrieval', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(chatResponse('¡De nada! Cuando quieras seguimos con la lección.'));
     vi.stubGlobal('fetch', fetchMock);
     const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¡Muchas gracias!' });
-    expect(result).toEqual({ answer: SOCIAL_ANSWER, citations: [], usage: null, relatedLesson: null });
+    expect(result).toEqual({ answer: '¡De nada! Cuando quieras seguimos con la lección.', citations: [], usage: null, relatedLesson: null });
     expect(prisma.$queryRaw).not.toHaveBeenCalled();
-    expect(fetchMock).not.toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(systemPromptOf(fetchMock, 0)).toContain('no se recuperaron fuentes del curso');
+  });
+
+  it('falls back to the fixed greeting when the model returns nothing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(chatResponse('')));
+    const result = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: 'hola' });
+    expect(result).toEqual({ answer: SOCIAL_ANSWER, citations: [], usage: null, relatedLesson: null });
   });
 
   it('treats a social-looking message as the student answer under feedback', async () => {
@@ -444,17 +495,19 @@ describe('RAG chat security', () => {
     expect(isConversationContinuation(message)).toBe(expected);
   });
 
-  it('asks for clarification only for real follow-ups without evidence', async () => {
+  it('lets the model ask about an unclear follow-up without sources', async () => {
     prisma.$queryRaw.mockReset();
     prisma.$queryRaw.mockResolvedValue([]);
     const history = [{ role: 'user', content: '¿Qué es una variable?' }];
-    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => embeddingResponse()));
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(embeddingResponse())
+      .mockResolvedValueOnce(chatResponse('¿Te referís a cómo se usa una variable en un programa?'));
+    vi.stubGlobal('fetch', fetchMock);
 
-    const offTopic = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Quién ganó los mundiales?', history });
     const followUp = await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿y eso cómo sigue?', history });
 
-    expect(offTopic.answer).toBe('No encontré evidencia suficiente en los materiales publicados de este curso.');
-    expect(followUp.answer).toContain('¿Te referís al concepto de la conversación anterior?');
+    expect(followUp).toMatchObject({ answer: '¿Te referís a cómo se usa una variable en un programa?', citations: [] });
+    expect(systemPromptOf(fetchMock, 1)).toContain('Seguimiento poco claro');
   });
 
   it('returns cited foreign lesson as relatedLesson and marks it in prompt', async () => {

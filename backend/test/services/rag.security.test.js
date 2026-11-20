@@ -8,6 +8,7 @@ import {
   isSocialMessage,
   normalizeCitationMarkers,
   stripCitationMarkers,
+  validateConversationalAnswer,
   validateGroundedAnswer,
 } from '../../src/services/rag.security.js';
 
@@ -145,5 +146,32 @@ describe('RAG security boundaries', () => {
     now += 60_000;
     expect(limiter.consume('student-1').allowed).toBe(true);
     expect(limiter.consume('student-1')).toMatchObject({ allowed: false, reason: 'daily_quota' });
+  });
+});
+
+describe('conversational answers', () => {
+  it('accepts a short plain reply', () => {
+    expect(validateConversationalAnswer('¡Hola! ¿Qué parte de la lección querés repasar?')).toMatchObject({ valid: true, reason: null });
+  });
+
+  it.each([
+    ['', 'empty_or_no_evidence'],
+    [NO_EVIDENCE_ANSWER, 'empty_or_no_evidence'],
+    ['a'.repeat(601), 'conversation_too_long'],
+    ['Así:\n```js\nlet x = 1;\n```', 'conversation_with_code'],
+    ['Pasos:\n1. Abrí el archivo\n2. Leelo', 'conversation_with_structure'],
+  ])('rejects %j', (answer, reason) => {
+    expect(validateConversationalAnswer(answer)).toMatchObject({ valid: false, answer: NO_EVIDENCE_ANSWER, reason });
+  });
+
+  it('allows a single dash in prose', () => {
+    expect(validateConversationalAnswer('Tranqui - vamos paso a paso.').valid).toBe(true);
+  });
+
+  it('accepts only up to three Text nodes in DIL', () => {
+    const text = { c: 'Text', text: 'Hola' };
+    expect(validateConversationalAnswer('Hola', { dilNodes: [text, text, text] }).valid).toBe(true);
+    expect(validateConversationalAnswer('Hola', { dilNodes: [text, text, text, text] }).reason).toBe('conversation_with_structure');
+    expect(validateConversationalAnswer('Hola', { dilNodes: [text, { c: 'Check', question: '¿Seguimos?' }] }).reason).toBe('conversation_with_structure');
   });
 });

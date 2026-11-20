@@ -150,6 +150,20 @@ describe('chat protection for pending evaluations', () => {
     expect(result.citations).toEqual([]);
   });
 
+  it('never accepts an uncited conversational answer for an evaluation question', async () => {
+    provider('¡Buena pregunta! Pensalo un ratito y contame qué opinás.');
+    const result = await ask();
+    expect(result).toMatchObject({ answer: ASSESSMENT_GUIDANCE_ANSWER, citations: [] });
+  });
+
+  it('gives the guidance without calling the model when an evaluation question finds no sources', async () => {
+    prisma.$queryRaw.mockResolvedValue([]);
+    const fetchMock = provider('No debería llamarse.');
+    const result = await ask();
+    expect(result).toMatchObject({ answer: ASSESSMENT_GUIDANCE_ANSWER, citations: [] });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it('gives the guidance instead of an error when the guarded answer comes back empty', async () => {
     provider('');
     const result = await ask();

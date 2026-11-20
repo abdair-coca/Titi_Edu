@@ -144,7 +144,8 @@ function outcomeOf({ result, error, events: seen }) {
     const rejected = seen.find((event) => event.type === 'ungrounded_answer_rejected');
     return rejected ? `rechazo_${rejected.reason}` : 'sin_evidencia';
   }
-  return 'respondida';
+  // Every question here has an answer in the course: talking instead of citing is a miss.
+  return result.citations.length ? 'respondida' : 'conversacion';
 }
 
 const percentile = (values, p) => {

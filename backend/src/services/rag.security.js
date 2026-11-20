@@ -1,4 +1,4 @@
-export const NO_EVIDENCE_ANSWER = 'No encontré evidencia suficiente en los materiales publicados de este curso.';
+export const NO_EVIDENCE_ANSWER = 'No encontré esto en los materiales del curso y prefiero no inventarte una respuesta. ¿Qué parte de la lección querés repasar?';
 export const ACTION_BLOCKED_ANSWER = 'No puedo cambiar notas, progreso ni inscripciones, ni ejecutar comandos. Sí puedo ayudarte a entender el material de este curso.';
 export const SOCIAL_ANSWER = '¡Con gusto! Contame qué parte de la lección querés repasar.';
 
@@ -154,6 +154,26 @@ export function validateGroundedAnswer(answer, chunks, { extraContext = '' } = {
   }
 
   return { valid: true, answer: text, citationNumbers, reason: null };
+}
+
+export const CONVERSATION_MAX_CHARS = 600;
+export const CONVERSATION_MAX_NODES = 3;
+const LIST_LINE = /^\s*(?:[-*•]|\d{1,2}[.)])\s+\S/gm;
+
+// An answer without citations can only be conversation: greeting, encouragement or
+// pointing to the lesson. Its shape is checked because the model cannot prove it did
+// not explain the course from memory; a long, structured or coded reply is a lesson.
+export function validateConversationalAnswer(answer, { dilNodes = null } = {}) {
+  const text = normalizeCitationMarkers(answer).trim();
+  const reject = (reason) => ({ valid: false, answer: NO_EVIDENCE_ANSWER, reason });
+  if (!text || text === NO_EVIDENCE_ANSWER) return reject('empty_or_no_evidence');
+  if (text.length > CONVERSATION_MAX_CHARS) return reject('conversation_too_long');
+  if (text.includes('```')) return reject('conversation_with_code');
+  if ((text.match(LIST_LINE) || []).length >= 2) return reject('conversation_with_structure');
+  if (dilNodes && (dilNodes.length > CONVERSATION_MAX_NODES || dilNodes.some((node) => node.c !== 'Text'))) {
+    return reject('conversation_with_structure');
+  }
+  return { valid: true, answer: text, reason: null };
 }
 
 const SOCIAL_WORDS = new Set([
