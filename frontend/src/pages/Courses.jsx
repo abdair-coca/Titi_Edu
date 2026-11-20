@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -10,6 +10,8 @@ import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
 import Hero3D from '../components/hero3d/Hero3D.jsx';
 import HeroSky from '../components/heroSky/HeroSky.jsx';
+import HeroTitle from '../components/heroTitle/HeroTitle.jsx';
+import { createHeroBridge } from '../lib/heroBridge.js';
 import { HERO_MODELS } from '../components/hero3d/heroModels.js';
 import { GotaIcon, BookIcon, BoltIcon, AwardIcon } from '../components/icons.jsx';
 
@@ -251,11 +253,13 @@ export default function Courses() {
   const pathsRef = useStaggerReveal([allCursos.length]);
   const stripRef = useStaggerReveal([4]);
   const badgesRef = useStaggerReveal([BADGES.length]);
-  // Bloques sueltos (no-lista) que también deben entrar (motion.md §4).
-  const promoRef = usePopIn([]);
-  const heroRef = usePopIn([]);
+  // Bloques sueltos (no-lista) que también deben entrar (motion.md §4). El
+  // hero entra letra a letra (HeroTitle), sin pop del bloque.
   const skyRegionRef = useRef(null);
   const skyTextRef = useRef(null);
+  // Puente entre las letras del título, el cielo 3D y el cuarto (rediseno-hero-cursos).
+  const [heroBridge] = useState(createHeroBridge);
+  useHeroFillsScreen(skyRegionRef);
   const darkPromoRef = usePopIn([]);
   const footerRef = usePopIn([]);
 
@@ -387,70 +391,34 @@ export default function Courses() {
 
   return (
     <div className="flex flex-col gap-8 sm:gap-10">
-      {/* Header: barra amarilla + hero, con el cielo 3D detrás (change cielo-hero-cursos) */}
-      <div ref={skyRegionRef} className="relative isolate flex flex-col gap-8 sm:gap-10">
-        <HeroSky regionRef={skyRegionRef} textRef={skyTextRef} />
+      {/* Hero: título letra a letra + buscador, con el cielo 3D detrás y el
+          cuarto a la derecha (changes cielo-hero-cursos y rediseno-hero-cursos).
+          En desktop ocupa toda la primera pantalla. */}
+      <div
+        ref={skyRegionRef}
+        className="relative isolate flex flex-col justify-center pt-16 sm:pt-20 lg:pt-14 lg:pb-6 lg:min-h-[calc(100svh-var(--hero-top,96px))]"
+      >
+        <HeroSky regionRef={skyRegionRef} textRef={skyTextRef} bridge={heroBridge} />
 
-        {/* Promo bar */}
-        <div ref={promoRef} data-sky="promo" className="flex items-center justify-center gap-2 bg-titi-yellow text-titi-dark rounded-xl px-4 py-2.5 text-center text-sm font-bold">
-          <svg
-            viewBox="0 0 16 16"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-4 h-4 shrink-0"
-            aria-hidden="true"
-          >
-            <path d="M8 1.5 9.5 6l4.5 1.5L9.5 9 8 13.5 6.5 9 2 7.5 6.5 6Z" />
-          </svg>
-          Cursos nuevos cada semana, creados por la comunidad Titi
-        </div>
-
-        {/* Hero */}
-        <section ref={heroRef} className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-center">
-          <div ref={skyTextRef}>
-            {/* Badge */}
-            <span className="inline-flex items-center gap-2 bg-white border border-gray-100 rounded-full pl-1.5 pr-3 py-1.5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] mb-5">
-              <span className="w-5 h-5 rounded-full bg-titi-yellow grid place-items-center shrink-0">
-                <svg
-                  viewBox="0 0 12 12"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-3 h-3 text-titi-dark"
-                  aria-hidden="true"
-                >
-                  <path d="M2 6 5 9l5-6" />
-                </svg>
-              </span>
-              <span className="text-xs font-bold text-titi-dark">
-                Comunidad de aprendizaje
-              </span>
-            </span>
-
-            {/* Título */}
-            <h1 data-sky="title" className="text-4xl sm:text-5xl font-extrabold text-titi-dark leading-[1.05] tracking-tight mb-4">
-              Aprendé algo nuevo, <span className="text-titi-streak">hoy</span>.
-            </h1>
-            <p data-sky="paragraph" className="text-base sm:text-lg font-medium text-gray-500 leading-relaxed mb-6 max-w-md">
-              Cursos creados por personas como vos. Sumá lecciones cortas, ganá
-              gotas y seguí tu propio ritmo en la comunidad Titi.
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+          <div ref={skyTextRef} className="[container-type:inline-size]">
+            <HeroTitle bridge={heroBridge} />
+            <p data-sky="paragraph" className="text-lg sm:text-xl font-semibold text-gray-500 mb-8 max-w-md">
+              Cursos cortos de la comunidad, a tu ritmo.
             </p>
 
-            {/* Search grande */}
-            <div data-sky="search" className="relative max-w-lg mb-6">
+            {/* Buscador */}
+            <div data-sky="search" className="relative max-w-lg">
               <input
                 type="text"
                 value={query}
                 onChange={handleSearchChange}
                 onKeyDown={handleSearchKeyDown}
+                onFocus={() => heroBridge.emit('focus', { on: true })}
+                onBlur={() => heroBridge.emit('focus', { on: false })}
                 placeholder="¿Qué querés aprender hoy?"
                 aria-label="Buscar cursos"
-                className="w-full bg-white border border-gray-100 rounded-2xl pl-12 pr-12 py-5 text-base font-medium text-titi-dark placeholder:text-gray-400 shadow-[0_4px_14px_rgba(0,0,0,0.06)] focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
+                className="w-full bg-white border-2 border-titi-dark rounded-2xl pl-12 pr-12 py-4 sm:py-5 text-base font-semibold text-titi-dark placeholder:text-gray-400 shadow-[0_4px_0px_#1A1A2E] focus:outline-none focus:ring-4 focus:ring-titi-yellow/50 transition-shadow duration-150"
               />
               <svg
                 viewBox="0 0 24 24"
@@ -459,7 +427,7 @@ export default function Courses() {
                 strokeWidth="2.5"
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                className="w-5 h-5 absolute left-4 top-1/2 -translate-y-1/2 text-titi-dark pointer-events-none"
                 aria-hidden="true"
               >
                 <circle cx="11" cy="11" r="7" />
@@ -491,18 +459,6 @@ export default function Courses() {
                 </button>
               )}
             </div>
-
-            {/* Stats */}
-            <div data-sky="stats" className="flex items-center gap-5 flex-wrap">
-              <HeroStat num={allCursos.length} label="cursos" />
-              <span className="w-px h-5 bg-gray-200" aria-hidden="true" />
-              <HeroStat num={categorias.length} label="categorías" />
-              <span className="w-px h-5 bg-gray-200" aria-hidden="true" />
-              <HeroStat
-                num={profesCount}
-                label={profesCount === 1 ? 'profe de la comunidad' : 'profes de la comunidad'}
-              />
-            </div>
           </div>
 
           {/* Visual del hero — escena 3D de las categorías, con imagen de respaldo */}
@@ -513,6 +469,7 @@ export default function Courses() {
               setQuery('');
               goToTrending();
             }}
+            onHover={(item) => heroBridge.emit('roomHover', item?.nombre ?? null)}
             poster="/hero/hero-3d-poster.webp"
             alt="Habitación de estudio de Titi con los objetos de las categorías: laptop y calculadora en el escritorio, libros, globo y matraz en las repisas, guitarra, paleta y maletín"
             width={1176}
@@ -1098,45 +1055,20 @@ function CategoryPill({ active, onClick, children }) {
   );
 }
 
-// Conteo animado 0→target (ease-out), respeta prefers-reduced-motion.
-function useCountUp(target, duration = 900) {
-  const [value, setValue] = useState(0);
-
-  useEffect(() => {
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
-      setValue(target);
-      return undefined;
-    }
-    if (!target) {
-      setValue(0);
-      return undefined;
-    }
-    let raf;
-    const start = performance.now();
-    const tick = (now) => {
-      const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 4); // ease-out cuártico, arranque vivo
-      setValue(Math.round(target * eased));
-      if (t < 1) raf = requestAnimationFrame(tick);
+// El hero llena la primera pantalla en desktop: guarda en --hero-top cuánto
+// hay arriba (navbar y margen, distinto con y sin sesión).
+function useHeroFillsScreen(ref) {
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const update = () => {
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      el.style.setProperty('--hero-top', `${Math.round(top)}px`);
     };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-
-  return value;
-}
-
-// ---- Stat del hero ----
-function HeroStat({ num, label }) {
-  const display = useCountUp(num);
-  return (
-    <div className="flex items-baseline gap-1.5">
-      <span className="text-3xl font-extrabold text-titi-dark tabular-nums">
-        {display}
-      </span>
-      <span className="text-sm font-bold text-gray-400">{label}</span>
-    </div>
-  );
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, [ref]);
 }
 
 // ---- CourseCard v2 (propuesta catálogo, plano + DESIGN.md §5.2) ----

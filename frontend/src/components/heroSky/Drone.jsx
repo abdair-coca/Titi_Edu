@@ -1,21 +1,32 @@
 // Drones del cielo del header: el repartidor (amarillo, con un librito
-// colgando) cruza la fila del badge y esquiva el mouse; el dron chico (naranja,
-// con antena) ronda el hueco a la derecha del párrafo y mira al puntero.
-// Al tocarlos hacen un rizo y sueltan una gota que cae sobre el buscador.
+// colgando) cruza rasante sobre el título y esquiva el mouse; el dron chico
+// (naranja, con antena) ronda el hueco junto al título y mira al puntero.
+// Al tocarlos hacen un rizo y sueltan una gota que cae sobre las letras.
+// Con las letras (change rediseno-hero-cursos): las peinan con viento al
+// pasar, el repartidor a veces suelta una gota sobre una letra al azar, y al
+// tocar una letra el dron más cercano vuela hasta ella, la mira y le suelta
+// una gota. Con el buscador enfocado, lo miran.
 //
 // Todo el modelo se arma con figuras básicas (sin modelos de terceros), con la
 // paleta de la habitación y la misma luz suave.
-import { useCallback, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { RoundedBox } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { COLORS } from '../hero3d/roomLayout.js';
-import { TAU, clamp, damp, placeAt, pointerPx, pxUnit, rand, useSky, useTouchable } from './skyKit.js';
+import { TAU, clamp, damp, lerp, placeAt, pointerPx, pxUnit, rand, useSky, useTouchable } from './skyKit.js';
+import { brushLetters, randomLetter } from './skyLetters.js';
 
 // Ancho del modelo en unidades propias (con hélices), para escalarlo a px.
 const MODEL_WIDTH = 1.9;
 const LOOP_SECONDS = 0.8;
 const LOOP_RADIUS_PX = 46;
 const DODGE_RADIUS_PX = 110;
+// Visita a una letra tocada: llega, la mira, suelta la gota y vuelve.
+const VISIT_IN = 0.6;
+const VISIT_HOLD = 1.3;
+const VISIT_OUT = 0.6;
+const VISIT_DROP_AT = VISIT_IN + 0.4;
+const AUTO_DROP_CHANCE = 0.55;
 
 const ROTORS = [
   [-0.68, 0.3],
@@ -172,6 +183,61 @@ function loopOffset(q, dir, down = false) {
 
 const easeLoop = (q) => (q < 0.5 ? 2 * q * q : 1 - (-2 * q + 2) ** 2 / 2);
 
+// Peso de la visita (0 = vuelo normal, 1 = sobre la letra) a los `u` s de
+// empezar; null cuando terminó.
+function visitWeight(u) {
+  if (u < VISIT_IN) return easeLoop(u / VISIT_IN);
+  if (u < VISIT_IN + VISIT_HOLD) return 1;
+  if (u < VISIT_IN + VISIT_HOLD + VISIT_OUT) return 1 - easeLoop((u - VISIT_IN - VISIT_HOLD) / VISIT_OUT);
+  return null;
+}
+
+/**
+ * Visita compartida por los dos drones. El paso devuelto mezcla la posición
+ * normal con la de arriba de la letra y suelta la gota en el momento justo.
+ */
+function useVisit(sky, pos, available, hoverAbove, dropBelow) {
+  const visit = useRef(null);
+  useEffect(
+    () =>
+      sky.registerDrone({
+        pos,
+        available,
+        visit(letter) {
+          visit.current = { letter, start: null, dropped: false };
+        },
+      }),
+    [sky, pos, available],
+  );
+  return (t, x, y) => {
+    const v = visit.current;
+    if (!v) return { x, y, w: 0, look: null };
+    if (v.start === null) v.start = t;
+    const u = t - v.start;
+    const w = visitWeight(u);
+    if (w === null) {
+      visit.current = null;
+      return { x, y, w: 0, look: null };
+    }
+    const nx = lerp(x, v.letter.cx, w);
+    const ny = lerp(y, v.letter.top - hoverAbove, w);
+    if (!v.dropped && u >= VISIT_DROP_AT) {
+      v.dropped = true;
+      sky.drops.current?.spawn(nx, ny + dropBelow, 0);
+    }
+    return { x: nx, y: ny, w, look: { x: v.letter.cx, y: v.letter.cy } };
+  };
+}
+
+// Qué mira el dron: la letra que visita, el buscador con foco, el mouse o
+// hacia adelante.
+function lookAt(state, sky, L, visitLook, fallback) {
+  if (visitLook) return visitLook;
+  if (sky.focusRef.current && L.searchCenter) return L.searchCenter;
+  if (sky.pointerRef.current.inside) return pointerPx(state);
+  return fallback;
+}
+
 // Hélices, ojos y antena: lo que se anima igual en los dos drones.
 function animateParts(parts, t, dt, look) {
   for (const b of parts.blades.current) if (b) b.rotation.y += dt * 38;
@@ -186,7 +252,7 @@ function animateParts(parts, t, dt, look) {
 }
 
 /**
- * Dron repartidor: cruza de lado a lado por la fila del badge (cada 5–7 s),
+ * Dron repartidor: cruza de lado a lado rasante sobre el título (cada 5–7 s),
  * se balancea, el librito colgado acompaña el movimiento y esquiva el mouse.
  */
 export function DeliveryDrone({ sizePx }) {
@@ -198,6 +264,9 @@ export function DeliveryDrone({ sizePx }) {
   const dodge = useRef({ x: 0, y: 0 });
   const loop = useRef(null);
   const pos = useRef({ x: -999, y: -999 });
+  const wind = useRef(new Map());
+  const always = useCallback(() => true, []);
+  const stepVisit = useVisit(sky, pos, always, sizePx * 0.62, sizePx * 0.32);
 
   const onActivate = useCallback(() => {
     if (loop.current !== null) return;
@@ -221,6 +290,8 @@ export function DeliveryDrone({ sizePx }) {
       fl.start = t;
       fl.dur = sky.mobile ? rand(4.6, 5.6) : rand(5.2, 6.6);
       fl.gap = rand(0.1, 0.8);
+      // A veces suelta una gota sobre una letra al azar del primer renglón.
+      fl.dropOn = Math.random() < AUTO_DROP_CHANCE ? randomLetter(L, (l) => l.line === 0) : null;
     }
     const p = clamp((t - fl.start) / fl.dur, 0, 1);
     // Velocidad que respira un poco (no es una cinta transportadora).
@@ -229,6 +300,12 @@ export function DeliveryDrone({ sizePx }) {
     const to = fl.dir > 0 ? L.width + margin : -margin;
     let x = from + (to - from) * eased;
     let y = L.deliveryY + Math.sin(t * 2.3) * 6;
+
+    // Gota espontánea al pasar sobre la letra sorteada.
+    if (fl.dropOn && (x - fl.dropOn.cx) * fl.dir >= 0) {
+      sky.drops.current?.spawn(x, y + sizePx * 0.32, fl.dir * 20);
+      fl.dropOn = null;
+    }
 
     // Esquiva el mouse (solo puntero fino).
     let tx = 0;
@@ -263,10 +340,14 @@ export function DeliveryDrone({ sizePx }) {
       }
     }
 
+    const visit = stepVisit(t, x, y);
+    x = visit.x;
+    y = visit.y;
     pos.current.x = x;
     pos.current.y = y;
     placeAt(state, group.current, x, y);
     group.current.scale.setScalar((sizePx * pxUnit(state)) / MODEL_WIDTH);
+    brushLetters(sky, L, wind.current, t, x, y, fl.dir, sizePx * 0.72);
 
     // Se inclina hacia donde va y un poco más cuando esquiva.
     const lean = -fl.dir * 0.14 - dodge.current.x * 0.003;
@@ -276,7 +357,7 @@ export function DeliveryDrone({ sizePx }) {
     if (parts.pivot.current) {
       parts.pivot.current.rotation.z = -fl.dir * 0.16 + Math.sin(t * 3.1) * 0.14 - roll * 0.4;
     }
-    const lookTarget = sky.pointerRef.current.inside ? pointerPx(state) : { x: x + fl.dir * 60, y };
+    const lookTarget = lookAt(state, sky, L, visit.look, { x: x + fl.dir * 60, y });
     animateParts(parts, t, dt, {
       x: clamp((lookTarget.x - x) / 120, -1, 1),
       y: clamp((y - lookTarget.y) / 120, -1, 1),
@@ -299,7 +380,7 @@ export function DeliveryDrone({ sizePx }) {
 }
 
 /**
- * Dron chico: ronda en ocho el hueco a la derecha del párrafo, mira al
+ * Dron chico: ronda en ocho el hueco junto al título, mira al
  * puntero y al acercarle el mouse se agranda un poco, contento. Al tocarlo
  * da una voltereta en el lugar y suelta una gota.
  */
@@ -312,6 +393,9 @@ export function ScoutDrone({ sizePx }) {
   const hovered = useRef(false);
   const grow = useRef(1);
   const pos = useRef({ x: -999, y: -999 });
+  const wind = useRef(new Map());
+  const hasZone = useCallback(() => Boolean(sky.layoutRef.current?.smallZone), [sky]);
+  const stepVisit = useVisit(sky, pos, hasZone, sizePx * 0.55, sizePx * 0.2);
 
   const onActivate = useCallback(() => {
     if (loop.current !== null) return;
@@ -337,7 +421,7 @@ export function ScoutDrone({ sizePx }) {
     const cy = (zone.y0 + zone.y1) / 2;
     const ax = Math.max(0, (zone.x1 - zone.x0) / 2 - sizePx * 0.55);
     const ay = Math.max(0, (zone.y1 - zone.y0) / 2 - sizePx * 0.3);
-    const x = cx + Math.sin(t * 0.9) * ax;
+    let x = cx + Math.sin(t * 0.9) * ax;
     let y = cy + Math.sin(t * 1.8) * ay;
     const vx = Math.cos(t * 0.9);
 
@@ -353,17 +437,20 @@ export function ScoutDrone({ sizePx }) {
         roll = -TAU * e * (vx >= 0 ? 1 : -1);
       }
     }
+    const visit = stepVisit(t, x, y);
+    x = visit.x;
+    y = visit.y;
     pos.current.x = x;
     pos.current.y = y;
     placeAt(state, g, x, y, 0.4);
+    if (visit.w > 0) brushLetters(sky, L, wind.current, t, x, y, vx >= 0 ? 1 : -1, sizePx * 0.6);
 
     grow.current = damp(grow.current, hovered.current ? 1.15 : 1, 10, dt);
     g.scale.setScalar(((sizePx * pxUnit(state)) / MODEL_WIDTH) * grow.current);
     g.rotation.z = roll;
 
-    // Mira al puntero (o hacia donde va).
-    const inside = sky.pointerRef.current.inside;
-    const m = inside ? pointerPx(state) : { x: x + vx * 80, y };
+    // Mira la letra que visita, el buscador con foco, el puntero o hacia donde va.
+    const m = lookAt(state, sky, L, visit.look, { x: x + vx * 80, y });
     const lx = clamp((m.x - x) / 160, -1, 1);
     const ly = clamp((y - m.y) / 160, -1, 1);
     tilt.current.rotation.y = damp(tilt.current.rotation.y, lx * 0.55, 6, dt);

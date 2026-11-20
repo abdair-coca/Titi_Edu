@@ -111,7 +111,7 @@ function ReadySignal({ onReady }) {
   return null;
 }
 
-function Room({ items, mobile, onSelect, onFirstDrag, hint }) {
+function Room({ items, mobile, onSelect, onHover, onFirstDrag, hint }) {
   const tx = useRoomTextures();
   return (
     <RoomRig onFirstDrag={onFirstDrag}>
@@ -126,13 +126,14 @@ function Room({ items, mobile, onSelect, onFirstDrag, hint }) {
           index={i}
           hopSignal={hint.slug === item.slug ? hint.n : 0}
           onSelect={onSelect}
+          onHover={onHover}
         />
       ))}
     </RoomRig>
   );
 }
 
-export default function HeroScene({ items, mobile, active, onSelect, onReady, onFail, onFirstDrag }) {
+export default function HeroScene({ items, mobile, active, onSelect, onHover, onReady, onFail, onFirstDrag }) {
   // Calidad alta solo en desktop: más resolución y sombras con penumbra (PCSS).
   const [high, setHigh] = useState(!mobile);
   const declines = useRef(0);
@@ -173,7 +174,7 @@ export default function HeroScene({ items, mobile, active, onSelect, onReady, on
       )}
       <FitCamera />
       <SoftEnvironment intensity={mobile ? 0.8 : 0.9} />
-      <Room items={placed} mobile={mobile} onSelect={onSelect} onFirstDrag={onFirstDrag} hint={hint} />
+      <Room items={placed} mobile={mobile} onSelect={onSelect} onHover={onHover} onFirstDrag={onFirstDrag} hint={hint} />
       <ReadySignal onReady={onReady} />
     </Canvas>
   );

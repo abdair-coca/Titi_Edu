@@ -35,9 +35,30 @@ export const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
 
 export const rand = (lo, hi) => lo + Math.random() * (hi - lo);
 
-// El buscador, los botones y los links siempre ganan: un toque ahí nunca llega
-// al 3D aunque haya un objeto detrás.
-const UI_SELECTOR = 'input, textarea, select, button, a, label, [role="button"], [contenteditable="true"]';
+export const lerp = (a, b, t) => a + (b - a) * t;
+
+// Punto de una curva cuadrática (p0 → p1 con control c) en u ∈ [0, 1].
+export function quadPoint(p0, c, p1, u) {
+  const v = 1 - u;
+  return { x: v * v * p0.x + 2 * v * u * c.x + u * u * p1.x, y: v * v * p0.y + 2 * v * u * c.y + u * u * p1.y };
+}
+
+// Largo aproximado de esa curva (para que la velocidad sea pareja entre vuelos).
+export function quadLength(p0, c, p1) {
+  let len = 0;
+  let prev = p0;
+  for (let i = 1; i <= 12; i += 1) {
+    const p = quadPoint(p0, c, p1, i / 12);
+    len += Math.hypot(p.x - prev.x, p.y - prev.y);
+    prev = p;
+  }
+  return len;
+}
+
+// El buscador, los botones, los links y las letras del título siempre ganan:
+// un toque ahí nunca llega al 3D aunque haya un objeto detrás.
+const UI_SELECTOR =
+  'input, textarea, select, button, a, label, [role="button"], [contenteditable="true"], [data-sky-letter]';
 export function isUiTarget(e) {
   const target = e?.nativeEvent?.target ?? e?.target;
   return Boolean(target?.closest?.(UI_SELECTOR));

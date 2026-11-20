@@ -15,10 +15,11 @@ const HeroScene = lazy(() => import('./HeroScene.jsx'));
 /**
  * @param {Array}    items     Categorías con modelo: { id, nombre, slug }, ordenadas por cantidad de cursos.
  * @param {Function} onSelect  Recibe el id de la categoría tocada.
+ * @param {Function} onHover   Recibe la categoría bajo el mouse (o null al salir).
  * @param {string}   poster    Imagen estática (respaldo y candidata a LCP).
  * @param {string}   alt       Texto alternativo de la imagen.
  */
-export default function Hero3D({ items, onSelect, poster, alt, width, height }) {
+export default function Hero3D({ items, onSelect, onHover, poster, alt, width, height }) {
   const boxRef = useRef(null);
   const [allowed] = useState(canShow3D);
   const [ready, setReady] = useState(false);
@@ -72,6 +73,7 @@ export default function Hero3D({ items, onSelect, poster, alt, width, height }) 
                 mobile={mobile}
                 active={active}
                 onSelect={onSelect}
+                onHover={onHover}
                 onReady={() => setReady(true)}
                 onFail={fail}
                 onFirstDrag={onFirstDrag}

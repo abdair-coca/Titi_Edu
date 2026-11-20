@@ -79,7 +79,7 @@ function hop(group, delay = 0) {
     .to(group.position, { y: 0, duration: 0.22, ease: MOTION.ease.pop });
 }
 
-export default function HeroObject({ item, slot, index, hopSignal, onSelect }) {
+export default function HeroObject({ item, slot, index, hopSignal, onSelect, onHover }) {
   const config = HERO_MODELS[item.slug];
   const { root, scale, offset, dims } = useRoomModel(config.url, slot.rotation, slot.size);
   const input = useRoomInput();
@@ -122,6 +122,8 @@ export default function HeroObject({ item, slot, index, hopSignal, onSelect }) {
     // Mientras se gira el cuarto, pasar por encima no muestra etiquetas.
     if (on === hovered || (on && input.isDragging())) return;
     setHovered(on);
+    // El título del hero muestra la categoría que tiene el mouse encima.
+    onHover?.(on ? item : null);
     if (on) input.hoverStart();
     else input.hoverEnd();
   };

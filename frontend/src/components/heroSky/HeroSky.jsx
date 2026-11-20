@@ -1,13 +1,16 @@
-// HeroSky — cielo 3D detrás del header de /courses (change cielo-hero-cursos).
+// HeroSky — cielo 3D detrás del hero de /courses (changes cielo-hero-cursos y
+// rediseno-hero-cursos).
 //
 // Vive en el chunk principal y NO importa three: decide si conviene mostrar el
 // cielo, mide el texto del hero para armar los carriles de vuelo y, solo
 // entonces, descarga `SkyScene` (chunk diferido). Si el 3D no conviene o falla,
 // no pinta nada: el header queda igual que siempre.
 //
-// El lienzo va detrás del texto (`-z-10` dentro de un contenedor `isolate`) y
-// no recibe eventos: los toma del contenedor (`eventSource`), así se puede tocar
-// un dron aunque pase por detrás del título.
+// El lienzo de fondo va detrás del texto (`-z-10` dentro de un contenedor
+// `isolate`). En desktop/tablet hay un segundo lienzo (avión y globos) cuya
+// capa cambia entre detrás (-5) y delante (10) del texto: lo maneja SkyScene.
+// Ninguno recibe eventos: los toman del contenedor (`eventSource`), así se
+// puede tocar un dron aunque pase por detrás del título.
 import { Suspense, lazy, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   SceneBoundary,
@@ -28,7 +31,7 @@ const sameLayout = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // Mide los carriles y vuelve a medir cuando cambia el tamaño del hero o del
 // texto (resize, fuentes que terminan de cargar, cifras que llegan de la API).
-function useSkyLayout(regionRef, textRef, desktop, enabled) {
+function useSkyLayout(regionRef, textRef, desktop, enabled, bridge) {
   const [layout, setLayout] = useState(null);
   useLayoutEffect(() => {
     if (!enabled) return undefined;
@@ -49,12 +52,15 @@ function useSkyLayout(regionRef, textRef, desktop, enabled) {
     ro?.observe(text);
     window.addEventListener('resize', measure);
     document.fonts?.ready.then(measure).catch(() => {});
+    // La palabra destacada del título cambió (no siempre cambia el tamaño).
+    const off = bridge?.on('relayout', measure);
     return () => {
       cancelAnimationFrame(frame);
       ro?.disconnect();
+      off?.();
       window.removeEventListener('resize', measure);
     };
-  }, [regionRef, textRef, desktop, enabled]);
+  }, [regionRef, textRef, desktop, enabled, bridge]);
   return layout;
 }
 
@@ -82,19 +88,21 @@ function usePointerPresence(regionRef, enabled) {
 }
 
 /**
- * @param {object} regionRef  Contenedor de la barra amarilla + hero (origen del lienzo y fuente de eventos).
+ * @param {object} regionRef  Contenedor del hero (origen del lienzo y fuente de eventos).
  * @param {object} textRef    Columna de texto del hero.
+ * @param {object} bridge     Puente con las letras del título (lib/heroBridge.js).
  */
-export default function HeroSky({ regionRef, textRef }) {
+export default function HeroSky({ regionRef, textRef, bridge }) {
   const [allowed] = useState(canShow3D);
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
+  const [midHost, setMidHost] = useState(null);
   const mobile = useIsMobile();
   const desktop = useMediaQuery(DESKTOP_QUERY);
 
   const wants3D = allowed && !failed;
   const load = useIdleLoad(wants3D);
-  const layout = useSkyLayout(regionRef, textRef, desktop, wants3D && load);
+  const layout = useSkyLayout(regionRef, textRef, desktop, wants3D && load, bridge);
   const active = useInViewActive(regionRef, load);
   const pointerRef = usePointerPresence(regionRef, load);
 
@@ -106,39 +114,46 @@ export default function HeroSky({ regionRef, textRef }) {
 
   if (!wants3D || !load || !layout) return null;
 
+  const frame = {
+    left: layout.offsetX,
+    width: layout.width,
+    height: layout.height,
+    // En desktop el lienzo termina antes del cuarto: los objetos se funden
+    // en vez de cortarse en seco (máscara de borde, no un fondo degradado).
+    ...(layout.fadeRight && {
+      maskImage: `linear-gradient(to right, #000 calc(100% - ${EDGE_FADE_PX}px), transparent)`,
+      WebkitMaskImage: `linear-gradient(to right, #000 calc(100% - ${EDGE_FADE_PX}px), transparent)`,
+    }),
+  };
+  const fade = ['transition-opacity duration-300 ease-out', ready ? 'opacity-100' : 'opacity-0'].join(' ');
+
   return (
-    <div
-      aria-hidden="true"
-      className={[
-        'absolute top-0 -z-10 pointer-events-none select-none',
-        'transition-opacity duration-300 ease-out',
-        ready ? 'opacity-100' : 'opacity-0',
-      ].join(' ')}
-      style={{
-        left: layout.offsetX,
-        width: layout.width,
-        height: layout.height,
-        // En desktop el lienzo termina antes del cuarto: los objetos se funden
-        // en vez de cortarse en seco (máscara de borde, no un fondo degradado).
-        ...(layout.fadeRight && {
-          maskImage: `linear-gradient(to right, #000 calc(100% - ${EDGE_FADE_PX}px), transparent)`,
-          WebkitMaskImage: `linear-gradient(to right, #000 calc(100% - ${EDGE_FADE_PX}px), transparent)`,
-        }),
-      }}
-    >
-      <SceneBoundary onFail={fail}>
-        <Suspense fallback={null}>
-          <SkyScene
-            layout={layout}
-            mobile={mobile}
-            active={active}
-            pointerRef={pointerRef}
-            eventSource={regionRef}
-            onReady={() => setReady(true)}
-            onFail={fail}
-          />
-        </Suspense>
-      </SceneBoundary>
-    </div>
+    <>
+      <div aria-hidden="true" className={`absolute top-0 -z-10 pointer-events-none select-none ${fade}`} style={frame}>
+        <SceneBoundary onFail={fail}>
+          <Suspense fallback={null}>
+            <SkyScene
+              layout={layout}
+              mobile={mobile}
+              active={active}
+              pointerRef={pointerRef}
+              bridge={bridge}
+              eventSource={regionRef}
+              midHost={mobile ? null : midHost}
+              onReady={() => setReady(true)}
+              onFail={fail}
+            />
+          </Suspense>
+        </SceneBoundary>
+      </div>
+      {!mobile && (
+        <div
+          ref={setMidHost}
+          aria-hidden="true"
+          className={`absolute top-0 pointer-events-none select-none ${fade}`}
+          style={{ ...frame, zIndex: -5 }}
+        />
+      )}
+    </>
   );
 }

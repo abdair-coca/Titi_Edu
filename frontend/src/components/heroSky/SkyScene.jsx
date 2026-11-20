@@ -1,23 +1,32 @@
-// SkyScene — cielo 3D del header de /courses (chunk diferido, lo carga HeroSky).
+// SkyScene — cielo 3D del hero de /courses (chunk diferido, lo carga HeroSky).
 //
 // Objetos armados con figuras básicas y la misma luz suave de la habitación
 // (luz de ambiente generada en el navegador, hemisférica y principal cálida).
-// Elenco: dron repartidor, dron chico, avión de papel, gotas y nubes en
+// Elenco: dron repartidor, dron chico, avión de papel, gotas y globos en
 // pantallas medianas y grandes; en celular solo el repartidor y el avión.
+// Las letras del título son HTML: el cielo les manda golpes por el puente
+// (`bridge`) y escucha cuando tocan una letra o enfocan el buscador.
 //
-// El lienzo no recibe eventos: los toma del contenedor del hero
-// (`eventSource`) y calcula el puntero respecto del propio lienzo.
+// Dos lienzos (change rediseno-hero-cursos), en desktop/tablet:
+// - Fondo (siempre detrás del texto): drones y gotas.
+// - Medio (`midHost`): avión y globos. Cambia de capa (detrás o delante del
+//   texto) para que pasen por detrás y por delante de las letras, como si
+//   fueran parte del escenario. En celular todo va en el lienzo de fondo.
+//
+// Los lienzos no reciben eventos: los toman del contenedor del hero
+// (`eventSource`) y calculan el puntero respecto de sí mismos.
 import { useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import * as THREE from 'three';
 import { Canvas } from '@react-three/fiber';
 import { PerformanceMonitor } from '@react-three/drei';
 import { COLORS } from '../hero3d/roomLayout.js';
 import { ContextLossGuard, SoftEnvironment, useWarmup } from '../hero3d/sceneKit.jsx';
-import Clouds from './Clouds.jsx';
+import Balloons from './Balloons.jsx';
 import { DeliveryDrone, ScoutDrone } from './Drone.jsx';
 import PaperPlane from './PaperPlane.jsx';
 import SkyDrops from './SkyDrops.jsx';
-import { SkyContext, useSky } from './skyKit.js';
+import { SkyContext } from './skyKit.js';
 
 // Tamaños en px del lienzo (desktop / celular).
 const SIZES = {
@@ -25,8 +34,9 @@ const SIZES = {
   scout: [68, 0],
   plane: [82, 70],
   drop: [28, 22],
-  cloud: [132, 0],
+  balloon: [46, 0],
 };
+const sizeFor = (key, mobile) => SIZES[key][mobile ? 1 : 0];
 
 // Puntero relativo al lienzo aunque el evento venga de otro elemento del hero.
 function computeFromCanvas(event, state) {
@@ -72,46 +82,93 @@ function useHoverCursor(eventSource) {
   );
 }
 
-function Cast({ mobile }) {
-  const size = (key) => SIZES[key][mobile ? 1 : 0];
-  const { drops } = useSky();
-  return (
-    <>
-      {!mobile && <Clouds count={3} sizePx={size('cloud')} />}
-      <SkyDrops apiRef={drops} rising={mobile ? 0 : 3} sizePx={size('drop')} />
-      <PaperPlane sizePx={size('plane')} />
-      {!mobile && <ScoutDrone sizePx={size('scout')} />}
-      <DeliveryDrone sizePx={size('delivery')} />
-    </>
+// Drones registrados para visitar letras: { pos, available(), visit(letter) }.
+function useDroneRegistry() {
+  const drones = useRef(new Set());
+  const register = useMemo(
+    () => (drone) => {
+      drones.current.add(drone);
+      return () => drones.current.delete(drone);
+    },
+    [],
   );
+  return [drones, register];
 }
 
-function SkyRoot({ layout, mobile, pointerRef, eventSource, children }) {
+// Escucha al título y al buscador: tocar una letra manda al dron más cercano;
+// el foco del buscador hace que los drones lo miren.
+function useBridgeListeners(bridge, layoutRef, drones, focusRef) {
+  useEffect(() => {
+    if (!bridge) return undefined;
+    const offTap = bridge.on('letterTap', ({ index }) => {
+      const letter = layoutRef.current?.letters?.[index];
+      if (!letter) return;
+      let best = null;
+      let bestDist = Infinity;
+      for (const d of drones.current) {
+        if (!d.available()) continue;
+        const dist = Math.hypot(d.pos.current.x - letter.cx, d.pos.current.y - letter.top);
+        if (dist < bestDist) {
+          best = d;
+          bestDist = dist;
+        }
+      }
+      best?.visit(letter);
+    });
+    const offFocus = bridge.on('focus', ({ on }) => {
+      focusRef.current = on;
+    });
+    return () => {
+      offTap();
+      offFocus();
+    };
+  }, [bridge, layoutRef, drones, focusRef]);
+}
+
+// Capa del lienzo medio: detrás del texto (-5, sobre el fondo -10) o delante (10).
+// Se escribe directo en el DOM (sin renders).
+function useMidLayer(midHost) {
+  return useMemo(() => {
+    if (!midHost) return null;
+    let front = false;
+    return {
+      isFront: () => front,
+      set(next) {
+        if (next === front) return;
+        front = next;
+        midHost.style.zIndex = next ? '10' : '-5';
+      },
+    };
+  }, [midHost]);
+}
+
+// Estado compartido por los dos lienzos (el contexto de React no cruza un
+// Canvas, así que cada uno lo vuelve a proveer con el mismo valor).
+function useSkyShared({ layout, mobile, pointerRef, bridge, eventSource, midHost }) {
   const layoutRef = useRef(layout);
   layoutRef.current = layout;
   const drops = useRef(null);
+  const focusRef = useRef(false);
+  // Cajas (px) de lo que hay en el lienzo medio, para cambiar de capa solo
+  // cuando nada toca una letra.
+  const midRects = useRef(new Map());
+  const [drones, registerDrone] = useDroneRegistry();
   const setHover = useHoverCursor(eventSource);
-  const value = useMemo(
-    () => ({ layoutRef, pointerRef, drops, mobile, setHover }),
-    [pointerRef, mobile, setHover],
+  const midLayer = useMidLayer(midHost);
+  useBridgeListeners(bridge, layoutRef, drones, focusRef);
+  return useMemo(
+    () => ({ layoutRef, pointerRef, drops, mobile, setHover, bridge, focusRef, registerDrone, midLayer, midRects }),
+    [pointerRef, mobile, setHover, bridge, registerDrone, midLayer],
   );
-  return <SkyContext.Provider value={value}>{children}</SkyContext.Provider>;
 }
 
-export default function SkyScene({ layout, mobile, active, pointerRef, eventSource, onReady, onFail }) {
-  const measuring = useWarmup(active);
-
-  // Rendimiento bajo: a la primera caída sostenida se apaga el cielo (el
-  // header queda como siempre). Es decoración: le deja los recursos a la
-  // habitación, que tiene su propia escalera de calidad.
-  const handleDecline = () => onFail('rendimiento bajo');
-
+function SkyCanvas({ shared, active, eventSource, onFail, children }) {
   return (
     <Canvas
-      dpr={mobile ? 1 : 1.5}
+      dpr={shared.mobile ? 1 : 1.5}
       frameloop={active ? 'always' : 'demand'}
       camera={{ fov: 30, near: 0.1, far: 60, position: [0, 0, 14] }}
-      gl={{ antialias: !mobile, alpha: true, powerPreference: 'low-power' }}
+      gl={{ antialias: !shared.mobile, alpha: true, powerPreference: 'low-power' }}
       eventSource={eventSource}
       onCreated={({ gl, setEvents }) => {
         gl.toneMapping = THREE.NeutralToneMapping;
@@ -119,13 +176,44 @@ export default function SkyScene({ layout, mobile, active, pointerRef, eventSour
       }}
     >
       <ContextLossGuard onFail={onFail} />
-      {measuring && <PerformanceMonitor bounds={() => [mobile ? 30 : 40, Infinity]} onDecline={handleDecline} />}
-      <SoftEnvironment intensity={mobile ? 0.8 : 0.9} />
+      <SoftEnvironment intensity={shared.mobile ? 0.8 : 0.9} />
       <Lights />
-      <SkyRoot layout={layout} mobile={mobile} pointerRef={pointerRef} eventSource={eventSource}>
-        <Cast mobile={mobile} />
-      </SkyRoot>
-      <ReadySignal onReady={onReady} />
+      <SkyContext.Provider value={shared}>{children}</SkyContext.Provider>
     </Canvas>
+  );
+}
+
+export default function SkyScene({ layout, mobile, active, pointerRef, bridge, eventSource, midHost, onReady, onFail }) {
+  const measuring = useWarmup(active);
+  const shared = useSkyShared({ layout, mobile, pointerRef, bridge, eventSource, midHost });
+  const size = (key) => sizeFor(key, mobile);
+  const layered = Boolean(midHost) && !mobile;
+
+  // Rendimiento bajo: a la primera caída sostenida se apaga el cielo (el
+  // header queda como siempre). Es decoración: le deja los recursos a la
+  // habitación, que tiene su propia escalera de calidad.
+  const handleDecline = () => onFail('rendimiento bajo');
+
+  const plane = <PaperPlane sizePx={size('plane')} />;
+
+  return (
+    <>
+      <SkyCanvas shared={shared} active={active} eventSource={eventSource} onFail={onFail}>
+        {measuring && <PerformanceMonitor bounds={() => [mobile ? 30 : 40, Infinity]} onDecline={handleDecline} />}
+        <SkyDrops apiRef={shared.drops} sizePx={size('drop')} />
+        {!layered && plane}
+        {!mobile && <ScoutDrone sizePx={size('scout')} />}
+        <DeliveryDrone sizePx={size('delivery')} />
+        <ReadySignal onReady={onReady} />
+      </SkyCanvas>
+      {layered &&
+        createPortal(
+          <SkyCanvas shared={shared} active={active} eventSource={eventSource} onFail={onFail}>
+            <Balloons sizePx={size('balloon')} />
+            {plane}
+          </SkyCanvas>,
+          midHost,
+        )}
+    </>
   );
 }

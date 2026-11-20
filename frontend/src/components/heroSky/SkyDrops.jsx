@@ -1,110 +1,46 @@
 // Gotas del cielo del header (la moneda de Titi, con la forma y los ojitos de
-// la gota de juguete de la habitación):
-// - Gotas que suben: nacen en las cifras y se esfuman antes del buscador. Al
-//   tocarlas salpican.
-// - Gotas que caen: las sueltan los drones al tocarlos; caen, rebotan sobre el
-//   borde del buscador (o el piso del lienzo) y se van.
+// la gota de juguete de la habitación). Las sueltan los drones y los globos:
+// caen, rebotan sobre la letra que tengan debajo (la letra se aplasta), sobre
+// el buscador o sobre el piso del lienzo, y se van. Con algo de deriva lateral
+// pueden resbalar del borde de una letra y seguir cayendo.
 // Todo es visual: no da gotas reales.
 import { useCallback, useImperativeHandle, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { COLORS } from '../hero3d/roomLayout.js';
 import { makeDropGeometry } from '../hero3d/dropGeometry.js';
-import { clamp, damp, placeAt, pxUnit, rand, useSky, useTouchable } from './skyKit.js';
+import { damp, placeAt, pxUnit, rand, useSky } from './skyKit.js';
+import { hitLetter, surfaceBelow } from './skyLetters.js';
 
-const DROP_HEIGHT = 0.42; // alto de la geometría de la gota
+const DROP_HEIGHT = 0.42; // alto de la geometría de la gota (base en y = 0)
 const GRAVITY = 1900; // px/s²
-const FALL_POOL = 4;
-const SPLASH_POOL = 18;
+const FALL_POOL = 6;
+const SPLASH_POOL = 24;
 const SPLASH_BITS = 6;
+const MAX_BOUNCES = 3;
 
-function DropBody({ geometry, eyes = true }) {
+function DropBody({ geometry }) {
   return (
     <>
       <mesh geometry={geometry}>
         <meshStandardMaterial color={COLORS.yellow} roughness={0.22} />
       </mesh>
-      {eyes &&
-        [-0.05, 0.05].map((x) => (
-          <mesh key={x} position={[x, 0.15, 0.13]}>
-            <sphereGeometry args={[0.022, 10, 8]} />
-            <meshStandardMaterial color={COLORS.dark} roughness={0.3} />
-          </mesh>
-        ))}
+      {[-0.05, 0.05].map((x) => (
+        <mesh key={x} position={[x, 0.15, 0.13]}>
+          <sphereGeometry args={[0.022, 10, 8]} />
+          <meshStandardMaterial color={COLORS.dark} roughness={0.3} />
+        </mesh>
+      ))}
     </>
   );
 }
 
-// Una gota que sube; al tocarla avisa para salpicar y vuelve a empezar.
-function RisingDrop({ geometry, index, count, sizePx, onPop }) {
-  const sky = useSky();
-  const group = useRef(null);
-  const life = useRef(null);
-  const pos = useRef({ x: 0, y: 0 });
-
-  const restart = (t, L, delay) => {
-    // Cada gota tiene su franja de ancho para que no se amontonen.
-    const band = L.width / count;
-    life.current = {
-      x: band * index + rand(0.2, 0.8) * band,
-      start: t + delay,
-      dur: rand(3.2, 4.4),
-      phase: rand(0, Math.PI * 2),
-    };
-  };
-
-  const onActivate = useCallback(() => {
-    const l = life.current;
-    if (!l) return;
-    onPop(pos.current.x, pos.current.y);
-    l.start = Infinity; // se reinicia en el próximo frame
-  }, [onPop]);
-  const handlers = useTouchable({ onActivate });
-
-  useFrame((state) => {
-    const L = sky.layoutRef.current;
-    const g = group.current;
-    if (!L || !g) return;
-    const t = state.clock.elapsedTime;
-    if (!life.current) restart(t, L, -index * 1.3); // arrancan escalonadas, ya a la vista
-    if (life.current.start === Infinity) restart(t, L, 0.5);
-    const l = life.current;
-    const p = (t - l.start) / l.dur;
-    if (p > 1) {
-      restart(t, L, rand(0, 0.6));
-      g.visible = false;
-      return;
-    }
-    g.visible = p >= 0;
-    if (p < 0) return;
-    const x = l.x + Math.sin(t * 2.2 + l.phase) * 10;
-    const y = L.dropsFrom + (L.dropsTo - L.dropsFrom) * p;
-    pos.current.x = x;
-    pos.current.y = y;
-    // Entra creciendo y se esfuma achicándose arriba.
-    const env = Math.min(1, p / 0.15, (1 - p) / 0.25);
-    placeAt(state, g, x, y, 0.3);
-    g.scale.setScalar(Math.max(0.0001, ((sizePx * pxUnit(state)) / DROP_HEIGHT) * clamp(env, 0, 1)));
-    g.rotation.set(0.25, Math.sin(t * 1.3 + l.phase) * 0.6, Math.sin(t * 2.2 + l.phase) * 0.12);
-  });
-
-  return (
-    <group ref={group} visible={false} {...handlers}>
-      <group position={[0, -DROP_HEIGHT / 2, 0]}>
-        <DropBody geometry={geometry} />
-        <mesh visible={false} position={[0, DROP_HEIGHT / 2, 0]}>
-          <sphereGeometry args={[0.42, 8, 6]} />
-        </mesh>
-      </group>
-    </group>
-  );
-}
-
 /**
- * Sistema de gotas. Expone `spawn(x, y)` (gota que cae desde un dron, en px)
- * por `apiRef` para que los drones la usen.
+ * Sistema de gotas. Expone por `apiRef`:
+ * - `spawn(x, y, vx?)`: gota que cae desde (x, y) px, con deriva lateral opcional.
+ * - `splash(x, y)`: salpicadura de gotitas.
  */
-export default function SkyDrops({ apiRef, rising, sizePx }) {
+export default function SkyDrops({ apiRef, sizePx }) {
   const sky = useSky();
   const geometry = useMemo(makeDropGeometry, []);
   const falling = useRef([]);
@@ -113,9 +49,9 @@ export default function SkyDrops({ apiRef, rising, sizePx }) {
   const bits = useRef([]);
   const tmp = useMemo(() => new THREE.Object3D(), []);
 
-  const splash = useCallback((x, y) => {
-    for (let i = 0; i < SPLASH_BITS; i += 1) {
-      const a = (i / SPLASH_BITS) * Math.PI * 2 + rand(-0.3, 0.3);
+  const splash = useCallback((x, y, count = SPLASH_BITS) => {
+    for (let i = 0; i < count; i += 1) {
+      const a = (i / count) * Math.PI * 2 + rand(-0.3, 0.3);
       const speed = rand(160, 280);
       bits.current.push({ x, y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed - 160, age: 0, life: rand(0.45, 0.6) });
     }
@@ -123,9 +59,9 @@ export default function SkyDrops({ apiRef, rising, sizePx }) {
   }, []);
 
   useImperativeHandle(apiRef, () => ({
-    spawn(x, y) {
+    spawn(x, y, vx = rand(-30, 30)) {
       if (falling.current.length >= FALL_POOL) falling.current.shift();
-      falling.current.push({ x, y, vy: -120, bounces: 0, rest: 0, squash: 1, gone: 0 });
+      falling.current.push({ x, y, vx, vy: -120, bounces: 0, rest: 0, squash: 1, gone: 0 });
     },
     splash,
   }), [splash]);
@@ -137,38 +73,39 @@ export default function SkyDrops({ apiRef, rising, sizePx }) {
     const u = pxUnit(state);
     const scale = (sizePx * u) / DROP_HEIGHT;
 
-    // Gotas que caen: gravedad, hasta dos rebotes y se achican.
+    // Gotas que caen: gravedad, rebotes sobre lo que haya debajo y se achican.
     for (let i = 0; i < FALL_POOL; i += 1) {
       const g = fallRefs.current[i];
       const d = falling.current[i];
       if (!g) continue;
       g.visible = Boolean(d);
       if (!d) continue;
-      // Si cae sobre el buscador, se apoya en su borde; si no, en el piso.
-      if (d.floor === undefined) {
-        const overSearch = d.x > L.landing.x0 && d.x < L.landing.x1 && d.y < L.landing.y;
-        d.floor = overSearch ? L.landing.y : L.floorY;
-      }
-      const { floor } = d;
       if (d.rest === 0) {
+        // La superficie se busca en cada cuadro: con la deriva, la gota puede
+        // salirse del borde de una letra y seguir cayendo al renglón de abajo.
+        const floor = surfaceBelow(L, d.x, d.y);
         d.vy += GRAVITY * dt;
+        d.x += d.vx * dt;
         d.y += d.vy * dt;
-        if (d.y >= floor) {
-          d.y = floor;
+        if (d.y >= floor.y) {
+          const impact = Math.abs(d.vy);
+          d.y = floor.y;
           d.bounces += 1;
-          d.squash = 0.7;
-          if (d.bounces > 2 || Math.abs(d.vy) < 140) d.rest = 0.0001;
-          d.vy = -Math.abs(d.vy) * 0.38;
+          d.squash = 0.65;
+          if (floor.letter >= 0) hitLetter(sky, floor.letter, 'bounce', Math.sign(d.vx) || 1, impact / 700);
+          if (d.bounces >= MAX_BOUNCES || impact < 140) d.rest = 0.0001;
+          d.vy = -impact * 0.42;
+          d.vx *= 0.7;
         }
       } else {
         d.rest += dt;
-        if (d.rest > 0.5) d.gone = Math.min(1, d.gone + dt / 0.25);
+        if (d.rest > 0.45) d.gone = Math.min(1, d.gone + dt / 0.25);
       }
       d.squash = damp(d.squash, 1, 12, dt);
       placeAt(state, g, d.x, d.y, 0.35);
       const k = Math.max(0.0001, scale * (1 - d.gone));
       g.scale.set(k * (2 - d.squash), k * d.squash, k * (2 - d.squash));
-      g.rotation.x = 0.25;
+      g.rotation.set(0.25, 0, -d.vx * 0.002);
     }
     falling.current = falling.current.filter((d) => d.gone < 1);
 
@@ -193,9 +130,6 @@ export default function SkyDrops({ apiRef, rising, sizePx }) {
 
   return (
     <>
-      {Array.from({ length: rising }, (_, i) => (
-        <RisingDrop key={i} geometry={geometry} index={i} count={rising} sizePx={sizePx} onPop={splash} />
-      ))}
       {Array.from({ length: FALL_POOL }, (_, i) => (
         <group
           key={`f${i}`}
