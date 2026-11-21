@@ -62,3 +62,51 @@ vuelve a la imagen (correcto a 5 fps), así que se usó un **reloj virtual**
 
 - FPS con GPU real en desktop (4.3) y en un celular de gama media (4.4): el
   render por software no sirve para medirlo.
+
+---
+
+# Fase 6 — Dirección de arte
+
+> **Fecha:** 2026-11-21 · **Resultado:** mismo personaje, con acabado de
+> mascota de juego; T1, T1b y T2 siguen cumpliéndose en render por software.
+
+## Comandos
+
+| Comando | Resultado |
+|---|---|
+| `cd frontend && npm run build` | ✅ limpio (solo el aviso de tamaño de chunks que ya existía); `HeroScene` 48,2 KB gzip |
+| `npm run test:titi-3d` | ✅ `vida propia, carga, toque, poses y cara OK` |
+| `npm run test:hero-3d` | ✅ `Hero 3D code split: OK` |
+| `npm run shots:titi -- <carpeta>` | ✅ 15 capturas sin errores de consola |
+| `/courses` con la API simulada | ✅ sin errores de consola (en render por software el monitor de rendimiento muestra el póster) |
+
+## Comparación visual
+
+- [fase6-antes-despues.webp](fase6-antes-despues.webp): `Titi.png`, antes y después desde frente, 3/4, costado, espalda, cara y cara 3/4.
+- [fase6-poses.webp](fase6-poses.webp): saludo, festejo, caminata, cargado, caras de festejo y de pensar, parpadeo y vista del cuarto.
+
+| Rasgo | Antes (fase 5) | Después (fase 6) |
+|---|---|---|
+| Cabeza | esfera + 2 esferas de antifaz (parecían antiparras) + mejillas y hocico sueltos | una sola pieza: mejillas llenas, hocico, mentón, arco de cejas y cuencas; antifaz pintado |
+| Bigote | dos medialunas desde las comisuras, finas, puntas como cuernos | puente bajo la nariz con la "w" encima; alas gruesas sobre la mejilla, dos capas y punta fina que sube (silueta de la imagen) |
+| Ojos | sobresalían de perfil, algo chicos y juntos | más grandes y separados, metidos en la cuenca; pupila y nariz toon |
+| Cejas / mechón | arcos finos / tres espigas altas | mechones gruesos altos adentro / cresta baja de tres puntas |
+| Cuerpo | torso de 3 esferas, ancas como pelotas, dedos sueltos | torso en pera con panza pintada, muslos en pata de pollo, manos y pies con dedos marcados |
+| Cola | subía hasta el bigote y terminaba en gancho | baja al costado y cierra una espiral limpia (20 huesos, pesos suaves) |
+
+## Rendimiento (laboratorio, sin sombras, misma vista)
+
+| Medida | Antes | Después |
+|---|---|---|
+| Llamadas de dibujo | 98 | **62** (menos piezas sueltas) |
+| Triángulos | 98 k | 124 k (piezas esculpidas; resolución recortada donde no se ve) |
+| Armado de las mallas al montar (Node, desktop) | ~70 ms | ~220 ms (la cabeza ~100 ms) |
+
+En un celular el armado puede rondar 0,5–1 s una sola vez al montar la escena;
+entra en la tarea pendiente 4.4.
+
+## Pendiente
+
+- Igual que antes: FPS con GPU real (4.3) y en un celular de gama media (4.4),
+  ahora incluyendo el tiempo de armado de las mallas.
+

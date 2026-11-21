@@ -24,11 +24,17 @@ escena.
   escritorio (1,42), bien visible en la alfombra.
 - Proporciones medidas sobre la imagen: el blanco del ojo se ve alrededor de
   toda la pupila (pupila un poco abajo y hacia adentro, brillo arriba a la
-  izquierda); la "w" de la boca queda justo bajo la nariz y **encima** del
-  bigote; cada mitad del bigote nace en una comisura, baja abriéndose (~1,5
-  veces el ancho de la cabeza) y la punta sube; la chivita termina en punta.
-- Hecho con figuras en código (esferas, cápsulas, barridos y una cola continua
-  con esqueleto). Sin archivos nuevos.
+  izquierda); la "w" de la boca queda justo bajo la nariz, dibujada **sobre**
+  el puente blanco del bigote (como en la imagen); desde ese puente cada ala
+  baja abriéndose sobre la mejilla (~1,5 veces el ancho de la cabeza), con una
+  segunda capa debajo, y termina en una punta fina que sube; las cejas son
+  mechones gruesos, altos adentro y más bajos afuera; el mechón de la
+  coronilla es una cresta baja de tres puntas; la chivita termina en punta.
+- Hecho en código, sin archivos nuevos: cabeza, torso, muslos, orejas, manos y
+  pies son piezas "esculpidas" (formas suaves fundidas en una sola malla, con
+  el antifaz y la panza pintados), sin uniones de primitivas a la vista;
+  bigote, cejas, mechón y chivita son barridos; la cola es una malla continua
+  con esqueleto.
 
 ## T1b — Estilo y acabado
 

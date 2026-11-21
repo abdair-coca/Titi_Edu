@@ -1,7 +1,7 @@
 # Tasks — Titi 3D en el cuarto de cursos
 
 > **Change:** `titi-3d-cursos`
-> **Estado:** implementado y pulido (fase 5); faltan 4.3 (FPS con GPU real) y 4.4.
+> **Estado:** implementado, pulido (fase 5) y con dirección de arte refinada (fase 6); faltan 4.3 (FPS con GPU real) y 4.4.
 > Verificación: `cd frontend && npm run build`, `npm run test:titi-3d` y `npm run test:hero-3d`.
 
 ## Fase 1 — Modelo
@@ -41,3 +41,15 @@
 - [x] 5.6 Animación: `titiFace.js` (parpadeo con ease, sacadas, olfateo, orejas), canales `brow`/`browTilt`/`stache` en las poses, cabeza que deriva, respiración en cabeza y hombros, onda e inercia de la cola.
 - [x] 5.7 Test de la cara en `check-titi-brain.mjs`; build, `test:titi-3d` y `test:hero-3d` OK.
 - [x] 5.8 QA en el cuarto real (API simulada, reloj virtual): click, arrastre, caída, cursor, consola y llamadas de dibujo. Ver [verify-report.md](verify-report.md).
+
+## Fase 6 — Dirección de arte (mismo personaje, acabado de mascota de juego)
+
+- [x] 6.1 `titiSculpt.js`: piezas "esculpidas" con formas suaves fundidas (campos de distancia) pasadas a una malla, con normales del campo y color por vértice.
+- [x] 6.2 Cabeza en una sola pieza: cráneo, mejillas llenas, hocico, mentón, arco de cejas suave, cuencas poco profundas y base de las orejas; antifaz pintado (sin las esferas que parecían antiparras).
+- [x] 6.3 Bigote medido de nuevo sobre `Titi.png`: puente blanco bajo la nariz con la "w" encima, alas que bajan sobre la mejilla, más allá de las orejas, y terminan en una punta fina que sube; segunda capa debajo (los dos tonos de la imagen).
+- [x] 6.4 Ojos más grandes y algo más separados, metidos en la cuenca; nariz y pupilas toon (sin reflejo de plástico).
+- [x] 6.5 Cejas como mechones gruesos (altas adentro, bajan hacia afuera) pegadas al cráneo; mechón de la coronilla como cresta baja de tres puntas.
+- [x] 6.6 Cuerpo: torso en forma de pera con la panza pintada, muslos en forma de pata de pollo, manos y pies en una pieza con dedos marcados; orejas ahuecadas.
+- [x] 6.7 Cola: 20 huesos cortos con pesos suaves (B-spline) y curvatura que crece de a poco; espiral limpia que se cierra hacia adentro; normales exactas en la punta.
+- [x] 6.8 Costo: mallas armadas en ~0,2 s (desktop), 62 llamadas de dibujo (antes 98) y 124 k triángulos (antes 98 k) en el laboratorio. Build y tests OK; capturas en [verify-report.md](verify-report.md).
+
