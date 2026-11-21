@@ -98,6 +98,8 @@ function Lab() {
       camera={{ near: 0.1, far: 100 }}
       onCreated={({ gl }) => {
         gl.toneMapping = THREE.NeutralToneMapping;
+        // Para medir llamadas de dibujo y triángulos desde las capturas.
+        window.__titiGl = gl;
       }}
     >
       <color attach="background" args={[COLORS.cream]} />

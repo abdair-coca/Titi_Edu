@@ -1,10 +1,11 @@
-// TitiBody — el modelo articulado de Titi, armado con esferas, cápsulas y
-// barridos (sin archivos externos). Fiel a /Titi.png: pelaje amarillo con
-// antifaz claro, ojos grandes con el blanco visible alrededor de la pupila,
-// nariz oscura, sonrisa en "w" sobre el bigote, bigote blanco enorme que nace en
-// las comisuras y enrosca las puntas para arriba, cejas y chivita blancas en
-// mechones, mechón en la cabeza, manos y pies marrón claro y cola larga en
-// espiral (una sola malla con esqueleto, sin quiebres).
+// TitiBody — el modelo articulado de Titi, hecho en código (sin archivos
+// externos). Cabeza, torso, muslos, orejas, manos y pies son piezas esculpidas
+// de una sola malla (titiSculpt); bigote, cejas, mechón y chivita son barridos.
+// Fiel a /Titi.png: pelaje amarillo con antifaz claro pintado, ojos grandes en
+// su cuenca con el blanco visible alrededor de la pupila, nariz oscura, bigote
+// blanco enorme que sale de un puente bajo la nariz (con la "w" dibujada encima)
+// y levanta las puntas, cejas en mechones, chivita, cresta de tres puntas,
+// manos y pies con dedos y cola larga en espiral (una malla con esqueleto).
 //
 // Estilo: sombreado toon con contorno de dibujo animado (titiMaterials).
 // No anima nada: guarda cada articulación en `rig` para que Titi.jsx la mueva.
@@ -12,11 +13,17 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { useFrame } from '@react-three/fiber';
 import { BONES, TAIL, TITI_COLORS as C } from './titiLook.js';
-import { MUZZLE, makeTailGeometry, makeTitiGeometries, onHead } from './titiGeometry.js';
+import {
+  EYE, STACHE_PAD, makeEarGeometry, makeFootGeometry, makeHandGeometry, makeHeadGeometry, makeTailGeometry, makeThighGeometry, makeTitiGeometries, makeTorsoGeometry, onHead,
+} from './titiGeometry.js';
 import { makeOutlineMaterial, makeOutlineUniforms, makeToonMaterial, updateOutline } from './titiMaterials.js';
 
 // Centro de cada ceja (lado +x): ahí giran y suben.
-const BROW_PIVOT = [0.13, 0.18, onHead(0.13, 0.18, 0.016)];
+const BROW_PIVOT = [0.13, 0.17, onHead(0.13, 0.17, 0.024)];
+// Cada mitad del bigote gira desde el borde del puente.
+const STACHE_PIVOT = [0.05, -0.1, 0.25];
+// Los ojos se apoyan en el fondo de la cuenca.
+const EYE_Z = onHead(EYE.x, EYE.y, -0.006);
 
 function useMaterials() {
   const mats = useMemo(() => {
@@ -25,25 +32,29 @@ function useMaterials() {
     // pelaje, gris lavanda en lo blanco (como el bigote de Titi.png).
     const warm = [0.8, 0.55, 0.48];
     const cool = [0.7, 0.7, 0.8];
-    return {
+    const mats = {
       outline,
       fur: makeToonMaterial(C.fur, { shadow: warm }),
-      mask: makeToonMaterial(C.mask, { shadow: warm, rim: 0.2 }),
-      belly: makeToonMaterial(C.belly, { shadow: warm, rim: 0.2 }),
-      earInner: makeToonMaterial(C.earInner, { shadow: [0.75, 0.58, 0.5], rim: 0.1, spec: 0 }),
-      skin: makeToonMaterial(C.skin, { shadow: [0.78, 0.62, 0.57], rim: 0.25, spec: 0.05 }),
+      // Pelaje pintado por vértice (antifaz, panza, interior de las orejas).
+      painted: makeToonMaterial('#FFFFFF', { shadow: warm, rim: 0.24 }),
+      // Manos y pies (la malla trae su color por vértice).
+      skinV: makeToonMaterial('#FFFFFF', { shadow: [0.78, 0.62, 0.57], rim: 0.25, spec: 0.05 }),
       white: makeToonMaterial(C.white, { shadow: cool, rim: 0.22, spec: 0.12 }),
       sclera: makeToonMaterial('#FFFFFA', { shadow: [0.86, 0.86, 0.92], rim: 0, spec: 0, band: 0.2 }),
       mouth: makeToonMaterial(C.mouth, { shadow: [0.85, 0.75, 0.7], rim: 0, spec: 0 }),
       mouthInside: makeToonMaterial(C.mouthInside, { shadow: [0.8, 0.7, 0.7], rim: 0, spec: 0 }),
-      // Pupilas y nariz: brillo real (reflejan el ambiente del cuarto).
-      eye: new THREE.MeshStandardMaterial({ color: C.eye, roughness: 0.18, metalness: 0 }),
+      // Pupilas y nariz: toon como el resto (sin reflejos de plástico); el
+      // brillo es la mancha de luz del toon más los puntos blancos.
+      eye: makeToonMaterial(C.eye, { shadow: [0.55, 0.55, 0.7], rim: 0.35, spec: 0.22, band: 0.08 }),
       glint: new THREE.MeshBasicMaterial({ color: '#FFFFFF', toneMapped: false }),
       // Contornos: un tono oscuro de cada color, no negro.
       lineFur: makeOutlineMaterial(C.lineFur, outline),
       lineWhite: makeOutlineMaterial(C.lineWhite, outline),
       lineSkin: makeOutlineMaterial(C.lineSkin, outline),
     };
+    mats.painted.vertexColors = true;
+    mats.skinV.vertexColors = true;
+    return mats;
   }, []);
   useEffect(
     () => () => Object.values(mats).forEach((m) => m.dispose?.()),
@@ -72,15 +83,20 @@ function useGeometries() {
     };
     return {
       ...makeTitiGeometries(),
+      head: makeHeadGeometry(C),
+      ear: makeEarGeometry(C),
+      torso: makeTorsoGeometry(C),
+      thighL: makeThighGeometry(1, BONES.thigh),
+      thighR: makeThighGeometry(-1, BONES.thigh),
+      hand: makeHandGeometry(C.skin, C.lineSkin),
+      foot: makeFootGeometry(C.skin, C.lineSkin),
       upperArm: capsule(0.064, BONES.upperArm - 0.06, 0.056),
       forearm: capsule(0.056, BONES.forearm - 0.05, 0.05),
       shin: capsule(0.058, BONES.shin - 0.05, 0.052),
-      finger: new THREE.CapsuleGeometry(0.016, 0.03, 4, 8),
-      toe: new THREE.CapsuleGeometry(0.019, 0.026, 4, 8),
       tail: makeTailGeometry(TAIL),
     };
   }, []);
-  useEffect(() => () => Object.values(geo).forEach((g) => g.dispose?.()), [geo]);
+  useEffect(() => () => Object.values(geo).forEach((g) => g?.dispose?.()), [geo]);
   return geo;
 }
 
@@ -97,16 +113,16 @@ function Part({ geo, m, line, s, p, r, shadow = true }) {
 function Eye({ side, g, m, rig }) {
   const k = side > 0 ? 'L' : 'R';
   return (
-    <group position={[side * 0.1, 0.05, 0.234]} rotation={[0, side * 0.3, 0]}>
+    <group position={[side * EYE.x, EYE.y, EYE_Z]} rotation={[0, side * 0.3, 0]}>
       {/* Parpadeo: escala y del ojo entero */}
       <group ref={(o) => { rig[`eye${k}`] = o; }}>
-        <Part geo={g.eyeWhite} m={m.sclera} s={[0.064, 0.074, 0.042]} />
+        <Part geo={g.eyeWhite} m={m.sclera} s={[0.069, 0.079, 0.036]} />
         {/* Pupila (un poco abajo y hacia adentro, como en la imagen) */}
-        <group ref={(o) => { rig[`pupil${k}`] = o; }} position={[0, 0, 0.026]}>
+        <group ref={(o) => { rig[`pupil${k}`] = o; }} position={[0, 0, 0.021]}>
           <group position={[-side * 0.007, -0.009, 0]}>
-            <Part geo={g.sphere} m={m.eye} s={[0.037, 0.048, 0.022]} shadow={false} />
-            <Part geo={g.smallSphere} m={m.glint} s={[0.012, 0.014, 0.006]} p={[-0.012, 0.018, 0.019]} shadow={false} />
-            <Part geo={g.smallSphere} m={m.glint} s={0.005} p={[0.012, -0.018, 0.018]} shadow={false} />
+            <Part geo={g.sphere} m={m.eye} s={[0.041, 0.053, 0.022]} shadow={false} />
+            <Part geo={g.smallSphere} m={m.glint} s={[0.013, 0.015, 0.006]} p={[-0.013, 0.02, 0.019]} shadow={false} />
+            <Part geo={g.smallSphere} m={m.glint} s={0.0055} p={[0.013, -0.02, 0.018]} shadow={false} />
           </group>
         </group>
       </group>
@@ -118,8 +134,7 @@ function Ear({ side, g, m, rig }) {
   return (
     <group position={[side * 0.262, 0.04, -0.01]} rotation={[0, side * 0.5, side * -0.2]}>
       <group ref={(o) => { rig[side > 0 ? 'earL' : 'earR'] = o; }}>
-        <Part geo={g.sphere} m={m.fur} line={m.lineFur} s={[0.105, 0.115, 0.05]} />
-        <Part geo={g.sphere} m={m.earInner} s={[0.07, 0.08, 0.03]} p={[side * 0.006, -0.006, 0.03]} />
+        <Part geo={g.ear} m={m.painted} line={m.lineFur} />
       </group>
     </group>
   );
@@ -129,16 +144,8 @@ function Head({ g, m, rig }) {
   return (
     <group ref={(o) => { rig.head = o; }} position={[0, BONES.neckY, 0.01]}>
       <group position={[0, BONES.headY, 0]} scale={1.12}>
-        <Part geo={g.sphere} m={m.fur} line={m.lineFur} s={[0.27, 0.245, 0.25]} />
-        {/* Mejillas: el volumen donde se apoya el bigote */}
-        {[-1, 1].map((sx) => (
-          <Part key={sx} geo={g.sphere} m={m.fur} s={[0.1, 0.08, 0.09]} p={[sx * 0.13, -0.11, 0.14]} />
-        ))}
-        {/* Antifaz claro (ojos) y hocico */}
-        {[-1, 1].map((sx) => (
-          <Part key={sx} geo={g.sphere} m={m.mask} s={[0.118, 0.122, 0.055]} p={[sx * 0.095, 0.045, 0.19]} r={[0, sx * 0.3, 0]} />
-        ))}
-        <Part geo={g.sphere} m={m.mask} s={MUZZLE.s} p={MUZZLE.p} />
+        {/* Cabeza esculpida: cráneo, mejillas, hocico y antifaz en una sola pieza */}
+        <Part geo={g.head} m={m.painted} line={m.lineFur} />
         {/* Mechón de la coronilla */}
         <Part geo={g.tuft} m={m.fur} line={m.lineFur} />
         <Ear side={1} g={g} m={m} rig={rig} />
@@ -159,21 +166,23 @@ function Head({ g, m, rig }) {
         <Part geo={g.nose} m={m.eye} s={[0.062, 0.042, 0.044]} p={[0, -0.028, 0.262]} />
         <Part geo={g.smallSphere} m={m.glint} s={[0.012, 0.007, 0.005]} p={[-0.022, -0.012, 0.302]} r={[0, 0, -0.3]} shadow={false} />
         <Part geo={g.smallSphere} m={m.glint} s={[0.007, 0.005, 0.004]} p={[0.024, -0.014, 0.3]} shadow={false} />
+        {/* Puente del bigote bajo la nariz: ahí está dibujada la "w" */}
+        <Part geo={g.sphere} m={m.white} line={m.lineWhite} s={STACHE_PAD.s} p={STACHE_PAD.p} />
         {/* Boca: sonrisa en "w"; se abre al celebrar o al caer */}
         <group ref={(o) => { rig.smile = o; }}>
           <mesh geometry={g.smile} material={m.mouth} />
         </group>
-        <group ref={(o) => { rig.mouth = o; }} position={[0, -0.112, 0.258]} scale={0}>
+        <group ref={(o) => { rig.mouth = o; }} position={[0, -0.106, g.mouthZ - 0.012]} scale={0}>
           <Part geo={g.sphere} m={m.mouthInside} s={[0.042, 0.036, 0.02]} shadow={false} />
         </group>
         {/* Bigote: cada mitad gira desde la comisura (se mueve al hablar y al respirar) */}
-        <group ref={(o) => { rig.mustacheL = o; }} position={[0.072, -0.096, 0.26]}>
-          <group position={[-0.072, 0.096, -0.26]}>
+        <group ref={(o) => { rig.mustacheL = o; }} position={STACHE_PIVOT}>
+          <group position={STACHE_PIVOT.map((v) => -v)}>
             <Part geo={g.mustacheL} m={m.white} line={m.lineWhite} />
           </group>
         </group>
-        <group ref={(o) => { rig.mustacheR = o; }} position={[-0.072, -0.096, 0.26]}>
-          <group position={[0.072, 0.096, -0.26]}>
+        <group ref={(o) => { rig.mustacheR = o; }} position={[-STACHE_PIVOT[0], STACHE_PIVOT[1], STACHE_PIVOT[2]]}>
+          <group position={[STACHE_PIVOT[0], -STACHE_PIVOT[1], -STACHE_PIVOT[2]]}>
             <Part geo={g.mustacheR} m={m.white} line={m.lineWhite} />
           </group>
         </group>
@@ -190,10 +199,7 @@ function Head({ g, m, rig }) {
 function Hand({ g, m }) {
   return (
     <group>
-      <Part geo={g.sphere} m={m.skin} line={m.lineSkin} s={[0.056, 0.04, 0.06]} p={[0, -0.02, 0.01]} />
-      {[-0.03, 0, 0.03].map((x) => (
-        <Part key={x} geo={g.finger} m={m.skin} line={m.lineSkin} p={[x, -0.052, 0.024]} r={[0.35, 0, x * 3]} />
-      ))}
+      <Part geo={g.hand} m={m.skinV} line={m.lineSkin} />
     </group>
   );
 }
@@ -218,16 +224,13 @@ function Leg({ side, g, m, rig }) {
   return (
     <group ref={(o) => { rig[`leg${k}`] = o; }} position={[side * BONES.hipJointX, BONES.hipJointY, 0.02]}>
       {/* Muslo ancho: de frente se ven las ancas a los costados */}
-      <Part geo={g.sphere} m={m.fur} line={m.lineFur} s={[0.128, 0.152, 0.135]} p={[side * 0.025, -0.085, 0]} />
+      <Part geo={side > 0 ? g.thighL : g.thighR} m={m.fur} line={m.lineFur} />
       <group ref={(o) => { rig[`knee${k}`] = o; }} position={[0, -BONES.thigh, 0]}>
         <Part geo={g.shin} m={m.fur} line={m.lineFur} />
         {/* El pie se mantiene plano: Titi.jsx compensa el giro de cadera y rodilla */}
         <group ref={(o) => { rig[`foot${k}`] = o; }} position={[0, -BONES.shin, 0]}>
           <group rotation={[0, side * 0.35, 0]}>
-            <Part geo={g.sphere} m={m.skin} line={m.lineSkin} s={[0.07, 0.034, 0.095]} p={[0, -0.004, 0.04]} />
-            {[-0.042, -0.014, 0.014, 0.042].map((x) => (
-              <Part key={x} geo={g.toe} m={m.skin} line={m.lineSkin} p={[x, -0.012, 0.122]} r={[Math.PI / 2, 0, x * 2]} />
-            ))}
+            <Part geo={g.foot} m={m.skinV} line={m.lineSkin} />
           </group>
         </group>
       </group>
@@ -286,9 +289,7 @@ export default function TitiBody({ rig }) {
       <OutlineSizer uniforms={m.outline} />
       <group ref={(o) => { rig.torso = o; }}>
         <group ref={(o) => { rig.chest = o; }}>
-          <Part geo={g.sphere} m={m.fur} line={m.lineFur} s={[0.25, 0.21, 0.22]} p={[0, 0.1, -0.015]} />
-          <Part geo={g.sphere} m={m.fur} line={m.lineFur} s={[0.185, 0.2, 0.165]} p={[0, 0.27, 0]} />
-          <Part geo={g.sphere} m={m.belly} s={[0.145, 0.2, 0.08]} p={[0, 0.17, 0.125]} />
+          <Part geo={g.torso} m={m.painted} line={m.lineFur} />
         </group>
         <Head g={g} m={m} rig={rig} />
         <Arm side={1} g={g} m={m} rig={rig} />

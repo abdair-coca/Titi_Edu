@@ -44,8 +44,10 @@ export const BONES = {
 export const HIPS_SIT = BONES.shin + BONES.foot - BONES.hipJointY;
 export const HIPS_STAND = BONES.thigh + BONES.shin + BONES.foot - BONES.hipJointY;
 
+// Muchos huesos cortos: cada articulación dobla poco y la malla no se pellizca
+// en la parte de adentro de la espiral.
 export const TAIL = {
-  segments: 14,
-  length: 0.07,
-  radius: [0.04, 0.028], // de la base a la punta (gruesa hasta el final, como en la imagen)
+  segments: 20,
+  length: 0.049,
+  radius: [0.038, 0.031], // de la base a la punta (casi pareja hasta el final, como en la imagen)
 };

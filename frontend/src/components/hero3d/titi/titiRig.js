@@ -3,11 +3,20 @@
 // las capturas muestran exactamente lo mismo que el cuarto.
 import { BONES, HIPS_SIT, HIPS_STAND, TAIL } from './titiLook.js';
 
-// La cola sale hacia el costado, sube y termina en una espiral que se ve de
-// frente (como en Titi.png): las últimas vueltas cierran casi un círculo.
-// Curvatura de cada segmento respecto del anterior.
+// La cola sale hacia el costado casi a ras del piso, sube en curva y termina
+// en una espiral que se cierra hacia adentro y se ve de frente (Titi.png).
+// Curvatura a lo largo de la cola (radianes cada 0,07 de largo, de la base a
+// la punta): crece de a poco, así la curva es continua (sin tramos rectos ni
+// codos). Se reparte entre los huesos que haya.
 const TAIL_BASE = -1.62;
-const TAIL_CURL = [0, 0.04, 0.04, 0.04, 0.05, 0.6, 0.6, 0.05, 0.05, 0.66, 0.74, 0.82, 0.9, 0.98];
+const CURVE = [0, 0, 0.04, 0.14, 0.26, 0.34, 0.4, 0.46, 0.52, 0.6, 0.72, 0.9, 1.15, 1.4];
+const PER_BONE = TAIL.length / 0.07;
+const TAIL_CURL = Array.from({ length: TAIL.segments }, (_, i) => {
+  const u = (i / (TAIL.segments - 1)) * (CURVE.length - 1);
+  const k = Math.floor(u);
+  const next = CURVE[Math.min(CURVE.length - 1, k + 1)];
+  return (CURVE[k] + (next - CURVE[k]) * (u - k)) * PER_BONE;
+});
 
 const BROW_LIFT = 0.018; // cuánto suben las cejas con brow = 1 (unidades de la cabeza)
 const BROW_TURN = 0.22; // y cuánto se inclinan (adentro arriba = sorpresa)
@@ -45,8 +54,10 @@ export function applyPose(rig, pose, { time, lid = 1, px = 0, py = 0, twitch = 0
   // Ojos y cejas.
   rig.eyeL.scale.y = lid;
   rig.eyeR.scale.y = lid;
-  rig.pupilL.position.set(px, py, 0.026);
-  rig.pupilR.position.set(px, py, 0.026);
+  rig.pupilL.position.x = px;
+  rig.pupilL.position.y = py;
+  rig.pupilR.position.x = px;
+  rig.pupilR.position.y = py;
   // Al parpadear las cejas bajan un poquito (se lee como un párpado de verdad).
   const blinkDip = (1 - lid) * 0.006;
   rig.browL.position.y = BROW_LIFT * (pose.brow + pose.browTilt * 0.9) - blinkDip;
@@ -68,7 +79,7 @@ export function applyPose(rig, pose, { time, lid = 1, px = 0, py = 0, twitch = 0
   const n = TAIL.segments;
   for (let i = 1; i < n; i += 1) {
     const along = i / n;
-    rig.tail[i].rotation.x = TAIL_CURL[i] * pose.tailCurl + Math.sin(time * 2 - i * 0.55) * 0.045 * (0.4 + along);
-    rig.tail[i].rotation.z = pose.tailSway * 0.12 + Math.sin(time * 1.6 - i * 0.5) * 0.04 * along + tailLag * 0.25 * (1 - along);
+    rig.tail[i].rotation.x = TAIL_CURL[i] * pose.tailCurl + Math.sin(time * 2 - along * 7.7) * 0.045 * PER_BONE * (0.4 + along);
+    rig.tail[i].rotation.z = (pose.tailSway * 0.12 + Math.sin(time * 1.6 - along * 7) * 0.04 * along + tailLag * 0.25 * (1 - along)) * PER_BONE;
   }
 }
