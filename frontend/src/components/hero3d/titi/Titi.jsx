@@ -17,18 +17,18 @@ import { useFrame, useThree } from '@react-three/fiber';
 import TitiBody from './TitiBody.jsx';
 import { POSE_KEYS, poseFor, restPose } from './titiPoses.js';
 import { CARRY_HEIGHT, carryTo, createBrain, drop, grab, poke, stepBrain } from './titiBrain.js';
-import { HIPS_SIT, HIPS_STAND, TAIL, TITI_SCALE } from './titiLook.js';
+import { TITI_SCALE } from './titiLook.js';
+import { applyPose } from './titiRig.js';
+import { createFace, stepFace } from './titiFace.js';
 import { CAMERA_DIR } from '../roomLayout.js';
 import { useRoomInput } from '../RoomRig.jsx';
 
 const CLICK_PX = 6;
 const MAX_DT = 1 / 20; // tras volver de una pestaña oculta, sin saltos
-// La cola sale hacia el costado, sube y termina en una espiral que se ve de
-// frente (como en Titi.png). Curvatura de cada segmento respecto del anterior.
-const TAIL_BASE = -1.62;
-const TAIL_CURL = [0, 0.04, 0.04, 0.04, 0.05, 0.6, 0.6, 0.05, 0.05, 0.62, 0.64, 0.66, 0.68, 0.7];
-
 // Cuánto sigue la cabeza al mouse/cámara según lo que esté haciendo.
+// Solo tranquilo mira de reojo, olfatea y sacude las orejas.
+const CALM_FACE = new Set(['sit', 'stand', 'walk', 'think']);
+
 const LOOK_WEIGHT = { sit: 1, stand: 0.6, land: 0.5, dizzy: 0.3, wave: 0.8, celebrate: 0.7, think: 0, walk: 0.35, carried: 0.3, fall: 0.2 };
 
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
@@ -37,20 +37,6 @@ const damp = (k, dt) => 1 - Math.exp(-k * dt);
 
 const hasFinePointer = () =>
   typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-
-// Parpadeo: cada 2–5 s cierra los ojos 120 ms (a veces dos veces seguidas).
-function blinkLid(blink, dt) {
-  blink.wait -= dt;
-  if (blink.wait <= 0) {
-    blink.wait = 2 + Math.random() * 3;
-    blink.left = Math.random() < 0.2 ? 0.36 : 0.12;
-  }
-  if (blink.left > 0) {
-    blink.left -= dt;
-    return Math.abs(Math.sin((blink.left / 0.12) * Math.PI)) > 0.5 ? 0.1 : 1;
-  }
-  return 1;
-}
 
 /**
  * @param {THREE.Texture} blobMap  Mancha de contacto del cuarto (roomTextures).
@@ -66,7 +52,8 @@ export default function Titi({ blobMap, mobile }) {
   const rig = useMemo(() => ({}), []);
   const brain = useMemo(createBrain, []);
   const pose = useMemo(restPose, []);
-  const blink = useMemo(() => ({ wait: 2, left: 0 }), []);
+  const face = useMemo(createFace, []);
+  const turn = useRef({ yaw: null, lag: 0 });
   const press = useRef(null);
   const hovered = useRef(false);
   const ndc = useMemo(() => new THREE.Vector2(), []);
@@ -187,42 +174,19 @@ export default function Titi({ blobMap, mobile }) {
     const sq = brain.mode === 'land' ? 1 - 0.22 * Math.sin(Math.min(1, brain.t / 0.35) * Math.PI) : 1;
     squash.current.scale.set(1 + (1 - sq) * 0.6, sq, 1 + (1 - sq) * 0.6);
 
-    // Cuerpo.
-    rig.hips.position.y = HIPS_STAND + (HIPS_SIT - HIPS_STAND) * pose.sit + pose.lift;
-    rig.torso.rotation.set(pose.lean, 0, pose.roll);
-    rig.chest.scale.set(1, 1 + Math.sin(time * 2.4) * 0.018, 1 + Math.sin(time * 2.4) * 0.012);
-    rig.head.rotation.set(pose.headPitch, pose.headYaw, pose.headRoll, 'YXZ');
-    rig.armL.rotation.set(pose.armLX, 0, pose.armLZ);
-    rig.armR.rotation.set(pose.armRX, 0, pose.armRZ);
-    rig.elbowL.rotation.x = pose.elbowL;
-    rig.elbowR.rotation.x = pose.elbowR;
-    rig.legL.rotation.x = pose.legLX;
-    rig.legR.rotation.x = pose.legRX;
-    rig.kneeL.rotation.x = pose.kneeL;
-    rig.kneeR.rotation.x = pose.kneeR;
-    rig.footL.rotation.x = -(pose.legLX + pose.kneeL);
-    rig.footR.rotation.x = -(pose.legRX + pose.kneeR);
-    const wiggle = Math.sin(time * 22) * 0.18 * pose.ears;
-    rig.earL.rotation.z = wiggle;
-    rig.earR.rotation.z = -wiggle;
+    // Cola: al girar se queda atrás un instante (inercia) y vuelve sola.
+    const tr = turn.current;
+    const yawRate = tr.yaw === null || dt <= 0 ? 0 : wrap(brain.yaw - tr.yaw) / dt;
+    tr.yaw = brain.yaw;
+    tr.lag += (clamp(-yawRate * 0.12, -0.5, 0.5) - tr.lag) * damp(6, dt);
 
-    // Cara: parpadeo, pupilas que terminan de mirar y boca.
-    const lid = brain.mode === 'dizzy' ? 0.45 : blinkLid(blink, dt);
-    rig.eyeL.scale.y = lid;
-    rig.eyeR.scale.y = lid;
-    const px = clamp(lookYaw * w - pose.headYaw, -1, 1) * 0.012;
-    const py = brain.mode === 'think' ? 0.014 : clamp(-lookPitch * w + pose.headPitch, -1, 1) * 0.01;
-    rig.pupilL.position.set(px, py, 0.026);
-    rig.pupilR.position.set(px, py, 0.026);
-    rig.mouth.scale.setScalar(pose.mouth);
-    rig.smile.visible = pose.mouth < 0.35;
-
-    // Cola: sale hacia atrás y se enrosca en espiral; se mece sola.
-    rig.tail[0].rotation.set(TAIL_BASE + pose.tailSway * 0.3, 0, pose.tailSway);
-    for (let i = 1; i < TAIL.segments; i += 1) {
-      rig.tail[i].rotation.x = TAIL_CURL[i] * pose.tailCurl + Math.sin(time * 2 + i * 0.6) * 0.04;
-      rig.tail[i].rotation.z = pose.tailSway * 0.12;
-    }
+    // Cara: parpadeo con ease, mirada de reojo, olfateo y orejas (titiFace).
+    const calm = CALM_FACE.has(brain.mode);
+    const fx = stepFace(face, dt, { calm });
+    const lid = brain.mode === 'dizzy' ? 0.45 : fx.lid;
+    const px = clamp(lookYaw * w - pose.headYaw, -1, 1) * 0.014 + fx.sx * 0.006;
+    const py = brain.mode === 'think' ? 0.014 : clamp(-lookPitch * w + pose.headPitch, -1, 1) * 0.011 + fx.sy * 0.005;
+    applyPose(rig, pose, { time, lid, px, py, twitch: fx.twitch, ear: fx.ear * fx.earSide, tailLag: tr.lag });
 
     // Mancha de contacto: se achica y aclara cuando está en el aire.
     const air = clamp(brain.y / CARRY_HEIGHT, 0, 1);

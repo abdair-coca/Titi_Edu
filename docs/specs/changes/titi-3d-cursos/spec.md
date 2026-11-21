@@ -22,7 +22,28 @@ escena.
   sale al costado y termina en espiral visible de frente.
 - Sentado mide ~1,1 de alto en el cuarto (escala 1,1): más bajo que el
   escritorio (1,42), bien visible en la alfombra.
-- Hecho con figuras en código (esferas, cápsulas, tubos). Sin archivos nuevos.
+- Proporciones medidas sobre la imagen: el blanco del ojo se ve alrededor de
+  toda la pupila (pupila un poco abajo y hacia adentro, brillo arriba a la
+  izquierda); la "w" de la boca queda justo bajo la nariz y **encima** del
+  bigote; cada mitad del bigote nace en una comisura, baja abriéndose (~1,5
+  veces el ancho de la cabeza) y la punta sube; la chivita termina en punta.
+- Hecho con figuras en código (esferas, cápsulas, barridos y una cola continua
+  con esqueleto). Sin archivos nuevos.
+
+## T1b — Estilo y acabado
+
+- Sombreado toon estilizado: en la luz, los colores de T1 salen **exactos**
+  (sin tone mapping); en la sombra, un tono diseñado por material (cálido en el
+  pelaje, gris lavanda en lo blanco), nunca marrón sucio. Terminador suave en
+  dos escalones, brillo suave y luz de contorno.
+- Usa las mismas luces y sombras del cuarto: si pasa bajo un mueble, se
+  oscurece. El factor de luz se normaliza con la suma de las luces (si cambian
+  sus intensidades, Titi no se quema ni se apaga).
+- Sin granulado del mapa de sombras sobre Titi (desvío normal propio, solo para
+  él; el del cuarto no cambia).
+- Contorno de dibujo animado en un tono oscuro de cada color (no negro), de
+  grosor fijo en pantalla: ~1 px en el cuarto, hasta ~2,6 px de cerca.
+- Pupilas y nariz con brillo real (reflejan el ambiente del cuarto).
 
 ## T2 — Vida propia
 
@@ -35,6 +56,15 @@ escena.
 - Camina solo dentro de una zona libre de muebles alrededor de la alfombra
   (rectángulo x −1,35…0,9, z −1,3…1,0): nunca atraviesa muebles.
 - Los cambios de pose son suaves (amortiguación), sin saltos.
+- Micro-vida: parpadeo con ease (a veces doble) en el que las cejas bajan un
+  poco; la mirada salta de reojo cada 1–3 s; el bigote "olfatea" cada 3–8 s;
+  una oreja se sacude cada 4–10 s; la cabeza deriva despacio en reposo; la
+  respiración mueve pecho, cabeza y hombros; la cola ondula de la base a la
+  punta y se queda atrás un instante al girar. Agitado (cargado, cayendo,
+  mareado) no mira de reojo ni olfatea.
+- Expresión por modo: cejas arriba y puntas del bigote arriba al saludar y
+  celebrar; cejas de sorpresa y bigote caído colgando; ceño al aterrizar; una
+  ceja levantada al pensar; cejas y bigote temblando al marearse.
 
 ## T3 — Tocar y arrastrar
 
@@ -63,3 +93,7 @@ escena.
   máximo de 1/20 s).
 - Sin dependencias nuevas; el código de Titi viaja en el chunk diferido de la
   escena (nunca en el principal).
+- Sentado quieto, la micro-vida no fuerza a redibujar el mapa de sombras
+  (movimiento por frame por debajo del umbral de `RoomRig.poke`).
+- El acabado (contornos y cola continua) no suma más de ~10 llamadas de dibujo
+  por frame a la página.

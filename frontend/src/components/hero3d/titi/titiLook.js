@@ -15,6 +15,10 @@ export const TITI_COLORS = {
   eye: '#171C32', // pupilas y nariz
   mouth: '#C47F3C',
   mouthInside: '#7A2E2E',
+  // Contornos: versión oscura y cálida de cada color (nunca negro puro).
+  lineFur: '#9A5B06',
+  lineWhite: '#B9AC93',
+  lineSkin: '#7E4528',
 };
 
 export const TITI_SCALE = 1.1;
@@ -43,5 +47,5 @@ export const HIPS_STAND = BONES.thigh + BONES.shin + BONES.foot - BONES.hipJoint
 export const TAIL = {
   segments: 14,
   length: 0.07,
-  radius: [0.038, 0.022], // de la base a la punta
+  radius: [0.04, 0.028], // de la base a la punta (gruesa hasta el final, como en la imagen)
 };
