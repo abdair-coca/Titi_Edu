@@ -46,6 +46,9 @@ export const CATEGORY_SLOTS = {
   musica: { position: [-1.35, 0, -2.62], rotation: [-0.22, Math.PI / 2, 0], size: 1.95 },
 };
 
+// Dirección desde la que mira la cámara isométrica (desde +x +z, en alto).
+export const CAMERA_DIR = [1, 0.86, 1];
+
 // Rango del giro al arrastrar y de la paralaje del puntero (radianes).
 export const CONTROLS = {
   maxYaw: 0.6, // ±35°

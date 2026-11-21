@@ -9,7 +9,8 @@
 //
 // Expone por contexto si el último gesto fue un arrastre (para que soltar el
 // dedo sobre un objeto no cuente como click) y el cursor del lienzo. También
-// decide cuándo redibujar el mapa de sombras (ver abajo).
+// decide cuándo redibujar el mapa de sombras (ver abajo). Titi puede tomar el
+// puntero (`grab`/`release`): mientras lo cargan, el cuarto no gira.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
 import gsap from 'gsap';
 import { useFrame, useThree } from '@react-three/fiber';
@@ -29,20 +30,21 @@ const hasFinePointer = () =>
 export default function RoomRig({ onFirstDrag, children }) {
   const group = useRef(null);
   const el = useThree((s) => s.events.connected || s.gl.domElement);
-  const state = useRef({ yaw: 0, drag: null, moved: false, releasedAt: 0, hover: 0, px: 0, py: 0 });
+  const state = useRef({ yaw: 0, drag: null, grabbing: false, moved: false, releasedAt: 0, hover: 0, px: 0, py: 0 });
   const firstDragDone = useRef(false);
+  const warmFrames = useRef(30);
 
   // Cursor del lienzo: mano para arrastrar, puntero sobre objetos tocables.
   const setCursor = useCallback(() => {
     if (!el) return;
     const s = state.current;
-    el.style.cursor = s.drag?.active ? 'grabbing' : s.hover > 0 ? 'pointer' : 'grab';
+    el.style.cursor = s.drag?.active || s.grabbing ? 'grabbing' : s.hover > 0 ? 'pointer' : 'grab';
   }, [el]);
 
   const input = useMemo(
     () => ({
       wasDrag: () => state.current.moved,
-      isDragging: () => Boolean(state.current.drag?.active),
+      isDragging: () => Boolean(state.current.drag?.active || state.current.grabbing),
       hoverStart: () => {
         state.current.hover += 1;
         setCursor();
@@ -50,6 +52,23 @@ export default function RoomRig({ onFirstDrag, children }) {
       hoverEnd: () => {
         state.current.hover = Math.max(0, state.current.hover - 1);
         setCursor();
+      },
+      // Un objeto (Titi) se queda con el gesto: cancela el giro del cuarto,
+      // haya empezado antes o después en el mismo pointerdown.
+      grab: () => {
+        state.current.drag = null;
+        state.current.grabbing = true;
+        state.current.moved = false;
+        setCursor();
+      },
+      release: (moved) => {
+        state.current.grabbing = false;
+        state.current.moved = Boolean(moved);
+        setCursor();
+      },
+      // Algo se movió este frame: redibujar las sombras.
+      poke: () => {
+        warmFrames.current = Math.max(warmFrames.current, 1);
       },
     }),
     [setCursor],
@@ -61,7 +80,7 @@ export default function RoomRig({ onFirstDrag, children }) {
     setCursor();
 
     const onDown = (e) => {
-      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      if (s.grabbing || (e.pointerType === 'mouse' && e.button !== 0)) return;
       s.drag = { id: e.pointerId, x0: e.clientX, yaw0: s.yaw, active: false };
       s.moved = false;
     };
@@ -114,7 +133,6 @@ export default function RoomRig({ onFirstDrag, children }) {
   // algo se mueve (giro, paralaje o una animación GSAP en curso). Quieto, el
   // cuadro cuesta la mitad.
   const gl = useThree((s) => s.gl);
-  const warmFrames = useRef(30);
   useEffect(() => {
     gl.shadowMap.autoUpdate = false;
     gl.shadowMap.needsUpdate = true;

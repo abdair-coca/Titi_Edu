@@ -30,7 +30,7 @@ for (const file of mainChunkFiles) {
 // Las piezas de las escenas importan three: solo las traen HeroScene o
 // SkyScene, nunca el chunk principal.
 const SCENE_FILES = new RegExp(
-  "from\\s+['\"][./]*(hero3d/|heroSky/)?(HeroScene|HeroObject|RoomRig|RoomShell|RoomToys|roomTextures|roomLayout|sceneKit|dropGeometry|SkyScene|Drone|PaperPlane|SkyDrops|Balloons|skyKit|skyLetters)(\\.jsx?)?['\"]",
+  "from\\s+['\"][./]*(hero3d/|heroSky/|titi/)*(HeroScene|HeroObject|RoomRig|RoomShell|RoomToys|roomTextures|roomLayout|sceneKit|dropGeometry|SkyScene|Drone|PaperPlane|SkyDrops|Balloons|skyKit|skyLetters|Titi|TitiBody|titiGeometry)(\\.jsx?)?['\"]",
 );
 for (const file of mainChunkFiles) {
   if (SCENE_FILES.test(fs.readFileSync(file, 'utf8'))) {

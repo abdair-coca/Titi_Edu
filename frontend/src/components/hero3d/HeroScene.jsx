@@ -7,7 +7,8 @@
 // sombras suaves y oclusión pintada en los rincones.
 //
 // Interacción: arrastrar gira el cuarto (RoomRig), el mouse da paralaje, los
-// objetos de categoría filtran el catálogo y los adornos tienen sorpresas.
+// objetos de categoría filtran el catálogo, los adornos tienen sorpresas y
+// Titi vive en el piso (camina solo, se toca y se arrastra).
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { Canvas, useThree } from '@react-three/fiber';
@@ -16,11 +17,12 @@ import HeroObject from './HeroObject.jsx';
 import RoomRig from './RoomRig.jsx';
 import RoomShell from './RoomShell.jsx';
 import RoomToys from './RoomToys.jsx';
-import { CATEGORY_SLOTS, COLORS, ROOM } from './roomLayout.js';
+import Titi from './titi/Titi.jsx';
+import { CAMERA_DIR, CATEGORY_SLOTS, COLORS, ROOM } from './roomLayout.js';
 import { ContextLossGuard, SoftEnvironment, useWarmup } from './sceneKit.jsx';
 import { useRoomTextures } from './roomTextures.js';
 
-const CAMERA_DIR = new THREE.Vector3(1, 0.86, 1).normalize();
+const CAMERA_VIEW = new THREE.Vector3(...CAMERA_DIR).normalize();
 const CAMERA_TARGET = new THREE.Vector3(-0.1, 1.55, -0.1);
 const HINT_EVERY_MS = 4500;
 
@@ -37,7 +39,7 @@ function FitCamera({ margin = 0.94 }) {
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
   useLayoutEffect(() => {
-    camera.position.copy(CAMERA_TARGET).addScaledVector(CAMERA_DIR, 30);
+    camera.position.copy(CAMERA_TARGET).addScaledVector(CAMERA_VIEW, 30);
     camera.lookAt(CAMERA_TARGET);
     camera.updateMatrixWorld();
     const inv = camera.matrixWorldInverse;
@@ -118,6 +120,7 @@ function Room({ items, mobile, onSelect, onHover, onFirstDrag, hint }) {
       <Lights mobile={mobile} />
       <RoomShell tx={tx} />
       <RoomToys tx={tx} />
+      <Titi blobMap={tx.blob} mobile={mobile} />
       {items.map((item, i) => (
         <HeroObject
           key={item.slug}
