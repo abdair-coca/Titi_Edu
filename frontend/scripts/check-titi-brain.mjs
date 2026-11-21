@@ -3,10 +3,12 @@
 //   - hace de todo un poco (sentarse, mirar, saludar, pensar);
 //   - cargado nunca sale de la zona; al soltarlo cae, se marea y vuelve a lo suyo;
 //   - tocarlo solo hace celebrar si estaba tranquilo;
-//   - todas las poses devuelven números válidos para cada articulación.
+//   - todas las poses devuelven números válidos para cada articulación;
+//   - la cara parpadea seguido, sus impulsos quedan acotados y vuelven a reposo.
 import assert from 'node:assert/strict';
 import { AREA, CARRY_HEIGHT, carryTo, createBrain, drop, grab, poke, stepBrain } from '../src/components/hero3d/titi/titiBrain.js';
 import { POSE_KEYS, poseFor } from '../src/components/hero3d/titi/titiPoses.js';
+import { createFace, stepFace } from '../src/components/hero3d/titi/titiFace.js';
 
 // Azar con semilla: la prueba siempre recorre el mismo camino.
 function seeded(seed) {
@@ -85,4 +87,33 @@ for (const mode of ['sit', 'stand', 'walk', 'wave', 'think', 'celebrate', 'carri
   }
 }
 
-console.log('Titi 3D: vida propia, carga, toque y poses OK');
+// 5. Cara: parpadea cada 2–5 s, todo acotado y en reposo fuera de los impulsos.
+{
+  const rand = seeded(11);
+  const f = createFace();
+  let blinks = 0;
+  let closed = false;
+  let restFrames = 0;
+  const frames = 60 * 120;
+  for (let i = 0; i < frames; i += 1) {
+    const fx = stepFace(f, DT, { calm: true, rand });
+    for (const [k, v] of Object.entries(fx)) assert.ok(Number.isFinite(v), `cara: "${k}" no es un número`);
+    assert.ok(fx.lid >= 0.05 && fx.lid <= 1, `párpado fuera de rango: ${fx.lid}`);
+    assert.ok(Math.abs(fx.sx) <= 0.6 && Math.abs(fx.sy) <= 0.4, 'la mirada se fue demasiado');
+    assert.ok(Math.abs(fx.twitch) <= 1 && fx.ear >= 0 && fx.ear <= 1, 'impulso fuera de rango');
+    if (fx.lid < 0.5 && !closed) blinks += 1;
+    closed = fx.lid < 0.5;
+    if (fx.twitch === 0 && fx.ear === 0) restFrames += 1;
+  }
+  assert.ok(blinks >= 120 / 5 && blinks <= (120 / 2) * 1.3, `parpadeos en 2 min: ${blinks}`);
+  assert.ok(restFrames / frames > 0.9, 'bigote u orejas casi nunca en reposo');
+  // Agitado (cargado, cayendo): mira al frente y no olfatea.
+  const g = createFace();
+  for (let i = 0; i < 60 * 20; i += 1) {
+    const fx = stepFace(g, DT, { calm: false, rand });
+    if (i > 120) assert.equal(fx.twitch, 0, 'olfatea mientras lo cargan');
+  }
+  assert.ok(Math.abs(g.look.x) < 1e-3 && Math.abs(g.look.y) < 1e-3, 'agitado no vuelve a mirar al frente');
+}
+
+console.log('Titi 3D: vida propia, carga, toque, poses y cara OK');

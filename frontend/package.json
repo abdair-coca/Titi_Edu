@@ -20,7 +20,8 @@
     "test:learn-code-split": "node scripts/check-learn-code-split.mjs",
     "test:tutor-key-banner": "node scripts/check-tutor-key-banner.mjs",
     "test:hero-3d": "node scripts/check-hero-3d-split.mjs",
-    "test:titi-3d": "node scripts/check-titi-brain.mjs"
+    "test:titi-3d": "node scripts/check-titi-brain.mjs",
+    "shots:titi": "node scripts/titi-shots.mjs"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
