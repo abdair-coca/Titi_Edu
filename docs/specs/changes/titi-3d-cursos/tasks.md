@@ -52,4 +52,4 @@
 - [x] 6.6 Cuerpo: torso en forma de pera con la panza pintada, muslos en forma de pata de pollo, manos y pies en una pieza con dedos marcados; orejas ahuecadas.
 - [x] 6.7 Cola: 20 huesos cortos con pesos suaves (B-spline) y curvatura que crece de a poco; espiral limpia que se cierra hacia adentro; normales exactas en la punta.
 - [x] 6.8 Costo: mallas armadas en ~0,2 s (desktop), 62 llamadas de dibujo (antes 98) y 124 k triángulos (antes 98 k) en el laboratorio. Build y tests OK; capturas en [verify-report.md](verify-report.md).
-
+- [x] 6.9 Mejillas a la medida de `Titi.png` (silueta alineada por nariz y pies): media anchura de la cara bajo las orejas 0,272 / 0,270 / 0,265 contra 0,276 / 0,269 / 0,264 de la imagen (antes 0,296 / 0,300 / 0,301); también avanzan menos de frente. Ver [fase6-mejillas.webp](fase6-mejillas.webp).

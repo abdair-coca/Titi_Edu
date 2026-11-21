@@ -35,12 +35,15 @@ const ellipsoidZ = (x, y, cx, cy, cz, rx, ry, rz) => {
 const HEAD_C = [0, 0, 0];
 const HEAD_R = [HEAD.x, HEAD.y, HEAD.z];
 const CHIN = { p: [0, -0.16, 0.13], s: [0.1, 0.075, 0.09] };
-const CHEEK_R = [0.15, 0.12, 0.15];
+// Mejillas medidas sobre Titi.png: la cara apenas se ensancha bajo las orejas
+// (media anchura ~0,27 a la altura de la "w") y se angosta hacia el mentón.
+const CHEEK_C = [0.12, -0.08, 0.07];
+const CHEEK_R = [0.13, 0.105, 0.13];
 const BROW_RIDGE_R = [0.1, 0.045, 0.068];
 const EAR_BASE_R = [0.05, 0.07, 0.05];
 // Piezas de cada lado (centro con x en el lado correspondiente).
 const SIDES = [-1, 1].map((sx) => ({
-  cheek: [sx * 0.15, -0.105, 0.06],
+  cheek: [sx * CHEEK_C[0], CHEEK_C[1], CHEEK_C[2]],
   ridge: [sx * 0.1, 0.155, 0.16],
   socket: [sx * EYE_SOCKET.p[0], EYE_SOCKET.p[1], EYE_SOCKET.p[2]],
   ear: [sx * 0.245, 0.04, -0.015],

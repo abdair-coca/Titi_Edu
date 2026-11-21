@@ -94,6 +94,21 @@ vuelve a la imagen (correcto a 5 fps), así que se usó un **reloj virtual**
 | Cuerpo | torso de 3 esferas, ancas como pelotas, dedos sueltos | torso en pera con panza pintada, muslos en pata de pollo, manos y pies con dedos marcados |
 | Cola | subía hasta el bigote y terminaba en gancho | baja al costado y cierra una espiral limpia (20 huesos, pesos suaves) |
 
+### Ajuste de mejillas
+
+Las mejillas se veían grandes. Se midió la silueta de `Titi.png` alineada con
+la captura de frente (nariz y pies) y se pasó a unidades de la cabeza:
+
+| Altura (unidades de cabeza) | Imagen | Antes | Después |
+|---|---|---|---|
+| −0,06 (bajo las orejas) | 0,276 | 0,296 | **0,272** |
+| −0,08 (altura de la "w") | 0,269 | 0,300 | **0,270** |
+| −0,10 | 0,264 | 0,301 | **0,265** |
+
+La mejilla también avanza menos de frente (z en (0,2; −0,1): 0,206 → 0,184).
+El bigote se apoya solo en la nueva superficie. Comparación:
+[fase6-mejillas.webp](fase6-mejillas.webp). Build y tests OK.
+
 ## Rendimiento (laboratorio, sin sombras, misma vista)
 
 | Medida | Antes | Después |
