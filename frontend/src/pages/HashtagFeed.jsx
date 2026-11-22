@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import client from '../api/client.js';
-import PostCard from '../components/PostCard.jsx';
+import PostCard, { PostCardSkeleton } from '../components/PostCard.jsx';
+import { ErrorBox } from '../components/social/StateBlocks.jsx';
+import { TrendingPanel } from '../components/social/TrendingHashtags.jsx';
+import { useTrending } from '../components/social/useSocialData.js';
+import { BackLink, EmptyState, RoleBadge } from '../components/ui/v3.jsx';
+import { HashIcon } from '../components/icons.jsx';
 import { useStaggerReveal } from '../lib/motion.js';
+
+// Hashtag v3 (rediseno-plataforma-v3 R2): cabecera con el tema, posts y, en
+// desktop, el rail de tendencias para saltar a otros temas.
 
 export default function HashtagFeed() {
   const { tag } = useParams();
@@ -49,58 +57,61 @@ export default function HashtagFeed() {
     setPosts((prev) => prev.map((p) => (p.id === updated.id ? { ...p, ...updated } : p)));
   }, []);
 
-  const listRef = useStaggerReveal([posts.length]);
+  const trending = useTrending(8);
+  const listRef = useStaggerReveal([loading, normalized]);
 
   return (
-    <div>
-      <header className="mb-6">
-        <Link to="/explore" className="text-sm text-gray-500 hover:text-white inline-flex items-center gap-1">
-          ← Explorar
-        </Link>
-        <h1 className="text-3xl sm:text-4xl font-black mt-2 break-all">
-          <span className="text-titi-yellow-dark">#</span>{normalized}
-        </h1>
-        <p className="text-sm text-gray-500 mt-1">
-          {loading
-            ? 'Cargando…'
-            : `${posts.length} ${posts.length === 1 ? 'post' : 'posts'}`}
-        </p>
-      </header>
+    <div className="max-w-6xl mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:items-start">
+      <div className="max-w-2xl w-full mx-auto lg:max-w-none lg:mx-0 min-w-0">
+        <BackLink to="/explore">Explorar</BackLink>
+        <header className="flex items-center gap-3 mb-5">
+          <RoleBadge Icon={HashIcon} solid="bg-titi-yellow" size="lg" />
+          <div className="min-w-0">
+            <h1 className="text-3xl sm:text-4xl font-black text-titi-dark leading-tight break-all">
+              <span className="text-titi-streak">#</span>
+              {normalized}
+            </h1>
+            <p className="text-base font-medium text-gray-500 tabular-nums">
+              {loading ? 'Buscando posts…' : `${posts.length} ${posts.length === 1 ? 'post' : 'posts'} con este tema`}
+            </p>
+          </div>
+        </header>
 
-      {loading && posts.length === 0 && (
-        <div className="titi-card p-8 text-center text-gray-500">Cargando…</div>
-      )}
+        {loading && posts.length === 0 && (
+          <div aria-busy="true" aria-label="Cargando posts">
+            <PostCardSkeleton />
+            <PostCardSkeleton withImage />
+          </div>
+        )}
 
-      {error && (
-        <div className="titi-card p-6 text-center border border-titi-yellow/40">
-          <p className="text-titi-yellow-dark font-semibold mb-2">Error</p>
-          <p className="text-sm text-gray-500 mb-4">{error}</p>
-          <button onClick={fetchPosts} className="titi-btn-primary">Reintentar</button>
-        </div>
-      )}
+        {error && <ErrorBox title="No pudimos cargar este tema" message={error} onRetry={fetchPosts} />}
 
-      {!loading && !error && posts.length === 0 && (
-        <div className="titi-card p-8 text-center">
-          <h2 className="text-xl font-bold mb-2">Sin posts con #{normalized}</h2>
-          <p className="text-gray-500 mb-6">
-            Nadie ha usado este hashtag todavía. ¡Sé el primero!
-          </p>
-          <Link to="/feed" className="titi-btn-primary">Crear un post</Link>
-        </div>
-      )}
+        {!loading && !error && posts.length === 0 && (
+          <EmptyState
+            state="pensando"
+            title={`Nadie usó #${normalized}`}
+            accent="todavía"
+            text="Estrená el tema con una publicación en tu inicio."
+          >
+            <Link to="/feed" className="titi-btn-primary">
+              Publicar en Inicio
+            </Link>
+          </EmptyState>
+        )}
 
-      {posts.length > 0 && (
-        <div ref={listRef}>
-          {posts.map((p) => (
-            <PostCard
-              key={p.id}
-              post={p}
-              onDelete={handleDelete}
-              onEdit={handleEdit}
-            />
-          ))}
-        </div>
-      )}
+        {posts.length > 0 && (
+          <div ref={listRef}>
+            {posts.map((p) => (
+              <PostCard key={p.id} post={p} onDelete={handleDelete} onEdit={handleEdit} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Rail (solo desktop): otros temas */}
+      <aside className="hidden lg:flex flex-col gap-5 sticky top-8">
+        <TrendingPanel trending={trending} />
+      </aside>
     </div>
   );
 }

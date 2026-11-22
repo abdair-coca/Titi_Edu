@@ -767,3 +767,38 @@ export function FireIcon({ className = 'w-5 h-5' }) {
     </svg>
   );
 }
+
+// ---- Íconos de rediseno-plataforma-v3 ----
+
+// Cuadrícula — pestaña de posts del perfil.
+export function GridIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+    </NavSvg>
+  );
+}
+
+// Copo de nieve — ítem "Congelar racha" de la tienda.
+export function SnowflakeIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M12 2.5v19M3.8 7.25l16.4 9.5M3.8 16.75l16.4-9.5" />
+      <path d="m9.5 4 2.5 2.5L14.5 4M9.5 20l2.5-2.5 2.5 2.5" />
+    </NavSvg>
+  );
+}
+
+// Medalla — podio del ranking.
+export function MedalIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M7.5 2.5 10 8.5M16.5 2.5 14 8.5" />
+      <circle cx="12" cy="15" r="6" />
+      <path d="m12 12.3.9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2L9.1 14.4l2-.3z" />
+    </NavSvg>
+  );
+}
