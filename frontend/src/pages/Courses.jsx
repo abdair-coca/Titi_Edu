@@ -1,396 +1,188 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useStaggerReveal, usePopIn } from '../lib/motion.js';
-import { nivelTextClass } from '../lib/nivel.js';
-import { sanitizeMarkdownUrl } from '../lib/markdown.js';
-import { resolveMediaUrl } from '../lib/format.js';
-import RecommendedCourseCard from '../components/RecommendedCourseCard.jsx';
-import TitiMascot from '../components/TitiMascot.jsx';
 import Hero3D from '../components/hero3d/Hero3D.jsx';
 import HeroSky from '../components/heroSky/HeroSky.jsx';
 import HeroTitle from '../components/heroTitle/HeroTitle.jsx';
 import { createHeroBridge } from '../lib/heroBridge.js';
 import { HERO_MODELS } from '../components/hero3d/heroModels.js';
-import { GotaIcon, BookIcon, BoltIcon, AwardIcon } from '../components/icons.jsx';
+import CatalogFilters from '../components/catalog/CatalogFilters.jsx';
+import CatalogGrid from '../components/catalog/CatalogGrid.jsx';
+import CatalogOutro from '../components/catalog/CatalogOutro.jsx';
+import CourseCard from '../components/catalog/CourseCard.jsx';
+import CourseQuickView from '../components/catalog/CourseQuickView.jsx';
+import CourseRow, { ContinueCard, RowItem } from '../components/catalog/CourseRow.jsx';
+import LearningPathMap from '../components/catalog/LearningPathMap.jsx';
+import useCatalogFilters from '../components/catalog/useCatalogFilters.js';
+import {
+  LEARNING_PATHS,
+  buildRows,
+  categoriaSlug,
+  filterCourses,
+  friendsByCourse,
+  hasActiveSearch,
+  lessonCount,
+  resolvePaths,
+} from '../components/catalog/catalogData.js';
 
-// Copys estáticos de los paneles de comunidad (marketing, sin backend).
-const PERKS = [
-  'Lecciones cortas que terminás en una sentada',
-  'Profes de la comunidad, no robots',
-  'Seguí tu progreso y tu racha de gotas',
-  'Aprendé gratis, a tu propio ritmo',
-];
+// /courses: hero 3D (sin cambios) + catálogo (rediseno-catalogo-cursos).
+// Orden: hero → filas curadas → todos los cursos → rutas → bloque final.
 
-const BADGES = [
-  { Icon: BoltIcon, color: 'text-titi-streak', title: 'Racha activa', note: '7 días seguidos' },
-  { Icon: GotaIcon, color: 'text-titi-yellow', title: 'Coleccionista', note: '50 gotas ganadas' },
-  { Icon: AwardIcon, color: 'text-titi-achievement', title: 'Primer curso', note: 'curso completado' },
-];
-
-// Testimonios — placeholder estático (sin backend, contenido de ejemplo).
-const TESTIMONIALS = [
-  {
-    quote:
-      'Empecé sin saber nada de código y hoy mantengo el back-end de mi propio proyecto.',
-    name: 'Lucía R.',
-    role: 'Estudiante de Back-End',
-    tint: 'bg-titi-dark',
-  },
-  {
-    quote:
-      'Las lecciones cortas hacen que sea fácil sumar aunque tenga poco tiempo.',
-    name: 'Martín D.',
-    role: 'Estudiante de Python',
-    tint: 'bg-titi-streak',
-  },
-  {
-    quote: 'La comunidad responde rapidísimo, nunca te quedás trabado.',
-    name: 'Sofía G.',
-    role: 'Estudiante de Diseño',
-    tint: 'bg-titi-achievement',
-  },
-  {
-    quote:
-      'Pasé de tenerle miedo al inglés a leer documentación sin traductor.',
-    name: 'Diego F.',
-    role: 'Estudiante de Inglés',
-    tint: 'bg-titi-certificate',
-  },
-];
-
-// Rutas de aprendizaje — curadas a mano (sin backend). A diferencia de las
-// "Áreas" (explorar un tema), una RUTA es una secuencia ORDENADA de cursos
-// reales hacia un objetivo. Los cursos se referencian por título y se resuelven
-// contra el catálogo real (si falta uno, se omite sin romper).
-const PATHS = [
-  {
-    title: 'De cero a Programador',
-    objetivo: 'Empezá sin saber nada y terminá creando apps completas.',
-    cursos: [
-      'Introducción a Python',
-      'Desarrollo Web con React',
-      'Desarrollo Back-End',
-      'Neo4j para Desarrolladores',
-    ],
-  },
-  {
-    title: 'Camino a Data Science',
-    objetivo: 'De los fundamentos al machine learning aplicado.',
-    cursos: [
-      'Introducción a Python',
-      'Álgebra Lineal Aplicada',
-      'Machine Learning con Python',
-    ],
-  },
-  {
-    title: 'Front-End Moderno',
-    objetivo: 'Diseñá y construí interfaces web profesionales.',
-    cursos: [
-      'Diseño de Interfaces Modernas',
-      'Desarrollo Web con React',
-      'Inglés para Desarrolladores',
-    ],
-  },
-];
-
-const FOOTER_COLS = [
-  { title: 'Explorar', items: ['Cursos', 'Categorías', 'Rutas'] },
-  { title: 'Comunidad', items: ['Profes', 'Logros', 'Ranking'] },
-  { title: 'Titi', items: ['Sobre nosotros', 'Ayuda', 'Contacto'] },
-];
-
-// Normaliza texto para buscar: saca acentos/diacríticos y pasa a minúsculas,
-// así "ingles" matchea "Inglés" y "PYTHON" matchea "python".
-function normalizeText(s) {
-  return (s || '')
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase();
+/** GET que devuelve `data.data[key]`, con estados de carga/error y reintento. */
+function useList(url, key, { enabled = true } = {}) {
+  const [state, setState] = useState({ items: [], loading: enabled, error: null });
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!enabled) {
+      setState({ items: [], loading: false, error: null });
+      return undefined;
+    }
+    let cancelled = false;
+    setState((s) => ({ ...s, loading: true, error: null }));
+    client
+      .get(url)
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.success) setState({ items: data.data?.[key] || [], loading: false, error: null });
+        else setState({ items: [], loading: false, error: data?.message || 'No se pudo cargar' });
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setState({ items: [], loading: false, error: err.response?.data?.message || err.message || 'Error de red' });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [url, key, enabled, tick]);
+  const reload = useCallback(() => setTick((t) => t + 1), []);
+  return { ...state, reload };
 }
-
-// Orden editorial de las "habilidades esenciales" (Featured): se muestran las
-// primeras 3 de esta lista que existan en la API. Curado a mano (no slice del
-// orden crudo) para destacar categorías con contenido y arte propio.
-const FEATURED_PREF = [
-  'Programación',
-  'Idiomas',
-  'Matemáticas',
-  'Diseño',
-  'Ciencias',
-  'Negocios',
-  'Humanidades',
-  'Música',
-];
 
 export default function Courses() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
-  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [categoria, setCategoria] = useState('all');
+  const categoriasList = useList('/api/categories', 'categorias');
+  const catalog = useList('/api/courses', 'cursos');
+  const recommendedList = useList('/api/courses/recommended', 'recommended', { enabled: isAuthenticated });
+  const enrolledList = useList('/api/courses/my/enrolled', 'inscripciones', { enabled: isAuthenticated });
 
-  const [categorias, setCategorias] = useState([]);
-  // Catálogo completo (sin filtros) — única fuente: el filtrado (búsqueda +
-  // categoría) se hace en cliente. Sirve también para stats, conteos y populares.
-  const [allCursos, setAllCursos] = useState([]);
-  const [recommended, setRecommended] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [refreshTick, setRefreshTick] = useState(0);
+  const categorias = categoriasList.items;
+  const allCursos = catalog.items;
+  const recommended = recommendedList.items;
+  const enrolled = enrolledList.items;
 
-  // Recomendados por amigos — solo para usuarios autenticados.
-  useEffect(() => {
-    if (!isAuthenticated) {
-      setRecommended([]);
-      return;
-    }
-    let cancelled = false;
-    client
-      .get('/api/courses/recommended')
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.success) setRecommended(data.data?.recommended || []);
-      })
-      .catch(() => {
-        // Silencioso: la sección de recomendados no bloquea el catálogo.
-        if (!cancelled) setRecommended([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isAuthenticated]);
+  const { filters, query, setQuery, setFilter, toggleNivel, clearFilters, openCourseId, openCourse, closeCourse } =
+    useCatalogFilters(categorias);
 
-  // Cargar categorías una sola vez
-  useEffect(() => {
-    let cancelled = false;
-    client
-      .get('/api/categories')
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.success) setCategorias(data.data?.categorias || []);
-      })
-      .catch(() => {
-        // Silencioso: si falla, el filtro de categoría queda vacío.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const cursos = useMemo(() => filterCourses(allCursos, filters), [allCursos, filters]);
+  const filtering = hasActiveSearch(filters);
+  const rows = useMemo(() => buildRows({ cursos: allCursos, enrolled, recommended }), [allCursos, enrolled, recommended]);
+  const friendsMap = useMemo(() => friendsByCourse(recommended), [recommended]);
+  const enrollmentMap = useMemo(() => new Map(enrolled.map((i) => [i.curso.id, i])), [enrolled]);
+  const progressMap = useMemo(() => new Map(enrolled.map((i) => [i.curso.id, i.avance])), [enrolled]);
+  const paths = useMemo(() => resolvePaths(LEARNING_PATHS, allCursos, enrolled), [allCursos, enrolled]);
 
-  // Catálogo completo (una vez por refresh). Es la única carga: el filtrado por
-  // búsqueda y categoría se hace en cliente (búsqueda insensible a acentos).
-  useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    client
-      .get('/api/courses')
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.success) setAllCursos(data.data?.cursos || []);
-        else setError(data?.message || 'No se pudo cargar el catálogo');
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setError(err.response?.data?.message || err.message || 'Error de red');
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [refreshTick]);
-
-  // Deep-link `?categoria=<id>` (viene de "Explorar categorías" en Mis cursos).
-  // Aplica el filtro cuando la categoría existe en el catálogo, baja a Trending
-  // y limpia el param para no re-forzarlo si el usuario cambia de tab.
-  useEffect(() => {
-    const catParam = searchParams.get('categoria');
-    if (!catParam || categorias.length === 0) return;
-    if (categorias.some((c) => c.id === catParam)) {
-      setCategoria(catParam);
-      setQuery('');
-      document
-        .getElementById('trending')
-        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    setSearchParams({}, { replace: true });
-  }, [searchParams, categorias, setSearchParams]);
-
-  // Debounce del search input
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedQuery(query.trim()), 300);
-    return () => clearTimeout(id);
-  }, [query]);
-
-  // Lista visible: filtrado en cliente sobre el catálogo completo.
-  // Búsqueda insensible a acentos/mayúsculas y por múltiples palabras (AND),
-  // sobre título + categoría + autor.
-  const cursos = useMemo(() => {
-    const tokens = normalizeText(debouncedQuery).split(/\s+/).filter(Boolean);
-    return allCursos.filter((c) => {
-      if (categoria !== 'all' && c.categoria?.id !== categoria) return false;
-      if (!tokens.length) return true;
-      const hay = normalizeText(
-        [c.titulo, c.categoria?.nombre, c.creador?.username]
-          .filter(Boolean)
-          .join(' '),
-      );
-      return tokens.every((t) => hay.includes(t));
-    });
-  }, [allCursos, debouncedQuery, categoria]);
-
-  // Entrada escalonada de las cards (GSAP, respeta reduced-motion).
-  const gridRef = useStaggerReveal([cursos.length]);
-  const recommendedRef = useStaggerReveal([recommended.length]);
-  const featuredRef = useStaggerReveal([categorias.length]);
-  const testimonialsRef = useStaggerReveal([TESTIMONIALS.length]);
-  const pathsRef = useStaggerReveal([allCursos.length]);
-  const stripRef = useStaggerReveal([4]);
-  const badgesRef = useStaggerReveal([BADGES.length]);
-  // Bloques sueltos (no-lista) que también deben entrar (motion.md §4). El
-  // hero entra letra a letra (HeroTitle), sin pop del bloque.
-  const skyRegionRef = useRef(null);
-  const skyTextRef = useRef(null);
-  // Puente entre las letras del título, el cielo 3D y el cuarto (rediseno-hero-cursos).
-  const [heroBridge] = useState(createHeroBridge);
-  useHeroFillsScreen(skyRegionRef);
-  const darkPromoRef = usePopIn([]);
-  const footerRef = usePopIn([]);
-
-  const hasFilters = debouncedQuery || categoria !== 'all';
-
-  // Stats del hero, derivados del catálogo completo (estables, no cambian al
-  // filtrar/buscar).
-  const profesCount = useMemo(
-    () => new Set(allCursos.map((c) => c.creador?.username).filter(Boolean)).size,
-    [allCursos],
-  );
-
-  // Cursos agrupados por categoría (del catálogo completo).
-  const coursesByCat = useMemo(() => {
+  // Solo categorías con cursos publicados, las de más cursos primero.
+  const countByCat = useMemo(() => {
     const map = {};
-    for (const c of allCursos) {
-      const id = c.categoria?.id;
-      if (!id) continue;
-      (map[id] ||= []).push(c);
-    }
+    for (const c of allCursos) if (c.categoria?.id) map[c.categoria.id] = (map[c.categoria.id] || 0) + 1;
     return map;
   }, [allCursos]);
-
-  // Categorías que tienen al menos un curso (para "Categorías populares").
-  const popularCats = useMemo(
-    () => categorias.filter((c) => coursesByCat[c.id]?.length),
-    [categorias, coursesByCat],
+  const usedCategorias = useMemo(
+    () => categorias.filter((c) => countByCat[c.id]).sort((a, b) => countByCat[b.id] - countByCat[a.id]),
+    [categorias, countByCat],
   );
 
-  // Áreas destacadas (Featured): primeras 3 de FEATURED_PREF que existan;
-  // si faltaran, se completan con el resto de categorías sin repetir.
-  const featuredCats = useMemo(() => {
-    const picked = FEATURED_PREF
-      .map((n) => categorias.find((c) => c.nombre === n))
-      .filter(Boolean);
-    for (const c of categorias) {
-      if (picked.length >= 3) break;
-      if (!picked.includes(c)) picked.push(c);
-    }
-    return picked.slice(0, 3);
-  }, [categorias]);
+  const stats = useMemo(
+    () => ({
+      cursos: allCursos.length,
+      profes: new Set(allCursos.map((c) => c.creador?.username).filter(Boolean)).size,
+      lecciones: allCursos.reduce((n, c) => n + lessonCount(c), 0),
+      categorias: usedCategorias.length,
+    }),
+    [allCursos, usedCategorias],
+  );
 
-  // Rutas de aprendizaje resueltas: mapea cada título de PATHS a su curso real
-  // (por título). Omite cursos que no existan y rutas que queden vacías.
-  const learningPaths = useMemo(() => {
-    const byTitulo = new Map(allCursos.map((c) => [c.titulo, c]));
-    return PATHS.map((p) => ({
-      ...p,
-      cursos: p.cursos.map((t) => byTitulo.get(t)).filter(Boolean),
-    })).filter((p) => p.cursos.length > 0);
-  }, [allCursos]);
-  const popularRef = useStaggerReveal([popularCats.length]);
+  // ---- Hero (sin cambios de comportamiento) ----
+  const skyRegionRef = useRef(null);
+  const skyTextRef = useRef(null);
+  const [heroBridge] = useState(createHeroBridge);
+  useHeroFillsScreen(skyRegionRef);
 
-  // Objetos del hero 3D: todas las categorías con modelo (como las pills), las
-  // de más cursos primero (orden del saludo de entrada). Espera al catálogo
-  // para que el orden no cambie con los objetos ya en escena.
+  // Objetos del cuarto 3D: categorías con modelo, las de más cursos primero.
+  // Espera al catálogo para que el orden no cambie con los objetos en escena.
   const heroItems = useMemo(
     () =>
-      loading
+      catalog.loading
         ? []
         : categorias
-            .map((c) => ({ id: c.id, nombre: c.nombre, slug: categoriaSlug(c.nombre), count: coursesByCat[c.id]?.length || 0 }))
+            .map((c) => ({ id: c.id, nombre: c.nombre, slug: categoriaSlug(c.nombre), count: countByCat[c.id] || 0 }))
             .filter((c) => HERO_MODELS[c.slug])
             .sort((a, b) => b.count - a.count),
-    [loading, categorias, coursesByCat],
+    [catalog.loading, categorias, countByCat],
   );
 
-  // Total de lecciones del catálogo (para el stat strip).
-  const lessonsTotal = useMemo(
-    () =>
-      allCursos.reduce(
-        (sum, c) => sum + (c._count?.lecciones ?? c._count?.modulos ?? 0),
-        0,
-      ),
-    [allCursos],
+  const goToCatalog = useCallback(() => {
+    document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, []);
+
+  const selectCategoryId = useCallback(
+    (id) => {
+      const c = categorias.find((x) => x.id === id);
+      setFilter({ cat: c ? categoriaSlug(c.nombre) : '', q: '' });
+      goToCatalog();
+    },
+    [categorias, setFilter, goToCatalog],
   );
 
-  function goToTrending() {
-    document
-      .getElementById('trending')
-      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  // El buscador siempre busca en TODO el catálogo: al escribir, resetea la
-  // categoría activa a "Todas".
-  function handleSearchChange(e) {
-    const v = e.target.value;
-    setQuery(v);
-    if (v.trim()) setCategoria('all');
-  }
-
-  // Enter en el buscador → baja a "Cursos en tendencia".
   function handleSearchKeyDown(e) {
     if (e.key === 'Enter') {
       e.preventDefault();
-      goToTrending();
+      goToCatalog();
     }
   }
 
-  function clearFilters() {
-    setQuery('');
-    setDebouncedQuery('');
-    setCategoria('all');
-  }
-
-  // Botón "volver arriba" tras scrollear (página larga).
-  const [showTop, setShowTop] = useState(false);
+  // Enlace con filtros (Mis cursos, Feed, Explore, link compartido): baja al
+  // catálogo una vez que cargó.
+  const arrivedFiltered = useRef(filtering);
   useEffect(() => {
-    const onScroll = () => setShowTop(window.scrollY > 600);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
+    if (arrivedFiltered.current && !catalog.loading) {
+      arrivedFiltered.current = false;
+      goToCatalog();
+    }
+  }, [catalog.loading, goToCatalog]);
 
-  // Detecta cuándo las tabs de categoría quedan "pegadas" arriba (sticky) para
-  // darles un look flotante (sombra/fondo) solo en ese momento.
-  const tabsSentinelRef = useRef(null);
-  const [tabsStuck, setTabsStuck] = useState(false);
-  useEffect(() => {
-    const el = tabsSentinelRef.current;
-    if (!el || typeof IntersectionObserver === 'undefined') return undefined;
-    const obs = new IntersectionObserver(
-      ([entry]) => setTabsStuck(!entry.isIntersecting),
-      { rootMargin: '-12px 0px 0px 0px', threshold: 1 },
-    );
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, []);
+  const seeAll = (patch) => () => {
+    setFilter(patch);
+    goToCatalog();
+  };
+
+  const onEnrolled = useCallback(() => {
+    enrolledList.reload();
+    catalog.reload();
+  }, [enrolledList, catalog]);
+
+  const quickPreview = useMemo(
+    () => (openCourseId ? allCursos.find((c) => c.id === openCourseId) || { id: openCourseId } : null),
+    [openCourseId, allCursos],
+  );
+
+  const showRows = !filtering && !catalog.loading && !catalog.error;
+  const card = (curso) => (
+    <RowItem key={curso.id}>
+      <CourseCard
+        curso={curso}
+        onOpen={() => openCourse(curso.id)}
+        friends={friendsMap.get(curso.id)}
+        progress={progressMap.get(curso.id)}
+      />
+    </RowItem>
+  );
 
   return (
-    <div className="flex flex-col gap-8 sm:gap-10">
+    <div className="flex flex-col gap-10 sm:gap-14">
       {/* Hero: título letra a letra + buscador, con el cielo 3D detrás y el
           cuarto a la derecha (changes cielo-hero-cursos y rediseno-hero-cursos).
           En desktop ocupa toda la primera pantalla. */}
@@ -412,7 +204,7 @@ export default function Courses() {
               <input
                 type="text"
                 value={query}
-                onChange={handleSearchChange}
+                onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
                 onFocus={() => heroBridge.emit('focus', { on: true })}
                 onBlur={() => heroBridge.emit('focus', { on: false })}
@@ -436,10 +228,7 @@ export default function Courses() {
               {query && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setQuery('');
-                    setDebouncedQuery('');
-                  }}
+                  onClick={() => setFilter({ q: '' })}
                   aria-label="Limpiar búsqueda"
                   className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:text-titi-dark hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow transition-colors"
                 >
@@ -464,11 +253,7 @@ export default function Courses() {
           {/* Visual del hero — escena 3D de las categorías, con imagen de respaldo */}
           <Hero3D
             items={heroItems}
-            onSelect={(id) => {
-              setCategoria(id);
-              setQuery('');
-              goToTrending();
-            }}
+            onSelect={selectCategoryId}
             onHover={(item) => heroBridge.emit('roomHover', item?.nombre ?? null)}
             poster="/hero/hero-3d-poster.webp"
             alt="Habitación de estudio de Titi con los objetos de las categorías: laptop y calculadora en el escritorio, libros, globo y matraz en las repisas, guitarra, paleta y maletín"
@@ -478,580 +263,106 @@ export default function Courses() {
         </section>
       </div>
 
-      {/* Featured — habilidades esenciales (3 categorías destacadas) */}
-      {categorias.length > 0 && (
-        <section aria-label="Habilidades esenciales">
-          <h2 className="text-2xl font-bold text-titi-dark mb-1">
-            Aprendé habilidades{' '}
-            <span className="italic text-titi-streak">esenciales</span>
-          </h2>
-          <p className="text-sm font-medium text-gray-500 mb-5">
-            Áreas destacadas para impulsar lo que estás construyendo.
-          </p>
-          <div ref={featuredRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {featuredCats.map((c) => (
-              <FeaturedCategoryCard
-                key={c.id}
-                categoria={c}
-                count={coursesByCat[c.id]?.length || 0}
-                onClick={() => {
-                  setCategoria(c.id);
-                  goToTrending();
-                }}
-              />
-            ))}
-          </div>
-        </section>
+      {showRows && rows.continua.length > 0 && (
+        <CourseRow
+          title="Continúa donde"
+          accent="quedaste"
+          count={rows.continua.length}
+          seeAll={{ label: 'Mis cursos', onClick: () => navigate('/my-courses') }}
+        >
+          {rows.continua.map((i) => (
+            <RowItem key={i.curso.id} wide>
+              <ContinueCard inscripcion={i} />
+            </RowItem>
+          ))}
+        </CourseRow>
       )}
 
-      {/* Recomendados por tus amigos */}
-      {recommended.length > 0 && (
-        <section aria-label="Recomendados por tus amigos">
-          <h2 className="text-lg font-bold text-titi-dark mb-3">
-            Tus amigos están aprendiendo
-          </h2>
-          <div ref={recommendedRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {recommended.map(({ curso, friendCount, sampleFriends }) => (
-              <RecommendedCourseCard
-                key={curso.id}
-                curso={curso}
-                friendCount={friendCount}
-                sampleFriends={sampleFriends}
-                onOpen={() => navigate(`/courses/${curso.id}`)}
-              />
-            ))}
-          </div>
-        </section>
+      {showRows && rows.amigos.length > 0 && (
+        <CourseRow
+          title="Tus amigos están"
+          accent="aprendiendo"
+          subtitle="Cursos que toma la gente que sigues."
+          count={rows.amigos.length}
+        >
+          {rows.amigos.map((r) => card(r.curso))}
+        </CourseRow>
       )}
 
-      {/* Trending — tabs de categoría + grid */}
-      <section id="trending" aria-label="Cursos en tendencia">
-        <h2 className="text-2xl font-bold text-titi-dark mb-4">
-          Cursos en tendencia
+      {showRows && rows.empezar.length > 0 && (
+        <CourseRow
+          title="Para empezar"
+          accent="desde cero"
+          subtitle="Nivel principiante: no necesitas saber nada antes."
+          count={rows.empezar.length}
+          seeAll={{ onClick: seeAll({ niveles: ['principiante'], orden: 'populares' }) }}
+        >
+          {rows.empezar.map(card)}
+        </CourseRow>
+      )}
+
+      {showRows && rows.nuevos.length > 0 && (
+        <CourseRow title="Recién" accent="publicados" count={rows.nuevos.length} seeAll={{ onClick: seeAll({ orden: 'nuevos' }) }}>
+          {rows.nuevos.map(card)}
+        </CourseRow>
+      )}
+
+      {showRows && rows.populares.length > 0 && (
+        <CourseRow
+          title="Los más"
+          accent="populares"
+          subtitle="Los que más gente está tomando."
+          count={rows.populares.length}
+          seeAll={{ onClick: seeAll({ orden: 'populares' }) }}
+        >
+          {rows.populares.map(card)}
+        </CourseRow>
+      )}
+
+      <section id="catalogo" aria-label="Todos los cursos" className="flex flex-col gap-3 scroll-mt-16 md:scroll-mt-4">
+        <h2 className="text-2xl sm:text-3xl font-black text-titi-dark">
+          Todos los <span className="text-titi-streak">cursos</span>
         </h2>
-
-        {/* Sentinel para detectar cuándo las tabs quedan pegadas arriba */}
-        <div ref={tabsSentinelRef} aria-hidden="true" className="h-px" />
-
-        {/* Tabs de categoría — sticky con look flotante al pegarse. En mobile
-            es una tira horizontal con scroll (flex-wrap ahí apila 4-5 filas y
-            tapa media pantalla); desde sm hay lugar de sobra para envolver. */}
-        <div
-          className={[
-            'sticky top-14 md:top-2 z-20 -mt-3 mb-3 py-3 flex flex-nowrap sm:flex-wrap gap-2',
-            'overflow-x-auto sm:overflow-visible [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
-            'rounded-2xl border border-transparent transition-all duration-200',
-            tabsStuck
-              ? 'bg-white px-3 border-gray-100 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.22)]'
-              : '',
-          ].join(' ')}
-        >
-          <CategoryPill
-            active={categoria === 'all'}
-            onClick={() => {
-              setCategoria('all');
-              goToTrending();
-            }}
-          >
-            Todas
-          </CategoryPill>
-          {categorias.map((c) => (
-            <CategoryPill
-              key={c.id}
-              active={categoria === c.id}
-              onClick={() => {
-                setCategoria(c.id);
-                goToTrending();
-              }}
-            >
-              {c.icono} {c.nombre}
-            </CategoryPill>
-          ))}
-        </div>
-
-        {loading ? (
-          <SkeletonGrid />
-        ) : error ? (
-          <ErrorState
-            message={error}
-            onRetry={() => setRefreshTick((t) => t + 1)}
-          />
-        ) : cursos.length === 0 ? (
-          <EmptyState hasFilters={hasFilters} onClear={clearFilters} />
-        ) : (
-          <>
-            {/* Contador de resultados */}
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-sm font-semibold text-gray-500">
-                {cursos.length === 1
-                  ? '1 curso encontrado'
-                  : `${cursos.length} cursos encontrados`}
-                {hasFilters && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="ml-2 text-titi-dark font-bold hover:text-titi-yellow-dark transition-colors"
-                  >
-                    · Limpiar filtros
-                  </button>
-                )}
-              </p>
-            </div>
-
-            <div
-              ref={gridRef}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
-            >
-              {cursos.map((curso) => (
-                <CourseCard
-                  key={curso.id}
-                  curso={curso}
-                  onOpen={() => navigate(`/courses/${curso.id}`)}
-                />
-              ))}
-            </div>
-          </>
-        )}
+        <CatalogFilters
+          categorias={usedCategorias}
+          filters={filters}
+          onFilter={setFilter}
+          onToggleNivel={toggleNivel}
+          onClear={(what) => (what === 'q' ? setFilter({ q: '' }) : clearFilters())}
+          resultCount={cursos.length}
+        />
+        <CatalogGrid
+          cursos={cursos}
+          totalCount={allCursos.length}
+          loading={catalog.loading}
+          error={catalog.error}
+          onRetry={catalog.reload}
+          filtering={filtering}
+          query={filters.q}
+          onClear={clearFilters}
+          onOpen={openCourse}
+          friendsMap={friendsMap}
+          progressMap={progressMap}
+        />
       </section>
 
-      {/* Dark promo — reimaginá tu forma de aprender */}
-      <section ref={darkPromoRef} aria-label="Reimaginá tu forma de aprender">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-titi-dark rounded-2xl p-8 sm:p-10">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-black text-titi-cream leading-tight mb-3">
-              Reimaginá tu forma de{' '}
-              <span className="text-titi-yellow">aprender</span>
-            </h2>
-            <p className="text-sm font-medium text-white/60 leading-relaxed mb-6 max-w-md">
-              Lecciones cortas, hechas por la comunidad, pensadas para que
-              avances a tu ritmo y sin frustrarte.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 mb-7">
-              {PERKS.map((perk) => (
-                <div key={perk} className="flex items-start gap-2.5">
-                  <span className="w-6 h-6 rounded-lg bg-titi-yellow/15 grid place-items-center shrink-0 mt-0.5">
-                    <svg
-                      viewBox="0 0 14 14"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.6"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      className="w-3 h-3 text-titi-yellow"
-                      aria-hidden="true"
-                    >
-                      <path d="M2 7 6 11l6-8" />
-                    </svg>
-                  </span>
-                  <span className="text-sm font-medium text-white/85 leading-snug">
-                    {perk}
-                  </span>
-                </div>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={goToTrending}
-              className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
-            >
-              Empezar a aprender
-            </button>
-          </div>
-
-          {/* Visual — Titi animado (reemplaza el placeholder "imagen/collage") */}
-          <div className="hidden lg:block relative">
-            <div className="h-56 rounded-2xl bg-titi-dark-mid flex items-center justify-center overflow-hidden">
-              <TitiMascot state="idle" size="xl" message="" />
-            </div>
-            <div className="absolute -bottom-4 -left-4 bg-titi-cream rounded-xl px-4 py-3 shadow-lg flex items-center gap-2.5">
-              <GotaIcon className="w-5 h-5 text-sky-400" />
-              <div className="leading-tight">
-                <p className="text-base font-extrabold text-titi-dark">+10 gotas</p>
-                <p className="text-xs font-bold text-gray-400">por lección</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stat strip — la comunidad en números (data real) */}
-      <section aria-label="La comunidad Titi en números">
-        <p className="text-center text-sm font-bold text-gray-400 mb-5">
-          Lo que está construyendo la comunidad Titi
-        </p>
-        <div ref={stripRef} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StripStat num={allCursos.length} label="cursos publicados" />
-          <StripStat num={profesCount} label="profes de la comunidad" />
-          <StripStat num={categorias.length} label="categorías" />
-          <StripStat num={lessonsTotal} label="lecciones disponibles" />
-        </div>
-      </section>
-
-      {/* Testimonios — placeholder estático (contenido de ejemplo) */}
-      <section aria-label="Historias de la comunidad">
-        <div className="flex items-end justify-between gap-3 mb-5">
-          <h2 className="text-2xl font-bold text-titi-dark">
-            Historias de la comunidad
-          </h2>
-          <span className="text-xs font-semibold text-gray-400 italic shrink-0">
-            contenido de ejemplo
-          </span>
-        </div>
-        <div
-          ref={testimonialsRef}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
-        >
-          {TESTIMONIALS.map((t) => (
-            <div
-              key={t.name}
-              className="bg-white border border-gray-100 rounded-2xl p-5 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col"
-            >
-              <span
-                className="text-titi-yellow text-3xl font-black leading-none h-5"
-                aria-hidden="true"
-              >
-                “
-              </span>
-              <p className="text-sm font-medium text-titi-dark leading-relaxed mb-4 flex-1">
-                {t.quote}
-              </p>
-              <div className="flex items-center gap-2.5">
-                <span
-                  className={`w-9 h-9 rounded-full grid place-items-center text-white text-sm font-bold shrink-0 ${t.tint}`}
-                >
-                  {t.name[0]}
-                </span>
-                <div className="leading-tight min-w-0">
-                  <p className="text-sm font-bold text-titi-dark truncate">
-                    {t.name}
-                  </p>
-                  <p className="text-xs font-medium text-gray-400 truncate">
-                    {t.role}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Logros — sumá gotas y desbloqueá logros */}
-      <section aria-label="Sumá gotas y desbloqueá logros">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-titi-dark rounded-2xl p-8 sm:p-10">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-black text-titi-cream leading-tight mb-3">
-              Sumá gotas y desbloqueá logros
-            </h2>
-            <p className="text-sm font-medium text-white/60 leading-relaxed mb-6 max-w-sm">
-              Cada lección suma. Mantené tu racha, ganá insignias y subí en el
-              ranking de la comunidad.
-            </p>
-            <button
-              type="button"
-              onClick={() =>
-                isAuthenticated
-                  ? navigate('/certificates')
-                  : navigate('/login', { state: { from: '/courses' } })
-              }
-              className="bg-white text-titi-dark font-bold text-sm px-5 py-2.5 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150"
-            >
-              {isAuthenticated ? 'Ver mis logros' : 'Iniciá sesión'}
-            </button>
-          </div>
-          <div ref={badgesRef} className="grid grid-cols-3 gap-3 sm:gap-4">
-            {BADGES.map((b) => (
-              <div
-                key={b.title}
-                className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center"
-              >
-                <div className="w-12 h-12 rounded-xl bg-white/10 grid place-items-center mx-auto mb-3">
-                  <b.Icon className={`w-6 h-6 ${b.color}`} aria-hidden="true" />
-                </div>
-                <div className="text-sm font-bold text-titi-cream mb-0.5">
-                  {b.title}
-                </div>
-                <div className="text-xs font-medium text-white/50">{b.note}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Rutas de aprendizaje — secuencia ordenada de cursos reales (curadas) */}
-      {learningPaths.length > 0 && (
-        <section aria-label="Rutas de aprendizaje">
-          <h2 className="text-2xl font-bold text-titi-dark mb-1">
-            Rutas de aprendizaje
-          </h2>
-          <p className="text-sm font-medium text-gray-500 mb-5">
-            Caminos ordenados de varios cursos para llevarte de cero a un objetivo
-            concreto. Seguilos paso a paso.
-          </p>
-          <div
-            ref={pathsRef}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 items-start"
-          >
-            {learningPaths.map((p) => (
-              <div
-                key={p.title}
-                className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-5 flex flex-col"
-              >
-                <span className="self-start inline-flex items-center bg-titi-yellow text-titi-dark text-xs font-extrabold uppercase tracking-wide px-2.5 py-1 rounded-full mb-3">
-                  Ruta
-                </span>
-                <h3 className="text-lg font-bold text-titi-dark mb-1">
-                  {p.title}
-                </h3>
-                <p className="text-sm font-medium text-gray-500 mb-4">
-                  {p.objetivo}
-                </p>
-                <ol className="flex flex-col gap-2">
-                  {p.cursos.map((c, i) => (
-                    <li key={c.id}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(`/courses/${c.id}`)}
-                        className="w-full flex items-center gap-3 text-left rounded-xl border border-gray-100 px-3 py-2 hover:border-titi-yellow hover:bg-titi-cream/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow transition-colors"
-                      >
-                        <span className="w-6 h-6 rounded-full bg-titi-dark text-titi-cream grid place-items-center text-xs font-bold shrink-0">
-                          {i + 1}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-bold text-titi-dark truncate">
-                            {c.titulo}
-                          </span>
-                          <span
-                            className={`block text-xs font-bold uppercase tracking-wide ${nivelTextClass(c.nivel)}`}
-                          >
-                            {c.nivel || 'sin nivel'}
-                          </span>
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            ))}
-          </div>
-        </section>
+      {!catalog.loading && paths.length > 0 && (
+        <LearningPathMap paths={paths} onOpen={openCourse} signedIn={isAuthenticated} />
       )}
 
-      {/* Categorías populares — columnas con cursos por categoría */}
-      {popularCats.length > 0 && (
-        <section aria-label="Categorías populares">
-          <h2 className="text-2xl font-bold text-titi-dark mb-6">
-            Categorías populares
-          </h2>
-          <div ref={popularRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-8">
-            {popularCats.slice(0, 6).map((c) => (
-              <div key={c.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCategoria(c.id);
-                    goToTrending();
-                  }}
-                  className="text-base font-bold text-titi-streak uppercase tracking-wide mb-3 hover:text-titi-yellow-dark transition-colors"
-                >
-                  {c.nombre}
-                </button>
-                <div className="flex flex-col gap-3">
-                  {coursesByCat[c.id].slice(0, 4).map((curso) => (
-                    <button
-                      key={curso.id}
-                      type="button"
-                      onClick={() => navigate(`/courses/${curso.id}`)}
-                      className="flex items-center justify-between gap-2 text-left text-sm font-bold text-titi-dark hover:text-titi-streak transition-colors"
-                    >
-                      <span className="truncate">{curso.titulo}</span>
-                      <svg
-                        viewBox="0 0 13 13"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        className="w-3 h-3 shrink-0"
-                        aria-hidden="true"
-                      >
-                        <path d="m4 2 5 4.5-5 4.5" />
-                      </svg>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+      {!catalog.loading && <CatalogOutro signedIn={isAuthenticated} stats={stats} />}
 
-      {/* Footer */}
-      <footer ref={footerRef} className="bg-titi-dark rounded-2xl p-8 sm:p-10 text-white/60">
-        <div className="flex items-center gap-2.5 mb-6">
-          <img
-            src="/favicon.png"
-            alt=""
-            className="w-9 h-9 object-contain select-none"
-            draggable={false}
-            onError={(e) => (e.currentTarget.style.display = 'none')}
-          />
-          <span className="text-xl font-extrabold lowercase tracking-tight text-titi-cream">
-            titi
-          </span>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pb-6 border-b border-white/10">
-          <p className="text-sm font-medium leading-relaxed max-w-xs col-span-2 md:col-span-1">
-            Una comunidad donde cualquiera puede aprender y enseñar. Lecciones
-            cortas, gente real, a tu ritmo.
-          </p>
-          {FOOTER_COLS.map((col) => (
-            <div key={col.title} className="flex flex-col gap-2.5">
-              <span className="text-sm font-bold text-titi-cream mb-0.5">
-                {col.title}
-              </span>
-              {col.items.map((item) => (
-                <span key={item} className="text-sm font-medium">
-                  {item}
-                </span>
-              ))}
-            </div>
-          ))}
-        </div>
-        <p className="text-xs font-medium text-white/40 pt-5">
-          © 2026 Titi · Hecho por y para la comunidad
-        </p>
-      </footer>
+      <BackToTop />
 
-      {/* Volver arriba (página larga) — aparece/desaparece suave */}
-      <button
-        type="button"
-        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-        aria-label="Volver arriba"
-        aria-hidden={!showTop}
-        tabIndex={showTop ? 0 : -1}
-        className={[
-          'fixed bottom-24 md:bottom-6 right-4 md:right-6 z-30 w-11 h-11 grid place-items-center',
-          'rounded-full bg-titi-dark text-titi-cream shadow-lg',
-          'focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow',
-          'transition-all duration-300 ease-out hover:-translate-y-0.5',
-          showTop
-            ? 'opacity-100 translate-y-0 scale-100'
-            : 'opacity-0 translate-y-3 scale-95 pointer-events-none',
-        ].join(' ')}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-5 h-5"
-          aria-hidden="true"
-        >
-          <line x1="12" y1="19" x2="12" y2="5" />
-          <path d="m5 12 7-7 7 7" />
-        </svg>
-      </button>
+      <CourseQuickView
+        cursoId={openCourseId}
+        preview={quickPreview}
+        friends={openCourseId ? friendsMap.get(openCourseId) : undefined}
+        enrollment={openCourseId ? enrollmentMap.get(openCourseId) : undefined}
+        onClose={closeCourse}
+        onEnrolled={onEnrolled}
+      />
     </div>
-  );
-}
-
-// ---- Stat del strip de comunidad ----
-function StripStat({ num, label }) {
-  return (
-    <div className="bg-white border border-gray-100 rounded-2xl p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-      <div className="text-3xl font-extrabold text-titi-dark tabular-nums">
-        {num}
-      </div>
-      <div className="text-sm font-bold text-gray-400 mt-1">{label}</div>
-    </div>
-  );
-}
-
-// Mapea el nombre de una categoría a su ilustración en /public/categories/
-// (slug = nombre sin acentos/ñ ni símbolos). Ej: "Diseño" → /categories/diseno.webp
-function categoriaSlug(nombre) {
-  return normalizeText(nombre).replace(/[^a-z0-9]/g, '');
-}
-
-function categoriaImg(nombre) {
-  return `/categories/${categoriaSlug(nombre)}.webp`;
-}
-
-// ---- Card de categoría destacada (Featured) ----
-function FeaturedCategoryCard({ categoria, count, onClick }) {
-  const [imgOk, setImgOk] = useState(true);
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="titi-card-pop text-left bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] overflow-hidden flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
-    >
-      {/* Thumb — ilustración de la categoría (cuadrada, sin recortar; fallback
-          al emoji si falta). Contenedor cuadrado + object-contain = la imagen
-          llena exacto y el crema del thumb matchea el fondo del dibujo. */}
-      <div className="h-[200px] aspect-square bg-titi-cream flex items-center justify-center overflow-hidden">
-        {imgOk ? (
-          <img
-            src={categoriaImg(categoria.nombre)}
-            alt={categoria.nombre}
-            className="w-full h-64 object-contain select-none"
-            draggable={false}
-            loading="lazy"
-            onError={() => setImgOk(false)}
-          />
-        ) : categoria.icono ? (
-          <span className="text-6xl select-none" aria-hidden="true">
-            {categoria.icono}
-          </span>
-        ) : (
-          <BookIcon className="w-16 h-16 text-titi-dark/30" />
-        )}
-      </div>
-      <div className="p-5 flex flex-col gap-1.5">
-        <h3 className="text-lg font-bold text-titi-dark">{categoria.nombre}</h3>
-        <p className="text-sm font-medium text-gray-500">
-          {count} {count === 1 ? 'curso' : 'cursos'} en esta área.
-        </p>
-        <span className="mt-1 inline-flex items-center gap-1.5 text-sm font-bold text-titi-streak">
-          Explorar área
-          <svg
-            viewBox="0 0 15 15"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="w-3.5 h-3.5"
-            aria-hidden="true"
-          >
-            <path d="M3 7.5h9" />
-            <path d="m8 3.5 4 4-4 4" />
-          </svg>
-        </span>
-      </div>
-    </button>
-  );
-}
-
-// ---- Pill de categoría (tabs del Trending) ----
-function CategoryPill({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={[
-        'h-9 px-4 rounded-full text-sm font-bold cursor-pointer select-none shrink-0 whitespace-nowrap',
-        'transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow',
-        active
-          ? 'bg-titi-yellow text-titi-dark shadow-[0_3px_0_#E6B800] -translate-y-0.5'
-          : 'bg-white text-titi-dark border border-gray-200 hover:border-titi-yellow hover:bg-titi-yellow-light hover:-translate-y-0.5',
-      ].join(' ')}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -1071,195 +382,34 @@ function useHeroFillsScreen(ref) {
   }, [ref]);
 }
 
-// ---- CourseCard v2 (propuesta catálogo, plano + DESIGN.md §5.2) ----
-function CourseCard({ curso, onOpen }) {
-  const cantidadLecciones =
-    curso._count?.lecciones ?? curso._count?.modulos ?? 0;
-  const lessonsLabel =
-    cantidadLecciones === 1 ? '1 lección' : `${cantidadLecciones} lecciones`;
-  const nivel = curso.nivel || 'sin nivel';
-  const author = curso.creador?.username;
-  const initial = author?.[0]?.toUpperCase() ?? '?';
-
+// Volver arriba (página larga): aparece tras scrollear.
+function BackToTop() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 600);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
   return (
-    <div
-      onClick={onOpen}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          onOpen();
-        }
-      }}
-      role="button"
-      tabIndex={0}
-      className="titi-card-pop bg-white rounded-2xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none overflow-hidden cursor-pointer flex flex-col focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
+    <button
+      type="button"
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      aria-label="Volver arriba"
+      aria-hidden={!show}
+      tabIndex={show ? 0 : -1}
+      className={[
+        'fixed bottom-24 md:bottom-6 right-4 md:right-6 z-30 w-12 h-12 grid place-items-center',
+        'rounded-full bg-titi-dark text-titi-cream border-2 border-titi-dark shadow-[0_4px_0_#E6B800]',
+        'focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60',
+        'transition-all duration-300 ease-out hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-none',
+        show ? 'opacity-100 translate-y-0 scale-100' : 'opacity-0 translate-y-3 scale-95 pointer-events-none',
+      ].join(' ')}
     >
-      {/* Thumb — plano (sin gradiente ni blur) */}
-      <div className="relative h-40 bg-titi-yellow-light flex items-center justify-center overflow-hidden">
-        {curso.portadaUrl ? (
-          <img
-            src={resolveMediaUrl(sanitizeMarkdownUrl(curso.portadaUrl))}
-            alt={curso.titulo}
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={(e) => {
-              e.currentTarget.style.display = 'none';
-            }}
-          />
-        ) : curso.categoria?.icono ? (
-          <span className="text-5xl select-none" aria-hidden="true">
-            {curso.categoria.icono}
-          </span>
-        ) : (
-          <BookIcon className="w-14 h-14 text-titi-dark/30" />
-        )}
-      </div>
-
-      {/* Contenido */}
-      <div className="p-4 flex flex-col gap-2 flex-1">
-        {/* Meta: categoría + nivel (etiqueta de texto color, sin forma) */}
-        <div className="flex items-center gap-2">
-          {curso.categoria?.nombre && (
-            <span className="text-xs font-semibold text-titi-streak uppercase tracking-wide truncate">
-              {curso.categoria.nombre}
-            </span>
-          )}
-          <span
-            className={`ml-auto text-xs font-bold uppercase tracking-wide shrink-0 ${nivelTextClass(nivel)}`}
-          >
-            {nivel}
-          </span>
-        </div>
-
-        {/* Título */}
-        <h3 className="text-base font-bold text-titi-dark leading-snug line-clamp-2">
-          {curso.titulo}
-        </h3>
-
-        {/* Autor + lecciones */}
-        <div className="mt-auto pt-2 flex items-center gap-2">
-          <span className="w-7 h-7 rounded-full bg-titi-dark text-titi-cream grid place-items-center text-xs font-bold shrink-0">
-            {initial}
-          </span>
-          <span className="text-sm font-bold text-titi-dark truncate">
-            {author || 'Anónimo'}
-          </span>
-          <span className="ml-auto text-xs font-medium text-gray-400 shrink-0">
-            {lessonsLabel}
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---- Skeleton (sección 8 del DESIGN.md) ----
-function SkeletonGrid() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div
-          key={i}
-          className="bg-white rounded-2xl border border-gray-100 overflow-hidden animate-pulse"
-        >
-          <div className="h-40 bg-gray-100" />
-          <div className="p-4 flex flex-col gap-3">
-            <div className="h-3 bg-gray-100 rounded w-1/3" />
-            <div className="h-4 bg-gray-100 rounded w-3/4" />
-            <div className="h-3 bg-gray-100 rounded w-1/2" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-// ---- Empty state (sección 8 del DESIGN.md) ----
-function EmptyState({ hasFilters, onClear }) {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-
-  if (hasFilters) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
-        <TitiMascot state="triste" size="lg" message="" className="mb-4" />
-        <h3 className="text-xl font-bold text-titi-dark mb-2">
-          No encontré cursos con esos filtros
-        </h3>
-        <p className="text-sm text-gray-400 mb-6 max-w-xs">
-          Probá ajustar la búsqueda o quitá los filtros para ver el catálogo
-          completo.
-        </p>
-        <button
-          type="button"
-          onClick={onClear}
-          className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Limpiar filtros
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
-      <TitiMascot state="idle" size="lg" message="" className="mb-4" />
-      <h3 className="text-xl font-bold text-titi-dark mb-2">
-        ¡Aún no hay cursos disponibles!
-      </h3>
-      <p className="text-sm text-gray-400 mb-6 max-w-xs">
-        Pronto vas a poder explorar contenido creado por la comunidad Titi.
-      </p>
-      <button
-        type="button"
-        onClick={() =>
-          isAuthenticated
-            ? navigate('/feed')
-            : navigate('/login', { state: { from: '/courses' } })
-        }
-        className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {isAuthenticated ? 'Volver al feed' : 'Iniciá sesión'}
-      </button>
-    </div>
-  );
-}
-
-// ---- Error state (sección 8 del DESIGN.md) ----
-function ErrorState({ message, onRetry }) {
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="w-5 h-5 text-red-500 shrink-0 mt-0.5"
-          aria-hidden="true"
-        >
-          <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
-          <line x1="12" y1="9" x2="12" y2="13" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-red-700">
-            No pudimos cargar el catálogo
-          </p>
-          <p className="text-xs text-red-500 mt-0.5">{message}</p>
-        </div>
-      </div>
-      <div>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Reintentar
-        </button>
-      </div>
-    </div>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5" aria-hidden="true">
+        <line x1="12" y1="19" x2="12" y2="5" />
+        <path d="m5 12 7-7 7 7" />
+      </svg>
+    </button>
   );
 }
