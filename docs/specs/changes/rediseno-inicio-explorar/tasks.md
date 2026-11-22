@@ -5,9 +5,9 @@
 
 ## Fase 1 — API (solo lectura)
 
-- [ ] 1.1 `GET /api/users/suggestions` (R6) antes de `/:username`.
-- [ ] 1.2 `GET /api/search/trending` (R8).
-- [ ] 1.3 Tests de ambos; `docs/api.md`.
+- [x] 1.1 `GET /api/users/suggestions` (R6) antes de `/:username`.
+- [x] 1.2 `GET /api/search/trending` (R8).
+- [x] 1.3 Tests de ambos; `docs/api.md`.
 
 ## Fase 2 — Piezas sociales v3
 

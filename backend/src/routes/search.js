@@ -65,4 +65,42 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
+// ---- Tendencias (rediseno-inicio-explorar R8) ----
+// Hashtags con más posts de los últimos 14 días; si no hay recientes, los de
+// más posts de siempre.
+const TRENDING_DAYS = 14;
+const TRENDING_DEFAULT = 8;
+const TRENDING_MAX = 20;
+
+router.get('/trending', requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(TRENDING_MAX, Math.max(1, Number(req.query.limit) || TRENDING_DEFAULT));
+    const query = (recent) =>
+      runQuery(
+        `MATCH (h:Hashtag)<-[:TIENE_HASHTAG]-(p:Post)
+         ${recent ? 'WHERE p.createdAt >= datetime() - duration({days: toInteger($days)})' : ''}
+         RETURN h.name AS name, count(DISTINCT p) AS postCount
+         ORDER BY postCount DESC, name ASC
+         LIMIT toInteger($limit)`,
+        { days: TRENDING_DAYS, limit },
+      );
+
+    let records = await query(true);
+    let recent = true;
+    if (records.length === 0) {
+      records = await query(false);
+      recent = false;
+    }
+
+    const hashtags = records.map((r) => ({
+      name: r.get('name'),
+      postCount: toNumber(r.get('postCount')),
+    }));
+    res.json({ success: true, data: { hashtags, recent } });
+  } catch (err) {
+    console.error('GET /search/trending error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo tendencias' });
+  }
+});
+
 export default router;

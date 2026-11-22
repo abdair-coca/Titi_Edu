@@ -259,6 +259,65 @@ router.post('/me/banner', requireAuth, (req, res, next) => {
   }
 });
 
+// ---- Gente para seguir (rediseno-inicio-explorar R6) ----
+// Primero amigos de amigos (más amigos en común arriba); si faltan, los más
+// seguidos. Nunca yo ni gente que ya sigo. Va antes de /:username.
+const SUGGESTIONS_DEFAULT = 10;
+const SUGGESTIONS_MAX = 20;
+
+function suggestionFromRecord(r) {
+  const p = r.get('s').properties;
+  return {
+    id: p.id,
+    username: p.username,
+    bio: p.bio || null,
+    avatarUrl: p.avatarUrl || null,
+    followerCount: toNumber(r.get('followerCount')),
+    mutualCount: r.has('mutualCount') ? toNumber(r.get('mutualCount')) : 0,
+    mutualSample: r.has('mutualSample') ? r.get('mutualSample') || [] : [],
+  };
+}
+
+router.get('/suggestions', requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(SUGGESTIONS_MAX, Math.max(1, Number(req.query.limit) || SUGGESTIONS_DEFAULT));
+    const userId = req.user.id;
+
+    const mutualRecords = await runQuery(
+      `MATCH (me:Usuario {id: $userId})-[:SIGUIO]->(f:Usuario)-[:SIGUIO]->(s:Usuario)
+       WHERE s <> me AND NOT (me)-[:SIGUIO]->(s)
+       WITH s, count(DISTINCT f) AS mutualCount, collect(DISTINCT f.username)[0..3] AS mutualSample
+       OPTIONAL MATCH (s)<-[:SIGUIO]-(fol:Usuario)
+       WITH s, mutualCount, mutualSample, count(DISTINCT fol) AS followerCount
+       RETURN s, mutualCount, mutualSample, followerCount
+       ORDER BY mutualCount DESC, followerCount DESC, s.username ASC
+       LIMIT toInteger($limit)`,
+      { userId, limit },
+    );
+    const users = mutualRecords.map(suggestionFromRecord);
+
+    if (users.length < limit) {
+      const popularRecords = await runQuery(
+        `MATCH (me:Usuario {id: $userId})
+         MATCH (s:Usuario)
+         WHERE s <> me AND NOT (me)-[:SIGUIO]->(s) AND NOT s.id IN $exclude
+         OPTIONAL MATCH (s)<-[:SIGUIO]-(fol:Usuario)
+         WITH s, count(DISTINCT fol) AS followerCount
+         RETURN s, followerCount
+         ORDER BY followerCount DESC, s.createdAt DESC
+         LIMIT toInteger($limit)`,
+        { userId, exclude: users.map((u) => u.id), limit: limit - users.length },
+      );
+      users.push(...popularRecords.map(suggestionFromRecord));
+    }
+
+    res.json({ success: true, data: { users } });
+  } catch (err) {
+    console.error('GET /suggestions error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo sugerencias' });
+  }
+});
+
 // ---- Perfil público (requiere login) ----
 router.get('/:username', requireAuth, async (req, res) => {
   try {
