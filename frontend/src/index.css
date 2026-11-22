@@ -55,6 +55,15 @@
     @apply titi-btn rounded-xl bg-white text-titi-dark text-sm border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  /* v3 (rediseno-plataforma-v3): superficie con borde oscuro y botón
+     secundario oscuro. Espejo de SURFACE / BTN_SECONDARY de components/ui/v3.jsx. */
+  .titi-surface {
+    @apply bg-white rounded-2xl border-2 border-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)];
+  }
+  .titi-btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-titi-dark text-sm font-extrabold text-titi-dark shadow-[0_3px_0_#1A1A2E] hover:bg-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1A1A2E] active:translate-y-0.5 active:shadow-none transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:bg-white;
+  }
+
   /* Input canónico (design.md §9). */
   .titi-input {
     @apply w-full bg-titi-cream border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-titi-dark placeholder:text-gray-300 focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150;

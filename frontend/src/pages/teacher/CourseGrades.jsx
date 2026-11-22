@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { ErrorBox } from '../../components/social/StateBlocks.jsx';
+import { BackLink, EmptyState, INPUT } from '../../components/ui/v3.jsx';
+import { CheckIcon, CloseIcon, FileIcon } from '../../components/icons.jsx';
 import client from '../../api/client.js';
 import { formatDeadline, isDeadlineExpired } from '../../lib/deadline.js';
 
@@ -75,18 +78,20 @@ export default function CourseGrades() {
 
   return (
     <div className="max-w-6xl">
-      <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-titi-dark">Notas — {data.curso.titulo}</h1>
-          <p className="text-sm font-medium text-gray-500 mt-1">
+      <BackLink to="/teacher">Mis cursos</BackLink>
+      <header className="flex flex-col gap-3 mb-6">
+        <div className="min-w-0">
+          <p className="text-sm font-extrabold uppercase tracking-wide text-titi-streak">Notas del curso</p>
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark leading-tight break-words">{data.curso.titulo}</h1>
+          <p className="text-base font-medium text-gray-500 mt-0.5">
             {data.estudiantes.length} estudiante{data.estudiantes.length === 1 ? '' : 's'} inscrito{data.estudiantes.length === 1 ? '' : 's'}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <select
             value={filtroModulo}
             onChange={(e) => { setFiltroModulo(e.target.value); setFiltroLeccion('todos'); }}
-            className="titi-input"
+            className={`${INPUT.replace("w-full ", "")} w-full sm:w-auto max-w-full`}
             aria-label="Filtrar por módulo"
           >
             <option value="todos">Todos los módulos</option>
@@ -97,7 +102,7 @@ export default function CourseGrades() {
           <select
             value={filtroLeccion}
             onChange={(e) => setFiltroLeccion(e.target.value)}
-            className="titi-input"
+            className={`${INPUT.replace("w-full ", "")} w-full sm:w-auto max-w-full`}
             aria-label="Filtrar por lección"
           >
             <option value="todos">Todas las lecciones</option>
@@ -108,32 +113,31 @@ export default function CourseGrades() {
                 <option key={l.id} value={l.id}>{l.titulo}</option>
               ))}
           </select>
-          <label className="flex items-center gap-2 text-sm font-semibold text-gray-600">
-            <input type="checkbox" checked={verFinal} onChange={(e) => setVerFinal(e.target.checked)} />
+          <label className="flex items-center gap-2 h-11 px-3 rounded-xl border-2 border-gray-200 bg-white text-sm font-bold text-titi-dark cursor-pointer hover:border-titi-dark transition-colors duration-150">
+            <input type="checkbox" checked={verFinal} onChange={(e) => setVerFinal(e.target.checked)} className="h-4 w-4 accent-titi-yellow" />
             Solo final
           </label>
-          <button type="button" onClick={exportCsv} className="bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2.5 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 transition-all duration-150">
+          <button type="button" onClick={exportCsv} className="titi-btn-primary text-sm px-4 sm:ml-auto">
+            <FileIcon className="w-4 h-4" />
             Exportar CSV
           </button>
         </div>
       </header>
 
       {data.estudiantes.length === 0 ? (
-        <div className="bg-white border border-gray-200 rounded-2xl p-8 text-center text-sm text-gray-500">
-          Todavía no hay estudiantes inscritos en este curso.
-        </div>
+        <EmptyState state="pensando" title="Todavía no hay" accent="estudiantes" text="Cuando alguien se inscriba en este curso, sus notas aparecen acá." />
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-x-auto">
+        <div className="bg-white rounded-2xl border-2 border-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-x-auto">
           <table className="w-full text-sm min-w-[640px]">
             <thead>
-              <tr className="border-b border-gray-100 text-left">
+              <tr className="border-b-2 border-titi-dark bg-titi-cream text-left">
                 <th className="px-4 py-3 font-bold text-titi-dark">Usuario</th>
                 <th className="px-4 py-3 font-bold text-titi-dark">Progreso</th>
                 <th className="px-4 py-3 font-bold text-titi-dark">Estado</th>
                 {filtros.evaluaciones.map((e) => (
                   <th key={e.id} className="px-4 py-3 font-bold text-titi-dark">
                     {e.titulo}
-                    <span className="block text-xs font-medium text-gray-400">
+                    <span className="block text-xs font-semibold text-gray-500">
                       {e.esFinal ? 'final' : 'módulo'} · mín {e.notaMinima}
                       {e.fechaLimite && ` · ${isDeadlineExpired(e.fechaLimite) ? 'vencida' : `hasta ${formatDeadline(e.fechaLimite)}`}`}
                     </span>
@@ -143,7 +147,7 @@ export default function CourseGrades() {
                   <th key={l.id} className="px-4 py-3 font-bold text-titi-dark">
                     {l.titulo}
                     {l.fechaLimite && (
-                      <span className="block text-xs font-medium text-gray-400">
+                      <span className="block text-xs font-semibold text-gray-500">
                         {isDeadlineExpired(l.fechaLimite) ? 'vencida' : `hasta ${formatDeadline(l.fechaLimite)}`}
                       </span>
                     )}
@@ -153,17 +157,24 @@ export default function CourseGrades() {
             </thead>
             <tbody>
               {data.estudiantes.map((est) => (
-                <tr key={est.usuario.id} className="border-b border-gray-50 hover:bg-titi-cream">
+                <tr key={est.usuario.id} className="border-b border-gray-100 last:border-0 hover:bg-titi-cream transition-colors duration-150">
                   <td className="px-4 py-3">
                     <p className="font-bold text-titi-dark">{est.usuario.username}</p>
-                    {est.usuario.email && <p className="text-xs text-gray-400">{est.usuario.email}</p>}
+                    {est.usuario.email && <p className="text-xs font-medium text-gray-500">{est.usuario.email}</p>}
                   </td>
-                  <td className="px-4 py-3 font-semibold text-gray-600">{est.progreso}%</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 min-w-[110px]">
+                      <span className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden" role="progressbar" aria-valuenow={est.progreso} aria-valuemin={0} aria-valuemax={100} aria-label={`Progreso de ${est.usuario.username}`}>
+                        <span className={`block h-full rounded-full ${est.completado ? 'bg-green-500' : 'bg-titi-yellow'}`} style={{ width: `${est.progreso}%` }} />
+                      </span>
+                      <span className="text-xs font-extrabold tabular-nums text-titi-dark">{est.progreso}%</span>
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     {est.completado ? (
-                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">Completado</span>
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-green-500 text-white border-2 border-titi-dark whitespace-nowrap">Completado</span>
                     ) : (
-                      <span className="text-xs font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-500 border border-gray-200">En curso</span>
+                      <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-white text-titi-dark border-2 border-gray-200 whitespace-nowrap">En curso</span>
                     )}
                   </td>
                   {filtros.evaluaciones.map((e) => {
@@ -174,9 +185,10 @@ export default function CourseGrades() {
                         {nota?.mejorNota == null ? (
                           <span className="text-gray-300">—</span>
                         ) : (
-                          <span className={`font-black tabular-nums ${aprobada ? 'text-green-600' : 'text-red-500'}`}>
+                          <span className={`inline-flex items-center gap-1 font-black tabular-nums ${aprobada ? 'text-green-600' : 'text-red-500'}`} title={aprobada ? 'Aprobada' : 'No aprobada'}>
                             {nota.mejorNota}
-                            {aprobada ? ' ✓' : ' ✗'}
+                            {aprobada ? <CheckIcon className="w-3.5 h-3.5" /> : <CloseIcon className="w-3.5 h-3.5" />}
+                            <span className="sr-only">{aprobada ? 'aprobada' : 'no aprobada'}</span>
                           </span>
                         )}
                       </td>
@@ -207,22 +219,17 @@ export default function CourseGrades() {
 function Cargando() {
   return (
     <div className="max-w-6xl">
-      <div className="h-8 w-48 bg-gray-100 rounded animate-pulse mb-6" />
-      <div className="h-64 bg-white border border-gray-100 rounded-2xl animate-pulse" />
+      <div className="h-9 w-40 bg-gray-100 rounded-full animate-pulse mb-4" />
+      <div className="h-9 w-2/3 bg-gray-100 rounded-full animate-pulse mb-6" />
+      <div className="h-64 bg-white border-2 border-gray-200 rounded-2xl animate-pulse" aria-busy="true" aria-label="Cargando notas" />
     </div>
   );
 }
 
 function ErrorState({ message, onRetry }) {
   return (
-    <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 max-w-2xl">
-      <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
-      <div className="flex-1">
-        <p className="text-sm font-semibold text-red-700">{message}</p>
-        <button type="button" onClick={onRetry} className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark mt-2">
-          Reintentar →
-        </button>
-      </div>
+    <div className="max-w-2xl">
+      <ErrorBox title="No pudimos cargar las notas" message={message} onRetry={onRetry} />
     </div>
   );
 }

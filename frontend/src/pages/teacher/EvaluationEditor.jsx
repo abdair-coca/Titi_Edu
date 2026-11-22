@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import client from '../../api/client.js';
 import ConfirmModal from '../../components/ConfirmModal.jsx';
-import { CheckIcon, ListIcon, PencilIcon } from '../../components/icons.jsx';
+import { CheckIcon, CloseIcon, ListIcon, PencilIcon, PlusIcon } from '../../components/icons.jsx';
+import { BackLink } from '../../components/ui/v3.jsx';
 import {
   authoringError,
   authoringMutation,
@@ -41,14 +42,14 @@ function emptyQuestion(tipo) {
 }
 
 function AnalyticsPanel({ analytics, error }) {
-  if (error) return <div className="bg-red-50 border border-red-200 rounded-xl p-3 mb-5"><p className="text-sm font-semibold text-red-700">{error}</p></div>;
-  if (!analytics) return <div className="bg-white border border-gray-100 rounded-2xl p-4 mb-5 animate-pulse"><div className="h-4 w-40 bg-gray-100 rounded" /></div>;
-  if (analytics.suprimida) return <section className="bg-titi-cream border border-titi-yellow/40 rounded-2xl p-4 mb-5"><h2 className="text-base font-bold text-titi-dark">Analítica de la evaluación</h2><p className="text-sm text-gray-600 mt-1">Disponible desde 3 estudiantes. Nunca mostramos identidades.</p></section>;
+  if (error) return <div role="alert" className="bg-red-50 border-2 border-red-500 rounded-2xl p-3 mb-5"><p className="text-sm font-semibold text-red-700">{error}</p></div>;
+  if (!analytics) return <div className="bg-white border-2 border-titi-dark rounded-2xl p-4 mb-5 animate-pulse"><div className="h-4 w-40 bg-gray-100 rounded" /></div>;
+  if (analytics.suprimida) return <section className="bg-titi-cream border-2 border-gray-200 rounded-2xl p-4 mb-5"><h2 className="text-base font-bold text-titi-dark">Analítica de la evaluación</h2><p className="text-sm text-gray-600 mt-1">Disponible desde 3 estudiantes. Nunca mostramos identidades.</p></section>;
   const max = Math.max(...(analytics.scoreDistribution || []).map((bucket) => bucket.count), 1);
-  return <section className="bg-white border border-gray-100 rounded-2xl p-4 mb-5"><h2 className="text-base font-bold text-titi-dark">Analítica agregada</h2><div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3"><Metric label="Intentos" value={analytics.totalAttempts} /><Metric label="Estudiantes" value={analytics.uniqueStudents} /><Metric label="Promedio" value={`${Math.round(analytics.averageScore)}%`} /><Metric label="Aprobación" value={`${Math.round(analytics.attemptPassRate * 100)}%`} /></div><div className="mt-4"><p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Distribución de notas</p><div className="flex items-end gap-2 h-28">{analytics.scoreDistribution.map((bucket) => <div key={bucket.range} className="flex-1 min-w-0 flex flex-col items-center gap-1"><span className="text-xs font-bold text-titi-dark">{bucket.count}</span><div className="w-full rounded-t-lg bg-titi-yellow" style={{ height: `${Math.max(8, (bucket.count / max) * 72)}px` }} /><span className="text-[10px] text-gray-500">{bucket.range}</span></div>)}</div></div></section>;
+  return <section className="titi-surface p-4 mb-5"><h2 className="text-lg font-extrabold text-titi-dark">Analítica <span className="text-titi-streak">agregada</span></h2><div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3"><Metric label="Intentos" value={analytics.totalAttempts} /><Metric label="Estudiantes" value={analytics.uniqueStudents} /><Metric label="Promedio" value={`${Math.round(analytics.averageScore)}%`} /><Metric label="Aprobación" value={`${Math.round(analytics.attemptPassRate * 100)}%`} /></div><div className="mt-4"><p className="text-xs font-bold uppercase tracking-wide text-gray-500 mb-2">Distribución de notas</p><div className="flex items-end gap-2 h-28">{analytics.scoreDistribution.map((bucket) => <div key={bucket.range} className="flex-1 min-w-0 flex flex-col items-center gap-1"><span className="text-xs font-bold text-titi-dark">{bucket.count}</span><div className="w-full rounded-t-lg bg-titi-yellow" style={{ height: `${Math.max(8, (bucket.count / max) * 72)}px` }} /><span className="text-xs text-gray-500">{bucket.range}</span></div>)}</div></div></section>;
 }
 
-function Metric({ label, value }) { return <div className="bg-titi-cream rounded-xl p-3"><p className="text-xs font-semibold text-gray-500">{label}</p><p className="text-lg font-extrabold text-titi-dark">{value}</p></div>; }
+function Metric({ label, value }) { return <div className="bg-titi-cream border-2 border-gray-200 rounded-xl p-3"><p className="text-xs font-semibold text-gray-500">{label}</p><p className="text-lg font-extrabold text-titi-dark">{value}</p></div>; }
 
 /**
  * EvaluationEditor — crea/edita la evaluación de un módulo o la final del curso.
@@ -289,7 +290,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
 
   if (loading) {
     return (
-      <div className="bg-white border border-gray-100 rounded-2xl p-8 animate-pulse max-w-3xl">
+      <div className="bg-white border-2 border-titi-dark rounded-2xl p-8 animate-pulse max-w-3xl">
         <div className="h-5 w-1/3 bg-gray-100 rounded mb-6" />
         <div className="space-y-4">
           <div className="h-10 bg-gray-100 rounded-xl" />
@@ -302,29 +303,23 @@ export default function EvaluationEditor({ mode = 'module' }) {
 
   return (
     <div className="max-w-3xl">
-      <button
-        type="button"
-        onClick={() => navigate(-1)}
-        className="text-sm font-semibold text-gray-500 hover:text-titi-dark mb-4 inline-flex items-center gap-1"
-      >
-        ← Volver al contenido
-      </button>
+      <BackLink onClick={() => navigate(-1)}>Volver al contenido</BackLink>
 
-      <h1 className="text-xl sm:text-3xl font-extrabold text-titi-dark mb-1 leading-tight">
-        {isFinal ? 'Evaluación final del curso' : 'Evaluación del módulo'}
+      <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1 leading-tight">
+        Evaluación <span className="text-titi-streak">{isFinal ? 'final del curso' : 'del módulo'}</span>
       </h1>
-      <p className="text-sm font-medium text-gray-500 mb-5 sm:mb-6">
+      <p className="text-base font-medium text-gray-500 mb-5 sm:mb-6">
         {evalId
           ? 'Editá las preguntas. Al guardar se reemplazan por esta versión.'
           : 'Creá las preguntas. Podés combinar los 3 tipos.'}
       </p>
 
-      {moduleReadOnly && <div className="bg-titi-cream border border-titi-yellow/40 rounded-xl p-3 mb-5"><p className="text-sm font-semibold text-titi-dark">Módulo publicado: evaluación en solo lectura. Despublicalo para editar.</p></div>}
+      {moduleReadOnly && <div className="bg-titi-yellow-light border-2 border-titi-dark rounded-2xl p-3 mb-5"><p className="text-sm font-bold text-titi-dark">Módulo publicado: evaluación en solo lectura. Despublicalo para editar.</p></div>}
 
       <fieldset disabled={moduleReadOnly} className="border-0 p-0 m-0">
       {evalId && <AnalyticsPanel analytics={analytics} error={analyticsError} />}
 
-      <div className="bg-white border border-gray-100 rounded-2xl p-4 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col gap-5">
+      <div className="bg-white border-2 border-titi-dark rounded-2xl p-4 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col gap-5">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-semibold text-titi-dark">
             Título <span className="text-red-500">*</span>
@@ -372,7 +367,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
               onChange={(e) => setFechaLimite(e.target.value)}
               className="titi-input"
             />
-            <button type="button" onClick={() => setFechaLimite('')} className="titi-btn-ghost shrink-0">Limpiar</button>
+            <button type="button" onClick={() => setFechaLimite('')} className="titi-btn-outline shrink-0">Limpiar</button>
           </span>
           <span className="text-xs font-medium text-gray-500">Zona horaria local; se guarda en UTC.</span>
         </label>
@@ -381,8 +376,8 @@ export default function EvaluationEditor({ mode = 'module' }) {
 
         {/* Preguntas */}
         {preguntas.length === 0 ? (
-          <p className="text-sm text-gray-400 font-medium text-center py-4">
-            Todavía no hay preguntas. Agregá la primera 👇
+          <p className="text-sm text-gray-500 font-semibold text-center py-6 border-2 border-dashed border-gray-300 rounded-xl">
+            Todavía no hay preguntas. Agregá la primera con los botones de abajo.
           </p>
         ) : (
           preguntas.map((p, idx) => (
@@ -403,20 +398,20 @@ export default function EvaluationEditor({ mode = 'module' }) {
               key={t.value}
               type="button"
               onClick={() => addQuestion(t.value)}
-              className="inline-flex items-center gap-1.5 bg-titi-cream text-titi-dark font-bold text-sm px-3 py-2 rounded-xl border border-dashed border-titi-yellow hover:bg-titi-yellow-light active:scale-[0.96] transition-all duration-150"
+              className="inline-flex items-center gap-1.5 bg-titi-cream text-titi-dark font-bold text-sm px-3 py-2 rounded-xl border-2 border-dashed border-gray-300 hover:border-titi-dark hover:bg-titi-yellow-light active:scale-[0.96] transition-all duration-150"
             >
-              + <t.Icon className="w-4 h-4 shrink-0" aria-hidden="true" /> {t.label}
+              <PlusIcon className="w-4 h-4 shrink-0" /> <t.Icon className="w-4 h-4 shrink-0" aria-hidden="true" /> {t.label}
             </button>
           ))}
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3">
+          <div role="alert" className="bg-red-50 border-2 border-red-500 rounded-2xl p-3">
             <p className="text-sm font-semibold text-red-700">{error}</p>
           </div>
         )}
         {success && !error && (
-          <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
+          <div role="status" className="bg-green-50 border-2 border-green-500 rounded-2xl p-3 flex items-center gap-2">
             <span className="w-6 h-6 rounded-full bg-green-500 grid place-items-center shrink-0" aria-hidden="true">
               <CheckIcon className="w-3.5 h-3.5 text-white" />
             </span>
@@ -429,7 +424,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="w-full sm:w-auto bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50"
+            className="w-full sm:w-auto titi-btn-primary px-6 py-3"
           >
             {saving ? 'Guardando…' : evalId ? 'Guardar cambios' : 'Crear evaluación'}
           </button>
@@ -437,7 +432,7 @@ export default function EvaluationEditor({ mode = 'module' }) {
             <button
               type="button"
               onClick={() => setConfirmDelete(true)}
-              className="w-full sm:w-auto text-red-500 font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-red-50 transition-all"
+              className="w-full sm:w-auto text-sm font-bold uppercase tracking-wide text-red-500 hover:text-red-600 px-4 py-2.5 rounded-xl hover:bg-red-50 active:scale-95 transition-all duration-150"
             >
               Eliminar evaluación
             </button>
@@ -485,7 +480,7 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
   }
 
   return (
-    <div className="bg-titi-cream/50 border border-gray-100 rounded-2xl p-3 sm:p-4">
+    <div className="bg-titi-cream border-2 border-gray-200 rounded-2xl p-3 sm:p-4">
       <div className="flex items-start gap-2 mb-3">
         <span className="shrink-0 w-7 h-7 rounded-full bg-titi-yellow-light text-titi-dark grid place-items-center text-xs font-extrabold mt-1">
           {index + 1}
@@ -507,9 +502,9 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
           type="button"
           onClick={onRemove}
           aria-label="Eliminar pregunta"
-          className="shrink-0 w-8 h-8 grid place-items-center rounded-lg text-red-500 hover:bg-red-50 mt-1"
+          className="shrink-0 w-8 h-8 grid place-items-center rounded-lg text-red-500 hover:bg-red-50 active:scale-90 transition-all duration-150 mt-1"
         >
-          ✕
+          <CloseIcon className="w-4 h-4" />
         </button>
       </div>
 
@@ -533,9 +528,9 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
                   type="button"
                   onClick={() => removeOpcion(i)}
                   aria-label="Quitar respuesta"
-                  className="w-7 h-7 grid place-items-center rounded text-red-500 hover:bg-red-50 shrink-0"
+                  className="w-7 h-7 grid place-items-center rounded-lg text-red-500 hover:bg-red-50 active:scale-90 transition-all duration-150 shrink-0"
                 >
-                  ✕
+                  <CloseIcon className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -543,9 +538,9 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
           <button
             type="button"
             onClick={addRespuesta}
-            className="self-start text-xs font-bold text-titi-dark bg-white border border-dashed border-gray-100 hover:border-titi-yellow rounded-lg px-3 py-1.5"
+            className="self-start inline-flex items-center gap-1 text-xs font-bold text-titi-dark bg-white border-2 border-dashed border-gray-300 hover:border-titi-dark rounded-lg px-3 py-1.5 active:scale-95 transition-all duration-150"
           >
-            + Otra respuesta aceptada
+            <PlusIcon className="w-3.5 h-3.5" /> Otra respuesta aceptada
           </button>
         </div>
       ) : (
@@ -562,11 +557,11 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
                 aria-label={o.esCorrecta ? 'Opción correcta' : 'Marcar como correcta'}
                 className={`w-6 h-6 rounded-full border-2 grid place-items-center shrink-0 transition-colors ${
                   o.esCorrecta
-                    ? 'bg-green-500 border-green-500 text-white'
-                    : 'bg-white border-gray-300 text-transparent hover:border-green-400'
-                }`}
+                    ? 'bg-green-500 border-titi-dark text-white'
+                    : 'bg-white border-gray-300 text-transparent hover:border-green-500'
+                } active:scale-90 transition-all duration-150`}
               >
-                ✓
+                <CheckIcon className="w-3.5 h-3.5" />
               </button>
               <input
                 value={o.texto}
@@ -581,9 +576,9 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
                   type="button"
                   onClick={() => removeOpcion(i)}
                   aria-label="Quitar opción"
-                  className="w-7 h-7 grid place-items-center rounded text-red-500 hover:bg-red-50 shrink-0"
+                  className="w-7 h-7 grid place-items-center rounded-lg text-red-500 hover:bg-red-50 active:scale-90 transition-all duration-150 shrink-0"
                 >
-                  ✕
+                  <CloseIcon className="w-4 h-4" />
                 </button>
               )}
             </div>
@@ -592,9 +587,9 @@ function QuestionEditor({ pregunta, index, onChange, onRemove }) {
             <button
               type="button"
               onClick={addOpcion}
-              className="self-start text-xs font-bold text-titi-dark bg-white border border-dashed border-gray-100 hover:border-titi-yellow rounded-lg px-3 py-1.5"
+              className="self-start inline-flex items-center gap-1 text-xs font-bold text-titi-dark bg-white border-2 border-dashed border-gray-300 hover:border-titi-dark rounded-lg px-3 py-1.5 active:scale-95 transition-all duration-150"
             >
-              + Agregar opción
+              <PlusIcon className="w-3.5 h-3.5" /> Agregar opción
             </button>
           )}
         </div>
