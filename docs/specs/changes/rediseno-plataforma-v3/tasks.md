@@ -27,7 +27,7 @@
 
 ## Fase 3 — Detalle de curso
 
-- [ ] 3.1 `CourseDetail` (R8).
+- [x] 3.1 `CourseDetail` (R8).
 
 ## Fase 4 — Chrome
 
