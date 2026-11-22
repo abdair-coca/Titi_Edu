@@ -60,7 +60,8 @@ frontend/src/
     StreakBadge.jsx (3 variantes), StreakToast.jsx
     AchievementToast.jsx, AchievementsSection.jsx
     EvaluationQuiz.jsx
-    AcademicActivityCard.jsx, RecommendedCourseCard.jsx   [Etapa 4]
+    AcademicActivityCard.jsx   [Etapa 4]
+    catalog/  ← catálogo de /courses (tarjeta v3, filtros, filas, vista rápida, rutas)   [v4.0.0]
     titi/titiAssets.js  ← mapa estado→WebP de la mascota   [Etapa 6.4]
     icons.jsx (GotaIcon, BookIcon), PageTransition.jsx
   pages/

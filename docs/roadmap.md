@@ -7,6 +7,10 @@ falta". Modelos y reglas de la gamificación en [architecture.md](architecture.m
 > misiones diarias, ranking de amigos y una mascota animada.
 > **Etapa 7 — Tienda de gotas: CERRADA (`v3.0.0`).** Consumibles que se compran
 > con gotas: congelar racha, intento extra, multiplicador x2.
+> **`v4.0.0` (2026-11-22) — Catálogo de cursos.** `/courses` rehecho debajo del
+> hero (change `rediseno-catalogo-cursos`) y todo lo acumulado desde `v3.0.0`:
+> tutor RAG conversacional y estructurado, hero 3D con la habitación, el cielo y
+> Titi 3D, centralizador de notas y catálogo público para visitantes.
 
 ---
 

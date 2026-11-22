@@ -122,7 +122,7 @@ contenido abajo), `AchievementsSection`, `AdminDashboard` (stats + paneles),
 ### Excepciones (decisiones, no olvidos)
 
 - **Hover pop (lift+escala) en tiles de curso/navegación**: `CourseCard`,
-  `RecommendedCourseCard`, `EnrolledCard` (Mis cursos), mini-card de
+  `EnrolledCard` (Mis cursos), mini-card de
   `AcademicActivityCard`, paneles de `AdminDashboard`. Son grids de tiles y deben
   sentirse iguales en toda la app.
 - **`PostCard` NO escala**: es full-width en el feed y hovering para dar

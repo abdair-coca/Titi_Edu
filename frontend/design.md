@@ -569,7 +569,18 @@ Un clickeable sin feedback es un bug de diseño. Ver `.titi-btn` en `motion.md`.
 
 ### 5.3 CourseCard — Tarjeta de curso (tile)
 
-**Descripción:** Tile blanco (spec §5.2), imagen de portada arriba. Badge de
+**v3 (catálogo de `/courses`, `components/catalog/CourseCard.jsx`):** misma
+lógica de tile pero con el look del buscador del hero: `border-2 border-titi-dark`
+y sombra dura oscura `shadow-[0_5px_0_#1A1A2E]` que sube a `0_8px` al hover y se
+aplasta a `0_2px` al presionar. Portada sin imagen = tinte de la categoría con su
+ícono en un cuadro sólido girado (§2 "Acento de categoría"). Con puntero fino se
+inclina ≤ 4° siguiendo al mouse (propiedad CSS `rotate`, que se compone con el
+`transform` del hover). Toda la tarjeta abre la vista rápida (botón estirado con
+`after:inset-0`); el botón chico con flecha va a la página del curso. Usar la
+v3 para tarjetas de curso nuevas; el ejemplo de abajo es la v2 que sigue en
+otras pantallas.
+
+**Descripción v2:** Tile blanco (spec §5.2), imagen de portada arriba. Badge de
 nivel **oscuro sólido** sobre la portada. Badges de estado en **sólido pleno**.
 
 ```jsx
@@ -1250,7 +1261,14 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `CategoriesExplorer.jsx` | chips de categorías → `/courses?categoria=` (Mis cursos + rails de Feed/Explore) |
 | `AchievementsSection.jsx` | grid de logros del perfil |
 | `AcademicActivityCard.jsx` | actividad académica del feed (chips sólidos por tipo) |
-| `RecommendedCourseCard.jsx` / `ItemCard.jsx` | tiles de curso recomendado / ítem de tienda |
+| `ItemCard.jsx` | tile de ítem de tienda |
+| `catalog/CourseCard.jsx` | tarjeta de curso v3 del catálogo (§5.3) + `CourseCover`, `FriendStack`, `LevelChip`, skeleton |
+| `catalog/categoryTheme.jsx` | `categoryTheme(nombre)` (acento §2) y `<CategoryIcon>` con microinteracción (§5.6) |
+| `catalog/CatalogFilters.jsx` · `CatalogGrid.jsx` | filtros pegajosos + hoja en celular; cuadrícula con FLIP, vacío con Titi y lupa |
+| `catalog/CourseRow.jsx` | fila curada deslizable con snap y flechas; `ContinueCard` con avance |
+| `catalog/CourseQuickView.jsx` | vista rápida: panel derecho (md+) / hoja inferior; foco atrapado, `?curso=` |
+| `catalog/LearningPathMap.jsx` · `CatalogOutro.jsx` | rutas en camino serpenteante; bloque final visitante/con sesión |
+| `catalog/useSheetDismiss.js` | Esc, bloqueo de scroll, foco atrapado y cerrar arrastrando (hojas y paneles) |
 | `PostCard.jsx`, `CreatePost.jsx`, `CommentSection.jsx`, `LessonComments.jsx`, `EditPostModal.jsx`, `OptionsPosts.jsx` | social: post, composer, comentarios, edición |
 | `EvaluationQuiz.jsx` | quiz de evaluación en Learn |
 | `ConfirmModal.jsx` | confirmación destructiva — **nunca** `window.confirm` |
@@ -1378,7 +1396,7 @@ esto te dice qué esperar del código existente:
 |---|---|---|
 | 1 — Íconos | Hecha | `icons.jsx` fuente única; navbar SVG; emojis de chrome reemplazados (error "!", éxito Check, chips del feed) |
 | 2 — Tipografía y densidad | Hecha | h1 `font-black`, subtítulos `text-base`, mínimo `text-xs` global; densidad aplicada en Mis cursos |
-| 3 — Tiles y sólidos | Hecha | `CourseCard`/`RecommendedCourseCard`/paneles admin a `border-2` + sombra dura; chips de stats/categorías/actividad en sólido pleno; botón secundario chunky en toda la app (12 sitios) |
+| 3 — Tiles y sólidos | Hecha | `CourseCard`/paneles admin a `border-2` + sombra dura; chips de stats/categorías/actividad en sólido pleno; botón secundario chunky en toda la app (12 sitios) |
 | 4 — Motion obligatorio | Hecha | `useCountUp` creado en `lib/motion.js` + aplicado a stats de Mis cursos; press hundido en links/chips/nodos/toggles; `TitiMascot state="saludo"` en el banner de cierre |
 | 5 — Limpieza legacy | Hecha | ~200 tokens legacy migrados y **eliminados** de `tailwind.config`; clases de `index.css` redefinidas al spec (§5.0); emojis de editores teacher/Learn → SVG (`FileIcon`/`PencilIcon`/`ImageIcon`/`ClipIcon`/`ListIcon` nuevos). Nota: el placeholder de emoji de AdminCategories es data (campo `categoria.icono`), se queda |
 | 6 — Layouts densos | Hecha | Feed y Explore con rail lateral sticky en `lg:` (grid `minmax(0,1fr)_320px`): Feed = mini-stats con count-up + categorías; Explore = categorías + CTA al catálogo. `CategoriesExplorer` extraído a `components/`. Candidatos futuros: Leaderboard (`max-w-2xl`) y Shop (`max-w-3xl`) siguen angostos |

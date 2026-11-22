@@ -111,7 +111,8 @@ SemVer alineado a etapas. Tag anotado sobre `main`, árbol limpio, smoke test pa
 | 4 Integración Social + Admin | `v0.4.0` | ✅ |
 | 5 Pulido y Deploy | `v1.0.0` | ✅ |
 | 6 Gamificación + Titi Vivo | `v2.0.0` | ✅ |
-| 7 Tienda de gotas | `v3.0.0` | 📋 planificada |
+| 7 Tienda de gotas | `v3.0.0` | ✅ |
+| Catálogo de cursos + tutor y hero 3D | `v4.0.0` | ✅ |
 
 Desde la Etapa 6 se taggea por subfase (un MINOR cada una; el cierre corta el MAJOR):
 

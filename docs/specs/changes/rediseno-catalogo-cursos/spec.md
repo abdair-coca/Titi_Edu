@@ -39,6 +39,9 @@ Sin testimonios, promo oscura, bloque de logros suelto, tira de cifras,
 | Más populares | todos | más inscritos | inscritos desc |
 
 - Una fila sin cursos no se muestra. Máximo 10 tarjetas por fila.
+- *Para empezar*, *Nuevos* y *Más populares* solo aparecen con 8 cursos o más
+  publicados: con menos repetirían el catálogo entero (hoy hay 1 en producción).
+  *Continúa* y *Amigos* se muestran siempre que tengan algo.
 - Cada fila se desliza en horizontal (scroll con snap; flechas en desktop que
   aparecen solo si hay más para ver) y tiene "Ver todo", que aplica el filtro
   equivalente al catálogo y baja hasta él.
@@ -126,7 +129,7 @@ Sin testimonios, promo oscura, bloque de logros suelto, tira de cifras,
 ## R10 — Movimiento y rendimiento
 
 - Al cambiar filtros o búsqueda, las tarjetas se deslizan a su nuevo lugar
-  (FLIP con GSAP); las que salen se desvanecen y las nuevas entran con
+  (FLIP con GSAP); las que salen desaparecen y las nuevas entran con
   saltito. Duración ≤ 300 ms, máximo ~12 tarjetas animadas (las visibles).
 - Con `prefers-reduced-motion`: cambios instantáneos, sin inclinación ni
   animación de íconos.
