@@ -1,6 +1,6 @@
 import { useCountUp } from '../lib/motion.js';
 import { ProgressBar } from './ui/v3.jsx';
-import { CheckIcon, ClockIcon } from './icons.jsx';
+import { CheckIcon, ClockIcon, FLAME_PATHS } from './icons.jsx';
 
 /**
  * StreakBadge — muestra la racha del usuario con estética Titi.
@@ -78,39 +78,39 @@ function metaProgress(racha) {
   return { next, prev, pct };
 }
 
-// ---- Llama animada SVG ----
+// ---- Llama de la racha (sticker v3) ----
 
-export function FlameIcon({ size = 24, dim = false, animated = true }) {
-  const id = `${size}-${dim ? 'dim' : 'lit'}`;
+/**
+ * Llama de la racha: plana, con contorno oscuro (como las tarjetas v3), cuerpo
+ * naranja de racha, núcleo amarillo y un brillo crema. Encendida, la llama se
+ * mece y el núcleo late por separado; desde 24 px suelta una chispa. Apagada
+ * (`dim`) queda en grises. Sin degradados ni resplandor (design.md §1).
+ * La forma vive en `FLAME_PATHS` (icons.jsx), compartida con `StreakIcon`.
+ */
+export function FlameIcon({ size = 24, dim = false, animated = true, className = '' }) {
+  const lit = animated && !dim;
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
       aria-hidden="true"
-      className={animated && !dim ? 'titi-flame-flicker' : ''}
+      className={`overflow-visible ${lit ? 'titi-flame-flicker' : ''} ${className}`}
     >
-      <defs>
-        <linearGradient id={`flame-outer-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={dim ? '#9CA3AF' : '#FF9A3C'} />
-          <stop offset="55%" stopColor={dim ? '#6B7280' : '#FF6B35'} />
-          <stop offset="100%" stopColor={dim ? '#4B5563' : '#D9480F'} />
-        </linearGradient>
-        <linearGradient id={`flame-inner-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={dim ? '#E5E7EB' : '#FFE08A'} />
-          <stop offset="100%" stopColor={dim ? '#9CA3AF' : '#FFD93D'} />
-        </linearGradient>
-      </defs>
-      {/* Cuerpo principal */}
       <path
-        d="M12 2c.6 3.4 3.5 4.8 3.5 8.5 0 1.6-.6 2.8-1.5 3.6.4-1.5.1-3-1-4.3 0 2.2-1 3.6-2 4.5-1.8 1.6-2.5 3.3-2.5 5 0 3.3 2.5 4.7 5.5 4.7s5.5-1.4 5.5-4.7c0-5.6-7.5-7.4-7.5-17.3z"
-        fill={`url(#flame-outer-${id})`}
+        d={FLAME_PATHS.body}
+        className={dim ? 'fill-gray-300 stroke-gray-500' : 'fill-titi-streak stroke-titi-dark'}
+        strokeWidth="1.6"
+        strokeLinejoin="round"
       />
-      {/* Lengua interior */}
       <path
-        d="M12 11c0 1.8-.7 2.8-1.4 3.7-.8 1-1.3 2-1.3 3.3 0 1.9 1.4 2.8 2.7 2.8s2.7-.9 2.7-2.8c0-2.4-2.7-3.8-2.7-7z"
-        fill={`url(#flame-inner-${id})`}
+        d={FLAME_PATHS.core}
+        className={`${dim ? 'fill-gray-100' : 'fill-titi-yellow'} ${lit ? 'titi-flame-core' : ''}`}
       />
+      {!dim && (
+        <path d={FLAME_PATHS.shine} className="fill-none stroke-titi-cream" strokeWidth="1.3" strokeLinecap="round" />
+      )}
+      {lit && size >= 24 && <circle cx="17.6" cy="5.4" r="1" className="fill-titi-yellow titi-flame-spark" />}
     </svg>
   );
 }
@@ -198,7 +198,7 @@ function HeroVariant({ racha, estado, isSelf, className }) {
             rota ? 'bg-gray-100' : 'bg-orange-100'
           }`}
         >
-          <FlameIcon size={36} animated={encendida} dim={rota || estado === 'apagada'} />
+          <FlameIcon size={40} animated={encendida} dim={rota || estado === 'apagada'} />
         </span>
         <div className="min-w-0 flex-1">
           <p className="flex items-end gap-1.5 flex-wrap">

@@ -72,17 +72,37 @@
 
 /* ---- Llama de racha ---- */
 @keyframes titi-flame-flicker {
-  0%, 100% { transform: scale(1) rotate(0deg);       filter: drop-shadow(0 0 4px rgba(255, 107, 53, 0.4)); }
-  25%      { transform: scale(1.05) rotate(-1.5deg); filter: drop-shadow(0 0 6px rgba(255, 154, 60, 0.55)); }
-  50%      { transform: scale(0.97) rotate(1deg);    filter: drop-shadow(0 0 3px rgba(255, 107, 53, 0.35)); }
-  75%      { transform: scale(1.03) rotate(-0.5deg); filter: drop-shadow(0 0 5px rgba(255, 154, 60, 0.5)); }
+  0%, 100% { transform: rotate(0deg) scaleY(1); }
+  30%      { transform: rotate(-3deg) scaleY(1.04); }
+  60%      { transform: rotate(2deg) scaleY(0.98); }
+  80%      { transform: rotate(-1deg) scaleY(1.02); }
+}
+/* El núcleo late a otro ritmo que la llama: se ve vivo sin brillo ni blur. */
+@keyframes titi-flame-core {
+  0%, 100% { transform: scale(1, 1) translateY(0); }
+  50%      { transform: scale(0.9, 1.1) translateY(-0.4px); }
+}
+@keyframes titi-flame-spark {
+  0%       { transform: translate(0, 0) scale(1); opacity: 0; }
+  20%      { opacity: 1; }
+  100%     { transform: translate(1.5px, -5px) scale(0.3); opacity: 0; }
 }
 .titi-flame-flicker {
-  transform-origin: 50% 80%;
+  transform-origin: 50% 90%;
   animation: titi-flame-flicker 1.6s ease-in-out infinite;
 }
+.titi-flame-core {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: titi-flame-core 0.9s ease-in-out infinite;
+}
+.titi-flame-spark {
+  transform-box: fill-box;
+  animation: titi-flame-spark 1.8s ease-out infinite 0.4s;
+}
 @media (prefers-reduced-motion: reduce) {
-  .titi-flame-flicker { animation: none; }
+  .titi-flame-flicker, .titi-flame-core { animation: none; }
+  .titi-flame-spark { display: none; }
 }
 
 /* ---- Gota (contador de gotas, sidebar/topbar) ---- */

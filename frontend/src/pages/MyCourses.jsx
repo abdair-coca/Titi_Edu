@@ -7,7 +7,7 @@ import useStreak from '../hooks/useStreak.js';
 import {
   AwardIcon,
   BagIcon,
-  BoltIcon,
+  StreakIcon,
   CheckIcon,
   ClockIcon,
   GotaIcon,
@@ -203,7 +203,7 @@ function StatsRow({ progresoPromedio, gotasTotal, streak }) {
           </div>
         </div>
         <div className={`${DARK_TILE} p-4 flex items-center gap-3`}>
-          <StatIcon solid={rachaActiva ? 'bg-titi-streak text-white' : 'bg-white/10 text-white'} Icon={BoltIcon} />
+          <StatIcon solid={rachaActiva ? 'bg-titi-streak text-white' : 'bg-white/10 text-white'} Icon={StreakIcon} />
           <div className="min-w-0">
             <p className="text-3xl font-black text-titi-cream tabular-nums leading-none">{rachaAnim}</p>
             <p className="text-xs font-bold text-white/60 mt-1">

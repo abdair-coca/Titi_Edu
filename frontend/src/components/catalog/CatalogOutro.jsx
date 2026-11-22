@@ -5,7 +5,7 @@ import { useGamification } from '../../context/GamificationContext.jsx';
 import useStreak from '../../hooks/useStreak.js';
 import { useCountUp } from '../../lib/motion.js';
 import TitiMascot from '../TitiMascot.jsx';
-import { AwardIcon, BoltIcon, GotaIcon, GraduationIcon, ListIcon, UsersIcon } from '../icons.jsx';
+import { AwardIcon, StreakIcon, GotaIcon, GraduationIcon, ListIcon, UsersIcon } from '../icons.jsx';
 
 // Bloque final de /courses (rediseno-catalogo-cursos R8): visitante → por qué
 // Titi + cifras reales; con sesión → tu racha, tus gotas y el próximo logro.
@@ -141,7 +141,7 @@ function MemberOutro() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white/5 border-2 border-white/10 rounded-2xl p-4 flex items-center gap-3">
           <span className={`w-11 h-11 rounded-xl grid place-items-center text-white ${estaActiva ? 'bg-titi-streak' : 'bg-white/10'}`}>
-            <BoltIcon className="w-6 h-6" />
+            <StreakIcon className="w-6 h-6" />
           </span>
           <div>
             <p className="text-2xl font-black text-titi-cream tabular-nums leading-none">{rachaShown}</p>

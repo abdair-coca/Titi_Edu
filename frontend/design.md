@@ -1292,8 +1292,8 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `Navbar.jsx` | rail desktop + top bar y bottom nav mobile (por rol) |
 | `PageTransition.jsx` | transición de página (ya montada en `App.jsx`) |
 | `TitiMascot.jsx` | mascota animada por estado (`idle`, `celebra`, `triste`, `racha`, `saludo`, `pensando`) |
-| `icons.jsx` | **única fuente de íconos SVG**: navegación (trazo 2.2), categorías (`categoryIcon(nombre)`), Gota/Bolt/Target/Check/Award/Graduation/Trophy/Users; sociales Heart/Comment/Bookmark/Pin/Search/Hash/Fire |
-| `StreakBadge.jsx` | badge de racha (variants `sidebar`/`inline`/`hero`) + `FlameIcon`; `hero` es superficie v3 con barra hacia la meta e hitos sin emojis |
+| `icons.jsx` | **única fuente de íconos SVG**: navegación (trazo 2.2), categorías (`categoryIcon(nombre)`), Gota/Bolt/Target/Check/Award/Graduation/Trophy/Users; sociales Heart/Comment/Bookmark/Pin/Search/Hash/Fire; racha `StreakIcon` (llama de un color para círculos sólidos) y `FLAME_PATHS` |
+| `StreakBadge.jsx` | badge de racha (variants `sidebar`/`hero`/`inline`) + `FlameIcon`: llama sticker plana (contorno oscuro, cuerpo `titi-streak`, núcleo amarillo, brillo crema; se mece, el núcleo late y suelta una chispa; `dim` en grises). **La racha siempre es la llama**, nunca el rayo (`BoltIcon` = misiones y multiplicador de gotas) |
 | `GotasCounter.jsx` | contador de gotas (usa GamificationContext) |
 | `DailyMissions.jsx` | misiones diarias v3 (prop `title`, su última palabra va de acento); ícono por `codigo` de misión |
 | `CategoriesExplorer.jsx` | mini tiles de categoría con acento → `/courses?cat=<slug>`; `layout="rail"` (Feed/Explore) o `"wide"` (Mis cursos) |

@@ -8,7 +8,7 @@ import ItemCard from '../components/ItemCard.jsx';
 import PurchaseToast from '../components/PurchaseToast.jsx';
 import { ErrorBox, SectionHeading } from '../components/social/StateBlocks.jsx';
 import { DARK_PANEL, DARK_TILE, EmptyState, PageHeader } from '../components/ui/v3.jsx';
-import { GotaIcon, CheckIcon, TrophyIcon, BoltIcon, GiftIcon } from '../components/icons.jsx';
+import { GotaIcon, CheckIcon, TrophyIcon, StreakIcon, GiftIcon } from '../components/icons.jsx';
 
 // Tienda v3 (rediseno-plataforma-v3 R7): saldo en tile oscuro con conteo,
 // ítems como superficies con ícono por código, "cómo ganar gotas" en panel oscuro.
@@ -31,8 +31,8 @@ const WAYS = [
     desc: 'Superá desafíos diarios y lográ objetivos.',
   },
   {
-    Icon: BoltIcon,
-    chip: 'bg-titi-achievement text-white',
+    Icon: StreakIcon,
+    chip: 'bg-titi-streak text-white',
     titulo: 'Rachas de estudio',
     desc: 'Mantené tu racha activa y ganá recompensas.',
   },

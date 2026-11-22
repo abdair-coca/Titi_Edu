@@ -18,7 +18,7 @@ import useQuickViewParam from '../components/catalog/useQuickViewParam.js';
 import { SuggestionsPanel, SuggestionsRow } from '../components/social/Suggestions.jsx';
 import { ErrorBox } from '../components/social/StateBlocks.jsx';
 import { useApiList, useSuggestions } from '../components/social/useSocialData.js';
-import { BoltIcon, BooksIcon, CommentIcon, GotaIcon, RefreshIcon, SparklesIcon, TargetIcon } from '../components/icons.jsx';
+import { StreakIcon, BooksIcon, CommentIcon, GotaIcon, RefreshIcon, SparklesIcon, TargetIcon } from '../components/icons.jsx';
 
 // Inicio (rediseno-inicio-explorar R2): saludo → composer → continuá →
 // pestañas → línea de tiempo; rail con tu día, gente para seguir y categorías.
@@ -327,7 +327,7 @@ function TuDia() {
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-white/5 border-2 border-white/10 rounded-xl p-3">
           <span className={`w-9 h-9 rounded-xl grid place-items-center text-white mb-2 ${activa ? 'bg-titi-streak' : 'bg-white/10'}`}>
-            <BoltIcon className="w-5 h-5" />
+            <StreakIcon className="w-5 h-5" />
           </span>
           <p className="text-2xl font-black text-titi-cream tabular-nums leading-none">{rachaShown}</p>
           <p className="text-xs font-bold text-white/60 mt-1">{racha === 1 ? 'día de racha' : 'días de racha'}</p>

@@ -802,3 +802,26 @@ export function MedalIcon({ className = 'w-5 h-5' }) {
     </NavSvg>
   );
 }
+
+// ---- Racha (llama) ----
+
+/**
+ * Forma de la llama de la racha (viewBox 24): cuerpo con una lengua lateral,
+ * núcleo y brillo. La usan `FlameIcon` (sticker a color, StreakBadge) y
+ * `StreakIcon` (un color, para círculos sólidos).
+ */
+export const FLAME_PATHS = {
+  body: 'M12 2.6c.5 2.7 2.3 4.3 3.9 6.1 1.9 2.1 3.1 4.1 3.1 6.7 0 3.9-3.1 6.6-7 6.6s-7-2.7-7-6.5c0-2.5 1.1-4.4 2.6-5.8.1 1.5.8 2.7 2 3.3-.4-3.6.7-7.3 2.4-10.4Z',
+  core: 'M12 11.8c.4 1.7 1.6 2.5 2.3 3.7.5.8.7 1.5.7 2.2 0 1.8-1.3 3-3 3s-3-1.2-3-2.9c0-1.3.7-2.3 1.6-3 .2.8.6 1.3 1.2 1.5-.3-1.5-.4-3 .2-4.5Z',
+  shine: 'M7.9 14.9c.1-1 .5-1.9 1.1-2.6',
+};
+
+// Llama de un color (currentColor) con el núcleo calado: para círculos sólidos
+// de rol (`bg-titi-streak` + ícono blanco), como el resto de íconos de chip.
+export function StreakIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path d={`${FLAME_PATHS.body} ${FLAME_PATHS.core}`} fill="currentColor" fillRule="evenodd" />
+    </svg>
+  );
+}
