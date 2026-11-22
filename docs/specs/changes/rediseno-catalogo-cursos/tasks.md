@@ -55,4 +55,4 @@
 > Decisión del usuario (2026-11-22): commits por fase directo en `main`, push al terminar, tag + Release en GitHub. Incluye todo lo hecho desde `v3.0.0`.
 
 - [x] 9.1 `docs/roadmap.md` y tabla de versionado de `docs/conventions.md` con `v4.0.0`.
-- [ ] 9.2 Push de `main`, tag anotado `v4.0.0` y Release en GitHub con notas desde `v3.0.0`.
+- [x] 9.2 Push de `main`, tag anotado `v4.0.0` y Release en GitHub con notas desde `v3.0.0`.
