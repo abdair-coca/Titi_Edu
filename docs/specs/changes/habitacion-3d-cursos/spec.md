@@ -20,7 +20,8 @@ queda en `tasks.md`. Lo que no se nombra acá sigue igual que en la spec de
   `#E6B800`, crema `#FFFBF0`, oscuros `#1A1A2E`/`#16213E`, racha `#FF6B35`,
   logro `#A855F7`, certificado `#F59E0B` y maderas cálidas.
 - El cuarto entra completo en la caja del hero (relación 4:3) en desktop
-  (~590 px) y mobile (~360 px).
+  (~706 px, columna del cuarto al 60 %) y mobile (~347 px, sin margen de aire
+  alrededor del cuarto).
 
 ## R2 — Luz suave ("horneada")
 

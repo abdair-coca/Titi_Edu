@@ -175,7 +175,7 @@ export default function HeroScene({ items, mobile, active, onSelect, onHover, on
         // "mejora" como vaivén y terminaba volviendo a la imagen sin motivo.
         <PerformanceMonitor bounds={() => [mobile ? 30 : 40, Infinity]} onDecline={handleDecline} />
       )}
-      <FitCamera />
+      <FitCamera margin={mobile ? 1 : 0.94} />
       <SoftEnvironment intensity={mobile ? 0.8 : 0.9} />
       <Room items={placed} mobile={mobile} onSelect={onSelect} onHover={onHover} onFirstDrag={onFirstDrag} hint={hint} />
       <ReadySignal onReady={onReady} />

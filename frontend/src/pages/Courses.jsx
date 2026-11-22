@@ -400,7 +400,7 @@ export default function Courses() {
       >
         <HeroSky regionRef={skyRegionRef} textRef={skyTextRef} bridge={heroBridge} />
 
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+        <section className="grid grid-cols-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] gap-10 items-center">
           <div ref={skyTextRef} className="[container-type:inline-size]">
             <HeroTitle bridge={heroBridge} />
             <p data-sky="paragraph" className="text-lg sm:text-xl font-semibold text-gray-500 mb-8 max-w-md">
