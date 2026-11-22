@@ -214,7 +214,16 @@ function FiltersSheet({ open, onClose, filters, onFilter, onToggleNivel, resultC
   );
 }
 
-export default function CatalogFilters({ categorias, filters, onFilter, onToggleNivel, onClear, resultCount }) {
+// `stickyTop`: clases de `top` según lo fijo arriba (barra de la app o header de visitante).
+export default function CatalogFilters({
+  categorias,
+  filters,
+  onFilter,
+  onToggleNivel,
+  onClear,
+  resultCount,
+  stickyTop = 'top-14 md:top-2',
+}) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const sentinelRef = useRef(null);
   const [stuck, setStuck] = useState(false);
@@ -237,7 +246,7 @@ export default function CatalogFilters({ categorias, filters, onFilter, onToggle
       <div ref={sentinelRef} aria-hidden="true" className="h-px" />
       <div
         className={[
-          'sticky top-14 md:top-2 z-20 flex flex-col gap-3 rounded-2xl border-2 transition-all duration-200 py-2',
+          `sticky ${stickyTop} z-20 flex flex-col gap-3 rounded-2xl border-2 transition-all duration-200 py-2`,
           stuck ? 'bg-white border-titi-dark px-3 shadow-[0_4px_0_#1A1A2E]' : 'border-transparent bg-titi-cream',
         ].join(' ')}
       >

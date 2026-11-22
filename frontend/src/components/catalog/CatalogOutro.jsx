@@ -48,10 +48,10 @@ const PERKS = [
 function GuestOutro({ stats }) {
   const [ref, seen] = useSeen();
   const numbers = [
-    { value: stats.cursos, label: 'cursos publicados' },
-    { value: stats.profes, label: 'profes de la comunidad' },
-    { value: stats.lecciones, label: 'lecciones' },
-    { value: stats.categorias, label: 'categorías' },
+    { value: stats.cursos, label: stats.cursos === 1 ? 'curso publicado' : 'cursos publicados' },
+    { value: stats.profes, label: stats.profes === 1 ? 'profe de la comunidad' : 'profes de la comunidad' },
+    { value: stats.lecciones, label: stats.lecciones === 1 ? 'lección' : 'lecciones' },
+    { value: stats.categorias, label: stats.categorias === 1 ? 'categoría' : 'categorías' },
   ].filter((n) => n.value > 0);
 
   return (
@@ -93,7 +93,7 @@ function GuestOutro({ stats }) {
               <Stat key={n.label} {...n} seen={seen} />
             ))}
           </div>
-          <TitiMascot state="saludo" size="lg" message="" className="hidden lg:flex absolute -bottom-12 -right-6" />
+          <TitiMascot state="saludo" size="md" message="" className="hidden lg:flex absolute -top-[92px] right-2" />
         </div>
       </div>
     </section>

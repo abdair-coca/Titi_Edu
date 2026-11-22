@@ -144,6 +144,8 @@ export function filtersToParams(filters, params) {
 // ---- Filas curadas (R3) ----
 
 const ROW_MAX = 10;
+/** Con menos cursos, las filas temáticas repetirían el catálogo entero. */
+export const THEMED_ROWS_MIN_CATALOG = 8;
 
 /**
  * Arma las filas visibles. `enrolled` son inscripciones de /my/enrolled y
@@ -161,6 +163,10 @@ export function buildRows({ cursos, enrolled = [], recommended = [] }) {
     .map((i) => ({ ...i, curso: merge(i.curso) }));
 
   const amigos = recommended.slice(0, ROW_MAX).map((r) => ({ ...r, curso: merge(r.curso) }));
+
+  if (cursos.length < THEMED_ROWS_MIN_CATALOG) {
+    return { continua, amigos, empezar: [], nuevos: [], populares: [] };
+  }
 
   const empezar = cursos
     .filter((c) => levelId(c.nivel) === 'principiante')

@@ -84,15 +84,21 @@ const enrolled = [
   { curso: { id: 'Álgebra', _count: {} }, completado: false, siguienteLeccionId: 'l9', leccionesTotales: 3, avance: 66, ultimaActividad: '2026-05-01' },
   { curso: { id: 'React avanzado', _count: {} }, completado: true, siguienteLeccionId: null, leccionesTotales: 20, avance: 100 },
 ];
+// Catálogo chico: sin filas temáticas (repetirían el catálogo), sí las personales
+const small = buildRows({ cursos, enrolled, recommended: [] });
+assert.deepEqual([small.empezar, small.nuevos, small.populares], [[], [], []]);
+assert.equal(small.continua.length, 2);
+
+const many = [...cursos, ...Array.from({ length: 4 }, (_, i) => curso(`Extra ${i}`))];
 const rows = buildRows({
-  cursos,
+  cursos: many,
   enrolled,
   recommended: [{ curso: { id: 'Inglés técnico', _count: {} }, friendCount: 2, sampleFriends: ['a', 'b'] }],
 });
 assert.deepEqual(rows.continua.map((i) => i.curso.id), ['Álgebra', 'Python básico']);
 assert.equal(rows.continua[0].curso._count.lecciones, 3, 'completa el curso con el catálogo');
 assert.equal(rows.amigos[0].curso._count.lecciones, 8);
-assert.deepEqual(titles(rows.empezar), ['Python básico', 'Álgebra']);
+assert.deepEqual(titles(rows.empezar).slice(0, 2), ['Python básico', 'Álgebra']);
 assert.equal(rows.nuevos[0].titulo, 'React avanzado');
 assert.deepEqual(titles(rows.populares), ['Python básico', 'Inglés técnico', 'React avanzado']);
 

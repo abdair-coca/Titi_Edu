@@ -330,6 +330,7 @@ export default function Courses() {
           onToggleNivel={toggleNivel}
           onClear={(what) => (what === 'q' ? setFilter({ q: '' }) : clearFilters())}
           resultCount={cursos.length}
+          stickyTop={isAuthenticated ? 'top-14 md:top-2' : 'top-[72px]'}
         />
         <CatalogGrid
           cursos={cursos}
