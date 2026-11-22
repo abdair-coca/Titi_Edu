@@ -20,10 +20,10 @@
 
 ## Fase 2 — Aprendizaje y gamificación
 
-- [ ] 2.1 Mis cursos (R4) + `DailyMissions`.
-- [ ] 2.2 Certificados y verificación (R5).
-- [ ] 2.3 Ranking (R6).
-- [ ] 2.4 Tienda + `ItemCard` (R7).
+- [x] 2.1 Mis cursos (R4) + `DailyMissions`.
+- [x] 2.2 Certificados y verificación (R5).
+- [x] 2.3 Ranking (R6).
+- [x] 2.4 Tienda + `ItemCard` (R7).
 
 ## Fase 3 — Detalle de curso
 

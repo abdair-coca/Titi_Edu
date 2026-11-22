@@ -5,21 +5,38 @@ import { useStaggerReveal, useCountUp } from '../lib/motion.js';
 import { useGamification } from '../context/GamificationContext.jsx';
 import useStreak from '../hooks/useStreak.js';
 import {
-  BoltIcon,
-  GotaIcon,
-  TargetIcon,
-  categoryIcon,
-  CheckIcon,
   AwardIcon,
-  GraduationIcon,
-  TrophyIcon,
   BagIcon,
+  BoltIcon,
+  CheckIcon,
+  ClockIcon,
+  GotaIcon,
+  GraduationIcon,
+  PlayIcon,
+  TargetIcon,
+  TrophyIcon,
 } from '../components/icons.jsx';
 import DailyMissions from '../components/DailyMissions.jsx';
 import CategoriesExplorer from '../components/CategoriesExplorer.jsx';
 import TitiMascot from '../components/TitiMascot.jsx';
-import { sanitizeMarkdownUrl } from '../lib/markdown.js';
-import { relativeTime, resolveMediaUrl } from '../lib/format.js';
+import { CourseCover, LevelChip } from '../components/catalog/CourseCard.jsx';
+import { CategoryIcon, categoryTheme } from '../components/catalog/categoryTheme.jsx';
+import { ErrorBox, SectionHeading } from '../components/social/StateBlocks.jsx';
+import {
+  BTN_SECONDARY,
+  DARK_PANEL,
+  DARK_TILE,
+  EmptyState,
+  PageHeader,
+  PanelTitle,
+  ProgressBar,
+  SURFACE,
+  TILE,
+} from '../components/ui/v3.jsx';
+import { relativeTime } from '../lib/format.js';
+
+// Mis cursos v3 (rediseno-plataforma-v3 R4): resumen en panel oscuro, ruta de
+// aprendizaje con tiles v3 y nodos del color de cada categoría.
 
 // Cuántos nodos se ven en la ruta antes de "Ver toda la ruta".
 const RUTA_VISIBLE = 4;
@@ -104,151 +121,107 @@ export default function MyCourses() {
 
   return (
     <div>
-      {/* Header */}
-      <header className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div>
-          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">
-            Mis cursos
-          </h1>
-          <span
-            aria-hidden="true"
-            className="block w-12 h-1.5 mt-1.5 bg-titi-yellow rounded-full"
-          />
-          <p className="text-base font-medium text-gray-500 mt-1.5">
-            Continuá donde lo dejaste
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Ranking y Tienda viven acá (se sacaron del navbar) */}
-          <button
-            type="button"
-            onClick={() => navigate('/leaderboard')}
-            className="inline-flex items-center gap-2 bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2.5 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 whitespace-nowrap"
-          >
-            <TrophyIcon className="w-4 h-4" />
-            Ranking
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/shop')}
-            className="inline-flex items-center gap-2 bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2.5 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 whitespace-nowrap"
-          >
-            <BagIcon className="w-4 h-4" />
-            Tienda
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/certificates')}
-            className="inline-flex items-center gap-2 bg-white text-titi-dark font-bold text-sm px-4 py-2.5 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 whitespace-nowrap"
-          >
-            <GraduationIcon className="w-4 h-4 text-titi-certificate" />
-            Mis certificados
-          </button>
-        </div>
-      </header>
+      <PageHeader title="Mis" accent="cursos" subtitle="Continuá donde lo dejaste.">
+        {/* Ranking y Tienda viven acá (se sacaron del navbar) */}
+        <button type="button" onClick={() => navigate('/leaderboard')} className="titi-btn-primary text-sm px-4 whitespace-nowrap">
+          <TrophyIcon className="w-4 h-4" />
+          Ranking
+        </button>
+        <button type="button" onClick={() => navigate('/shop')} className="titi-btn-primary text-sm px-4 whitespace-nowrap">
+          <BagIcon className="w-4 h-4" />
+          Tienda
+        </button>
+        <button type="button" onClick={() => navigate('/certificates')} className={BTN_SECONDARY}>
+          <GraduationIcon className="w-4 h-4 text-titi-certificate" />
+          Mis certificados
+        </button>
+      </PageHeader>
 
       {loading ? (
         <SkeletonGrid />
       ) : error ? (
-        <ErrorState
-          message={error}
-          onRetry={() => setRefreshTick((t) => t + 1)}
-        />
+        <ErrorBox title="No pudimos cargar tus cursos" message={error} onRetry={() => setRefreshTick((t) => t + 1)} />
       ) : inscripciones.length === 0 ? (
-        <EmptyState onExplore={() => navigate('/courses')} />
+        <EmptyState
+          state="pensando"
+          title="Todavía no tenés"
+          accent="cursos"
+          text="Explorá el catálogo y encontrá algo nuevo para aprender con la comunidad Titi."
+        >
+          <button type="button" onClick={() => navigate('/courses')} className="titi-btn-primary">
+            Ver catálogo de cursos
+          </button>
+        </EmptyState>
       ) : (
         <>
-        <StatsRow progresoPromedio={progresoPromedio} gotasTotal={gotas.total} streak={streak} />
-        <LearningPathSection
-          inscripciones={inscripciones}
-          progressByCurso={progressByCurso}
-          onContinue={(cursoId) => navigate(`/courses/${cursoId}/learn`)}
-          onOpenDetail={(cursoId) => navigate(`/courses/${cursoId}`)}
-        />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 mb-6 sm:mb-8 items-start">
-          <div className="flex flex-col gap-5 sm:gap-6">
-            <DailyMissions title="Desafíos del día" />
-            <CategoriesExplorer />
+          <StatsRow progresoPromedio={progresoPromedio} gotasTotal={gotas.total} streak={streak} />
+          <LearningPathSection
+            inscripciones={inscripciones}
+            progressByCurso={progressByCurso}
+            onContinue={(cursoId) => navigate(`/courses/${cursoId}/learn`)}
+            onOpenDetail={(cursoId) => navigate(`/courses/${cursoId}`)}
+          />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 sm:gap-6 mb-6 sm:mb-8 items-start">
+            <div className="flex flex-col gap-5 sm:gap-6">
+              <DailyMissions title="Desafíos del día" />
+              <CategoriesExplorer />
+            </div>
+            <RecentActivity />
           </div>
-          <RecentActivity />
-        </div>
-        <BottomBanner onExplore={() => navigate('/courses')} />
+          <BottomBanner onExplore={() => navigate('/courses')} />
         </>
       )}
     </div>
   );
 }
 
-// ---- 3 stat cards separadas (mockup), cada una con su acento de color:
-// progreso → amarillo Titi (XP), gotas → azul info, racha → naranja streak.
+// ---- Resumen en panel oscuro (v3): progreso, gotas y racha con count-up ----
 function StatsRow({ progresoPromedio, gotasTotal, streak }) {
   const rachaActiva = streak.estaActiva && streak.racha > 0;
-  // Count-up de los 3 números (§10 patrón 5); la barra ya anima su width.
   const progresoAnim = useCountUp(progresoPromedio);
   const gotasAnim = useCountUp(gotasTotal);
   const rachaAnim = useCountUp(streak.racha);
-  const cardClass =
-    'bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-0.5 transition-all duration-200 p-4 sm:p-5 flex items-center gap-3';
   return (
-    <section className="mb-6 sm:mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
-      {/* Tu progreso */}
-      <div className={cardClass}>
-        <StatIcon tint="bg-titi-yellow" icon={<TargetIcon className="w-6 h-6 text-titi-dark" />} />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-gray-500">Tu progreso</p>
-          <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">
-            {progresoAnim}%
-          </p>
-          <p className="text-xs font-semibold text-gray-500">Promedio general</p>
-          <div
-            className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden"
-            role="progressbar"
-            aria-valuenow={progresoPromedio}
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-label="Progreso general"
-          >
-            <div
-              className="h-full bg-titi-yellow rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
-              style={{ width: `${progresoPromedio}%` }}
-            />
+    <section aria-label="Tu progreso" className={`${DARK_PANEL} p-4 sm:p-5 mb-6 sm:mb-8`}>
+      <h2 className="text-lg font-extrabold text-titi-cream mb-3">
+        Tu <span className="text-titi-yellow">progreso</span>
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className={`${DARK_TILE} p-4 flex items-center gap-3`}>
+          <StatIcon solid="bg-titi-yellow text-titi-dark" Icon={TargetIcon} />
+          <div className="min-w-0 flex-1">
+            <p className="text-3xl font-black text-titi-cream tabular-nums leading-none">{progresoAnim}%</p>
+            <p className="text-xs font-bold text-white/60 mt-1 mb-2">Promedio de tus cursos</p>
+            <ProgressBar value={progresoPromedio} track="bg-white/10" height="h-2" label="Progreso general" />
           </div>
         </div>
-      </div>
-
-      {/* Gotas totales */}
-      <div className={cardClass}>
-        <StatIcon tint="bg-blue-500" icon={<GotaIcon className="w-6 h-6 text-white" />} />
-        <div className="min-w-0">
-          <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">
-            {gotasAnim}
-          </p>
-          <p className="text-xs font-semibold text-gray-500">Gotas totales</p>
+        <div className={`${DARK_TILE} p-4 flex items-center gap-3`}>
+          <StatIcon solid="bg-blue-500 text-white" Icon={GotaIcon} />
+          <div className="min-w-0">
+            <p className="text-3xl font-black text-titi-cream tabular-nums leading-none">{gotasAnim}</p>
+            <p className="text-xs font-bold text-white/60 mt-1">Gotas totales</p>
+          </div>
         </div>
-      </div>
-
-      {/* Racha actual */}
-      <div className={cardClass}>
-        <StatIcon tint="bg-titi-streak" icon={<BoltIcon className="w-6 h-6 text-white" />} />
-        <div className="min-w-0">
-          <p className="text-3xl font-extrabold text-titi-dark tabular-nums leading-tight">
-            {rachaAnim}
-          </p>
-          <p className="text-xs font-semibold text-gray-500">Racha actual</p>
-          {rachaActiva && (
-            <p className="text-xs font-bold text-titi-streak">¡Sigue así!</p>
-          )}
+        <div className={`${DARK_TILE} p-4 flex items-center gap-3`}>
+          <StatIcon solid={rachaActiva ? 'bg-titi-streak text-white' : 'bg-white/10 text-white'} Icon={BoltIcon} />
+          <div className="min-w-0">
+            <p className="text-3xl font-black text-titi-cream tabular-nums leading-none">{rachaAnim}</p>
+            <p className="text-xs font-bold text-white/60 mt-1">
+              {streak.racha === 1 ? 'Día de racha' : 'Días de racha'}
+              {rachaActiva && <span className="text-titi-yellow"> · ¡Seguí así!</span>}
+            </p>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-function StatIcon({ icon, tint = 'bg-titi-yellow' }) {
+function StatIcon({ Icon, solid }) {
   return (
-    <div className={`w-12 h-12 rounded-full ${tint} shadow-sm grid place-items-center shrink-0`}>
-      {icon}
-    </div>
+    <span aria-hidden="true" className={`w-12 h-12 rounded-xl grid place-items-center shrink-0 -rotate-6 ${solid}`}>
+      <Icon className="w-6 h-6" />
+    </span>
   );
 }
 
@@ -257,10 +230,7 @@ function LearningPathSection({ inscripciones, progressByCurso, onContinue, onOpe
   const [expanded, setExpanded] = useState(false);
 
   const sorted = useMemo(
-    () =>
-      [...inscripciones].sort(
-        (a, b) => new Date(a.fechaInscripcion) - new Date(b.fechaInscripcion),
-      ),
+    () => [...inscripciones].sort((a, b) => new Date(a.fechaInscripcion) - new Date(b.fechaInscripcion)),
     [inscripciones],
   );
 
@@ -273,19 +243,19 @@ function LearningPathSection({ inscripciones, progressByCurso, onContinue, onOpe
   const pathRef = useStaggerReveal([visible.length, expanded]);
 
   return (
-    <section className="mb-6 sm:mb-8">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-xl sm:text-2xl font-extrabold text-titi-dark">Tu ruta de aprendizaje</h2>
+    <section aria-label="Tu ruta de aprendizaje" className="mb-6 sm:mb-8">
+      <SectionHeading title="Tu ruta de" accent="aprendizaje" className="mb-4">
         {showToggle && (
           <button
             type="button"
             onClick={toggle}
+            aria-expanded={expanded}
             className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-all duration-150 active:scale-95 whitespace-nowrap"
           >
             {expanded ? 'Ver menos' : 'Ver toda la ruta'}
           </button>
         )}
-      </div>
+      </SectionHeading>
 
       <ul ref={pathRef} className="flex flex-col gap-5">
         {visible.map((insc, i) => (
@@ -304,23 +274,11 @@ function LearningPathSection({ inscripciones, progressByCurso, onContinue, onOpe
   );
 }
 
-// ---- Círculo de la timeline con el ícono de trazo de la categoría ----
-// Plomo por default; se pone amarillo con el group-hover del curso asociado.
-function PathIcon({ categoria }) {
-  const Icon = categoryIcon(categoria);
-  return (
-    <div className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full grid place-items-center shrink-0 shadow-sm bg-gray-200 transition-colors duration-150 group-hover:bg-titi-yellow">
-      <Icon className="w-5 h-5 text-gray-500 transition-colors duration-150 group-hover:text-titi-dark" />
-    </div>
-  );
-}
-
-// ---- Un nodo de la ruta: círculo + línea + card horizontal (imagen | info) ----
+// ---- Un nodo de la ruta: cuadro de la categoría + línea + tile horizontal ----
 function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDetail }) {
   const curso = inscripcion.curso || {};
-  const computedComplete = Boolean(
-    progress && progress.total > 0 && progress.completadas === progress.total,
-  );
+  const theme = categoryTheme(curso.categoria?.nombre);
+  const computedComplete = Boolean(progress && progress.total > 0 && progress.completadas === progress.total);
   const completado = Boolean(inscripcion.completado) || computedComplete;
   const porcentaje = progress?.porcentaje ?? (completado ? 100 : 0);
   const total = progress?.total ?? 0;
@@ -328,118 +286,75 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
 
   return (
     <li className="group relative flex gap-3 sm:gap-4">
-      {/* Rail: círculo centrado verticalmente + línea conectora */}
+      {/* Rail: nodo de la categoría centrado + línea conectora */}
       <div className="relative w-11 sm:w-12 shrink-0 flex justify-center">
         {!isLast && (
-          <span
-            aria-hidden="true"
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 w-0.5 bg-gray-200 h-[calc(100%+1.25rem)]"
-          />
+          <span aria-hidden="true" className="absolute top-1/2 left-1/2 -translate-x-1/2 w-1 rounded-full bg-gray-200 h-[calc(100%+1.25rem)]" />
         )}
-        <div className="self-center">
-          <PathIcon categoria={curso.categoria?.nombre} />
-        </div>
+        <span
+          aria-hidden="true"
+          className={`relative z-10 self-center w-11 h-11 sm:w-12 sm:h-12 rounded-xl border-2 border-titi-dark grid place-items-center text-white -rotate-6 transition-transform duration-200 group-hover:rotate-0 group-hover:scale-110 motion-reduce:transition-none ${
+            completado ? 'bg-green-500' : theme.solid
+          }`}
+        >
+          {completado ? <CheckIcon className="w-5 h-5" /> : <CategoryIcon nombre={curso.categoria?.nombre} className="w-5 h-5" />}
+        </span>
       </div>
 
-      {/* Card horizontal — la portada queda al ras del contenedor (sin padding) */}
-      <article className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(255,217,61,0.2)] hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
+      {/* Tile horizontal: toda la tarjeta abre el detalle; "Continuar" va a la lección */}
+      <article className={`relative flex-1 min-w-0 overflow-hidden ${TILE} has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-titi-yellow`}>
         <div className="flex flex-col sm:flex-row sm:h-44">
-          {/* Portada (izquierda, al ras) */}
-          <button
-            type="button"
-            onClick={onOpenDetail}
-            aria-label={`Ver detalle de ${curso.titulo || 'curso'}`}
-            className="relative shrink-0 w-full sm:w-[42%] h-40 sm:h-full bg-titi-dark block focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-titi-yellow"
-          >
-            {curso.portadaUrl ? (
-              <img
-                src={resolveMediaUrl(sanitizeMarkdownUrl(curso.portadaUrl))}
-                alt=""
-                className="w-full h-full object-cover"
-                loading="lazy"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                }}
-              />
-            ) : (
-              <div className="w-full h-full grid place-items-center text-5xl select-none">
-                {curso.categoria?.icono || '📚'}
-              </div>
-            )}
-            {curso.nivel && (
-              <span className="absolute top-2.5 left-2.5 bg-titi-dark text-white text-xs font-semibold capitalize px-3 py-1 rounded-full shadow-sm">
-                {curso.nivel}
-              </span>
-            )}
+          <div className="relative shrink-0 w-full sm:w-[38%] h-36 sm:h-full border-b-2 sm:border-b-0 sm:border-r-2 border-titi-dark">
+            <CourseCover curso={curso} className="w-full h-full" />
+            <LevelChip nivel={curso.nivel} className="absolute top-2.5 left-2.5" />
             {completado && (
-              <span className="absolute top-2.5 right-2.5 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm whitespace-nowrap">
-                Completado ✓
+              <span className="absolute top-2.5 right-2.5 inline-flex items-center gap-1 bg-green-500 text-white text-xs font-bold px-2.5 py-1 rounded-full border-2 border-titi-dark whitespace-nowrap">
+                <CheckIcon className="w-3.5 h-3.5" />
+                Completado
               </span>
             )}
-          </button>
+          </div>
 
-          {/* Info (derecha) */}
-          <div className="min-w-0 flex-1 flex flex-col p-4 sm:p-5 overflow-hidden">
+          <div className="min-w-0 flex-1 flex flex-col p-4 sm:p-5">
             {curso.categoria?.nombre && (
-              <p className="text-xs font-bold text-titi-streak uppercase tracking-wide">
-                {curso.categoria.nombre}
-              </p>
+              <p className={`text-xs font-extrabold uppercase tracking-wide truncate ${theme.text}`}>{curso.categoria.nombre}</p>
             )}
-            <button
-              type="button"
-              onClick={onOpenDetail}
-              className="text-left w-fit max-w-full rounded-lg mt-0.5 active:scale-[0.98] transition-transform duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
-            >
-              <h3 className="text-lg font-bold text-titi-dark leading-snug line-clamp-1 hover:text-titi-yellow-dark transition-colors">
+            <h3 className="text-lg font-extrabold text-titi-dark leading-snug line-clamp-1 mt-0.5">
+              <button
+                type="button"
+                onClick={onOpenDetail}
+                aria-label={`Ver detalle de ${curso.titulo || 'curso'}`}
+                className="text-left focus:outline-none after:absolute after:inset-0 after:content-['']"
+              >
                 {curso.titulo || 'Curso sin título'}
-              </h3>
-            </button>
+              </button>
+            </h3>
 
             <div className="mt-2">
               {completado ? (
-                <p className="inline-flex items-center gap-1.5 text-sm font-bold text-green-600">
-                  <CheckIcon className="w-4 h-4" /> Completado
+                <p className="inline-flex items-center gap-1.5 text-sm font-extrabold text-green-600">
+                  <CheckIcon className="w-4 h-4" /> ¡Lo terminaste!
                 </p>
               ) : (
-                <button
-                  type="button"
-                  onClick={onContinue}
-                  className="inline-flex items-center gap-1.5 bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
-                >
-                  Continuar →
+                <button type="button" onClick={onContinue} className="relative z-10 titi-btn-primary text-sm px-4 py-2">
+                  <PlayIcon className="w-4 h-4" />
+                  {porcentaje > 0 ? 'Continuar' : 'Empezar'}
                 </button>
               )}
             </div>
 
-            {/* Lecciones + % + barra (abajo) */}
             <div className="mt-auto pt-4">
-              <div className="flex items-center justify-between text-sm font-medium text-gray-500 mb-1.5">
-                <span>
-                  {completadas} / {total} {total === 1 ? 'lección' : 'lecciones'}
+              <div className="flex items-center justify-between text-sm font-bold text-gray-500 mb-1.5">
+                <span className="tabular-nums">
+                  {completadas} de {total} {total === 1 ? 'lección' : 'lecciones'}
                 </span>
-                <span
-                  className={`tabular-nums font-bold ${
-                    completado ? 'text-green-600' : 'text-titi-yellow-dark'
-                  }`}
-                >
-                  {porcentaje}%
-                </span>
+                <span className={`tabular-nums font-extrabold ${completado ? 'text-green-600' : 'text-titi-yellow-dark'}`}>{porcentaje}%</span>
               </div>
-              <div
-                className="h-2.5 bg-gray-100 rounded-full overflow-hidden"
-                role="progressbar"
-                aria-valuenow={porcentaje}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                aria-label={`Progreso de ${curso.titulo || 'curso'}`}
-              >
-                <div
-                  className={`h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${
-                    completado ? 'bg-green-500' : 'bg-titi-yellow'
-                  }`}
-                  style={{ width: `${porcentaje}%` }}
-                />
-              </div>
+              <ProgressBar
+                value={porcentaje}
+                color={completado ? 'bg-green-500' : 'bg-titi-yellow'}
+                label={`Progreso de ${curso.titulo || 'curso'}`}
+              />
             </div>
           </div>
         </div>
@@ -448,7 +363,7 @@ function LearningPathNode({ inscripcion, progress, isLast, onContinue, onOpenDet
   );
 }
 
-// ---- Nodo "+N": mismo estilo de círculo, dispara el toggle de la ruta ----
+// ---- Nodo "+N": mismo estilo de nodo, dispara el toggle de la ruta ----
 function LearningPathMoreNode({ count, onClick }) {
   return (
     <li className="relative flex gap-3 sm:gap-4 items-center">
@@ -457,15 +372,15 @@ function LearningPathMoreNode({ count, onClick }) {
           type="button"
           onClick={onClick}
           aria-label={`Ver ${count} cursos más de tu ruta`}
-          className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-gray-200 grid place-items-center shrink-0 shadow-sm hover:bg-gray-300 active:scale-90 transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
+          className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-white border-2 border-titi-dark grid place-items-center shrink-0 shadow-[0_3px_0_#1A1A2E] hover:bg-titi-yellow active:translate-y-0.5 active:shadow-none transition-all duration-150 focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60"
         >
-          <span className="text-xs font-black text-gray-600 tabular-nums">+{count}</span>
+          <span className="text-sm font-black text-titi-dark tabular-nums">+{count}</span>
         </button>
       </div>
       <button
         type="button"
         onClick={onClick}
-        className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark active:scale-95 transition-all duration-150"
+        className="text-sm font-bold uppercase tracking-wide text-blue-500 hover:text-blue-600 active:scale-95 transition-all duration-150"
       >
         Ver {count} {count === 1 ? 'curso más' : 'cursos más'}
       </button>
@@ -479,25 +394,9 @@ function LearningPathMoreNode({ count, onClick }) {
 const ACTIVIDAD_VISIBLE = 4;
 
 function activityMeta(tipo, titulo) {
-  if (tipo === 'curso') {
-    return {
-      Icon: GraduationIcon,
-      tint: 'bg-titi-yellow text-titi-dark',
-      text: `Completaste el curso "${titulo}"`,
-    };
-  }
-  if (tipo === 'evaluacion') {
-    return {
-      Icon: AwardIcon,
-      tint: 'bg-titi-achievement text-white',
-      text: `Aprobaste "${titulo}"`,
-    };
-  }
-  return {
-    Icon: CheckIcon,
-    tint: 'bg-green-500 text-white',
-    text: `Completaste "${titulo}"`,
-  };
+  if (tipo === 'curso') return { Icon: GraduationIcon, tint: 'bg-titi-yellow text-titi-dark', text: `Completaste el curso "${titulo}"` };
+  if (tipo === 'evaluacion') return { Icon: AwardIcon, tint: 'bg-titi-achievement text-white', text: `Aprobaste "${titulo}"` };
+  return { Icon: CheckIcon, tint: 'bg-green-500 text-white', text: `Completaste "${titulo}"` };
 }
 
 function RecentActivity() {
@@ -522,54 +421,46 @@ function RecentActivity() {
     };
   }, []);
 
+  const listRef = useStaggerReveal([actividad?.length ?? 0, expanded]);
+
   if (error) return null;
 
   const showToggle = (actividad?.length || 0) > ACTIVIDAD_VISIBLE;
   const visible = expanded ? actividad : (actividad || []).slice(0, ACTIVIDAD_VISIBLE);
 
   return (
-    <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-5">
-      <div className="mb-3">
-        <h2 className="text-lg font-bold text-titi-dark">Actividad reciente</h2>
-      </div>
+    <section aria-label="Actividad reciente" className={`${SURFACE} p-4 sm:p-5`}>
+      <PanelTitle Icon={ClockIcon} solid="bg-blue-500" title="Actividad" accent="reciente" />
 
       {actividad === null ? (
-        <div className="flex flex-col gap-3 animate-pulse">
+        <div className="flex flex-col gap-3 animate-pulse motion-reduce:animate-none">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-full bg-gray-100 shrink-0" />
+            <div key={i} className="flex items-center gap-3 py-1">
+              <div className="w-9 h-9 rounded-xl bg-gray-100 shrink-0" />
               <div className="flex-1 flex flex-col gap-1.5">
-                <div className="h-3 w-3/4 bg-gray-100 rounded" />
-                <div className="h-2.5 w-1/3 bg-gray-100 rounded" />
+                <div className="h-3 w-3/4 bg-gray-100 rounded-full" />
+                <div className="h-2.5 w-1/3 bg-gray-100 rounded-full" />
               </div>
             </div>
           ))}
         </div>
       ) : actividad.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-6 px-4 text-center">
-          <TitiMascot state="idle" size="sm" message="" className="mb-2" />
-          <p className="text-sm text-gray-400">Aún no tenés actividad</p>
-        </div>
+        <EmptyState compact state="idle" title="Todavía no tenés" accent="actividad" text="Completá una lección y la vas a ver acá." />
       ) : (
-        <ul className="flex flex-col">
+        <ul ref={listRef} className="flex flex-col">
           {visible.map((item, i) => {
             const { Icon, tint, text } = activityMeta(item.tipo, item.titulo);
             return (
-              <li
-                key={`${item.tipo}-${item.titulo}-${item.createdAt}-${i}`}
-                className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0"
-              >
-                <span className={`w-9 h-9 rounded-full grid place-items-center shrink-0 ${tint}`}>
+              <li key={`${item.tipo}-${item.titulo}-${item.createdAt}-${i}`} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
+                <span className={`w-9 h-9 rounded-xl border-2 border-titi-dark grid place-items-center shrink-0 -rotate-6 ${tint}`}>
                   <Icon className="w-4 h-4" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-titi-dark leading-snug line-clamp-2">
-                    {text}
-                  </p>
-                  <p className="text-xs text-gray-400">{relativeTime(item.createdAt)}</p>
+                  <p className="text-sm font-bold text-titi-dark leading-snug line-clamp-2">{text}</p>
+                  <p className="text-xs font-semibold text-gray-400">{relativeTime(item.createdAt)}</p>
                 </div>
-                <span className="text-sm font-bold text-green-600 shrink-0 tabular-nums whitespace-nowrap">
-                  +{item.cantidad} gotas
+                <span className="inline-flex items-center gap-1 h-7 px-2 rounded-lg bg-titi-yellow-light text-sm font-black text-titi-dark shrink-0 tabular-nums whitespace-nowrap">
+                  <GotaIcon className="w-3.5 h-3.5 text-titi-yellow-dark" />+{item.cantidad}
                 </span>
               </li>
             );
@@ -577,12 +468,12 @@ function RecentActivity() {
         </ul>
       )}
 
-      {/* Toggle centrado al pie, como el mockup */}
       {actividad !== null && showToggle && (
         <button
           type="button"
           onClick={() => setExpanded((e) => !e)}
-          className="w-full mt-3 pt-3 border-t border-gray-50 text-center text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-all duration-150 active:scale-95"
+          aria-expanded={expanded}
+          className="w-full mt-3 pt-3 border-t-2 border-gray-100 text-center text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-all duration-150 active:scale-95"
         >
           {expanded ? 'Ver menos' : 'Ver toda la actividad'}
         </button>
@@ -591,118 +482,49 @@ function RecentActivity() {
   );
 }
 
-// ---- Banner de cierre: CTA plano a /courses ----
+// ---- Banner de cierre: panel oscuro con Titi (máx. 1 por página) ----
 function BottomBanner({ onExplore }) {
   return (
-    <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-4 sm:gap-5">
-      {/* Titi animado en el banner motivacional (design.md §7 v2, máx 1/página) */}
+    <section className={`${DARK_PANEL} p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-4 sm:gap-5`}>
       <TitiMascot state="saludo" size="sm" message="" className="shrink-0" />
       <div className="flex-1 text-center sm:text-left">
-        <h3 className="text-lg font-bold text-titi-dark">¡Sigue aprendiendo!</h3>
-        <p className="text-base font-medium text-gray-500">
-          La constancia es la clave del éxito.
-        </p>
+        <h3 className="text-xl font-extrabold text-titi-cream">
+          ¡Seguí <span className="text-titi-yellow">aprendiendo</span>!
+        </h3>
+        <p className="text-base font-medium text-white/60">La constancia es la clave: una lección hoy suma gotas y alarga tu racha.</p>
       </div>
-      <button
-        type="button"
-        onClick={onExplore}
-        className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 whitespace-nowrap"
-      >
+      <button type="button" onClick={onExplore} className="titi-btn-primary whitespace-nowrap">
         Explorar cursos
       </button>
     </section>
   );
 }
 
-// ---- Empty state (sección 8 del DESIGN.md) ----
-function EmptyState({ onExplore }) {
+// ---- Skeleton con la silueta real ----
+function SkeletonGrid() {
   return (
-    <div className="flex flex-col items-center justify-center py-10 px-8 text-center">
-      <img
-        src="/Titi.png"
-        alt="Titi"
-        className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
-        draggable={false}
-      />
-      <h3 className="text-xl font-bold text-titi-dark mb-2">
-        Aún no tienes cursos
-      </h3>
-      <p className="text-base font-medium text-gray-500 mb-6 max-w-xs">
-        Explorá el catálogo y encontrá algo nuevo para aprender con la
-        comunidad Titi.
-      </p>
-      <button
-        type="button"
-        onClick={onExplore}
-        className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Ver catálogo de cursos
-      </button>
-    </div>
-  );
-}
-
-// ---- Error state ----
-function ErrorState({ message, onRetry }) {
-  return (
-    <div className="flex flex-col gap-4 max-w-2xl">
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-        <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-red-700">
-            No pudimos cargar tus cursos
-          </p>
-          <p className="text-xs text-red-500 mt-0.5">{message}</p>
+    <div className="flex flex-col gap-6 sm:gap-8 animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label="Cargando tus cursos">
+      <div className="rounded-2xl bg-gray-200 p-4 sm:p-5">
+        <div className="h-5 w-32 bg-gray-100 rounded-full mb-3" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-[88px] bg-gray-100 rounded-xl" />
+          ))}
         </div>
       </div>
       <div>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
-        >
-          Reintentar
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ---- Loading skeleton ----
-function SkeletonGrid() {
-  return (
-    <div className="flex flex-col gap-6 sm:gap-8 animate-pulse">
-      {/* Stats row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 flex items-center gap-3"
-          >
-            <div className="w-12 h-12 rounded-full bg-gray-100 shrink-0" />
-            <div className="flex-1 flex flex-col gap-2">
-              <div className="h-5 w-16 bg-gray-100 rounded" />
-              <div className="h-3 w-20 bg-gray-100 rounded" />
-            </div>
-          </div>
-        ))}
-      </div>
-      {/* Ruta de aprendizaje */}
-      <div>
-        <div className="h-5 w-40 bg-gray-100 rounded mb-6" />
+        <div className="h-6 w-56 bg-gray-100 rounded-full mb-4" />
         <div className="flex flex-col gap-5">
-          {Array.from({ length: 4 }).map((_, i) => (
+          {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex gap-4">
-              <div className="w-12 h-12 rounded-full bg-gray-100 shrink-0 self-center" />
-              <div className="flex-1 bg-white rounded-2xl border border-gray-100 p-3">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="w-full sm:w-[42%] h-32 sm:h-36 bg-gray-100 rounded-xl shrink-0" />
-                  <div className="flex-1 flex flex-col gap-2 py-1">
-                    <div className="h-3 w-24 bg-gray-100 rounded" />
-                    <div className="h-5 w-3/4 bg-gray-100 rounded" />
-                    <div className="h-8 w-28 bg-gray-100 rounded-xl mt-1" />
-                    <div className="h-2.5 w-full bg-gray-100 rounded-full mt-auto" />
-                  </div>
+              <div className="w-12 h-12 rounded-xl bg-gray-100 shrink-0 self-center" />
+              <div className="flex-1 bg-white rounded-2xl border-2 border-gray-200 overflow-hidden flex flex-col sm:flex-row sm:h-44">
+                <div className="w-full sm:w-[38%] h-36 sm:h-full bg-gray-100 shrink-0" />
+                <div className="flex-1 flex flex-col gap-2 p-4 sm:p-5">
+                  <div className="h-3 w-24 bg-gray-100 rounded-full" />
+                  <div className="h-5 w-3/4 bg-gray-100 rounded-full" />
+                  <div className="h-9 w-28 bg-gray-100 rounded-xl mt-1" />
+                  <div className="h-2.5 w-full bg-gray-100 rounded-full mt-auto" />
                 </div>
               </div>
             </div>

@@ -2,14 +2,14 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { useStaggerReveal } from '../lib/motion.js';
-import TitiMascot from '../components/TitiMascot.jsx';
-import {
-  GotaIcon,
-  TrophyIcon,
-  CalendarIcon,
-  ClockIcon,
-} from '../components/icons.jsx';
+import { useCountUp, useStaggerReveal } from '../lib/motion.js';
+import Avatar from '../components/social/Avatar.jsx';
+import { ErrorBox, SectionHeading } from '../components/social/StateBlocks.jsx';
+import { DARK_PANEL, DARK_TILE, EmptyState, PageHeader, PanelTitle, SURFACE } from '../components/ui/v3.jsx';
+import { BoltIcon, BooksIcon, CalendarIcon, CheckIcon, ClockIcon, GotaIcon, MedalIcon, UsersIcon } from '../components/icons.jsx';
+
+// Ranking v3 (rediseno-plataforma-v3 R6): podio del top 3, filas de
+// superficie, tu fila en amarillo; rail con la temporada y cómo sumar gotas.
 
 // Cuántas filas se ven antes de "Ver todos".
 const TOP_VISIBLE = 10;
@@ -67,179 +67,233 @@ export default function Leaderboard() {
   const visible = expanded ? tabla : tabla.slice(0, TOP_VISIBLE);
   const listRef = useStaggerReveal([visible.length, expanded]);
 
+  const podio = tabla.length >= 3 ? tabla.slice(0, 3) : [];
+  const resto = podio.length ? visible.slice(3) : visible;
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <header className="mb-5">
-        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">Ranking semanal</h1>
-        <p className="text-base font-medium text-gray-500 mt-1">
-          Gotas de la semana entre vos y la gente que seguís.
-        </p>
-      </header>
+    <div className="max-w-6xl mx-auto lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:items-start">
+      <div className="min-w-0">
+        <PageHeader title="Ranking" accent="semanal" subtitle="Gotas de la semana entre vos y la gente que seguís." />
 
-      <SeasonCard />
-
-      {loading ? (
-        <ul className="space-y-2 animate-pulse">
-          {[0, 1, 2, 3].map((i) => (
-            <li key={i} className="h-16 bg-gray-100 rounded-2xl" />
-          ))}
-        </ul>
-      ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center justify-between gap-3">
-          <p className="text-sm text-red-600">{error}</p>
-          <button
-            type="button"
-            onClick={fetchRanking}
-            className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark active:scale-95 transition-all duration-150 shrink-0"
-          >
-            Reintentar →
-          </button>
+        <div className="lg:hidden mb-6">
+          <SeasonCard />
         </div>
-      ) : tabla.length <= 1 ? (
-        <div className="flex flex-col items-center justify-center py-10 px-8 text-center">
-          <TitiMascot state="idle" size="lg" message="" />
-          <h3 className="text-xl font-bold text-titi-dark mt-4 mb-2">
-            Aún no hay con quién competir
-          </h3>
-          <p className="text-base font-medium text-gray-500 max-w-xs">
-            Seguí a tus compañeros para ver quién junta más gotas esta semana.
-          </p>
-        </div>
-      ) : (
-        <>
-          {/* Top de la semana */}
-          <div className="flex items-center justify-between mb-1">
-            <h2 className="text-xl sm:text-2xl font-extrabold text-titi-dark">
-              Top {Math.min(tabla.length, TOP_VISIBLE)} de la semana
-            </h2>
-            {showToggle && (
-              <button
-                type="button"
-                onClick={() => setExpanded((e) => !e)}
-                className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-all duration-150 active:scale-95 whitespace-nowrap"
-              >
-                {expanded ? 'Ver menos' : 'Ver todos'}
-              </button>
-            )}
-          </div>
-          {miPosicion > 0 && (
-            <p className="text-sm font-semibold text-gray-500 mb-3">
-              Vas en el puesto{' '}
-              <span className="text-titi-dark font-extrabold">#{miPosicion}</span> de{' '}
-              {tabla.length}.
-            </p>
-          )}
 
-          {/* Encabezados de columna (mockup) */}
-          <div className="flex items-center gap-3 px-3 sm:px-4 mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">
-            <span className="w-8 text-center shrink-0">Pos.</span>
-            <span>Usuario</span>
-            <span className="ml-auto">Gotas semanales</span>
-          </div>
-
-          <ul ref={listRef} className="space-y-2">
-            {visible.map((fila, i) => (
-              <RankRow key={fila.usuarioId} fila={fila} puesto={i + 1} />
+        {loading ? (
+          <ul className="space-y-3 animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label="Cargando ranking">
+            {[0, 1, 2, 3].map((i) => (
+              <li key={i} className="flex items-center gap-3 p-3 sm:p-4 rounded-2xl border-2 border-gray-200 bg-white">
+                <span className="w-8 h-6 bg-gray-100 rounded-full" />
+                <span className="w-9 h-9 rounded-full bg-gray-100" />
+                <span className="flex-1 h-3 bg-gray-100 rounded-full" />
+                <span className="w-14 h-4 bg-gray-100 rounded-full" />
+              </li>
             ))}
           </ul>
+        ) : error ? (
+          <ErrorBox title="No pudimos cargar el ranking" message={error} onRetry={fetchRanking} />
+        ) : tabla.length <= 1 ? (
+          <EmptyState
+            state="pensando"
+            title="Todavía no hay con quién"
+            accent="competir"
+            text="Seguí a tus compañeros para ver quién junta más gotas esta semana."
+          >
+            <button type="button" onClick={() => navigate('/explore')} className="titi-btn-primary">
+              Buscar gente en Explorar
+            </button>
+          </EmptyState>
+        ) : (
+          <>
+            {podio.length > 0 && <Podium filas={podio} />}
 
-          <BottomBanner onExplore={() => navigate('/courses')} />
-        </>
-      )}
+            <SectionHeading title={`Top ${Math.min(tabla.length, TOP_VISIBLE)} de la`} accent="semana">
+              {showToggle && (
+                <button
+                  type="button"
+                  onClick={() => setExpanded((e) => !e)}
+                  aria-expanded={expanded}
+                  className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-all duration-150 active:scale-95 whitespace-nowrap"
+                >
+                  {expanded ? 'Ver menos' : 'Ver todos'}
+                </button>
+              )}
+            </SectionHeading>
+            {miPosicion > 0 && (
+              <p className="text-sm font-semibold text-gray-500 -mt-2 mb-3">
+                Vas en el puesto <span className="text-titi-dark font-extrabold">#{miPosicion}</span> de {tabla.length}.
+              </p>
+            )}
+
+            <ul ref={listRef} className="space-y-2.5">
+              {resto.map((fila, i) => (
+                <RankRow key={fila.usuarioId} fila={fila} puesto={i + 1 + (podio.length ? 3 : 0)} />
+              ))}
+            </ul>
+
+            <BottomBanner onExplore={() => navigate('/courses')} />
+          </>
+        )}
+      </div>
+
+      {/* Rail (solo desktop) */}
+      <aside className="hidden lg:flex flex-col gap-5 sticky top-8">
+        <SeasonCard />
+        <WaysPanel />
+      </aside>
     </div>
   );
 }
 
-// ---- Card de temporada: reset semanal + cuenta regresiva ----
+// ---- Temporada semanal: panel oscuro con cuenta regresiva ----
 function SeasonCard() {
   const { dias, horas } = tiempoHastaLunes();
   return (
-    <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-5 mb-6 flex items-center gap-4">
-      <span className="w-12 h-12 rounded-xl bg-titi-yellow shadow-sm grid place-items-center shrink-0">
-        <CalendarIcon className="w-6 h-6 text-titi-dark" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <h2 className="text-lg font-bold text-titi-dark leading-tight">Temporada semanal</h2>
-        <p className="text-sm font-medium text-gray-500">
-          Los rankings se reinician cada lunes.
-        </p>
-        <p className="mt-1 inline-flex items-center gap-1.5 text-sm font-bold text-titi-yellow-dark">
-          <ClockIcon className="w-4 h-4" />
-          Termina en {dias} {dias === 1 ? 'día' : 'días'}, {horas}{' '}
-          {horas === 1 ? 'hora' : 'horas'}
-        </p>
+    <section aria-label="Temporada semanal" className={`${DARK_PANEL} p-4`}>
+      <div className="flex items-center gap-3 mb-3">
+        <span className="w-10 h-10 rounded-xl bg-titi-yellow text-titi-dark grid place-items-center -rotate-6 shrink-0" aria-hidden="true">
+          <CalendarIcon className="w-5 h-5" />
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-lg font-extrabold text-titi-cream leading-tight">
+            Temporada <span className="text-titi-yellow">semanal</span>
+          </h2>
+          <p className="text-sm font-medium text-white/60">Se reinicia cada lunes.</p>
+        </div>
       </div>
-      <span className="hidden sm:grid w-14 h-14 rounded-full bg-titi-yellow-light place-items-center shrink-0">
-        <TrophyIcon className="w-8 h-8 text-titi-certificate" />
-      </span>
+      <div className="grid grid-cols-2 gap-2">
+        <div className={`${DARK_TILE} p-3`}>
+          <p className="text-2xl font-black text-titi-cream tabular-nums leading-none">{dias}</p>
+          <p className="text-xs font-bold text-white/60 mt-1">{dias === 1 ? 'día' : 'días'}</p>
+        </div>
+        <div className={`${DARK_TILE} p-3`}>
+          <p className="text-2xl font-black text-titi-cream tabular-nums leading-none">{horas}</p>
+          <p className="text-xs font-bold text-white/60 mt-1">{horas === 1 ? 'hora' : 'horas'}</p>
+        </div>
+      </div>
+      <p className="mt-3 inline-flex items-center gap-1.5 text-sm font-bold text-titi-yellow">
+        <ClockIcon className="w-4 h-4" />
+        Para que termine la semana
+      </p>
+    </section>
+  );
+}
+
+const WAYS = [
+  { Icon: BooksIcon, solid: 'bg-green-500', text: 'Completá lecciones' },
+  { Icon: CheckIcon, solid: 'bg-titi-achievement', text: 'Aprobá evaluaciones' },
+  { Icon: BoltIcon, solid: 'bg-titi-streak', text: 'Cumplí los desafíos del día' },
+  { Icon: UsersIcon, solid: 'bg-blue-500', text: 'Publicá y seguí gente' },
+];
+
+function WaysPanel() {
+  return (
+    <section aria-label="Cómo sumar gotas" className={`${SURFACE} p-4`}>
+      <PanelTitle Icon={GotaIcon} solid="bg-titi-yellow" title="Cómo sumar" accent="gotas" />
+      <ul>
+        {WAYS.map(({ Icon, solid, text }) => (
+          <li key={text} className="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
+            <span className={`w-8 h-8 rounded-full grid place-items-center text-white shrink-0 ${solid}`} aria-hidden="true">
+              <Icon className="w-4 h-4" />
+            </span>
+            <span className="text-sm font-bold text-titi-dark">{text}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
 
 // Medallas planas para el top 3: oro (amarillo), plata (gris), bronce (streak).
-const MEDAL_TINTS = {
-  1: 'bg-titi-yellow text-titi-dark',
-  2: 'bg-gray-300 text-titi-dark',
-  3: 'bg-titi-streak text-white',
+const MEDALS = {
+  1: { solid: 'bg-titi-yellow text-titi-dark', base: 'h-28 sm:h-32', label: 'Oro' },
+  2: { solid: 'bg-gray-300 text-titi-dark', base: 'h-20 sm:h-24', label: 'Plata' },
+  3: { solid: 'bg-titi-streak text-white', base: 'h-16 sm:h-20', label: 'Bronce' },
 };
 
-function RankRow({ fila, puesto }) {
-  const { username, gotasSemana, esYo } = fila;
-  const medal = MEDAL_TINTS[puesto];
+// ---- Podio: 2 · 1 · 3 ----
+function Podium({ filas }) {
+  const order = [filas[1], filas[0], filas[2]];
+  const ref = useStaggerReveal([filas.length]);
   return (
-    <li
-      className={`flex items-center gap-3 rounded-2xl border p-3 sm:p-4 transition-colors ${
-        esYo ? 'bg-titi-yellow-light border-titi-yellow' : 'bg-white border-gray-100'
-      }`}
-    >
-      {medal ? (
+    <section aria-label="Podio de la semana" className={`${SURFACE} px-3 sm:px-6 pt-5 pb-0 mb-6 overflow-hidden`}>
+      <ol ref={ref} className="grid grid-cols-3 gap-2 sm:gap-4 items-end">
+        {order.map((fila) => {
+          const puesto = filas.indexOf(fila) + 1;
+          return <PodiumSpot key={fila.usuarioId} fila={fila} puesto={puesto} />;
+        })}
+      </ol>
+    </section>
+  );
+}
+
+function PodiumSpot({ fila, puesto }) {
+  const medal = MEDALS[puesto];
+  const gotas = useCountUp(fila.gotasSemana);
+  return (
+    <li className="flex flex-col items-center text-center min-w-0">
+      <div className="relative mb-2">
+        <Avatar username={fila.username} size={puesto === 1 ? 'lg' : 'md'} className={fila.esYo ? 'ring-4 ring-titi-yellow' : ''} />
         <span
-          className={`w-8 h-8 rounded-full grid place-items-center text-sm font-black tabular-nums shadow-sm shrink-0 ${medal}`}
+          className={`absolute -bottom-2 left-1/2 -translate-x-1/2 w-7 h-7 rounded-full border-2 border-titi-dark grid place-items-center text-xs font-black tabular-nums ${medal.solid}`}
+          title={`Medalla de ${medal.label.toLowerCase()}`}
         >
           {puesto}
         </span>
-      ) : (
-        <span className="w-8 text-center text-lg font-black text-gray-500 tabular-nums shrink-0">
-          {puesto}
-        </span>
-      )}
-      <div className="w-9 h-9 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold shrink-0">
-        {username?.[0]?.toUpperCase() ?? '?'}
       </div>
-      <p className="min-w-0 flex-1 flex items-center gap-2 font-bold text-titi-dark truncate">
-        @{username}
+      <p className="mt-1 max-w-full text-sm font-extrabold text-titi-dark truncate">
+        {fila.esYo ? 'Vos' : `@${fila.username}`}
+      </p>
+      <p className="inline-flex items-center gap-1 text-sm font-black text-titi-yellow-dark tabular-nums">
+        <GotaIcon className="w-4 h-4" />
+        {gotas}
+      </p>
+      <div className={`mt-2 w-full ${medal.base} rounded-t-xl border-2 border-b-0 border-titi-dark grid place-items-start justify-center pt-2 ${medal.solid}`}>
+        <MedalIcon className="w-6 h-6" />
+      </div>
+    </li>
+  );
+}
+
+function RankRow({ fila, puesto }) {
+  const { username, gotasSemana, esYo } = fila;
+  const gotas = useCountUp(gotasSemana);
+  return (
+    <li
+      className={`flex items-center gap-3 rounded-2xl border-2 p-3 sm:p-4 ${
+        esYo ? 'bg-titi-yellow-light border-titi-dark shadow-[0_3px_0_#1A1A2E]' : 'bg-white border-gray-200'
+      }`}
+    >
+      <span className="w-8 text-center text-lg font-black text-gray-500 tabular-nums shrink-0">{puesto}</span>
+      <Avatar username={username} size="sm" />
+      <p className="min-w-0 flex-1 flex items-center gap-2 font-extrabold text-titi-dark">
+        <span className="truncate">@{username}</span>
         {esYo && (
-          <span className="bg-titi-yellow text-titi-dark text-xs font-bold px-2 py-0.5 rounded-full shrink-0">
-            Vos
-          </span>
+          <span className="bg-titi-yellow text-titi-dark text-xs font-extrabold px-2 py-0.5 rounded-full border-2 border-titi-dark shrink-0">Vos</span>
         )}
       </p>
       <span className="inline-flex items-center gap-1 text-titi-yellow-dark font-black tabular-nums shrink-0">
         <GotaIcon className="w-4 h-4" />
-        {gotasSemana}
+        {gotas}
       </span>
     </li>
   );
 }
 
-// ---- Banner de cierre: CTA a seguir sumando gotas ----
+// ---- Banner de cierre: panel oscuro con CTA ----
 function BottomBanner({ onExplore }) {
   return (
-    <section className="mt-6 bg-titi-yellow-light border border-titi-yellow/40 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-4">
-      <span className="w-10 h-10 rounded-full bg-titi-yellow shadow-sm grid place-items-center shrink-0">
-        <GotaIcon className="w-5 h-5 text-titi-dark" />
+    <section className={`mt-6 ${DARK_PANEL} p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-4`}>
+      <span className="w-12 h-12 rounded-xl bg-titi-yellow text-titi-dark grid place-items-center shrink-0 -rotate-6" aria-hidden="true">
+        <GotaIcon className="w-6 h-6" />
       </span>
       <div className="min-w-0 flex-1 text-center sm:text-left">
-        <h3 className="text-lg font-bold text-titi-dark">¡Sigue sumando gotas!</h3>
-        <p className="text-sm font-medium text-gray-500">
-          Completá lecciones y desafíos para subir en el ranking la próxima semana.
-        </p>
+        <h3 className="text-lg font-extrabold text-titi-cream">
+          ¡Seguí sumando <span className="text-titi-yellow">gotas</span>!
+        </h3>
+        <p className="text-sm font-medium text-white/60">Completá lecciones y desafíos para subir en el ranking.</p>
       </div>
-      <button
-        type="button"
-        onClick={onExplore}
-        className="bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2.5 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 whitespace-nowrap"
-      >
+      <button type="button" onClick={onExplore} className="titi-btn-primary text-sm px-5 whitespace-nowrap">
         Explorar cursos
       </button>
     </section>
