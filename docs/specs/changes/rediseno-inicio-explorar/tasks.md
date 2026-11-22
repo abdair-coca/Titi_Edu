@@ -11,22 +11,22 @@
 
 ## Fase 2 — Piezas sociales v3
 
-- [ ] 2.1 `components/social/Avatar.jsx` y `FollowButton.jsx` (optimista).
-- [ ] 2.2 `components/social/PersonCard.jsx` (tile + variante de lista) y `useSuggestions`.
-- [ ] 2.3 `components/social/TrendingHashtags.jsx` (pastillas + ranking) y `useTrending`.
-- [ ] 2.4 `Pill` exportada desde `catalog/CatalogFilters.jsx`; `useQuickViewParam` compartido.
+- [x] 2.1 `components/social/Avatar.jsx` y `FollowButton.jsx` (optimista).
+- [x] 2.2 `components/social/PersonCard.jsx` (tile + variante de lista) y `useSuggestions`.
+- [x] 2.3 `components/social/TrendingHashtags.jsx` (pastillas + ranking) y `useTrending`.
+- [x] 2.4 `Pill` exportada desde `catalog/CatalogFilters.jsx`; `useQuickViewParam` compartido.
 
 ## Fase 3 — Componentes compartidos
 
-- [ ] 3.1 `PostCard` v3 con doble toque para like (R4).
-- [ ] 3.2 `CreatePost` v3 plegable, sin emojis (R3).
-- [ ] 3.3 `AcademicActivityCard` v3 con vista rápida (R5).
-- [ ] 3.4 `CategoriesExplorer` con `categoryTheme` y pastillas v3.
+- [x] 3.1 `PostCard` v3 con doble toque para like (R4).
+- [x] 3.2 `CreatePost` v3 plegable, sin emojis (R3).
+- [x] 3.3 `AcademicActivityCard` v3 con vista rápida (R5).
+- [x] 3.4 `CategoriesExplorer` con `categoryTheme` y pastillas v3.
 
 ## Fase 4 — Páginas
 
-- [ ] 4.1 `Feed.jsx`: orden R2, pestañas, sugerencias inline, rail, estados (R9).
-- [ ] 4.2 `Explore.jsx`: cabecera, filas, búsqueda en URL con pestañas, rail (R7).
+- [x] 4.1 `Feed.jsx`: orden R2, pestañas, sugerencias inline, rail, estados (R9).
+- [x] 4.2 `Explore.jsx`: cabecera, filas, búsqueda en URL con pestañas, rail (R7).
 
 ## Fase 5 — Cierre
 
