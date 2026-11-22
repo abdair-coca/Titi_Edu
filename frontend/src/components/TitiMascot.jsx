@@ -39,7 +39,9 @@ export default function TitiMascot({ mood = 'happy', state, message, size = 'md'
   const effectiveSize = resolved === 'celebra' ? bumpForCelebra(size) : size;
   const sizeClass = sizes[effectiveSize] || sizes.md;
   const text = message ?? moodMsg[mood] ?? '';
-  const emoji = moodEmoji[mood] ?? '';
+  // API nueva (`state`): sin emoji en la burbuja (design.md §5.6). El emoji
+  // queda solo para las llamadas viejas con `mood`.
+  const emoji = state ? '' : moodEmoji[mood] ?? '';
 
   // Con reduced-motion mostramos el PNG estático; si no, la animación.
   const reduced = prefersReducedMotion();

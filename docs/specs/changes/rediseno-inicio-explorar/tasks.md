@@ -1,6 +1,7 @@
 # Tasks — Rediseño de Inicio y Explorar
 
 > **Change:** `rediseno-inicio-explorar`
+> **Estado:** implementado; falta probar con la API real y en celular.
 > Verificación: `cd backend && npm test`, `cd frontend && npm run build`.
 
 ## Fase 1 — API (solo lectura)
@@ -30,6 +31,6 @@
 
 ## Fase 5 — Cierre
 
-- [ ] 5.1 `design.md` (§5.5 post v3, superficie v3, inventario §14).
-- [ ] 5.2 Tests backend + build frontend; capturas a 1280 y 390 px con datos simulados.
-- [ ] 5.3 `verify-report.md` y fila en el índice de `AGENTS.md`.
+- [x] 5.1 `design.md` (§5.5 post v3, superficie v3, inventario §14).
+- [x] 5.2 Tests backend + build frontend; capturas a 1280 y 390 px con datos simulados.
+- [x] 5.3 `verify-report.md` y fila en el índice de `AGENTS.md`.

@@ -71,6 +71,8 @@ cursos), *Gente para seguir* (lista de 4), *Categorías*.
 
 ## R6 — Gente para seguir
 
+- La búsqueda (`GET /api/search`) devuelve además `isFollowing` y
+  `followerCount` de cada persona, para que el botón arranque en su estado real.
 - `GET /api/users/suggestions?limit=N` (N ≤ 20, por defecto 10): personas que
   no sigo ni soy yo. Primero amigos de amigos ordenados por cuántos amigos en
   común; si faltan, las más seguidas. Cada una trae `mutualCount`,
@@ -81,8 +83,10 @@ cursos), *Gente para seguir* (lista de 4), *Categorías*.
   y avisa. Toda la tarjeta lleva al perfil.
 - Variante compacta en lista para el rail.
 - Sin sugerencias: la sección no se muestra.
-- Seguir desde Inicio recarga la línea de tiempo al cerrar la sesión de
-  sugerencias (no en cada toque) para no hacer saltar la página.
+- Seguir desde Inicio: con el inicio vacío, la línea de tiempo se recarga
+  sola (con una pausa corta por si seguís a varias personas seguidas); con
+  contenido, el botón de refrescar pasa a **Novedades** y no se recarga nada
+  sin que lo pidas (la página no salta).
 
 ## R7 — Explorar: orden de la página
 
