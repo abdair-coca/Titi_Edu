@@ -35,8 +35,8 @@
 
 ## Fase 5 — Teacher y Admin
 
-- [ ] 5.1 `pages/teacher/*` (R10).
-- [ ] 5.2 `pages/admin/*` (R10).
+- [x] 5.1 `pages/teacher/*` (R10).
+- [x] 5.2 `pages/admin/*` (R10).
 
 ## Fase 6 — Learn (opcional)
 

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import client from '../../api/client.js';
-import { ChipIcon } from '../../components/icons.jsx';
+import { ChipIcon, CloseIcon, PlayIcon, SearchIcon } from '../../components/icons.jsx';
+import { ErrorBox } from '../../components/social/StateBlocks.jsx';
+import { BackLink } from '../../components/ui/v3.jsx';
 
 const STATUS_FILTERS = [
   { value: 'ALL', label: 'Todos los estados' },
@@ -125,9 +127,9 @@ function RagFragmentsModal({ lessonId, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-titi-dark/60 flex items-center justify-center p-3 sm:p-4">
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-2xl border-2 border-titi-dark shadow-[0_8px_0_#1A1A2E] max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header Modal */}
-        <div className="p-4 sm:p-6 border-b border-gray-100 flex items-start justify-between gap-4 bg-titi-cream/40">
+        <div className="p-4 sm:p-6 border-b-2 border-titi-dark flex items-start justify-between gap-4 bg-titi-cream">
           <div>
             <div className="flex items-center gap-2">
               <span className="w-7 h-7 rounded-lg bg-titi-dark text-titi-yellow grid place-items-center">
@@ -147,10 +149,10 @@ function RagFragmentsModal({ lessonId, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-xl bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold grid place-items-center transition-colors"
-            aria-label="Cerrar modal"
+            className="w-9 h-9 rounded-full text-gray-500 hover:text-titi-dark hover:bg-white grid place-items-center active:scale-90 transition-all duration-150 shrink-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
+            aria-label="Cerrar"
           >
-            ✕
+            <CloseIcon className="w-5 h-5" />
           </button>
         </div>
 
@@ -162,7 +164,7 @@ function RagFragmentsModal({ lessonId, onClose }) {
               <p className="text-sm font-semibold text-gray-500">Recuperando fragmentos vectoriales…</p>
             </div>
           ) : error ? (
-            <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm font-semibold">
+            <div role="alert" className="p-4 rounded-2xl bg-red-50 border-2 border-red-500 text-red-700 text-sm font-bold">
               {error}
             </div>
           ) : (
@@ -202,12 +204,12 @@ function RagFragmentsModal({ lessonId, onClose }) {
               )}
 
               {/* Simulador de Búsqueda Semántica */}
-              <section className="p-4 rounded-xl border border-titi-yellow/40 bg-titi-cream/30 space-y-3">
+              <section className="p-4 rounded-xl border-2 border-gray-200 bg-titi-cream space-y-3">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-black text-titi-dark flex items-center gap-1.5">
-                    🔍 Simulador de búsqueda semántica
+                    <SearchIcon className="w-4 h-4 text-titi-streak" /> Simulador de búsqueda semántica
                   </h3>
-                  <span className="text-[11px] font-semibold text-gray-500">Sin gasto de tokens LLM</span>
+                  <span className="text-xs font-semibold text-gray-500">Sin gasto de tokens LLM</span>
                 </div>
                 <form onSubmit={handleTestQuery} className="flex gap-2">
                   <input
@@ -244,7 +246,7 @@ function RagFragmentsModal({ lessonId, onClose }) {
                             <span className="text-titi-dark">
                               Fragmento #{res.orden} · {res.lessonTitle}
                             </span>
-                            <span className={`px-2 py-0.5 rounded text-[11px] font-black ${
+                            <span className={`px-2 py-0.5 rounded text-xs font-black ${
                               res.similarity >= 0.75
                                 ? 'bg-green-100 text-green-800'
                                 : res.similarity >= 0.5
@@ -413,50 +415,53 @@ export default function AdminRag() {
     <div className="space-y-6">
       {/* Header */}
       <header>
+        <BackLink to="/admin">Panel de administración</BackLink>
         <div className="flex items-center gap-3 mb-1">
-          <span className="w-10 h-10 rounded-xl bg-titi-dark text-titi-yellow grid place-items-center shadow-xs">
-            <ChipIcon className="w-5 h-5" />
+          <span className="w-11 h-11 rounded-xl bg-titi-dark text-titi-yellow border-2 border-titi-dark grid place-items-center -rotate-6 shrink-0">
+            <ChipIcon className="w-6 h-6" />
           </span>
-          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">Control RAG</h1>
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">
+            Control <span className="text-titi-streak">RAG</span>
+          </h1>
         </div>
-        <p className="text-sm font-medium text-gray-500">
+        <p className="text-base font-medium text-gray-500">
           Supervisá el estado de la indexación vectorial, auditá fragmentos y probá búsquedas semánticas para el tutor IA.
         </p>
       </header>
 
       {/* Tarjetas KPI de Resumen */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Publicadas</p>
+        <div className="titi-surface p-4">
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider">Total Publicadas</p>
           <p className="text-3xl font-black text-titi-dark mt-1 tabular-nums">{summary.totalLessons}</p>
-          <span className="text-[11px] font-semibold text-gray-500">Lecciones activas</span>
+          <span className="text-xs font-semibold text-gray-500">Lecciones activas</span>
         </div>
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
+        <div className="titi-surface p-4">
           <p className="text-xs font-bold text-green-700 uppercase tracking-wider">Listas (Indexadas)</p>
           <p className="text-3xl font-black text-green-600 mt-1 tabular-nums">{summary.ready}</p>
-          <span className="text-[11px] font-semibold text-green-700">En base vectorial</span>
+          <span className="text-xs font-semibold text-green-700">En base vectorial</span>
         </div>
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
+        <div className="titi-surface p-4">
           <p className="text-xs font-bold text-titi-streak uppercase tracking-wider">Desactualizadas</p>
           <p className="text-3xl font-black text-titi-streak mt-1 tabular-nums">{summary.stale ?? 0}</p>
-          <span className="text-[11px] font-semibold text-titi-streak">El tutor no las ve</span>
+          <span className="text-xs font-semibold text-titi-streak">El tutor no las ve</span>
         </div>
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
+        <div className="titi-surface p-4">
           <p className="text-xs font-bold text-red-700 uppercase tracking-wider">Con Error</p>
           <p className="text-3xl font-black text-red-600 mt-1 tabular-nums">{summary.failed}</p>
-          <span className="text-[11px] font-semibold text-red-700">Requieren reindexar</span>
+          <span className="text-xs font-semibold text-red-700">Requieren reindexar</span>
         </div>
-        <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs">
+        <div className="titi-surface p-4">
           <p className="text-xs font-bold text-yellow-700 uppercase tracking-wider">Sin Indexar</p>
           <p className="text-3xl font-black text-yellow-600 mt-1 tabular-nums">
             {summary.unindexed + summary.pending}
           </p>
-          <span className="text-[11px] font-semibold text-yellow-700">Pendientes de proceso</span>
+          <span className="text-xs font-semibold text-yellow-700">Pendientes de proceso</span>
         </div>
       </div>
 
       {/* Barra de Filtros */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+      <div className="titi-surface p-4 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
         <div className="flex flex-wrap gap-2 flex-1 items-center">
           {/* Selector de Curso */}
           <select
@@ -511,19 +516,29 @@ export default function AdminRag() {
       </div>
 
       {/* Tabla de Lecciones */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-xs overflow-hidden">
+      <div className="titi-surface overflow-hidden">
         {loading ? (
-          <div className="py-16 flex flex-col items-center justify-center gap-3">
-            <div className="w-8 h-8 border-3 border-titi-yellow border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-semibold text-gray-500">Cargando estado RAG de las lecciones…</p>
+          <div className="divide-y divide-gray-100 animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label="Cargando estado RAG de las lecciones">
+            <div className="h-11 bg-titi-cream" />
+            {[0, 1, 2, 3, 4].map((i) => (
+              <div key={i} className="px-4 py-4 flex items-center gap-4">
+                <span className="w-1/4 h-3 bg-gray-100 rounded-full" />
+                <span className="flex-1 h-3 bg-gray-100 rounded-full" />
+                <span className="w-20 h-6 bg-gray-100 rounded-full" />
+              </div>
+            ))}
           </div>
         ) : error ? (
-          <div className="p-8 text-center text-red-600 font-semibold text-sm">
-            {error}
+          <div className="p-4">
+            <ErrorBox title="No pudimos cargar el estado RAG" message={error} onRetry={fetchLessons} />
           </div>
         ) : lessons.length === 0 ? (
-          <div className="py-16 text-center text-gray-400 font-medium text-sm">
-            No se encontraron lecciones publicadas que coincidan con los filtros seleccionados.
+          <div className="py-12 px-6 text-center">
+            <span className="mx-auto w-12 h-12 rounded-xl border-2 border-titi-dark bg-titi-yellow text-titi-dark grid place-items-center -rotate-6 mb-3">
+              <SearchIcon className="w-6 h-6" />
+            </span>
+            <p className="text-base font-extrabold text-titi-dark">Sin lecciones para estos filtros</p>
+            <p className="text-sm font-medium text-gray-500 mt-1">Probá con otro curso o estado.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -551,7 +566,7 @@ export default function AdminRag() {
                         <div className="font-bold text-titi-dark truncate" title={lesson.modulo?.curso?.titulo}>
                           {lesson.modulo?.curso?.titulo}
                         </div>
-                        <div className="text-[11px] text-gray-400 truncate" title={lesson.modulo?.titulo}>
+                        <div className="text-xs text-gray-400 truncate" title={lesson.modulo?.titulo}>
                           {lesson.modulo?.titulo}
                         </div>
                       </td>
@@ -560,8 +575,8 @@ export default function AdminRag() {
                           {lesson.titulo}
                         </div>
                         {lesson.recursoHtml && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 mt-0.5">
-                            🎮 Presentación HTML
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-200 mt-0.5">
+                            <PlayIcon className="w-3 h-3" /> Presentación HTML
                           </span>
                         )}
                       </td>
@@ -571,7 +586,7 @@ export default function AdminRag() {
                       <td className="py-3.5 px-4 font-medium text-gray-500 whitespace-nowrap">
                         {formatDate(doc?.indexadoAt)}
                       </td>
-                      <td className="py-3.5 px-4 font-mono text-[11px] text-gray-500 max-w-[150px] truncate" title={doc?.modelo || '—'}>
+                      <td className="py-3.5 px-4 font-mono text-xs text-gray-500 max-w-[150px] truncate" title={doc?.modelo || '—'}>
                         {doc?.modelo || '—'}
                       </td>
                       <td className="py-3.5 px-4 font-bold text-titi-dark tabular-nums whitespace-nowrap">
