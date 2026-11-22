@@ -260,3 +260,46 @@ body {
   .titi-pop-in,
   .titi-hop { animation: none; }
 }
+
+/* ---- Íconos de categoría: microinteracción (rediseno-catalogo-cursos R2) ----
+   El contenedor `.group` (tarjeta, pastilla, nodo) dispara el gesto: el trazo
+   se redibuja (pathLength=1 en LineSvg) y el ícono hace el movimiento de su
+   materia. ≤ 300 ms, sin repetición. */
+@keyframes titi-icon-draw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes titi-icon-type   { 0%,100% { transform: translateX(0); } 35% { transform: translateX(-2px); } 70% { transform: translateX(2px); } }
+@keyframes titi-icon-turn   { from { transform: rotate(0); } to { transform: rotate(90deg); } }
+@keyframes titi-icon-tilt   { 0%,100% { transform: skewX(0); } 50% { transform: skewX(-12deg) scale(1.08); } }
+@keyframes titi-icon-spin   { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes titi-icon-shake  { 0%,100% { transform: rotate(0); } 25% { transform: rotate(-14deg); } 60% { transform: rotate(10deg); } }
+@keyframes titi-icon-swirl  { 0%,100% { transform: rotate(0) scale(1); } 50% { transform: rotate(-20deg) scale(1.1); } }
+@keyframes titi-icon-rise   { 0%,100% { transform: translateY(0); } 45% { transform: translateY(-3px) scale(1.08); } }
+@keyframes titi-icon-bop    { 0%,100% { transform: translateY(0) rotate(0); } 40% { transform: translateY(-3px) rotate(-10deg); } 75% { transform: translateY(0) rotate(6deg); } }
+@keyframes titi-icon-flip   { 0%,100% { transform: scaleX(1); } 50% { transform: scaleX(-1); } }
+
+.titi-cat-icon { transform-origin: center; }
+.group:hover .titi-cat-icon :is(path, line, polyline, circle, rect)[pathLength],
+.group:focus-visible .titi-cat-icon :is(path, line, polyline, circle, rect)[pathLength],
+.group:active .titi-cat-icon :is(path, line, polyline, circle, rect)[pathLength] {
+  stroke-dasharray: 1;
+  animation: titi-icon-draw 0.3s cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+:is(.group:hover, .group:focus-visible, .group:active) .titi-cat-icon {
+  animation: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+:is(.group:hover, .group:focus-visible, .group:active) .titi-cat-icon[data-cat='code']     { animation-name: titi-icon-type; }
+:is(.group:hover, .group:focus-visible, .group:active) .titi-cat-icon[data-cat='data']     { animation-name: titi-icon-turn; }
+:is(.group:hover, .group:focus-visible, .group:active) .titi-cat-icon[data-cat='math']     { animation-name: titi-icon-tilt; }
+:is(.group:hover, .group:focus-visible, .group:active) .titi-cat-icon[data-cat='lang']     { animation-name: titi-icon-spin; }
+:is(.group:hover, .group:focus-visible, .group:active) .titi-cat-icon[data-cat='science']  { animation-name: titi-icon-shake; }
+:is(.group:hover, .group:focus-visible, .group:active) .titi-cat-icon[data-cat='design']   { animation-name: titi-icon-swirl; }
+:is(.group:hover, .group:focus-visible, .group:active) .titi-cat-icon[data-cat='business'] { animation-name: titi-icon-rise; }
+:is(.group:hover, .group:focus-visible, .group:active) .titi-cat-icon[data-cat='music']    { animation-name: titi-icon-bop; }
+:is(.group:hover, .group:focus-visible, .group:active) .titi-cat-icon[data-cat='other']    { animation-name: titi-icon-flip; }
+
+@media (prefers-reduced-motion: reduce) {
+  .group .titi-cat-icon,
+  .group .titi-cat-icon [pathLength] { animation: none !important; }
+}

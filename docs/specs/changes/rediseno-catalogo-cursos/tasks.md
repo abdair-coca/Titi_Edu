@@ -1,7 +1,7 @@
 # Tasks — Rediseño del catálogo de cursos
 
 > **Change:** `rediseno-catalogo-cursos`
-> **Estado:** en curso (fase 1 lista).
+> **Estado:** en curso (fases 1-2 listas).
 > Verificación: `cd backend && npm test`, `cd frontend && npm run build` y `npm run test:*`.
 
 ## Fase 1 — API (solo lectura)
@@ -12,9 +12,9 @@
 
 ## Fase 2 — Base visual
 
-- [ ] 2.1 `components/catalog/categoryIcons.jsx`: mapa nombre → ícono SVG + color de acento, con respaldo genérico (R2).
-- [ ] 2.2 Microinteracciones de íconos en CSS (hover/foco del padre), apagadas con movimiento reducido.
-- [ ] 2.3 `frontend/design.md` sin emojis; sección nueva de íconos SVG y tarjeta de curso v3.
+- [x] 2.1 `components/catalog/categoryIcons.jsx`: mapa nombre → ícono SVG + color de acento, con respaldo genérico (R2).
+- [x] 2.2 Microinteracciones de íconos en CSS (hover/foco del padre), apagadas con movimiento reducido.
+- [x] 2.3 `frontend/design.md` sin emojis; sección nueva de íconos SVG y tarjeta de curso v3.
 
 ## Fase 3 — Catálogo
 

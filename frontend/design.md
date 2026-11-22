@@ -217,16 +217,38 @@ Cada rol tiene un **sólido** (acentos: círculos de ícono, badges, chips) y un
 | Error | `bg-red-500` | `bg-red-50` | `text-white` |
 
 ```jsx
-// ✅ Chip de rol v2 — color PLENO + ícono blanco (como los nodos de Duolingo)
+// Bien: chip de rol v2 — color PLENO + ícono blanco (como los nodos de Duolingo)
 <span className="w-11 h-11 rounded-full bg-titi-achievement shadow-sm grid place-items-center">
   <AwardIcon className="w-5 h-5 text-white" />
 </span>
 
-// ❌ v1 — tinte pastel con ícono de color (ya no; solo para fondos grandes)
+// Mal: v1 — tinte pastel con ícono de color (ya no; solo para fondos grandes)
 <span className="w-11 h-11 rounded-full bg-purple-100 ...">
   <AwardIcon className="w-5 h-5 text-titi-achievement" />
 </span>
 ```
+
+### Acento de categoría (catálogo de cursos)
+
+Cada categoría de curso tiene un acento propio (tokens `titi-cat-*` en
+`tailwind.config.js`). Sólido para el círculo del ícono, nodos de ruta y
+pastilla activa; `-light` como fondo de portadas sin imagen. Nunca como
+fondo de un panel grande.
+
+| Clave | Categorías (por nombre) | Sólido | Tinte |
+|---|---|---|---|
+| `code` | Programación, desarrollo, web | `titi-cat-code` #1CB0F6 | `titi-cat-code-light` |
+| `data` | Ciencia de datos, IA, machine learning | `titi-cat-data` #A855F7 | `titi-cat-data-light` |
+| `math` | Matemáticas, cálculo, estadística | `titi-cat-math` #FF6B35 | `titi-cat-math-light` |
+| `lang` | Idiomas, inglés | `titi-cat-lang` #58CC02 | `titi-cat-lang-light` |
+| `science` | Ciencias, física, química, biología | `titi-cat-science` #00B8A9 | `titi-cat-science-light` |
+| `design` | Diseño, arte, gráfico | `titi-cat-design` #FF4B91 | `titi-cat-design-light` |
+| `business` | Negocios, finanzas, marketing | `titi-cat-business` #F59E0B | `titi-cat-business-light` |
+| `music` | Música | `titi-cat-music` #6C5CE7 | `titi-cat-music-light` |
+| `other` | resto | `titi-dark` | `titi-yellow-light` |
+
+Se obtiene con `categoryTheme(nombre)` (`components/catalog/categoryTheme.jsx`),
+que devuelve las clases enteras (`solid`, `tint`, `text`, `border`) y el ícono.
 
 ### Reglas de armonía (lo que hace que se vea premium y no carnaval)
 
@@ -307,7 +329,7 @@ Cada rol tiene un **sólido** (acentos: círculos de ícono, badges, chips) y un
 | Subtítulo / descripción | `text-base` | `font-medium` | "12 lecciones · Principiante" |
 | Cuerpo de texto | `text-base` | `font-medium` | Descripción de lección |
 | Label / badge | `text-xs` | `font-bold` | "NUEVO", "COMPLETADO" |
-| Número de racha / gotas | `text-4xl` | `font-black` | "🔥 14" |
+| Número de racha / gotas | `text-4xl` | `font-black` | "14" junto a `<BoltIcon>` |
 | Número de stat card | `text-3xl` | `font-extrabold` + `tabular-nums` | "63%" |
 | Botón primario | `text-base` | `font-bold` | "Inscribirse" |
 | Botón secundario | `text-sm` | `font-bold` | "Ver detalles" |
@@ -495,7 +517,7 @@ gris** que se aplana al press. Misma mecánica que el primario, sin el color.
   active:shadow-none active:translate-y-0
   transition-all duration-150
 ">
-  ✓ Lección completada
+  <CheckIcon className="w-5 h-5" /> Lección completada
 </button>
 ```
 
@@ -771,11 +793,19 @@ emoji suelto.
   `w-6 h-6` stat cards.
 - **En chips siempre dentro de círculo sólido del rol** (§2). Nunca un SVG
   gris flotando sin contenedor en zonas de acento.
-- **Prohibido emoji como ícono de UI**: navbar, botones, badges, chips,
-  headers. Se ve distinto en cada OS y rompe el look premium.
-- **Emoji permitido solo en**: mensajes hablados de Titi ("¡Lo lograste! 🏆"),
-  contenido generado por usuarios, y el 🔥 histórico junto a números de racha
-  en texto.
+- **Cero emojis** en la interfaz y en este documento: navbar, botones, badges,
+  chips, headers, mensajes de Titi, toasts y estados vacíos. Se ven distinto en
+  cada OS y rompen el look premium. La emoción la pone `<TitiMascot>` con su
+  estado, no un emoji. Única excepción: contenido escrito por usuarios.
+- **El emoji de `categoria.icono` (DB) no se muestra.** La categoría se dibuja
+  con `categoryIcon(nombre)` / `categoryKey(nombre)` y su acento de color (§2).
+  Para UI nueva, usar `<CategoryIcon nombre={…} />` de
+  `components/catalog/categoryTheme.jsx`, que ya trae la microinteracción.
+- **Microinteracción obligatoria en íconos dentro de algo clickeable:** el
+  contenedor lleva `group` y el ícono se redibuja (trazo con `pathLength=1`)
+  y hace el gesto de su materia (código tipea, globo gira, matraz se agita,
+  nota rebota…) en ≤ 300 ms. Vive en `index.css` (`.titi-cat-icon`) y se
+  apaga con `prefers-reduced-motion`.
 - Si falta un ícono, se **agrega a `icons.jsx`** con el mismo estilo de trazo —
   no se importa otra librería ni se usa emoji de relleno.
 
@@ -834,7 +864,7 @@ número acompaña con count-up.
 ```jsx
 // ProgressBar — usada en LearnCourse.jsx arriba del contenido
 <div className="flex items-center gap-3 mb-6">
-  <button onClick={onClose} className="text-gray-400 hover:text-gray-600 active:scale-95">✕</button>
+  <button onClick={onClose} className="text-gray-400 hover:text-gray-600 active:scale-95"><CloseIcon className="w-5 h-5" /></button>
   <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
     <div
       className="h-full bg-titi-yellow rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none"
@@ -854,16 +884,16 @@ número acompaña con count-up.
 **Regla absoluta:** la mascota Titi siempre se representa con la imagen
 `/Titi.png` o el componente `<TitiMascot />` (WebP animado por estado —
 `idle`, `celebra`, `triste`, `racha`, `saludo`, `pensando`; ver
-`animationTiti.md`). **Nunca** el emoji 🐒 — ni como placeholder, ni en
+`animationTiti.md`). **Nunca** un emoji de mono — ni como placeholder, ni en
 logos, ni en estados vacíos, ni en toasts, ni dentro de mensajes.
 
 ```jsx
-// ✅ Correcto
+// Bien
 <img src="/Titi.png" alt="Titi" className="w-24 h-24 object-contain drop-shadow-sm select-none" draggable={false} />
-<TitiMascot state="celebra" size="md" message="¡Lo lograste! 🏆" />
+<TitiMascot state="celebra" size="md" message="¡Lo lograste!" />
 
-// ❌ Incorrecto — nunca usar el emoji para representar a Titi
-<span className="text-6xl">🐒</span>
+// Mal — nunca un emoji (ni ningún otro carácter) para representar a Titi
+<span className="text-6xl">{emojiDeMono}</span>
 ```
 
 **Preferí el WebP animado** (`<TitiMascot />`) sobre el PNG estático siempre
@@ -875,15 +905,15 @@ El PNG estático queda para usos "logo" (navbar, tamaños ≤ `w-8`). Con
 
 | Momento | Estado | Mensaje de referencia |
 |---|---|---|
-| Lección completada | `celebra` | "¡Excelente trabajo! 🎉" / "¡Sigue así, campeón! 💪" |
-| Evaluación aprobada | `celebra` | "¡Lo lograste! 🏆" / "¡Sabía que podías! ⭐" |
-| Evaluación fallida | `triste` | "No te rindas, tienes más intentos 💙" |
-| Racha activa | `racha` | "¡{N} días seguidos! ¡Imparable! 🔥" |
+| Lección completada | `celebra` | "¡Excelente trabajo!" / "¡Sigue así, campeón!" |
+| Evaluación aprobada | `celebra` | "¡Lo lograste!" / "¡Sabía que podías!" |
+| Evaluación fallida | `triste` | "No te rindas, tienes más intentos" |
+| Racha activa | `racha` | "¡{N} días seguidos! ¡Imparable!" |
 | Racha rota | `triste` | "Tu racha se rompió... ¡Pero hoy es un nuevo comienzo!" |
-| Logro desbloqueado | `celebra` | "¡Nuevo logro: {nombre}! 🏅" |
-| Feed vacío | `pensando` | "¡Sigue a alguien para ver su actividad! 👀" |
+| Logro desbloqueado | `celebra` | "¡Nuevo logro: {nombre}!" |
+| Feed vacío | `pensando` | "¡Sigue a alguien para ver su actividad!" |
 | Sin notificaciones | `idle` | "Todo tranquilo por aquí" |
-| Curso completado | `celebra` | "¡Curso completado! Tu certificado está listo 🎓" |
+| Curso completado | `celebra` | "¡Curso completado! Tu certificado está listo" |
 | **Banner motivacional** (v2) | `saludo`/`idle` | "¡Sigue aprendiendo!" — banners de cierre de página |
 | **Header de momento clave** (v2) | según contexto | ej. resumen de racha semanal, onboarding |
 
@@ -1115,7 +1145,7 @@ lado, sigue estas reglas:
   `icons.jsx` (§5.6). Emoji solo en la voz de Titi y contenido de usuarios.
 - **Nunca** inventar variantes de botón que no estén en este documento.
 - **Nunca** usar `font-family` inline. Solo `font-sans` (que ya es Nunito).
-- **Nunca** la mascota con el emoji 🐒 — siempre `/Titi.png` o `<TitiMascot />` (§7).
+- **Nunca** la mascota con un emoji — siempre `/Titi.png` o `<TitiMascot />` (§7).
 - **Siempre** decidir primero: ¿tile o card informativa? (§5.2) — y aplicar la
   familia de borde/sombra que corresponde.
 - **Siempre** acentos en **sólido pleno del rol** con ícono blanco (oscuro
@@ -1143,7 +1173,7 @@ Claude Code debe verificar esto antes de dar un componente por terminado:
 - [ ] ¿Respeta `prefers-reduced-motion`?
 - [ ] ¿Tiene estado de carga (skeleton que replica la silueta)?
 - [ ] ¿Tiene estado vacío con `<TitiMascot />` animado si aplica?
-- [ ] ¿La mascota es `/Titi.png` / `<TitiMascot />` y nunca 🐒?
+- [ ] ¿La mascota es `/Titi.png` / `<TitiMascot />` y nunca un emoji?
 - [ ] ¿El botón principal tiene la sombra inferior dura?
 - [ ] ¿Los bordes usan `rounded-xl` o `rounded-2xl`?
 - [ ] ¿Las transiciones de interacción son ≤ 300ms (entradas ≤ 400ms)?
@@ -1346,12 +1376,12 @@ esto te dice qué esperar del código existente:
 
 | Etapa | Estado | Contenido |
 |---|---|---|
-| 1 — Íconos | ✅ | `icons.jsx` fuente única; navbar SVG; emojis de chrome reemplazados (error "!", éxito Check, chips del feed) |
-| 2 — Tipografía y densidad | ✅ | h1 `font-black`, subtítulos `text-base`, mínimo `text-xs` global; densidad aplicada en Mis cursos |
-| 3 — Tiles y sólidos | ✅ | `CourseCard`/`RecommendedCourseCard`/paneles admin a `border-2` + sombra dura; chips de stats/categorías/actividad en sólido pleno; botón secundario chunky en toda la app (12 sitios) |
-| 4 — Motion obligatorio | ✅ | `useCountUp` creado en `lib/motion.js` + aplicado a stats de Mis cursos; press hundido en links/chips/nodos/toggles; `TitiMascot state="saludo"` en el banner de cierre |
-| 5 — Limpieza legacy | ✅ | ~200 tokens legacy migrados y **eliminados** de `tailwind.config`; clases de `index.css` redefinidas al spec (§5.0); emojis de editores teacher/Learn → SVG (`FileIcon`/`PencilIcon`/`ImageIcon`/`ClipIcon`/`ListIcon` nuevos). Nota: `placeholder="💻"` de AdminCategories es data (campo `categoria.icono`), se queda |
-| 6 — Layouts densos | ✅ | Feed y Explore con rail lateral sticky en `lg:` (grid `minmax(0,1fr)_320px`): Feed = mini-stats con count-up + categorías; Explore = categorías + CTA al catálogo. `CategoriesExplorer` extraído a `components/`. Candidatos futuros: Leaderboard (`max-w-2xl`) y Shop (`max-w-3xl`) siguen angostos |
+| 1 — Íconos | Hecha | `icons.jsx` fuente única; navbar SVG; emojis de chrome reemplazados (error "!", éxito Check, chips del feed) |
+| 2 — Tipografía y densidad | Hecha | h1 `font-black`, subtítulos `text-base`, mínimo `text-xs` global; densidad aplicada en Mis cursos |
+| 3 — Tiles y sólidos | Hecha | `CourseCard`/`RecommendedCourseCard`/paneles admin a `border-2` + sombra dura; chips de stats/categorías/actividad en sólido pleno; botón secundario chunky en toda la app (12 sitios) |
+| 4 — Motion obligatorio | Hecha | `useCountUp` creado en `lib/motion.js` + aplicado a stats de Mis cursos; press hundido en links/chips/nodos/toggles; `TitiMascot state="saludo"` en el banner de cierre |
+| 5 — Limpieza legacy | Hecha | ~200 tokens legacy migrados y **eliminados** de `tailwind.config`; clases de `index.css` redefinidas al spec (§5.0); emojis de editores teacher/Learn → SVG (`FileIcon`/`PencilIcon`/`ImageIcon`/`ClipIcon`/`ListIcon` nuevos). Nota: el placeholder de emoji de AdminCategories es data (campo `categoria.icono`), se queda |
+| 6 — Layouts densos | Hecha | Feed y Explore con rail lateral sticky en `lg:` (grid `minmax(0,1fr)_320px`): Feed = mini-stats con count-up + categorías; Explore = categorías + CTA al catálogo. `CategoriesExplorer` extraído a `components/`. Candidatos futuros: Leaderboard (`max-w-2xl`) y Shop (`max-w-3xl`) siguen angostos |
 
 **Migración v2 completa (etapas 1-6, 2026-07-02).** Desde acá rige solo la
 regla boy scout: lo que se toque queda 100% v2.

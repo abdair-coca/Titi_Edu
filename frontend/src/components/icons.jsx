@@ -1,6 +1,8 @@
+import { Children, cloneElement, isValidElement } from 'react';
+
 // Íconos SVG de marca (reemplazan emoji decorativos hardcodeados en la UI plana).
-// Los íconos que vienen de data (categoria.icono) NO se tocan; estos son los
-// decorativos fijos del front (gota, libro de fallback).
+// El emoji de `categoria.icono` (dato de la DB) no se muestra: la categoría se
+// dibuja con `categoryIcon(nombre)` / `categoryKey(nombre)`.
 
 // Gota (las "gotas" = XP de la gamificación). Color por `text-*` del padre.
 export function GotaIcon({ className = 'w-5 h-5' }) {
@@ -63,6 +65,8 @@ export function BookIcon({ className = 'w-12 h-12' }) {
 // ---- Íconos de categoría (trazo monocromo) para la ruta de aprendizaje ----
 // Se muestran dentro del círculo de cada nodo, en relación a la materia del curso.
 
+// `pathLength={1}` en cada trazo no cambia el dibujo; permite que el CSS
+// (`.titi-cat-icon`, index.css) "redibuje" el ícono como microinteracción.
 function LineSvg({ className, children }) {
   return (
     <svg
@@ -75,7 +79,9 @@ function LineSvg({ className, children }) {
       className={className}
       aria-hidden="true"
     >
-      {children}
+      {Children.map(children, (child) =>
+        isValidElement(child) ? cloneElement(child, { pathLength: 1 }) : child,
+      )}
     </svg>
   );
 }
@@ -492,6 +498,53 @@ export function ChevronDownIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+export function ChevronLeftIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <polyline points="15 6 9 12 15 18" />
+    </NavSvg>
+  );
+}
+
+export function ChevronRightIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <polyline points="9 6 15 12 9 18" />
+    </NavSvg>
+  );
+}
+
+// Cerrar — paneles, hojas y chips quitables.
+export function CloseIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </NavSvg>
+  );
+}
+
+// Filtros — deslizadores.
+export function SlidersIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <line x1="4" y1="7" x2="20" y2="7" />
+      <line x1="4" y1="17" x2="20" y2="17" />
+      <circle cx="9" cy="7" r="2.2" fill="white" />
+      <circle cx="15" cy="17" r="2.2" fill="white" />
+    </NavSvg>
+  );
+}
+
+// Reproducir — "Seguir" en la fila Continúa.
+export function PlayIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M8 5.6v12.8a1 1 0 0 0 1.5.9l10-6.4a1 1 0 0 0 0-1.8l-10-6.4A1 1 0 0 0 8 5.6Z" />
+    </svg>
+  );
+}
+
 // Más — nueva conversación.
 export function PlusIcon({ className = 'w-5 h-5' }) {
   return (
@@ -539,16 +592,37 @@ export function PracticeIcon({ className = 'w-5 h-5' }) {
  * de un curso (por su nombre). Fallback: BookIcon.
  */
 export function categoryIcon(nombre) {
+  return CATEGORY_ICONS[categoryKey(nombre)];
+}
+
+const CATEGORY_ICONS = {
+  code: CodeIcon,
+  data: ChipIcon,
+  math: SigmaIcon,
+  lang: GlobeIcon,
+  science: FlaskIcon,
+  design: PaletteIcon,
+  business: ChartIcon,
+  music: MusicIcon,
+  other: BookIcon,
+};
+
+/**
+ * Clave estable de la categoría a partir de su nombre ("Ciencia de Datos" →
+ * 'data'). La usan el ícono, el color de acento y la microinteracción.
+ * `\bia\b` va con bordes de palabra: "ciencia" no debe caer en datos.
+ */
+export function categoryKey(nombre) {
   const n = (nombre || '').toLowerCase();
-  if (/(program|código|codigo|desarrollo|web|software)/.test(n)) return CodeIcon;
-  if (/(dato|data|machine|inteligencia|ia|analít|analit)/.test(n)) return ChipIcon;
-  if (/(matem|cálculo|calculo|álgebra|algebra|estadíst|estadist)/.test(n)) return SigmaIcon;
-  if (/(idioma|lenguaj|inglés|ingles|español|espanol)/.test(n)) return GlobeIcon;
-  if (/(cienc|física|fisica|químic|quimic|biolog)/.test(n)) return FlaskIcon;
-  if (/(diseñ|disen|design|arte|gráfic|grafic)/.test(n)) return PaletteIcon;
-  if (/(negoci|business|finanz|marketing|empren)/.test(n)) return ChartIcon;
-  if (/(music|músic)/.test(n)) return MusicIcon;
-  return BookIcon;
+  if (/(program|código|codigo|desarrollo|web|software)/.test(n)) return 'code';
+  if (/(dato|data|machine|inteligencia|\bia\b|analít|analit)/.test(n)) return 'data';
+  if (/(matem|cálculo|calculo|álgebra|algebra|estadíst|estadist)/.test(n)) return 'math';
+  if (/(idioma|lenguaj|inglés|ingles|español|espanol)/.test(n)) return 'lang';
+  if (/(cienc|física|fisica|químic|quimic|biolog)/.test(n)) return 'science';
+  if (/(diseñ|disen|design|arte|gráfic|grafic)/.test(n)) return 'design';
+  if (/(negoci|business|finanz|marketing|empren)/.test(n)) return 'business';
+  if (/(music|músic)/.test(n)) return 'music';
+  return 'other';
 }
 
 // Sobre — campo de email (login/registro).
