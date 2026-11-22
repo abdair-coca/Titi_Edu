@@ -31,7 +31,7 @@
 
 ## Fase 4 — Chrome
 
-- [ ] 4.1 `Navbar` y `GuestShell` (R9).
+- [x] 4.1 `Navbar` y `GuestShell` (R9).
 
 ## Fase 5 — Teacher y Admin
 
