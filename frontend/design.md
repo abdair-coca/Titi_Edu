@@ -453,6 +453,8 @@ quedan son **canónicas** (redefinidas como espejo exacto de este documento):
 | `.titi-btn-primary` | botón primario (§5.1) |
 | `.titi-btn-ghost` | botón secundario chunky (§5.1) |
 | `.titi-input` | input estándar (§9) |
+| `.titi-surface` | superficie v3 (§5.2): `border-2 border-titi-dark` + sombra difusa — espejo de `SURFACE` de `components/ui/v3.jsx` |
+| `.titi-btn-outline` | botón secundario v3 (§15): blanco, borde y sombra dura oscuros, amarillo al hover — espejo de `BTN_SECONDARY` |
 | `.titi-card-pop` | hover pop de tiles (§10 patrón 7) |
 | `.titi-backdrop-in`, `.titi-*-toast-*`, `.titi-flame-flicker` | animaciones de modales/toasts/racha — **no tocar** (motion.md) |
 
@@ -576,6 +578,15 @@ actividad. **Superficie v3** = `border-2 border-titi-dark` + sombra **difusa**
 actividad académica, paneles del rail. En una superficie lo que reacciona son
 sus botones, no la card. Paneles oscuros de cierre o de "tu día":
 `bg-titi-dark rounded-2xl` con tiles internos `bg-white/5 border-2 border-white/10`.
+
+Desde `rediseno-plataforma-v3` **toda la app** (salvo el chrome de Learn)
+usa v3: perfil, hashtag, notificaciones, Mis cursos, certificados, ranking,
+tienda, detalle de curso, enseñar y admin. Las clases van centralizadas en
+`components/ui/v3.jsx` (`TILE`, `SURFACE`, `DARK_PANEL`, `DARK_TILE`,
+`BTN_SECONDARY`, `INPUT`…) y las piezas `PageHeader`, `BackLink`,
+`RoleBadge`, `PanelTitle`, `EmptyState` y `ProgressBar` (§15). Una tarjeta
+con varios botones adentro (`TeachingCard`, `ItemCard`, certificado) es
+superficie, no tile.
 
 ### 5.3 CourseCard — Tarjeta de curso (tile)
 
@@ -1282,13 +1293,13 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `PageTransition.jsx` | transición de página (ya montada en `App.jsx`) |
 | `TitiMascot.jsx` | mascota animada por estado (`idle`, `celebra`, `triste`, `racha`, `saludo`, `pensando`) |
 | `icons.jsx` | **única fuente de íconos SVG**: navegación (trazo 2.2), categorías (`categoryIcon(nombre)`), Gota/Bolt/Target/Check/Award/Graduation/Trophy/Users; sociales Heart/Comment/Bookmark/Pin/Search/Hash/Fire |
-| `StreakBadge.jsx` | badge de racha (variants `sidebar`/compacta) + `FlameIcon` |
+| `StreakBadge.jsx` | badge de racha (variants `sidebar`/`inline`/`hero`) + `FlameIcon`; `hero` es superficie v3 con barra hacia la meta e hitos sin emojis |
 | `GotasCounter.jsx` | contador de gotas (usa GamificationContext) |
-| `DailyMissions.jsx` | misiones diarias (prop `title`) |
+| `DailyMissions.jsx` | misiones diarias v3 (prop `title`, su última palabra va de acento); ícono por `codigo` de misión |
 | `CategoriesExplorer.jsx` | mini tiles de categoría con acento → `/courses?cat=<slug>`; `layout="rail"` (Feed/Explore) o `"wide"` (Mis cursos) |
-| `AchievementsSection.jsx` | grid de logros del perfil |
+| `AchievementsSection.jsx` | logros del perfil (superficie v3): ícono por `tipo` en púrpura, candado si falta; tira deslizable en celular, 2 columnas en el rail |
 | `AcademicActivityCard.jsx` | actividad académica del feed (chips sólidos por tipo) |
-| `ItemCard.jsx` | tile de ítem de tienda |
+| `ItemCard.jsx` | ítem de tienda (superficie v3) con ícono SVG por `codigo` (`congelar_racha` copo, `intento_extra` flechas, `multiplicador_gotas` rayo, resto regalo) |
 | `catalog/CourseCard.jsx` | tarjeta de curso v3 del catálogo (§5.3) + `CourseCover`, `FriendStack`, `LevelChip`, skeleton |
 | `catalog/categoryTheme.jsx` | `categoryTheme(nombre)` (acento §2) y `<CategoryIcon>` con microinteracción (§5.6) |
 | `catalog/CatalogFilters.jsx` · `CatalogGrid.jsx` | filtros pegajosos + hoja en celular; cuadrícula con FLIP, vacío con Titi y lupa |
@@ -1310,11 +1321,13 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `hero3d/support.js` · `sceneKit.jsx` · `dropGeometry.js` | compartido por las escenas 3D: decidir 3D (`canShow3D`), carga diferida, pausa fuera de pantalla, `SceneBoundary` · luz de ambiente, guardia de contexto, calentamiento del monitor · forma de la gota |
 | `heroSky/HeroSky.jsx` | cielo 3D del header de `/courses` (detrás de barra amarilla + texto): mide carriles (`skyLayout.js`), carga diferida de `SkyScene`, sin respaldo (§10, "3D") |
 | `heroSky/SkyScene.jsx` | escena del cielo (chunk diferido): dron repartidor, dron chico, avión de papel, gotas y nubes (`Drone`, `PaperPlane`, `SkyDrops`, `Clouds`); en celular solo repartidor + avión |
-| `social/Avatar.jsx` · `FollowButton.jsx` | avatar v3 (foto o inicial) · Seguir/Siguiendo optimista con rollback y refresco de gotas |
+| `social/Avatar.jsx` · `FollowButton.jsx` | avatar v3 (foto o inicial; tamaños `xs`–`xl`) · Seguir/Siguiendo optimista con rollback y refresco de gotas (también en el perfil) |
 | `social/PersonCard.jsx` · `Suggestions.jsx` | persona para seguir: tile v3 con banda de color + variante de lista; `SuggestionsRow` (fila) y `SuggestionsPanel` (rail) |
 | `social/TrendingHashtags.jsx` | `HashtagPill`, `TrendingStrip` (pastillas) y `TrendingPanel` (ranking del rail) |
 | `social/StateBlocks.jsx` · `useSocialData.js` | `ErrorBox` con Reintentar y `SectionHeading` con acento · `useApiList`, `useSuggestions`, `useTrending` |
 | `catalog/useQuickViewParam.js` | vista rápida en `?curso=` reusable (catálogo, Inicio, Explorar) |
+| `ui/v3.jsx` | clases v3 (`TILE`, `SURFACE`, `DARK_PANEL`, `DARK_TILE`, `BTN_SECONDARY(_SM)`, `BTN_DANGER_SM`, `INPUT`) y piezas `PageHeader` (título con acento + acciones), `BackLink` (volver), `RoleBadge` (cuadro sólido girado), `PanelTitle`, `EmptyState` (Titi con `state` + CTA; `compact` para secciones), `ProgressBar` (se llena desde 0), `SkeletonLine` |
+| `ConfirmModal.jsx` · `DeletionConfirmationDialog.jsx` | diálogos v3 (borde oscuro, sombra dura de 8 px); mismas props |
 | `GotaToast.jsx`, `StreakToast.jsx`, `AchievementToast.jsx`, `PurchaseToast.jsx`, `WeeklyPrizeCelebration.jsx` | toasts/celebraciones (animaciones cerradas, no tocar) |
 
 ### Hooks y lib
@@ -1379,6 +1392,17 @@ de §2-4 y se agrega acá.
 // Fila de lista densa
 <li className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
 
+// v3 (rediseno-plataforma-v3) — preferí las piezas de components/ui/v3.jsx:
+<PageHeader title="Mis" accent="cursos" subtitle="Continuá donde lo dejaste.">{acciones}</PageHeader>
+<BackLink to="/explore">Explorar</BackLink>
+<RoleBadge Icon={AwardIcon} solid="bg-titi-achievement" size="sm" />   // cuadro sólido girado, ícono blanco (oscuro sobre amarillo)
+<PanelTitle Icon={BoltIcon} solid="bg-titi-yellow" title="Desafíos del" accent="día" />
+<EmptyState state="pensando" title="Todavía no tenés" accent="cursos" text="…"><Link className="titi-btn-primary">…</Link></EmptyState>
+<ProgressBar value={pct} color="bg-titi-streak" track="bg-orange-100" label="…" />   // monta en 0 y se llena
+
+// Botón secundario v3 (BTN_SECONDARY / .titi-btn-outline)
+<button className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-white border-2 border-titi-dark text-sm font-extrabold text-titi-dark shadow-[0_3px_0_#1A1A2E] hover:bg-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1A1A2E] active:translate-y-0.5 active:shadow-none transition-all duration-150">
+
 // Barra de progreso (siempre animada, §10)
 <div className="h-2 bg-gray-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
   <div className="h-full bg-titi-yellow rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none" style={{ width: `${pct}%` }} />
@@ -1391,7 +1415,7 @@ de §2-4 y se agrega acá.
 |---|---|---|
 | Dashboard | full-width del shell; stats en `grid sm:grid-cols-3`; secciones cortas emparejadas `grid lg:grid-cols-2`; banner full al pie | Mis cursos |
 | Feed / columna social | `max-w-6xl` con grid `lg:grid-cols-[minmax(0,1fr)_320px]` (columna + rail sticky); en celular la columna a `max-w-2xl` | Feed, Explore |
-| Lista angosta | `max-w-2xl` | Leaderboard |
+| Lista + rail | `max-w-6xl` con grid `lg:grid-cols-[minmax(0,1fr)_320px]`; la lista ocupa la columna (en celular `max-w-2xl`) y el rail suma algo útil (temporada, gente para seguir, tendencias) | Leaderboard, Notificaciones, Hashtag, Perfil |
 | Catálogo / grid | grid de tiles `sm:2 lg:3 xl:4` + `gap-4 sm:gap-5` | Courses |
 | Detalle | 2 columnas `lg:` (contenido + panel de acción sticky) | CourseDetail |
 | Admin / tablas | full-width, cards informativas, tablas sin stagger | AdminUsers |
@@ -1436,6 +1460,12 @@ esto te dice qué esperar del código existente:
 
 **Migración v2 completa (etapas 1-6, 2026-07-02).** Desde acá rige solo la
 regla boy scout: lo que se toque queda 100% v2.
+
+**v3 en toda la app (2026-11-22, change `rediseno-plataforma-v3`):** perfil,
+hashtag, notificaciones, Mis cursos, certificados, ranking, tienda, detalle de
+curso, navegación, enseñar y admin pasaron al lenguaje v3. Falta solo el
+chrome de Learn (`LearnCourse.jsx`), que se dejó afuera para no tocar la
+lógica vigilada por los `test:learn-*`.
 
 **Regla boy scout**: cualquier archivo que toques por otro motivo queda
 migrado completo a v2 en ese mismo cambio (tokens, tipografía, átomos).

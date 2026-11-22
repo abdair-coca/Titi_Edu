@@ -162,3 +162,16 @@ Inicio y Explorar (`frontend/design.md` §5.2 "tile v3" y "superficie v3",
 - Solo chrome (header, barras, botones) y solo si queda margen; la lógica de
   carga, navegación y tutor no se toca (la vigilan los `test:learn-*`,
   `test:tutor-*`, `test:html-lesson`, `test:rag`).
+
+## Pendientes que necesitan datos nuevos (no se hicieron)
+
+- **Posts del perfil:** hoy se filtran de `GET /api/posts/explore`, así que
+  faltan los posts viejos de alguien. Un `GET /api/users/:username/posts`
+  paginado los traería todos.
+- **Avatares en el ranking y en Admin › Usuarios:** `GET /api/ranking/friends`
+  y `GET /api/admin/users` no devuelven `avatarUrl`; por eso se muestra la
+  inicial. Sumar el campo alcanza.
+- **Avatar del autor en el detalle de curso:** `curso.creador` trae solo
+  `username`; con `avatarUrl` el chip del autor mostraría la foto.
+- **Notificaciones:** "Marcar como leída" sigue sin rollback si el servidor
+  falla (comportamiento previo, no se tocó).

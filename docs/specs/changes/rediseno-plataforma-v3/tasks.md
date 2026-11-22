@@ -1,7 +1,7 @@
 # Tasks — Rediseño v3 del resto de la plataforma
 
 > **Change:** `rediseno-plataforma-v3`
-> **Estado:** en curso.
+> **Estado:** implementado (fases 0-5 y 7); Learn (fase 6) queda pendiente.
 > Verificación por etapa: `cd frontend && npx vite build`, `npm run test:catalog`,
 > `npm run test:hero-3d`; capturas a 1280 y 390 px con la API simulada.
 
@@ -40,9 +40,9 @@
 
 ## Fase 6 — Learn (opcional)
 
-- [ ] 6.1 Chrome de `LearnCourse` (R11).
+- [ ] 6.1 Chrome de `LearnCourse` (R11). **No se hizo:** se priorizó no tocar Learn (lógica vigilada por 9 chequeos); queda para un change propio.
 
 ## Fase 7 — Cierre
 
-- [ ] 7.1 `design.md` (§14 inventario, §15 átomos nuevos).
-- [ ] 7.2 `verify-report.md` y fila en el índice de `AGENTS.md`.
+- [x] 7.1 `design.md` (§14 inventario, §15 átomos nuevos).
+- [x] 7.2 `verify-report.md` y fila en el índice de `AGENTS.md`.
