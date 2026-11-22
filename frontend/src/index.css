@@ -327,3 +327,30 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .titi-quickview { animation: none; }
 }
+
+/* Post v3 (rediseno-inicio-explorar R4): el corazón late al dar like y
+   estalla sobre la imagen con doble toque. */
+@keyframes titi-heart-beat {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.35); }
+  65%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.titi-heart-beat { animation: titi-heart-beat 0.32s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@keyframes titi-heart-burst {
+  0%   { transform: scale(0.2); opacity: 0; }
+  30%  { transform: scale(1.15); opacity: 1; }
+  60%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.05); opacity: 0; }
+}
+.titi-heart-burst > * { animation: titi-heart-burst 0.4s ease-out both; }
+
+/* Refrescar: el ícono da una vuelta mientras carga. */
+@keyframes titi-refresh-spin { to { transform: rotate(360deg); } }
+.titi-refresh-spin { animation: titi-refresh-spin 0.7s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .titi-heart-beat, .titi-heart-burst > *, .titi-refresh-spin { animation: none; }
+  .titi-heart-burst { display: none; }
+}

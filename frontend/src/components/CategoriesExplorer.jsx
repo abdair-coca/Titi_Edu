@@ -1,24 +1,20 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import client from '../api/client.js';
-import { categoryIcon } from './icons.jsx';
-
-// Chip sólido rotado por índice — duotono por rol de design.md §2
-// (logro/info/éxito/XP): color pleno + ícono blanco (oscuro sobre amarillo).
-const CAT_TINTS = [
-  'bg-titi-achievement text-white',
-  'bg-blue-500 text-white',
-  'bg-green-500 text-white',
-  'bg-titi-yellow text-titi-dark',
-];
+import { useStaggerReveal } from '../lib/motion.js';
+import { categoriaSlug } from './catalog/catalogData.js';
+import { CategoryIcon, categoryTheme } from './catalog/categoryTheme.jsx';
 
 /**
- * CategoriesExplorer — fila de accesos a /courses?categoria=<id>.
- * Solo categorías con al menos un curso (máx 4 visibles). Se usa en
- * "Mis cursos" y en los rails laterales de Feed/Explore.
+ * CategoriesExplorer — accesos al catálogo filtrado por categoría
+ * (`/courses?cat=<slug>`). Solo categorías con cursos, las de más cursos
+ * primero. Look v3 (rediseno-inicio-explorar): superficie con borde oscuro y
+ * mini tiles con el acento y la microinteracción de cada categoría.
+ *
+ * @param layout 'wide' (Mis cursos: 4 columnas en sm+) | 'rail' (2 columnas)
+ * @param max    cuántas mostrar
  */
-export default function CategoriesExplorer() {
-  const navigate = useNavigate();
+export default function CategoriesExplorer({ layout = 'wide', max = 4 }) {
   const [categorias, setCategorias] = useState(null);
   const [error, setError] = useState(false);
 
@@ -39,56 +35,63 @@ export default function CategoriesExplorer() {
     };
   }, []);
 
-  const withCourses = (categorias || []).filter((c) => (c._count?.cursos ?? 0) > 0);
-  const visible = withCourses.slice(0, 4);
+  const visible = (categorias || [])
+    .filter((c) => (c._count?.cursos ?? 0) > 0)
+    .sort((a, b) => (b._count?.cursos ?? 0) - (a._count?.cursos ?? 0))
+    .slice(0, max);
+  const gridRef = useStaggerReveal([visible.length]);
+  const cols = layout === 'rail' ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-4';
 
   if (error) return null;
 
   return (
-    <section className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-5">
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-lg font-bold text-titi-dark">Explorar categorías</h2>
-        <button
-          type="button"
-          onClick={() => navigate('/courses')}
+    <section aria-label="Categorías" className="bg-white rounded-2xl border-2 border-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4">
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="text-lg font-extrabold text-titi-dark">
+          Explorá por <span className="text-titi-streak">categoría</span>
+        </h2>
+        <Link
+          to="/courses"
           className="text-sm font-bold text-blue-500 hover:text-blue-600 uppercase tracking-wide transition-all duration-150 active:scale-95 whitespace-nowrap"
         >
           Ver todas
-        </button>
+        </Link>
       </div>
 
       {categorias === null ? (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 animate-pulse">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-20 bg-gray-100 rounded-xl" />
+        <div className={`grid ${cols} gap-2 animate-pulse motion-reduce:animate-none`}>
+          {Array.from({ length: max }).map((_, i) => (
+            <div key={i} className="h-[92px] bg-gray-100 rounded-xl" />
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <p className="text-sm text-gray-500">Aún no hay categorías con cursos.</p>
+        <p className="text-sm font-medium text-gray-500">Todavía no hay categorías con cursos.</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          {visible.map((cat, i) => {
-            const Icon = categoryIcon(cat.nombre);
+        <div ref={gridRef} className={`grid ${cols} gap-2`}>
+          {visible.map((cat) => {
+            const theme = categoryTheme(cat.nombre);
             const count = cat._count?.cursos ?? 0;
             return (
-              <button
+              <Link
                 key={cat.id}
-                type="button"
-                onClick={() => navigate(`/courses?categoria=${cat.id}`)}
-                className="flex flex-col items-center gap-1.5 text-center rounded-xl py-3 px-1 hover:bg-titi-cream active:scale-[0.96] transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-yellow"
+                to={`/courses?cat=${encodeURIComponent(categoriaSlug(cat.nombre))}`}
+                className={[
+                  'group flex flex-col items-start gap-2 p-2.5 rounded-xl border-2 border-gray-200 bg-white text-left',
+                  'shadow-[0_3px_0_#E5E7EB] hover:border-titi-dark hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1A1A2E]',
+                  'active:translate-y-0.5 active:shadow-none transition-all duration-150 motion-reduce:transition-none',
+                  'focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60',
+                ].join(' ')}
               >
-                <span
-                  className={`w-11 h-11 rounded-full grid place-items-center shrink-0 shadow-sm ${CAT_TINTS[i % CAT_TINTS.length]}`}
-                >
-                  <Icon className="w-5 h-5" />
+                <span className={`w-9 h-9 rounded-xl border-2 border-titi-dark grid place-items-center text-white -rotate-6 transition-transform duration-200 group-hover:rotate-0 motion-reduce:transition-none ${theme.solid}`}>
+                  <CategoryIcon nombre={cat.nombre} className="w-5 h-5" />
                 </span>
-                <span className="text-xs font-bold text-titi-dark leading-tight line-clamp-2">
-                  {cat.nombre}
+                <span className="min-w-0 w-full">
+                  <span className="block text-sm font-extrabold text-titi-dark leading-tight truncate">{cat.nombre}</span>
+                  <span className="block text-xs font-bold text-gray-500 tabular-nums">
+                    {count} {count === 1 ? 'curso' : 'cursos'}
+                  </span>
                 </span>
-                <span className="text-xs font-semibold text-gray-500">
-                  {count} {count === 1 ? 'curso' : 'cursos'}
-                </span>
-              </button>
+              </Link>
             );
           })}
         </div>

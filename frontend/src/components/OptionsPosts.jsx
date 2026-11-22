@@ -150,7 +150,7 @@ export default function OptionsPosts({
         aria-haspopup="menu"
         aria-expanded={showMenu}
         aria-label="Opciones del post"
-        className="p-2 rounded-full text-gray-400 hover:bg-titi-cream hover:text-titi-dark transition-colors focus:outline-none focus:ring-2 focus:ring-titi-yellow/40"
+        className="w-9 h-9 grid place-items-center rounded-xl border-2 border-transparent text-gray-500 hover:border-titi-dark hover:bg-titi-yellow hover:text-titi-dark active:scale-95 transition-all duration-150 focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60"
       >
         <DotsIcon className="w-5 h-5" />
       </button>
@@ -159,7 +159,7 @@ export default function OptionsPosts({
         <div
           role="menu"
           aria-label="Acciones del post"
-          className="absolute right-0 top-full mt-2 w-56 bg-white border border-gray-100 rounded-xl shadow-[0_8px_24px_rgba(0,0,0,0.08)] overflow-hidden z-30 py-1"
+          className="absolute right-0 top-full mt-2 w-56 bg-white border-2 border-titi-dark rounded-2xl shadow-[0_5px_0_#1A1A2E] overflow-hidden z-30 py-1"
         >
           {isOwner ? (
             <>

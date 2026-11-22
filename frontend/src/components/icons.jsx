@@ -700,3 +700,70 @@ export function ArrowRightIcon({ className = 'w-5 h-5' }) {
     </NavSvg>
   );
 }
+
+// ---- Íconos sociales (rediseno-inicio-explorar) ----
+
+// Corazón — like de un post. `filled` lo pinta entero.
+export function HeartIcon({ className = 'w-5 h-5', filled = false }) {
+  return (
+    <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M19.5 5.1a5 5 0 0 0-7.1 0L12 5.5l-.4-.4a5 5 0 0 0-7.1 7.1l.4.4L12 19.7l7.1-7.1.4-.4a5 5 0 0 0 0-7.1z" />
+    </svg>
+  );
+}
+
+// Globo de diálogo — comentarios.
+export function CommentIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M20 11.5a7.5 7.5 0 0 1-11 6.6L4 19.5l1.4-4.6A7.5 7.5 0 1 1 20 11.5z" />
+    </NavSvg>
+  );
+}
+
+// Marcador — guardar post. `filled` lo pinta entero.
+export function BookmarkIcon({ className = 'w-5 h-5', filled = false }) {
+  return (
+    <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M18 21l-6-4.5L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+// Pin de mapa — ubicación del post.
+export function PinIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M19 10c0 5.5-7 11-7 11s-7-5.5-7-11a7 7 0 0 1 14 0z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </NavSvg>
+  );
+}
+
+// Lupa — buscadores.
+export function SearchIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20.5 20.5-4.2-4.2" />
+    </NavSvg>
+  );
+}
+
+// Numeral — hashtags y tendencias.
+export function HashIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M5 9h14M5 15h14M10 3.5 8 20.5M16 3.5l-2 17" />
+    </NavSvg>
+  );
+}
+
+// Fuego — tendencias.
+export function FireIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12.6 2.3c-.4-.3-1-.1-1.1.4-.5 2.6-1.9 4.3-3.4 6C6.6 10.4 5 12.2 5 15a7 7 0 0 0 14 0c0-2.7-1.2-4.6-2.4-6.2-.3-.4-.9-.3-1.1.1-.3.8-.8 1.6-1.6 2.1.2-3.5-.9-6.6-1.3-8.7Zm-.5 18.2a3 3 0 0 1-3-3c0-1.6 1.1-2.6 2.2-3.8.3.9.9 1.6 1.8 2 .4.2.9 0 1-.4l.3-.8c.5.7.7 1.4.7 2.1a3 3 0 0 1-3 3.9Z" />
+    </svg>
+  );
+}

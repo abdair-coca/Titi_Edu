@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
+import useQuickViewParam from './useQuickViewParam.js';
 import { DEFAULT_FILTERS, filtersFromParams, filtersToParams } from './catalogData.js';
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -11,8 +12,6 @@ const SEARCH_DEBOUNCE_MS = 300;
  */
 export default function useCatalogFilters(categorias) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const location = useLocation();
 
   const filters = useMemo(() => filtersFromParams(searchParams, categorias), [searchParams, categorias]);
   const [query, setQueryState] = useState(filters.q);
@@ -87,32 +86,7 @@ export default function useCatalogFilters(categorias) {
   );
 
   // ---- Vista rápida ----
-  const openCourseId = searchParams.get('curso');
-
-  const openCourse = useCallback(
-    (id) => {
-      const next = new URLSearchParams(searchParams);
-      next.set('curso', id);
-      navigate({ search: next.toString() }, { state: { quickView: true }, preventScrollReset: true });
-    },
-    [navigate, searchParams],
-  );
-
-  const closeCourse = useCallback(() => {
-    // Si la abrimos nosotros, "atrás" la cierra y deja el historial limpio.
-    if (location.state?.quickView) {
-      navigate(-1);
-      return;
-    }
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete('curso');
-        return next;
-      },
-      { replace: true },
-    );
-  }, [location.state, navigate, setSearchParams]);
+  const { openCourseId, openCourse, closeCourse } = useQuickViewParam();
 
   return {
     /** Filtros aplicados (la búsqueda ya con debounce). */

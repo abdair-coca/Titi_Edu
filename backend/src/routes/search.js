@@ -17,8 +17,13 @@ router.get('/', requireAuth, async (req, res) => {
       runQuery(
         `MATCH (u:Usuario)
          WHERE toLower(u.username) CONTAINS toLower($q) OR toLower(u.bio) CONTAINS toLower($q)
-         RETURN u LIMIT 10`,
-        { q: cleanQ }
+         OPTIONAL MATCH (u)<-[:SIGUIO]-(fol:Usuario)
+         WITH u, count(DISTINCT fol) AS followerCount
+         OPTIONAL MATCH (:Usuario {id: $userId})-[f:SIGUIO]->(u)
+         RETURN u, followerCount, f IS NOT NULL AS isFollowing
+         ORDER BY followerCount DESC, u.username ASC
+         LIMIT 10`,
+        { q: cleanQ, userId: req.user.id }
       ),
       runQuery(
         `MATCH (u:Usuario)-[:PUBLICO]->(p:Post)
@@ -38,7 +43,14 @@ router.get('/', requireAuth, async (req, res) => {
 
     const users = userRecords.map(r => {
       const p = r.get('u').properties;
-      return { id: p.id, username: p.username, bio: p.bio, avatarUrl: p.avatarUrl };
+      return {
+        id: p.id,
+        username: p.username,
+        bio: p.bio,
+        avatarUrl: p.avatarUrl,
+        followerCount: r.has?.('followerCount') ? toNumber(r.get('followerCount')) : 0,
+        isFollowing: r.has?.('isFollowing') ? Boolean(r.get('isFollowing')) : false,
+      };
     });
 
     const posts = postRecords.map(r => {

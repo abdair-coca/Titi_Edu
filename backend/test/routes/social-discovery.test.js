@@ -118,3 +118,24 @@ describe('GET /api/search/trending', () => {
     expect(res.body.success).toBe(false);
   });
 });
+
+describe('GET /api/search (usuarios)', () => {
+  it('suma followerCount e isFollowing a cada usuario', async () => {
+    runQuery
+      .mockResolvedValueOnce([rec({ u: userNode('u-2', 'ana', { bio: 'Cálculo' }), followerCount: 3, isFollowing: true })])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+    const res = await request(app).get('/api/search?q=ana').set(auth);
+    expect(res.status).toBe(200);
+    expect(res.body.data.users).toEqual([
+      { id: 'u-2', username: 'ana', bio: 'Cálculo', avatarUrl: undefined, followerCount: 3, isFollowing: true },
+    ]);
+    expect(runQuery.mock.calls[0][1]).toEqual({ q: 'ana', userId: 'user-1' });
+  });
+
+  it('sin término no consulta Neo4j', async () => {
+    const res = await request(app).get('/api/search?q=').set(auth);
+    expect(res.body.data).toEqual({ users: [], posts: [], hashtags: [] });
+    expect(runQuery).not.toHaveBeenCalled();
+  });
+});
