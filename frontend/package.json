@@ -21,6 +21,7 @@
     "test:tutor-key-banner": "node scripts/check-tutor-key-banner.mjs",
     "test:hero-3d": "node scripts/check-hero-3d-split.mjs",
     "test:titi-3d": "node scripts/check-titi-brain.mjs",
+    "test:catalog": "node scripts/check-catalog.mjs",
     "shots:titi": "node scripts/titi-shots.mjs"
   },
   "dependencies": {
