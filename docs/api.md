@@ -78,7 +78,7 @@ GET  /api/search                     Usuarios, posts, hashtags
 
 ## Cursos — `/api/courses`
 ```
-GET    /                   Catálogo público (?categoria= ?nivel= ?search=)
+GET    /                   Catálogo público (?categoria= ?nivel= ?search=); _count.lecciones publicadas
 GET    /:id                Detalle (módulos + lecciones + categoría + creador)
 POST   /                   Crear (PROFESOR verificado)
 PUT    /:id                Editar (autor)
@@ -86,7 +86,9 @@ DELETE /:id                Borrar (autor; 409 si tiene inscripciones)
 POST   /:id/publish | /unpublish
 POST   /:id/enroll         Inscribirse (ESTUDIANTE) → propaga a Neo4j
 GET    /:id/progress       Mi progreso en el curso
-GET    /my/enrolled | /my/teaching
+GET    /my/enrolled        Mis inscripciones + avance (0-100), leccionesCompletadas,
+                           leccionesTotales, siguienteLeccionId, ultimaActividad
+GET    /my/teaching
 GET    /recommended        Cursos que tomaron mis amigos y yo no
 ```
 

@@ -9,7 +9,8 @@ vi.mock('../../src/prisma.js', () => ({
     modulo: { findMany: vi.fn(), findUnique: vi.fn() },
     usuario: { findUnique: vi.fn() },
     evaluacion: { findFirst: vi.fn() },
-    inscripcion: { findUnique: vi.fn() },
+    inscripcion: { findUnique: vi.fn(), findMany: vi.fn() },
+    leccion: { findMany: vi.fn() },
     progreso: { findMany: vi.fn(), upsert: vi.fn() },
     resultadoHtmlLeccion: { findMany: vi.fn() },
   },
@@ -26,12 +27,102 @@ beforeEach(() => vi.clearAllMocks());
 describe('GET /api/courses', () => {
   it('200 lista el catálogo público (con filtros)', async () => {
     prisma.curso.findMany.mockResolvedValue([{ id: 'c1', titulo: 'Curso' }]);
+    prisma.leccion.findMany.mockResolvedValue([]);
     const res = await request(app).get('/api/courses?categoria=cat1&nivel=basico&search=js');
     expect(res.status).toBe(200);
     expect(res.body.data.cursos).toHaveLength(1);
     // El filtro de búsqueda arma un OR sobre titulo/descripcion
     expect(prisma.curso.findMany.mock.calls[0][0].where.OR).toBeTruthy();
     expect(prisma.curso.findMany.mock.calls[0][0].include._count.select.modulos.where).toEqual({ estado: 'PUBLICADO' });
+  });
+});
+
+describe('GET /api/courses — lecciones por curso', () => {
+  it('suma _count.lecciones publicadas con una sola consulta', async () => {
+    prisma.curso.findMany.mockResolvedValue([
+      { id: 'c1', _count: { inscripciones: 4, modulos: 2 } },
+      { id: 'c2', _count: { inscripciones: 0, modulos: 0 } },
+    ]);
+    prisma.leccion.findMany.mockResolvedValue([
+      { modulo: { cursoId: 'c1' } },
+      { modulo: { cursoId: 'c1' } },
+      { modulo: { cursoId: 'c1' } },
+    ]);
+    const res = await request(app).get('/api/courses');
+    expect(res.status).toBe(200);
+    expect(res.body.data.cursos[0]._count).toEqual({ inscripciones: 4, modulos: 2, lecciones: 3 });
+    expect(res.body.data.cursos[1]._count.lecciones).toBe(0);
+    expect(prisma.leccion.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.leccion.findMany.mock.calls[0][0].where).toEqual({
+      estado: 'PUBLICADA',
+      modulo: { estado: 'PUBLICADO', cursoId: { in: ['c1', 'c2'] } },
+    });
+  });
+
+  it('no consulta lecciones si el catálogo está vacío', async () => {
+    prisma.curso.findMany.mockResolvedValue([]);
+    const res = await request(app).get('/api/courses');
+    expect(res.status).toBe(200);
+    expect(prisma.leccion.findMany).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /api/courses/my/enrolled — avance', () => {
+  const curso = (id, lecciones) => ({
+    id,
+    titulo: id,
+    _count: { inscripciones: 1, modulos: 1 },
+    modulos: [{ lecciones: lecciones.map((l) => ({ id: l })) }],
+  });
+
+  it('401 sin sesión', async () => {
+    const res = await request(app).get('/api/courses/my/enrolled');
+    expect(res.status).toBe(401);
+  });
+
+  it('calcula avance, siguiente lección y última actividad sin N+1', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
+    prisma.inscripcion.findMany.mockResolvedValue([
+      { id: 'i1', fechaInscripcion: '2026-11-01T00:00:00.000Z', curso: curso('c1', ['l1', 'l2', 'l3', 'l4']) },
+      { id: 'i2', fechaInscripcion: '2026-11-02T00:00:00.000Z', curso: curso('c2', []) },
+    ]);
+    prisma.progreso.findMany.mockResolvedValue([
+      { leccionId: 'l1', fechaCompletado: '2026-11-10T00:00:00.000Z' },
+      { leccionId: 'l2', fechaCompletado: '2026-11-12T00:00:00.000Z' },
+    ]);
+    prisma.resultadoHtmlLeccion.findMany.mockResolvedValue([{ recursoHtml: { leccionId: 'l4' } }]);
+
+    const res = await request(app).get('/api/courses/my/enrolled').set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    const [a, b] = res.body.data.inscripciones;
+    expect(a).toMatchObject({
+      avance: 75,
+      leccionesCompletadas: 3,
+      leccionesTotales: 4,
+      siguienteLeccionId: 'l3',
+      ultimaActividad: '2026-11-12T00:00:00.000Z',
+    });
+    expect(a.curso.modulos).toBeUndefined();
+    expect(a.curso._count).toEqual({ inscripciones: 1, modulos: 1, lecciones: 4 });
+    expect(b).toMatchObject({
+      avance: 0,
+      leccionesTotales: 0,
+      siguienteLeccionId: null,
+      ultimaActividad: '2026-11-02T00:00:00.000Z',
+    });
+    expect(prisma.progreso.findMany).toHaveBeenCalledTimes(1);
+    expect(prisma.resultadoHtmlLeccion.findMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('siguienteLeccionId es null cuando todo está completo', async () => {
+    prisma.usuario.findUnique.mockResolvedValue({ id: 'u1', rol: 'ESTUDIANTE' });
+    prisma.inscripcion.findMany.mockResolvedValue([
+      { id: 'i1', fechaInscripcion: '2026-11-01T00:00:00.000Z', curso: curso('c1', ['l1']) },
+    ]);
+    prisma.progreso.findMany.mockResolvedValue([{ leccionId: 'l1', fechaCompletado: null }]);
+    prisma.resultadoHtmlLeccion.findMany.mockResolvedValue([]);
+    const res = await request(app).get('/api/courses/my/enrolled').set('Authorization', `Bearer ${token}`);
+    expect(res.body.data.inscripciones[0]).toMatchObject({ avance: 100, siguienteLeccionId: null });
   });
 });
 

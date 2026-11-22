@@ -9,6 +9,49 @@ import { checkCursoCompletado, syncProgresoFromHtmlResults } from '../services/p
 
 const router = Router();
 
+// Avance del usuario en varios cursos con dos consultas en total (sin N+1).
+// Cuenta como completada la lección con Progreso.completada o con nota en un
+// HTML evaluable, igual que GET /:id/progress. Espera cursos con
+// `modulos[].lecciones[].id` ya ordenados y filtrados a lo publicado.
+async function avancePorCurso(usuarioId, cursos) {
+  const leccionIds = cursos.flatMap((c) => c.modulos.flatMap((m) => m.lecciones.map((l) => l.id)));
+  const [progresos, resultadosHtml] = leccionIds.length
+    ? await Promise.all([
+        prisma.progreso.findMany({
+          where: { usuarioId, leccionId: { in: leccionIds }, completada: true },
+          select: { leccionId: true, fechaCompletado: true },
+        }),
+        prisma.resultadoHtmlLeccion?.findMany
+          ? prisma.resultadoHtmlLeccion.findMany({
+              where: { usuarioId, recursoHtml: { leccionId: { in: leccionIds }, evaluable: true } },
+              select: { recursoHtml: { select: { leccionId: true } } },
+            })
+          : [],
+      ])
+    : [[], []];
+
+  const completadas = new Map(progresos.map((p) => [p.leccionId, p.fechaCompletado]));
+  for (const r of resultadosHtml || []) {
+    const id = r.recursoHtml?.leccionId;
+    if (id && !completadas.has(id)) completadas.set(id, null);
+  }
+
+  const avances = new Map();
+  for (const curso of cursos) {
+    const ids = curso.modulos.flatMap((m) => m.lecciones.map((l) => l.id));
+    const hechas = ids.filter((id) => completadas.has(id));
+    const fechas = hechas.map((id) => completadas.get(id)).filter(Boolean);
+    avances.set(curso.id, {
+      leccionesTotales: ids.length,
+      leccionesCompletadas: hechas.length,
+      avance: ids.length ? Math.round((hechas.length / ids.length) * 100) : 0,
+      siguienteLeccionId: ids.find((id) => !completadas.has(id)) ?? null,
+      ultimaActividad: fechas.length ? new Date(Math.max(...fechas.map((f) => +new Date(f)))) : null,
+    });
+  }
+  return avances;
+}
+
 const authoringMoved = (req, res) => res.status(410).json({
   success: false,
   message: 'Esta operaciÃ³n docente requiere /api/authoring con control de concurrencia e idempotencia',
@@ -46,7 +89,28 @@ router.get('/', async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json({ success: true, data: { cursos } });
+    // Lecciones publicadas por curso en una sola consulta (Prisma no cuenta a
+    // través de módulos con `_count`). El catálogo las usa para el "largo".
+    const lessonCounts = new Map();
+    if (cursos.length) {
+      const lecciones = await prisma.leccion.findMany({
+        where: {
+          estado: 'PUBLICADA',
+          modulo: { estado: 'PUBLICADO', cursoId: { in: cursos.map((c) => c.id) } },
+        },
+        select: { modulo: { select: { cursoId: true } } },
+      });
+      for (const l of lecciones) {
+        const id = l.modulo.cursoId;
+        lessonCounts.set(id, (lessonCounts.get(id) || 0) + 1);
+      }
+    }
+    const conLecciones = cursos.map((c) => ({
+      ...c,
+      _count: { ...c._count, lecciones: lessonCounts.get(c.id) || 0 },
+    }));
+
+    res.json({ success: true, data: { cursos: conLecciones } });
   } catch (err) {
     console.error('GET /courses error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo cursos' });
@@ -67,14 +131,41 @@ router.get('/my/enrolled', requireAuth, async (req, res) => {
           include: {
             categoria: true,
             creador: { select: { id: true, username: true } },
-            _count: { select: { modulos: { where: { estado: 'PUBLICADO' } } } },
+            _count: { select: { inscripciones: true, modulos: { where: { estado: 'PUBLICADO' } } } },
+            modulos: {
+              where: { estado: 'PUBLICADO' },
+              orderBy: { orden: 'asc' },
+              select: {
+                lecciones: {
+                  where: { estado: 'PUBLICADA' },
+                  orderBy: { orden: 'asc' },
+                  select: { id: true },
+                },
+              },
+            },
           },
         },
       },
       orderBy: { fechaInscripcion: 'desc' },
     });
 
-    res.json({ success: true, data: { inscripciones } });
+    const avances = await avancePorCurso(usuario.id, inscripciones.map((i) => i.curso));
+
+    const conAvance = inscripciones.map((insc) => {
+      const { modulos: _modulos, ...curso } = insc.curso;
+      const a = avances.get(curso.id);
+      return {
+        ...insc,
+        curso: { ...curso, _count: { ...curso._count, lecciones: a.leccionesTotales } },
+        avance: a.avance,
+        leccionesCompletadas: a.leccionesCompletadas,
+        leccionesTotales: a.leccionesTotales,
+        siguienteLeccionId: a.siguienteLeccionId,
+        ultimaActividad: a.ultimaActividad ?? insc.fechaInscripcion,
+      };
+    });
+
+    res.json({ success: true, data: { inscripciones: conAvance } });
   } catch (err) {
     console.error('GET /courses/my/enrolled error', err);
     res.status(500).json({ success: false, message: 'Error obteniendo inscripciones' });
