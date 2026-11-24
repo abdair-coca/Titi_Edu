@@ -524,6 +524,40 @@ export function CloseIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+// Engranaje — ajustes (configuración del tutor).
+export function GearIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" />
+    </NavSvg>
+  );
+}
+
+// Llave — clave personal (tutor IA).
+export function KeyIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <circle cx="7.5" cy="15.5" r="4" />
+      <path d="m10.5 12.5 9-9" />
+      <path d="m16 7 3 3" />
+      <path d="m14 9 2 2" />
+    </NavSvg>
+  );
+}
+
+// Pantalla completa — cuatro esquinas hacia afuera.
+export function ExpandIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+      <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+      <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+      <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+    </NavSvg>
+  );
+}
+
 // Filtros — deslizadores.
 export function SlidersIcon({ className = 'w-5 h-5' }) {
   return (
