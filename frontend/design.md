@@ -579,9 +579,10 @@ actividad académica, paneles del rail. En una superficie lo que reacciona son
 sus botones, no la card. Paneles oscuros de cierre o de "tu día":
 `bg-titi-dark rounded-2xl` con tiles internos `bg-white/5 border-2 border-white/10`.
 
-Desde `rediseno-plataforma-v3` **toda la app** (salvo el chrome de Learn)
-usa v3: perfil, hashtag, notificaciones, Mis cursos, certificados, ranking,
-tienda, detalle de curso, enseñar y admin. Las clases van centralizadas en
+Desde `rediseno-plataforma-v3` y `rediseno-learn-v3` **toda la app** usa
+v3: perfil, hashtag, notificaciones, Mis cursos, certificados, ranking,
+tienda, detalle de curso, Learn (índice, lección, evaluación, comentarios),
+enseñar y admin. Las clases van centralizadas en
 `components/ui/v3.jsx` (`TILE`, `SURFACE`, `DARK_PANEL`, `DARK_TILE`,
 `BTN_SECONDARY`, `INPUT`…) y las piezas `PageHeader`, `BackLink`,
 `RoleBadge`, `PanelTitle`, `EmptyState` y `ProgressBar` (§15). Una tarjeta
@@ -911,7 +912,8 @@ Las barras **siempre** montan en 0 y se llenan hasta el % real (§10). El
 número acompaña con count-up.
 
 ```jsx
-// ProgressBar — usada en LearnCourse.jsx arriba del contenido
+// Barra de progreso de referencia (en Learn hoy se usa <ProgressBar> de ui/v3.jsx
+// en el panel oscuro del índice y en el botón del índice en celular)
 <div className="flex items-center gap-3 mb-6">
   <button onClick={onClose} className="text-gray-400 hover:text-gray-600 active:scale-95"><CloseIcon className="w-5 h-5" /></button>
   <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -1292,7 +1294,7 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `Navbar.jsx` | rail desktop + top bar y bottom nav mobile (por rol) |
 | `PageTransition.jsx` | transición de página (ya montada en `App.jsx`) |
 | `TitiMascot.jsx` | mascota animada por estado (`idle`, `celebra`, `triste`, `racha`, `saludo`, `pensando`) |
-| `icons.jsx` | **única fuente de íconos SVG**: navegación (trazo 2.2), categorías (`categoryIcon(nombre)`), Gota/Bolt/Target/Check/Award/Graduation/Trophy/Users; sociales Heart/Comment/Bookmark/Pin/Search/Hash/Fire; racha `StreakIcon` (llama de un color para círculos sólidos) y `FLAME_PATHS` |
+| `icons.jsx` | **única fuente de íconos SVG**: navegación (trazo 2.2), categorías (`categoryIcon(nombre)`), Gota/Bolt/Target/Check/Award/Graduation/Trophy/Users; `ExpandIcon` (pantalla completa), `GearIcon` (ajustes), `KeyIcon` (clave); sociales Heart/Comment/Bookmark/Pin/Search/Hash/Fire; racha `StreakIcon` (llama de un color para círculos sólidos) y `FLAME_PATHS` |
 | `StreakBadge.jsx` | badge de racha (variants `sidebar`/`hero`/`inline`) + `FlameIcon`: llama sticker plana (contorno oscuro, cuerpo `titi-streak`, núcleo amarillo, brillo crema; se mece, el núcleo late y suelta una chispa; `dim` en grises). **La racha siempre es la llama**, nunca el rayo (`BoltIcon` = misiones y multiplicador de gotas) |
 | `GotasCounter.jsx` | contador de gotas (usa GamificationContext) |
 | `DailyMissions.jsx` | misiones diarias v3 (prop `title`, su última palabra va de acento); ícono por `codigo` de misión |
@@ -1308,7 +1310,10 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `catalog/LearningPathMap.jsx` · `CatalogOutro.jsx` | rutas en camino serpenteante; bloque final visitante/con sesión |
 | `catalog/useSheetDismiss.js` | Esc, bloqueo de scroll, foco atrapado y cerrar arrastrando (hojas y paneles) |
 | `PostCard.jsx` (+ `PostCardSkeleton`), `CreatePost.jsx`, `CommentSection.jsx`, `LessonComments.jsx`, `EditPostModal.jsx`, `OptionsPosts.jsx` | social: post, composer, comentarios, edición |
-| `EvaluationQuiz.jsx` | quiz de evaluación en Learn |
+| `EvaluationQuiz.jsx` | evaluación v3 en Learn: superficie con insignia púrpura (trofeo si es final), cifras con conteo, avance de respuestas, opciones con letra y press, nota con conteo y correcciones con check/cruz |
+| `TutorPanel.jsx` + `tutor/*` | tutor IA v3: cabecera con insignia y botones redondos con borde, contexto en tarjeta amarilla, pregunta amarilla con sombra dura, respuesta en superficie con avatar de chispas, fuentes numeradas, acciones rápidas como tiles; DIL con pasos unidos, avisos con insignia girada, tablas con cabecera amarilla y quiz con letra |
+| `HtmlLessonPlayer.jsx` | presentación HTML: marco oscuro, `ExpandIcon`, cifras de la actividad evaluable en superficies 2×2 (`ActivityStat`) |
+| `pages/LearnCourse.jsx` (piezas locales) | `CourseIndex` (índice: categoría, avance en panel oscuro, módulos numerados con el acento de la categoría) e `IndexStep` (paso de la ruta: nodo verde con check / amarillo actual / blanco con número; púrpura para evaluaciones); barra de acción con "Siguiente" que muestra lo que sigue; riel de recursos con pestaña activa amarilla y sombra dura |
 | `ConfirmModal.jsx` | confirmación destructiva — **nunca** `window.confirm` |
 | `auth/AuthField.jsx` | campo de auth: label flotante, ícono con wiggle al enfocar, barra de foco, check animado (`valid`), error con shake, slot `trailing` |
 | `auth/AuthLayout.jsx` | superficie compartida de login/registro (fondo, encabezado, escena, entrada GSAP) + piezas: `AuthHeading`, `AuthSubmitButton`, `PasswordToggle`, `ErrorBanner`, `AuthSwitchLink`, `CapsLockHint` |
@@ -1463,9 +1468,14 @@ regla boy scout: lo que se toque queda 100% v2.
 
 **v3 en toda la app (2026-11-22, change `rediseno-plataforma-v3`):** perfil,
 hashtag, notificaciones, Mis cursos, certificados, ranking, tienda, detalle de
-curso, navegación, enseñar y admin pasaron al lenguaje v3. Falta solo el
-chrome de Learn (`LearnCourse.jsx`), que se dejó afuera para no tocar la
-lógica vigilada por los `test:learn-*`.
+curso, navegación, enseñar y admin pasaron al lenguaje v3.
+
+**Learn en v3 (2026-11-23, change `rediseno-learn-v3`):** índice, lección,
+riel y paneles, evaluación y comentarios. Solo cambió la capa visual: los
+contratos de `test:learn-*`, `test:tutor-*`, `test:html-lesson` y `test:rag`
+siguen en verde. En una segunda vuelta el tutor IA (conversación, fuentes,
+clave), sus respuestas estructuradas y la actividad HTML también pasaron a
+v3. Con esto toda la app habla v3.
 
 **Regla boy scout**: cualquier archivo que toques por otro motivo queda
 migrado completo a v2 en ese mismo cambio (tokens, tipografía, átomos).
