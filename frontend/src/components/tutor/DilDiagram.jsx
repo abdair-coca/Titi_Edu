@@ -40,13 +40,13 @@ export default function DilDiagram({ node, inline }) {
       )}
       {failed && source}
       <figcaption className="mt-2 flex items-start justify-between gap-2">
-        <span className="text-xs font-bold text-gray-500"><InlineText text={node.caption} {...inline} /></span>
+        <span className="text-xs font-semibold text-gray-500"><InlineText text={node.caption} {...inline} /></span>
         {state.status === 'ready' && (
           <button
             type="button"
             onClick={() => setShowSource((value) => !value)}
             aria-expanded={showSource}
-            className="shrink-0 text-xs font-bold text-blue-500 hover:text-titi-dark transition-colors duration-150"
+            className="shrink-0 text-xs font-bold uppercase tracking-wide text-blue-500 hover:text-blue-600 active:scale-95 transition-all duration-150"
           >
             {showSource ? 'Ocultar texto' : 'Ver como texto'}
           </button>
