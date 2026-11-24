@@ -15,7 +15,7 @@ import {
 import { requestLessonComments } from '../lib/lesson-comments-cache.js';
 import { useTutorAvailability } from '../hooks/useTutorAvailability.js';
 import { sanitizeMarkdownUrl } from '../lib/markdown.js';
-import { usePopIn, useStaggerReveal } from '../lib/motion.js';
+import { useCountUp, usePopIn, useStaggerReveal } from '../lib/motion.js';
 import { markPerformance } from '../lib/performance.js';
 import {
   FileIcon,
@@ -25,7 +25,32 @@ import {
   ClipIcon,
   AwardIcon,
   SparklesIcon,
+  CheckIcon,
+  CloseIcon,
+  ListIcon,
+  ChevronDownIcon,
+  ArrowRightIcon,
+  TrophyIcon,
+  BookmarkIcon,
+  CommentIcon,
+  GraduationIcon,
+  ExternalLinkIcon,
 } from '../components/icons.jsx';
+import { CategoryIcon, categoryTheme } from '../components/catalog/categoryTheme.jsx';
+import { ErrorBox } from '../components/social/StateBlocks.jsx';
+import {
+  BackLink,
+  BTN_SECONDARY,
+  BTN_SECONDARY_SM,
+  DARK_PANEL,
+  EmptyState,
+  INPUT,
+  ProgressBar,
+  RoleBadge,
+  SkeletonLine,
+  SURFACE,
+  TILE,
+} from '../components/ui/v3.jsx';
 
 // Los paneles y renderizadores pesados no forman parte del primer chunk de
 // LearnCourse. Se cargan en el momento justo y se pueden precargar cuando el
@@ -81,6 +106,8 @@ export default function LearnCourse() {
   const [loading, setLoading] = useState(true);
   const [progressLoading, setProgressLoading] = useState(true);
   const [error, setError] = useState(null);
+  // Reintentar la carga del curso sin recargar la página.
+  const [reloadKey, setReloadKey] = useState(0);
   // 403 al pedir contenido real (no inscripto, curso visto solo por el temario trimeado)
   const [accessDenied, setAccessDenied] = useState(false);
 
@@ -264,7 +291,7 @@ export default function LearnCourse() {
     return () => {
       cancelled = true;
     };
-  }, [courseId, isAuthenticated]);
+  }, [courseId, isAuthenticated, reloadKey]);
 
   // Si cambia el query param (ej. navegando desde notificaciones o atrás/adelante)
   useEffect(() => {
@@ -623,25 +650,15 @@ export default function LearnCourse() {
   // --- Render: error ---
   if (error) {
     return (
-      <div className="flex min-h-screen bg-titi-cream items-center justify-center p-8">
-        <div className="max-w-md w-full bg-red-50 border border-red-200 rounded-xl p-6">
-          <div className="flex items-start gap-3 mb-4">
-            <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-red-700">
-                No pudimos cargar el curso
-              </p>
-              <p className="text-xs text-red-500 mt-0.5">{error}</p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate(`/courses/${courseId}`)}
-            className="text-sm font-semibold text-titi-dark hover:text-titi-yellow-dark transition-colors"
-          >
-            ← Volver al detalle del curso
+      <div className="min-h-[70vh] grid place-items-center p-4">
+        <EmptyState state="triste" title="No pudimos cargar el" accent="curso" text={error} className="w-full max-w-md mb-0">
+          <button type="button" onClick={() => setReloadKey((k) => k + 1)} className="titi-btn-primary">
+            Reintentar
           </button>
-        </div>
+          <button type="button" onClick={() => navigate(`/courses/${courseId}`)} className={BTN_SECONDARY}>
+            Volver al detalle del curso
+          </button>
+        </EmptyState>
       </div>
     );
   }
@@ -651,26 +668,24 @@ export default function LearnCourse() {
   // --- Render: no inscripto (el temario cargó, pero el contenido no) ---
   if (accessDenied) {
     return (
-      <div className="flex min-h-screen bg-titi-cream items-center justify-center p-8">
-        <div className="max-w-md w-full flex flex-col items-center text-center">
-          <TitiMascot state="triste" size="lg" message="" className="mb-4" />
-          <h2 className="text-xl font-bold text-titi-dark mb-2">
-            Necesitás inscribirte para ver este curso
-          </h2>
-          <p className="text-sm text-gray-400 mb-6">
-            Andá al detalle del curso e inscribite gratis para acceder a las lecciones.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate(`/courses/${courseId}`)}
-            className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
-          >
+      <div className="min-h-[70vh] grid place-items-center p-4">
+        <EmptyState
+          state="triste"
+          title="Inscribite para ver este"
+          accent="curso"
+          text="Andá al detalle del curso e inscribite gratis para acceder a las lecciones."
+          className="w-full max-w-md mb-0"
+        >
+          <button type="button" onClick={() => navigate(`/courses/${courseId}`)} className="titi-btn-primary">
             Ir al detalle del curso
           </button>
-        </div>
+        </EmptyState>
       </div>
     );
   }
+
+  const theme = categoryTheme(curso.categoria?.nombre);
+  const activeModuloNumero = (curso.modulos?.findIndex((m) => m.id === activeModulo?.id) ?? -1) + 1;
 
   return (
     <div className="flex min-h-screen lg:min-h-0 lg:h-[calc(100vh-1.5rem)] lg:overflow-hidden bg-titi-cream lg:gap-3">
@@ -683,159 +698,33 @@ export default function LearnCourse() {
         logros={achievements}
         onDone={() => setAchievements([])}
       />
-      {/* === Sidebar de lecciones (desktop) + drawer (móvil) === */}
-      <aside
-        className={`
-          w-72 bg-white border-r border-gray-100 flex flex-col
-          fixed top-12 bottom-14 left-0 z-40 overflow-y-auto scrollbar-none
-          transition-transform duration-200
-          ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:static lg:inset-auto lg:h-full lg:transform-none
-          lg:border-r-0 lg:border lg:border-gray-100 lg:rounded-2xl
-        `}
-      >
-        {/* Header del sidebar */}
-        <div className="p-4 border-b border-gray-100">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="text-xs font-semibold text-gray-400 hover:text-titi-dark transition-colors mb-2 inline-flex items-center gap-1"
-          >
-            ← Volver
-          </button>
-          <h2 className="text-base font-bold text-titi-dark leading-snug line-clamp-2">
-            {curso.titulo}
-          </h2>
-          <p className="text-xs font-medium text-gray-400 mt-1">
-            Lección {currentPosition} de {totalLessons}
-            {progressLoading ? (
-              <span className="block mt-1.5 h-3 w-24 rounded bg-gray-100 animate-pulse" aria-label="Cargando progreso" />
-            ) : (
-              <span className="block text-[11px] font-medium text-gray-400 mt-0.5">
-                {completedCount} {completedCount === 1 ? 'completada' : 'completadas'}
-              </span>
-            )}
-          </p>
+      {/* === Índice del curso (desktop) + cajón (móvil) === */}
+      <CourseIndex
+        curso={curso}
+        theme={theme}
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        onBack={() => navigate(-1)}
+        navRef={lessonNavRef}
+        activeId={activeId}
+        activeEvalId={activeEvalId}
+        completed={completed}
+        newLessons={newLessons}
+        progressLoading={progressLoading}
+        progressPct={progressPct}
+        completedCount={completedCount}
+        currentPosition={currentPosition}
+        totalLessons={totalLessons}
+        onSelectLesson={handleSelectLesson}
+        onSelectEval={handleSelectEval}
+      />
 
-          {/* Progreso del curso */}
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">
-              Progreso del curso
-            </p>
-            {progressLoading ? (
-              <div className="h-2 w-full rounded-full bg-gray-100 animate-pulse" aria-hidden="true" />
-            ) : (
-              <div className="flex items-center gap-2">
-                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-titi-yellow rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
-                <span className="text-xs font-bold text-gray-400 tabular-nums">
-                  {progressPct}%
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Lista de módulos + lecciones */}
-        <nav ref={lessonNavRef} className="flex-1 py-2">
-          {curso.modulos?.length === 0 ? (
-            <p className="px-4 py-3 text-xs text-gray-400 font-medium">
-              Este curso aún no tiene módulos publicados.
-            </p>
-          ) : (
-            curso.modulos?.map((modulo) => (
-              <div key={modulo.id} className="mb-2">
-                <h3 className="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wide">
-                  {modulo.titulo}
-                </h3>
-                <ul>
-                  {modulo.lecciones?.map((leccion, index) => {
-                    const isActive = leccion.id === activeId;
-                    const isDone = completed.has(leccion.id);
-                    return (
-                      <li key={leccion.id}>
-                        <button
-                          type="button"
-                          onClick={() => handleSelectLesson(leccion.id)}
-                          className={[
-                            'w-full text-left px-4 py-2.5 flex items-center gap-3 cursor-pointer text-sm font-medium hover:bg-titi-cream transition-colors',
-                            isActive
-                              ? 'bg-titi-yellow-light text-titi-dark font-semibold border-l-2 border-titi-yellow'
-                              : isDone
-                                ? 'text-gray-400'
-                                : 'text-titi-dark',
-                          ].join(' ')}
-                        >
-                          {isDone ? (
-                            <span
-                              className="text-green-500 text-base shrink-0 font-bold"
-                              aria-label="Completada"
-                            >
-                              ✓
-                            </span>
-                          ) : (
-                            <span className="text-xs font-bold text-gray-400 w-4 shrink-0 tabular-nums text-center">
-                              {index + 1}
-                            </span>
-                          )}
-                          <span className="line-clamp-2 flex-1">
-                            {leccion.titulo}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                  {modulo.evaluacion && (
-                    <li>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectEval(modulo.evaluacion.id)}
-                        className={[
-                          'w-full text-left px-4 py-2.5 flex items-center gap-3 cursor-pointer text-sm font-semibold hover:bg-titi-cream transition-colors',
-                          modulo.evaluacion.id === activeEvalId
-                            ? 'bg-purple-50 text-titi-dark border-l-2 border-titi-achievement'
-                            : 'text-titi-achievement',
-                        ].join(' ')}
-                      >
-                        <AwardIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
-                        <span className="line-clamp-2 flex-1">{modulo.evaluacion.titulo}</span>
-                      </button>
-                    </li>
-                  )}
-                </ul>
-              </div>
-            ))
-          )}
-          {curso.evaluacionFinal && (
-            <div className="mt-2 border-t border-gray-100 pt-2">
-              <button
-                type="button"
-                onClick={() => handleSelectEval(curso.evaluacionFinal.id)}
-                className={[
-                  'w-full text-left px-4 py-3 flex items-center gap-3 cursor-pointer text-sm font-bold hover:bg-titi-cream transition-colors',
-                  curso.evaluacionFinal.id === activeEvalId
-                    ? 'bg-purple-50 text-titi-dark border-l-2 border-titi-achievement'
-                    : 'text-titi-achievement',
-                ].join(' ')}
-              >
-                <span className="text-base shrink-0" aria-hidden="true">🏁</span>
-                <span className="line-clamp-2 flex-1">{curso.evaluacionFinal.titulo}</span>
-              </button>
-            </div>
-          )}
-        </nav>
-      </aside>
-
-      {/* Overlay móvil cuando el drawer está abierto */}
+      {/* Fondo del cajón en móvil */}
       {drawerOpen && (
         <div
           aria-hidden="true"
           onClick={() => setDrawerOpen(false)}
-          className="fixed inset-0 bg-black/30 z-30 lg:hidden"
+          className="fixed inset-0 bg-titi-dark/40 z-30 lg:hidden titi-backdrop-in"
         />
       )}
 
@@ -843,17 +732,25 @@ export default function LearnCourse() {
       <div className="flex-1 flex flex-col lg:flex-row min-w-0 min-h-0 lg:h-full lg:gap-3">
         <main className="flex-1 p-4 sm:p-5 lg:p-5 overflow-y-auto scrollbar-none min-w-0 min-h-0">
           <div className="max-w-5xl mx-auto">
-            {/* Toggle del drawer en móvil */}
+            {/* Botón del índice en móvil */}
             <button
               type="button"
               onClick={() => setDrawerOpen(true)}
-              className="lg:hidden mb-4 w-full text-sm font-semibold text-titi-dark bg-white border border-gray-200 rounded-xl px-3 py-2.5 hover:bg-gray-50 transition-colors inline-flex items-center justify-between gap-2"
+              aria-expanded={drawerOpen}
+              aria-controls="learn-index"
+              className={`lg:hidden mb-4 w-full flex items-center gap-3 p-3 text-left ${TILE}`}
             >
-              <span className="inline-flex items-center gap-2">
-                <span aria-hidden="true">☰</span>
-                <span>Lección · {currentPosition}/{totalLessons}</span>
+              <RoleBadge Icon={ListIcon} solid={theme.solid} size="sm" />
+              <span className="min-w-0 flex-1">
+                <span className="block text-xs font-extrabold uppercase tracking-wide text-gray-500">
+                  Lección {currentPosition} de {totalLessons}
+                </span>
+                <span className="block text-sm font-extrabold text-titi-dark truncate">
+                  {activeModulo?.titulo || curso.titulo}
+                </span>
+                <ProgressBar value={progressPct} height="h-1.5" className="mt-1.5" label="Avance del curso" />
               </span>
-              <span aria-hidden="true" className="text-base leading-none">⌄</span>
+              <ChevronDownIcon className="w-5 h-5 shrink-0 text-titi-dark" />
             </button>
 
             {certBanner && (
@@ -880,6 +777,8 @@ export default function LearnCourse() {
                 <LessonView
                   key={activeLesson.id}
                   leccion={activeLesson}
+                  moduloNumero={activeModuloNumero}
+                  moduloTitulo={activeModulo?.titulo}
                   completed={completed.has(activeLesson.id)}
                   completing={completing}
                   completeError={completeError}
@@ -890,6 +789,7 @@ export default function LearnCourse() {
                   onHtmlDeadlineChange={setActiveHtmlDeadlineExpired}
                   onHtmlScoreRecorded={handleHtmlScoreRecorded}
                   hasNext={hasNext}
+                  nextTitle={nextLesson?.titulo || curso.evaluacionFinal?.titulo}
                   onNext={handleNext}
                   onSaveNote={() => setSidePanel('notas')}
                 />
@@ -897,9 +797,16 @@ export default function LearnCourse() {
                 <LessonContentSkeleton title={activeLesson.titulo} />
               )
             ) : (
-              <EmptyLessonState
-                onBack={() => navigate(`/courses/${courseId}`)}
-              />
+              <EmptyState
+                state="pensando"
+                title="Aún no hay"
+                accent="lecciones"
+                text="Cuando el profe agregue contenido, lo vas a poder seguir desde acá."
+              >
+                <button type="button" onClick={() => navigate(`/courses/${courseId}`)} className={BTN_SECONDARY}>
+                  Volver al detalle del curso
+                </button>
+              </EmptyState>
             )}
           </div>
         </main>
@@ -923,7 +830,7 @@ export default function LearnCourse() {
             tutor={{
               lessonId: activeLesson.id,
               cursoTitulo: curso.titulo,
-              moduloNumero: (curso.modulos?.findIndex((m) => m.id === activeModulo?.id) ?? -1) + 1,
+              moduloNumero: activeModuloNumero,
               moduloTitulo: activeModulo?.titulo,
               leccionTitulo: activeLesson.titulo,
               conversation: tutorConvos[activeLesson.id] || [],
@@ -941,6 +848,255 @@ export default function LearnCourse() {
   );
 }
 
+// ---- Índice del curso: cabecera, avance y ruta de lecciones ----
+function CourseIndex({
+  curso,
+  theme,
+  open,
+  onClose,
+  onBack,
+  navRef,
+  activeId,
+  activeEvalId,
+  completed,
+  newLessons,
+  progressLoading,
+  progressPct,
+  completedCount,
+  currentPosition,
+  totalLessons,
+  onSelectLesson,
+  onSelectEval,
+}) {
+  const shownPct = useCountUp(progressLoading ? 0 : progressPct);
+  const finalEval = curso.evaluacionFinal;
+  const finalActive = finalEval && finalEval.id === activeEvalId;
+
+  // Esc cierra el cajón en móvil.
+  useEffect(() => {
+    if (!open) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
+  return (
+    <aside
+      id="learn-index"
+      aria-label="Índice del curso"
+      className={`
+        w-80 max-w-[85vw] lg:w-72 bg-white flex flex-col
+        fixed top-12 bottom-14 left-0 z-40 overflow-y-auto scrollbar-none
+        border-r-2 border-titi-dark
+        transition-transform duration-200 motion-reduce:transition-none
+        ${open ? 'translate-x-0 shadow-[6px_0_0_rgba(26,26,46,0.12)]' : '-translate-x-full'}
+        lg:static lg:inset-auto lg:h-full lg:max-w-none lg:transform-none
+        lg:border-2 lg:rounded-2xl lg:shadow-[0_2px_8px_rgba(0,0,0,0.06)] lg:shrink-0
+      `}
+    >
+      {/* Cabecera: volver, categoría, título y avance */}
+      <div className="p-4 border-b-2 border-gray-100">
+        <div className="flex items-start justify-between gap-2">
+          <BackLink onClick={onBack}>Volver</BackLink>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar índice"
+            className="lg:hidden w-9 h-9 grid place-items-center rounded-full border-2 border-gray-200 text-titi-dark hover:border-titi-dark active:translate-y-0.5 transition-all duration-150 focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60"
+          >
+            <CloseIcon className="w-4 h-4" />
+          </button>
+        </div>
+        {curso.categoria?.nombre && (
+          <p className={`group inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide ${theme.text}`}>
+            <span className={`w-6 h-6 rounded-lg grid place-items-center text-white ${theme.solid}`}>
+              <CategoryIcon nombre={curso.categoria.nombre} className="w-3.5 h-3.5" />
+            </span>
+            {curso.categoria.nombre}
+          </p>
+        )}
+        <h2 className="text-lg font-black text-titi-dark leading-snug line-clamp-3 mt-1.5 break-words">
+          {curso.titulo}
+        </h2>
+
+        {/* Avance del curso (panel oscuro) */}
+        <div className={`${DARK_PANEL} p-3.5 mt-4`}>
+          <div className="flex items-end justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold uppercase tracking-wide text-white/60">Tu avance</p>
+              <p className="text-sm font-bold text-white mt-0.5">
+                Lección {currentPosition} de {totalLessons}
+              </p>
+            </div>
+            {progressLoading ? (
+              <span className="h-7 w-14 rounded-lg bg-white/10 animate-pulse" aria-label="Cargando progreso" />
+            ) : (
+              <span className="text-3xl font-black text-titi-yellow tabular-nums leading-none">{shownPct}%</span>
+            )}
+          </div>
+          {progressLoading ? (
+            <div className="h-2.5 w-full rounded-full bg-white/10 animate-pulse mt-3" aria-hidden="true" />
+          ) : (
+            <ProgressBar value={progressPct} color="bg-titi-yellow" track="bg-white/10" className="mt-3" label="Avance del curso" />
+          )}
+          <p className="text-xs font-semibold text-white/60 mt-2 tabular-nums">
+            {progressLoading
+              ? 'Cargando tu avance…'
+              : totalLessons === 0
+                ? 'Todavía no hay lecciones.'
+                : `${Math.min(completedCount, totalLessons)} de ${totalLessons} ${totalLessons === 1 ? 'lección completada' : 'lecciones completadas'}`}
+          </p>
+        </div>
+      </div>
+
+      {/* Ruta: módulos + lecciones + evaluaciones */}
+      <nav ref={navRef} aria-label="Lecciones del curso" className="flex-1 p-3">
+        {!curso.modulos?.length ? (
+          <p className="px-1 py-2 text-sm font-semibold text-gray-500">
+            Este curso aún no tiene módulos publicados.
+          </p>
+        ) : (
+          curso.modulos.map((modulo, mIndex) => {
+            const lecciones = modulo.lecciones || [];
+            const doneInModule = lecciones.filter((l) => completed.has(l.id)).length;
+            const steps = [
+              ...lecciones.map((leccion, index) => ({ kind: 'leccion', leccion, index })),
+              ...(modulo.evaluacion ? [{ kind: 'eval', evaluacion: modulo.evaluacion }] : []),
+            ];
+            return (
+              <section key={modulo.id} className="mb-4 last:mb-0">
+                <div className="flex items-center gap-2.5 px-1 mb-1.5">
+                  <span
+                    aria-hidden="true"
+                    className={`w-7 h-7 shrink-0 rounded-lg border-2 border-titi-dark grid place-items-center text-xs font-black text-white tabular-nums -rotate-6 ${theme.solid}`}
+                  >
+                    {mIndex + 1}
+                  </span>
+                  <h3 className="flex-1 min-w-0 text-sm font-extrabold text-titi-dark leading-snug break-words">
+                    {modulo.titulo}
+                  </h3>
+                  {lecciones.length > 0 && (
+                    <span className="shrink-0 text-xs font-bold text-gray-500 tabular-nums" aria-label={`${doneInModule} de ${lecciones.length} completadas`}>
+                      {doneInModule}/{lecciones.length}
+                    </span>
+                  )}
+                </div>
+                <ol>
+                  {steps.map((step, sIndex) => {
+                    const isLast = sIndex === steps.length - 1;
+                    if (step.kind === 'eval') {
+                      const isActive = step.evaluacion.id === activeEvalId;
+                      return (
+                        <li key={step.evaluacion.id} className="relative py-0.5">
+                          <IndexStep
+                            active={isActive}
+                            activeTint="bg-purple-100"
+                            onClick={() => onSelectEval(step.evaluacion.id)}
+                            node={
+                              <span className="w-7 h-7 rounded-full border-2 border-titi-dark bg-titi-achievement text-white grid place-items-center">
+                                <AwardIcon className="w-3.5 h-3.5" />
+                              </span>
+                            }
+                          >
+                            <span className="block text-xs font-extrabold uppercase tracking-wide text-titi-achievement">Evaluación</span>
+                            <span className="block line-clamp-2">{step.evaluacion.titulo}</span>
+                          </IndexStep>
+                        </li>
+                      );
+                    }
+                    const { leccion, index } = step;
+                    const isActive = leccion.id === activeId && !activeEvalId;
+                    const isDone = completed.has(leccion.id);
+                    const isNew = newLessons.has(leccion.id) && !isDone;
+                    return (
+                      <li key={leccion.id} className="relative py-0.5">
+                        {!isLast && (
+                          <span
+                            aria-hidden="true"
+                            className={`absolute left-[23px] top-1/2 h-full w-0.5 ${isDone ? 'bg-green-500' : 'bg-gray-200'}`}
+                          />
+                        )}
+                        <IndexStep
+                          active={isActive}
+                          activeTint="bg-titi-yellow-light"
+                          onClick={() => onSelectLesson(leccion.id)}
+                          node={
+                            isDone ? (
+                              <span className="w-7 h-7 rounded-full border-2 border-titi-dark bg-green-500 text-white grid place-items-center">
+                                <CheckIcon className="w-3.5 h-3.5" />
+                              </span>
+                            ) : (
+                              <span
+                                className={`w-7 h-7 rounded-full border-2 grid place-items-center text-xs font-black tabular-nums ${
+                                  isActive ? 'bg-titi-yellow border-titi-dark text-titi-dark' : 'bg-white border-gray-300 text-gray-500'
+                                }`}
+                              >
+                                {index + 1}
+                              </span>
+                            )
+                          }
+                          muted={isDone && !isActive}
+                          badge={isNew ? <span className="shrink-0 h-6 px-2 rounded-full bg-blue-500 text-white text-xs font-extrabold inline-flex items-center">Nueva</span> : null}
+                        >
+                          <span className="block line-clamp-2">{leccion.titulo}</span>
+                          {isDone && <span className="sr-only"> (completada)</span>}
+                        </IndexStep>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </section>
+            );
+          })
+        )}
+      </nav>
+
+      {/* Evaluación final al pie */}
+      {finalEval && (
+        <div className="p-3 border-t-2 border-gray-100">
+          <button
+            type="button"
+            onClick={() => onSelectEval(finalEval.id)}
+            aria-current={finalActive ? 'step' : undefined}
+            className={`${TILE.replace('bg-white ', '')} ${finalActive ? 'bg-purple-100' : 'bg-white'} w-full flex items-center gap-3 p-3 text-left`}
+          >
+            <RoleBadge Icon={TrophyIcon} solid="bg-titi-achievement" size="sm" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-extrabold uppercase tracking-wide text-titi-achievement">Evaluación final</span>
+              <span className="block text-sm font-extrabold text-titi-dark leading-snug line-clamp-2">{finalEval.titulo}</span>
+            </span>
+          </button>
+        </div>
+      )}
+    </aside>
+  );
+}
+
+/** Un paso de la ruta del índice: nodo + texto; la actual queda resaltada. */
+function IndexStep({ active, activeTint, onClick, node, muted = false, badge = null, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active ? 'step' : undefined}
+      className={[
+        'relative w-full flex items-center gap-3 pl-2 pr-2.5 py-2 rounded-xl border-2 text-left text-sm leading-snug',
+        'transition-all duration-150 active:translate-y-0.5 motion-reduce:transition-none',
+        'focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60',
+        active
+          ? `${activeTint} border-titi-dark font-extrabold text-titi-dark shadow-[0_3px_0_#1A1A2E]`
+          : `border-transparent hover:bg-titi-cream hover:border-gray-200 font-semibold ${muted ? 'text-gray-500' : 'text-titi-dark'}`,
+      ].join(' ')}
+    >
+      <span className="relative z-10 shrink-0">{node}</span>
+      <span className="min-w-0 flex-1 break-words">{children}</span>
+      {badge}
+    </button>
+  );
+}
+
 // ---- Vista de lección activa ----
 const TIPO_ICON = {
   pdf: FileIcon,
@@ -948,6 +1104,23 @@ const TIPO_ICON = {
   imagen: ImageIcon,
   codigo: CodeIcon,
   otro: ClipIcon,
+};
+
+const TIPO_LABEL = {
+  pdf: 'PDF',
+  word: 'Word',
+  imagen: 'Imagen',
+  codigo: 'Código',
+  otro: 'Archivo',
+};
+
+// Insignia sólida por tipo de material (design.md §2: un rol por color).
+const TIPO_SOLID = {
+  pdf: 'bg-red-500',
+  word: 'bg-blue-500',
+  imagen: 'bg-green-500',
+  codigo: 'bg-titi-dark',
+  otro: 'bg-titi-yellow',
 };
 
 function MaterialChip({ material }) {
@@ -961,18 +1134,19 @@ function MaterialChip({ material }) {
       target="_blank"
       rel="noopener noreferrer"
       download
-      className="inline-flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm font-semibold text-titi-dark hover:border-titi-yellow hover:bg-titi-cream transition-all duration-150 max-w-full"
+      className={`${TILE} flex items-center gap-3 p-2.5 pr-3 max-w-full`}
     >
-      <Icon className="w-4 h-4 text-gray-500 shrink-0" aria-hidden="true" />
-      <span className="truncate">{material.nombre}</span>
-      <span className="text-xs text-gray-400 uppercase tracking-wide shrink-0">
-        {material.tipo}
+      <RoleBadge Icon={Icon} solid={TIPO_SOLID[material.tipo] || TIPO_SOLID.otro} size="sm" />
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-extrabold text-titi-dark">{material.nombre}</span>
+        <span className="block text-xs font-bold text-gray-500">{TIPO_LABEL[material.tipo] || TIPO_LABEL.otro}</span>
       </span>
+      <ExternalLinkIcon className="w-4 h-4 text-gray-500 shrink-0" />
     </a>
   );
 }
 
-function LessonView({ leccion, completed, completing, completeError, onComplete, htmlEvaluable, onHtmlEvaluableChange, htmlDeadlineExpired, onHtmlDeadlineChange, onHtmlScoreRecorded, hasNext, onNext, onSaveNote }) {
+function LessonView({ leccion, moduloNumero, moduloTitulo, completed, completing, completeError, onComplete, htmlEvaluable, onHtmlEvaluableChange, htmlDeadlineExpired, onHtmlDeadlineChange, onHtmlScoreRecorded, hasNext, nextTitle, onNext, onSaveNote }) {
   const videoEmbed = useMemo(
     () => normalizeVideoUrl(leccion.videoUrl),
     [leccion.videoUrl],
@@ -980,50 +1154,67 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
   // Pop al cambiar de lección (también remonta por key en el padre). Ver motion.md §5.
   const articleRef = usePopIn([leccion.id]);
   const isHtml = leccion.formatoContenido === 'HTML';
+  const hasBody = Boolean(videoEmbed || leccion.contenido);
 
   return (
     <article ref={articleRef}>
-      {videoEmbed && (
-        <div className="w-full aspect-video rounded-2xl overflow-hidden bg-titi-dark mb-6">
-          <iframe
-            key={videoEmbed}
-            src={videoEmbed}
-            title={leccion.titulo}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-            sandbox="allow-scripts allow-same-origin allow-presentation"
-            referrerPolicy="strict-origin-when-cross-origin"
-            className="w-full h-full border-0"
-          />
+      {/* Cabecera de la lección */}
+      <header className="mb-4">
+        {moduloTitulo && (
+          <p className="text-xs font-extrabold uppercase tracking-wide text-gray-500 break-words">
+            {moduloNumero ? `Módulo ${moduloNumero} · ` : ''}{moduloTitulo}
+          </p>
+        )}
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black text-titi-dark leading-tight break-words min-w-0">
+            {leccion.titulo}
+          </h1>
+          <button type="button" onClick={onSaveNote} className={`${BTN_SECONDARY_SM} self-start shrink-0`}>
+            <BookmarkIcon className="w-4 h-4" />
+            Guardar nota
+          </button>
+        </div>
+        {completed && (
+          <span className="mt-3 inline-flex items-center gap-1.5 h-8 pl-1 pr-3 rounded-full bg-green-50 border-2 border-green-500 text-sm font-extrabold text-green-700">
+            <span className="w-6 h-6 rounded-full bg-green-500 grid place-items-center" aria-hidden="true">
+              <CheckIcon className="w-3.5 h-3.5 text-white" />
+            </span>
+            Completada
+          </span>
+        )}
+      </header>
+
+      {/* Video + contenido sobre una superficie (lectura sobre blanco) */}
+      {hasBody && (
+        <div className={`${SURFACE} p-4 sm:p-6 lg:p-8 mb-4`}>
+          {videoEmbed && (
+            <div className={`w-full aspect-video rounded-xl overflow-hidden bg-titi-dark border-2 border-titi-dark ${leccion.contenido ? 'mb-6' : ''}`}>
+              <iframe
+                key={videoEmbed}
+                src={videoEmbed}
+                title={leccion.titulo}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen
+                sandbox="allow-scripts allow-same-origin allow-presentation"
+                referrerPolicy="strict-origin-when-cross-origin"
+                className="w-full h-full border-0"
+              />
+            </div>
+          )}
+
+          {/* Contenido de la lección — se muestra directo, sin toggle. */}
+          {leccion.contenido && (
+            <Suspense fallback={<LessonBodySkeleton label="Cargando contenido…" />}>
+              <MarkdownContent
+                content={leccion.contenido}
+                format="MARKDOWN"
+              />
+            </Suspense>
+          )}
         </div>
       )}
 
-      <div className="flex flex-col sm:flex-row items-start justify-between gap-3 mb-3">
-        <h1 className="text-xl sm:text-2xl font-bold text-titi-dark">
-          {leccion.titulo}
-        </h1>
-        <button
-          type="button"
-          onClick={onSaveNote}
-          className="shrink-0 inline-flex items-center gap-1.5 text-sm font-semibold text-titi-dark hover:text-titi-yellow-dark transition-colors"
-        >
-          <BookmarkIcon className="w-4 h-4" />
-          Guardar nota
-        </button>
-      </div>
-
-      {/* Contenido de la lección — se muestra directo, sin toggle. */}
-      {leccion.contenido && (
-        <Suspense fallback={<LessonBodySkeleton label="Cargando contenido…" />}>
-          <MarkdownContent
-            content={leccion.contenido}
-            format="MARKDOWN"
-            className="mb-6"
-          />
-        </Suspense>
-      )}
-
-      {/* Profundiza en este tema (chips de IA — stub por ahora) */}
+      {/* Presentación interactiva (trae su propio marco) */}
       {isHtml && (
         <Suspense fallback={<LessonBodySkeleton label="Cargando actividad…" />}>
           <HtmlLessonPlayer
@@ -1037,56 +1228,57 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
       )}
 
       {completeError && (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-4">
-          <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-red-700">
-              No pudimos marcar la lección
-            </p>
-            <p className="text-xs text-red-500 mt-0.5">{completeError}</p>
-          </div>
-        </div>
+        <ErrorBox title="No pudimos marcar la lección" message={completeError} onRetry={onComplete} />
       )}
 
-      {/* Fila de acción */}
-      <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
+      {/* Barra de acción: completar + siguiente */}
+      <div className={`${SURFACE} p-3 sm:p-4 flex flex-wrap items-center gap-3`}>
+        <div className="grow basis-56 min-w-0">
+          {completed ? (
+            <p className="inline-flex items-center gap-2 text-sm font-extrabold text-green-700">
+              <span className="w-8 h-8 rounded-full bg-green-500 grid place-items-center shrink-0" aria-hidden="true">
+                <CheckIcon className="w-4 h-4 text-white" />
+              </span>
+              Lección completada
+            </p>
+          ) : isHtml && htmlEvaluable !== false ? (
+            <p className="text-sm font-semibold text-gray-500">
+              {htmlEvaluable === null ? 'Preparando la actividad…' : htmlDeadlineExpired ? 'El plazo venció; podés revisar la presentación, pero no enviar nuevos puntajes.' : 'Completá la actividad para registrar tu nota.'}
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={onComplete}
+              disabled={completing}
+              className="titi-btn-primary w-full sm:w-auto py-3 text-base whitespace-nowrap"
+            >
+              <CheckIcon className="w-5 h-5" />
+              {completing ? 'Marcando…' : 'Marcar como completada'}
+            </button>
+          )}
+        </div>
         {hasNext && (
           <button
             type="button"
             onClick={onNext}
-            className={`order-2 lg:order-1 w-full sm:w-auto justify-center bg-white text-titi-dark font-bold text-sm px-5 py-3 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 inline-flex items-center gap-2 ${completed ? 'bg-titi-yellow border-titi-yellow text-titi-dark shadow-[0_4px_0px_#E6B800] lg:bg-white lg:border-gray-200 lg:text-titi-dark lg:shadow-[0_4px_0px_#E5E7EB]' : ''}`}
+            className={[
+              'group grow sm:grow-0 basis-56 sm:max-w-xs min-w-0 inline-flex items-center justify-between gap-3 min-h-11 pl-4 pr-3 py-2 rounded-xl border-2 border-titi-dark text-left',
+              'transition-all duration-150 hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-none motion-reduce:transition-none',
+              'focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60',
+              completed
+                ? 'bg-titi-yellow shadow-[0_3px_0_#1A1A2E] hover:shadow-[0_4px_0_#1A1A2E]'
+                : 'bg-white shadow-[0_3px_0_#1A1A2E] hover:bg-titi-yellow hover:shadow-[0_4px_0_#1A1A2E]',
+            ].join(' ')}
           >
-            <span className="lg:hidden">{completed ? 'Continuar →' : 'Siguiente lección →'}</span>
-            <span className="hidden lg:inline">Siguiente lección →</span>
-          </button>
-        )}
-        {completed ? (
-          <>
-            <span className="order-1 lg:hidden w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-full bg-green-50 border border-green-200 px-4 py-2 text-sm font-bold text-green-700">
-              <span aria-hidden="true">✓</span>
-              Lección completada
+            <span className="min-w-0">
+              <span className="block text-xs font-extrabold uppercase tracking-wide text-titi-dark/60">
+                {completed ? 'Seguí con' : 'Siguiente'}
+              </span>
+              <span className="block truncate text-sm font-extrabold text-titi-dark">
+                {nextTitle || 'Siguiente lección'}
+              </span>
             </span>
-            <button
-              type="button"
-              disabled
-              className="hidden lg:inline-flex order-2 bg-green-500 text-white font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#16A34A] cursor-default items-center gap-2"
-            >
-              <span aria-hidden="true">✓</span>
-              Lección completada
-            </button>
-          </>
-        ) : isHtml && htmlEvaluable !== false ? (
-          <p className="order-1 lg:order-2 text-sm font-semibold text-gray-500">
-            {htmlEvaluable === null ? 'Preparando la actividad…' : htmlDeadlineExpired ? 'El plazo venció; podés revisar la presentación, pero no enviar nuevos puntajes.' : 'Completá la actividad para registrar tu nota.'}
-          </p>
-        ) : (
-          <button
-            type="button"
-            onClick={onComplete}
-            disabled={completing}
-            className="order-1 lg:order-2 w-full sm:w-auto bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {completing ? 'Marcando…' : 'Marcar como completada'}
+            <ArrowRightIcon className="w-5 h-5 shrink-0 text-titi-dark transition-transform duration-150 group-hover:translate-x-0.5 motion-reduce:transition-none" />
           </button>
         )}
       </div>
@@ -1097,32 +1289,35 @@ function LessonView({ leccion, completed, completing, completeError, onComplete,
 function LearnCourseSkeleton() {
   return (
     <div className="flex min-h-screen lg:min-h-0 lg:h-[calc(100vh-1.5rem)] bg-titi-cream lg:gap-3 animate-pulse" role="status" aria-busy="true" aria-label="Cargando curso">
-      <aside className="hidden lg:flex w-72 bg-white border border-gray-100 rounded-2xl flex-col p-4 gap-4">
-        <div className="h-3 w-16 rounded bg-gray-100" />
-        <div className="h-5 w-4/5 rounded bg-gray-100" />
-        <div className="h-3 w-2/5 rounded bg-gray-100" />
-        <div className="h-2 w-full rounded-full bg-gray-100 mt-3" />
-        <div className="space-y-3 mt-3">
+      <aside className={`hidden lg:flex w-72 shrink-0 ${SURFACE} flex-col p-4 gap-3`}>
+        <SkeletonLine className="h-9 w-24" />
+        <SkeletonLine className="h-3 w-28" />
+        <SkeletonLine className="h-5 w-4/5" />
+        <div className="h-28 rounded-2xl bg-titi-dark/10 mt-1" />
+        <div className="space-y-2.5 mt-2">
           {[0, 1, 2, 3, 4, 5].map((item) => (
-            <div key={item} className="h-8 rounded-xl bg-gray-100" />
+            <div key={item} className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-full bg-gray-100 shrink-0" />
+              <SkeletonLine className="h-3.5 flex-1" />
+            </div>
           ))}
         </div>
       </aside>
       <main className="flex-1 p-4 sm:p-5 lg:p-5 min-w-0">
-        <div className="max-w-5xl mx-auto space-y-5">
-          <div className="lg:hidden h-10 rounded-xl bg-gray-100" />
-          <div className="h-7 w-3/5 rounded bg-gray-100" />
-          <div className="h-4 w-2/5 rounded bg-gray-100" />
-          <div className="space-y-3 pt-3">
-            <div className="h-4 w-full rounded bg-gray-100" />
-            <div className="h-4 w-11/12 rounded bg-gray-100" />
-            <div className="h-4 w-4/5 rounded bg-gray-100" />
-            <div className="h-48 w-full rounded-2xl bg-gray-100 mt-6" />
+        <div className="max-w-5xl mx-auto space-y-4">
+          <div className="lg:hidden h-16 rounded-2xl bg-gray-100" />
+          <SkeletonLine className="h-3 w-40" />
+          <SkeletonLine className="h-8 w-3/5" />
+          <div className={`${SURFACE} p-6 space-y-3`}>
+            <SkeletonLine className="h-4 w-full" />
+            <SkeletonLine className="h-4 w-11/12" />
+            <SkeletonLine className="h-4 w-4/5" />
+            <div className="h-40 w-full rounded-xl bg-gray-100 mt-4" />
           </div>
         </div>
       </main>
-      <aside className="hidden lg:flex w-24 bg-white border border-gray-100 rounded-2xl flex-col justify-center gap-3 p-3">
-        {[0, 1, 2, 3].map((item) => <div key={item} className="h-14 rounded-xl bg-gray-100" />)}
+      <aside className={`hidden lg:flex w-24 ${SURFACE} flex-col gap-2 p-2`}>
+        {[0, 1, 2, 3].map((item) => <div key={item} className="h-16 rounded-xl bg-gray-100" />)}
       </aside>
     </div>
   );
@@ -1131,13 +1326,15 @@ function LearnCourseSkeleton() {
 function LessonContentSkeleton({ title }) {
   return (
     <article className="animate-pulse" aria-busy="true" aria-label="Cargando lección">
-      <div className="h-7 w-3/5 rounded bg-gray-100" aria-hidden="true" />
-      <div className="h-4 w-2/5 rounded bg-gray-100 mt-3" aria-hidden="true" />
-      <div className="space-y-3 mt-8">
-        <div className="h-4 w-full rounded bg-gray-100" />
-        <div className="h-4 w-11/12 rounded bg-gray-100" />
-        <div className="h-4 w-4/5 rounded bg-gray-100" />
-        <div className="h-52 w-full rounded-2xl bg-gray-100 mt-6" />
+      <div aria-hidden="true">
+        <SkeletonLine className="h-3 w-40" />
+        <SkeletonLine className="h-8 w-3/5 mt-3" />
+        <div className={`${SURFACE} p-6 space-y-3 mt-4`}>
+          <SkeletonLine className="h-4 w-full" />
+          <SkeletonLine className="h-4 w-11/12" />
+          <SkeletonLine className="h-4 w-4/5" />
+          <div className="h-44 w-full rounded-xl bg-gray-100 mt-4" />
+        </div>
       </div>
       <span className="sr-only">Cargando {title || 'lección'}.</span>
     </article>
@@ -1149,26 +1346,25 @@ function TutorCredentialBanner({ invalid, onConfigure }) {
     <section
       aria-live="polite"
       aria-labelledby="tutor-credential-banner-title"
-      className="mb-5 flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl border border-titi-yellow bg-titi-yellow-light px-4 py-3.5 sm:px-5"
+      className={`${SURFACE} mb-4 flex flex-col sm:flex-row sm:items-center gap-3 p-4`}
     >
-      <span className="w-10 h-10 rounded-xl bg-titi-yellow grid place-items-center shrink-0" aria-hidden="true">
-        <SparklesIcon className="w-5 h-5 text-titi-dark" />
-      </span>
+      <RoleBadge Icon={SparklesIcon} solid="bg-titi-yellow" />
       <div className="min-w-0 flex-1">
-        <h2 id="tutor-credential-banner-title" className="text-sm font-extrabold text-titi-dark">
-          {invalid ? 'Tu clave necesita reemplazo' : 'Conecta tu clave personal de Groq para usar el Tutor IA'}
+        <h2 id="tutor-credential-banner-title" className="text-base font-extrabold text-titi-dark leading-snug">
+          {invalid ? 'Tu clave necesita reemplazo' : 'Conectá tu clave personal de Groq para usar el Tutor IA'}
         </h2>
-        <p className="mt-0.5 text-xs sm:text-sm font-medium text-gray-600">
+        <p className="mt-0.5 text-sm font-medium text-gray-500">
           {invalid
-            ? 'La clave guardada no es válida o fue revocada. Reemplázala para continuar.'
+            ? 'La clave guardada no es válida o fue revocada. Reemplazala para continuar.'
             : 'La clave se valida y se guarda cifrada en tu cuenta; nunca se muestra completa.'}
         </p>
       </div>
       <button
         type="button"
         onClick={onConfigure}
-        className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center rounded-xl bg-titi-dark px-4 py-2.5 text-sm font-bold text-white hover:bg-titi-dark/90 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-dark focus-visible:ring-offset-2 transition-colors"
+        className="w-full sm:w-auto shrink-0 inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-titi-dark border-2 border-titi-dark text-sm font-extrabold text-white shadow-[0_3px_0_#E6B800] hover:-translate-y-0.5 hover:shadow-[0_4px_0_#E6B800] active:translate-y-0.5 active:shadow-none transition-all duration-150 motion-reduce:transition-none focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60"
       >
+        <SparklesIcon className="w-4 h-4 text-titi-yellow" />
         Configurar ahora
       </button>
     </section>
@@ -1178,9 +1374,9 @@ function TutorCredentialBanner({ invalid, onConfigure }) {
 function LessonBodySkeleton({ label }) {
   return (
     <div className="space-y-3 mb-6 animate-pulse" aria-busy="true" role="status">
-      <div className="h-4 w-full rounded bg-gray-100" aria-hidden="true" />
-      <div className="h-4 w-11/12 rounded bg-gray-100" aria-hidden="true" />
-      <div className="h-4 w-4/5 rounded bg-gray-100" aria-hidden="true" />
+      <SkeletonLine className="h-4 w-full" />
+      <SkeletonLine className="h-4 w-11/12" />
+      <SkeletonLine className="h-4 w-4/5" />
       <span className="sr-only">{label}</span>
     </div>
   );
@@ -1188,10 +1384,10 @@ function LessonBodySkeleton({ label }) {
 
 function PanelSkeleton({ label = 'Cargando panel…' }) {
   return (
-    <div className="space-y-3 animate-pulse" aria-busy="true" role="status">
-      <div className="h-4 w-2/3 rounded bg-gray-100" aria-hidden="true" />
+    <div className="space-y-3 p-4 animate-pulse" aria-busy="true" role="status">
+      <SkeletonLine className="h-4 w-2/3" />
       <div className="h-24 w-full rounded-xl bg-gray-100" aria-hidden="true" />
-      <div className="h-4 w-5/6 rounded bg-gray-100" aria-hidden="true" />
+      <SkeletonLine className="h-4 w-5/6" />
       <span className="sr-only">{label}</span>
     </div>
   );
@@ -1199,10 +1395,10 @@ function PanelSkeleton({ label = 'Cargando panel…' }) {
 
 // ---- Columna derecha: riel de íconos + panel desplegable ----
 const PANELS = [
-  { key: 'tutor', label: 'Tutor IA', Icon: SparklesIcon, title: 'Tutor IA' },
-  { key: 'notas', label: 'Notas', Icon: NoteIcon, title: 'Notas' },
-  { key: 'materiales', label: 'Archivos', Icon: FilesIcon, title: 'Materiales' },
-  { key: 'comentarios', label: 'Comentarios', Icon: CommentIcon, title: 'Comentarios' },
+  { key: 'tutor', label: 'Tutor IA', Icon: SparklesIcon, title: 'Tutor IA', solid: 'bg-titi-yellow' },
+  { key: 'notas', label: 'Notas', Icon: PencilIcon, title: 'Notas', solid: 'bg-blue-500' },
+  { key: 'materiales', label: 'Archivos', Icon: FileIcon, title: 'Materiales', solid: 'bg-green-500' },
+  { key: 'comentarios', label: 'Comentarios', Icon: CommentIcon, title: 'Comentarios', solid: 'bg-titi-streak' },
 ];
 
 function LessonSidePanels({
@@ -1270,10 +1466,6 @@ function LessonSidePanels({
     };
   }, [isTutor, onChange]);
   const active = PANELS.find((p) => p.key === displayKey);
-  const title =
-    active?.key === 'comentarios'
-      ? `Comentarios (${commentCount})`
-      : active?.title;
 
   return (
     <>
@@ -1285,7 +1477,7 @@ function LessonSidePanels({
           id="lesson-panel-tutor"
           role="tabpanel"
           aria-labelledby="lesson-tab-tutor"
-          className="fixed inset-y-0 right-0 z-50 hidden md:flex flex-col w-[22rem] lg:w-[26rem] bg-white border-l border-gray-100 shadow-[-8px_0_30px_rgba(0,0,0,0.12)] titi-sheet-right"
+          className="fixed inset-y-0 right-0 z-50 hidden md:flex flex-col w-[22rem] lg:w-[26rem] bg-white border-l-2 border-titi-dark shadow-[-8px_0_0_rgba(26,26,46,0.12)] titi-sheet-right"
         >
           <Suspense fallback={<PanelSkeleton label="Cargando Tutor IA…" />}>
             <TutorPanel {...tutor} titleId="tutor-panel-title-desktop" onClose={() => onChange(null)} />
@@ -1299,16 +1491,16 @@ function LessonSidePanels({
           <div
             aria-hidden="true"
             onClick={() => onChange(null)}
-            className="absolute inset-0 bg-black/30 titi-backdrop-in"
+            className="absolute inset-0 bg-titi-dark/40 titi-backdrop-in"
           />
           <div
             ref={mobileTutorRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="tutor-panel-title-mobile"
-            className="absolute inset-x-0 bottom-0 h-[92vh] bg-white rounded-t-2xl flex flex-col overflow-hidden shadow-[0_-8px_30px_rgba(0,0,0,0.12)] titi-sheet-in"
+            className="absolute inset-x-0 bottom-0 h-[92vh] bg-white rounded-t-2xl border-t-2 border-titi-dark flex flex-col overflow-hidden titi-sheet-in"
           >
-            <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto mt-2 shrink-0" />
+            <div className="w-10 h-1.5 rounded-full bg-gray-200 mx-auto mt-2 shrink-0" />
             <Suspense fallback={<PanelSkeleton label="Cargando Tutor IA…" />}>
               <TutorPanel {...tutor} titleId="tutor-panel-title-mobile" onClose={() => onChange(null)} />
             </Suspense>
@@ -1316,7 +1508,7 @@ function LessonSidePanels({
         </div>
       )}
 
-      <div className="flex flex-col-reverse lg:flex-row shrink-0 lg:h-full bg-white border border-gray-100 rounded-2xl overflow-hidden">
+      <div className={`${SURFACE} flex flex-col-reverse lg:flex-row shrink-0 lg:h-full overflow-hidden mx-4 mb-4 sm:mx-5 lg:m-0`}>
         {/* Panel colapsable: alto en móvil, ancho en desktop (grid 0fr→1fr + fade),
             ease neutro, no pop. Abre y cierra. Ver motion.md §3. */}
         <div
@@ -1339,18 +1531,23 @@ function LessonSidePanels({
                   expanded ? 'opacity-100' : 'opacity-0'
                 }`}
               >
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <h2 className="text-base font-bold text-titi-dark flex items-center gap-2">
-                    <active.Icon className="w-4 h-4 text-titi-dark" />
-                    {title}
+                <div className="flex items-center gap-2.5 mb-4">
+                  <RoleBadge Icon={active.Icon} solid={active.solid} size="sm" />
+                  <h2 className="flex-1 min-w-0 text-lg font-extrabold text-titi-dark leading-tight">
+                    {active.title}
+                    {active.key === 'comentarios' && (
+                      <span className="ml-1.5 align-middle inline-grid place-items-center min-w-6 h-6 px-1.5 rounded-full bg-titi-dark text-white text-xs font-extrabold tabular-nums">
+                        {commentCount}
+                      </span>
+                    )}
                   </h2>
                   <button
                     type="button"
                     onClick={() => onChange(null)}
-                    className="w-8 h-8 grid place-items-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                    className="w-9 h-9 shrink-0 grid place-items-center rounded-full border-2 border-gray-200 text-titi-dark hover:border-titi-dark active:translate-y-0.5 transition-all duration-150 focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60"
                     aria-label="Cerrar panel"
                   >
-                    ✕
+                    <CloseIcon className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -1378,7 +1575,7 @@ function LessonSidePanels({
         <nav
           role="tablist"
           aria-label="Recursos de la lección"
-          className={`grid grid-cols-4 lg:flex lg:flex-col gap-1 p-2 bg-white lg:w-24 lg:h-full shrink-0 justify-center lg:justify-start ${expanded ? 'lg:border-l border-gray-100' : ''}`}
+          className={`grid grid-cols-4 lg:flex lg:flex-col gap-1.5 p-2 bg-white lg:w-24 lg:h-full shrink-0 justify-center lg:justify-start ${expanded ? 'border-b-2 lg:border-b-0 lg:border-l-2 border-gray-100' : ''}`}
         >
           {PANELS.map(({ key, label, Icon }) => {
             const isOpen = open === key;
@@ -1395,18 +1592,20 @@ function LessonSidePanels({
                 aria-selected={isOpen}
                 aria-controls={`lesson-panel-${key}`}
                 className={[
-                  'relative flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl transition-colors w-full',
+                  'relative flex flex-col items-center justify-center gap-1 px-1.5 py-2.5 rounded-xl border-2 w-full',
+                  'transition-all duration-150 active:translate-y-0.5 active:shadow-none motion-reduce:transition-none',
+                  'focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60',
                   isOpen
-                    ? 'bg-titi-yellow-light text-titi-dark border-b-2 border-titi-yellow lg:border-b-0'
-                    : 'text-gray-500 hover:bg-titi-cream hover:text-titi-dark',
+                    ? 'bg-titi-yellow border-titi-dark text-titi-dark shadow-[0_3px_0_#1A1A2E]'
+                    : 'border-transparent text-gray-500 hover:bg-titi-cream hover:border-gray-200 hover:text-titi-dark',
                 ].join(' ')}
               >
                 <Icon className="w-5 h-5" />
-                <span className="text-xs font-semibold leading-none">{label}</span>
+                <span className={`text-xs leading-none ${isOpen ? 'font-extrabold' : 'font-bold'}`}>{label}</span>
                 {needsTutorKey && (
                   <>
                     <span
-                      className="absolute right-2 top-2 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-white"
+                      className="absolute right-2 top-2 w-3 h-3 rounded-full bg-titi-streak border-2 border-white"
                       aria-hidden="true"
                     />
                     <span className="sr-only">Requiere configurar una clave de Groq</span>
@@ -1424,26 +1623,34 @@ function LessonSidePanels({
 function NotesPanel({ value, onChange, onSave, saving, saved }) {
   return (
     <div>
-      <p className="text-xs text-gray-400 font-medium mb-2">
+      <p className="text-sm font-medium text-gray-500 mb-2">
         Tus apuntes personales de esta lección.
       </p>
       <textarea
-        rows={6}
+        rows={7}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         maxLength={5000}
         placeholder="Escribí tus apuntes…"
-        className="titi-input resize-none text-sm"
+        aria-label="Apuntes de la lección"
+        className={`${INPUT} resize-none leading-relaxed`}
       />
-      <div className="flex items-center justify-between mt-2">
-        <span className="text-xs font-semibold text-green-500">
-          {saved ? 'Guardado ✓' : ''}
+      <div className="flex items-center justify-between gap-2 mt-3">
+        <span role="status" className="inline-flex items-center gap-1.5 text-sm font-extrabold text-green-600">
+          {saved && (
+            <>
+              <span className="w-5 h-5 rounded-full bg-green-500 grid place-items-center" aria-hidden="true">
+                <CheckIcon className="w-3 h-3 text-white" />
+              </span>
+              Guardado
+            </>
+          )}
         </span>
         <button
           type="button"
           onClick={onSave}
           disabled={saving}
-          className="bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="titi-btn-primary text-sm px-4 py-2"
         >
           {saving ? 'Guardando…' : 'Guardar'}
         </button>
@@ -1455,85 +1662,64 @@ function NotesPanel({ value, onChange, onSave, saving, saved }) {
 function MaterialsPanel({ materiales }) {
   return (
     <div>
-      <p className="text-xs text-gray-400 font-medium mb-3">
-        Recursos descargables de la lección.
-      </p>
       {materiales === undefined ? (
-        <p className="text-xs text-gray-400 font-medium">Cargando…</p>
-      ) : materiales.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {materiales.map((m) => (
-            <MaterialChip key={m.id} material={m} />
-          ))}
+        <div className="space-y-2 animate-pulse" role="status" aria-busy="true">
+          <div className="h-14 rounded-2xl bg-gray-100" />
+          <div className="h-14 rounded-2xl bg-gray-100" />
+          <span className="sr-only">Cargando materiales…</span>
         </div>
+      ) : materiales.length > 0 ? (
+        <>
+          <p className="text-sm font-medium text-gray-500 mb-3">
+            Recursos descargables de la lección.
+          </p>
+          <ul className="flex flex-col gap-2.5">
+            {materiales.map((m) => (
+              <li key={m.id}>
+                <MaterialChip material={m} />
+              </li>
+            ))}
+          </ul>
+        </>
       ) : (
-        <p className="text-sm text-gray-400 font-medium">
-          No hay materiales disponibles por el momento.
-        </p>
+        <EmptyState
+          compact
+          state="pensando"
+          title="Todavía no hay"
+          accent="materiales"
+          text="Cuando el profe suba archivos para esta lección, los vas a encontrar acá."
+        />
       )}
     </div>
   );
 }
 
-// ---- Íconos de línea (riel + guardar nota) ----
-function NoteIcon({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-    </svg>
-  );
-}
-
-function FilesIcon({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
-      <path d="M14 2v6h6" />
-    </svg>
-  );
-}
-
-function CommentIcon({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2Z" />
-    </svg>
-  );
-}
-
-function BookmarkIcon({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z" />
-    </svg>
-  );
-}
-
 // ---- Banner de curso completado con certificado ----
 function CertificateBanner({ certificado, onClose }) {
+  const ref = usePopIn([]);
   return (
-    <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 sm:p-5 pr-10 mb-6 bg-titi-yellow-light border-2 border-titi-yellow rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-      <img
-        src="/Titi.png"
-        alt="Titi"
-        className="w-14 h-14 sm:w-16 sm:h-16 object-contain select-none shrink-0"
-        draggable={false}
-      />
+    <div
+      ref={ref}
+      role="status"
+      className={`${DARK_PANEL} relative flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-5 p-4 sm:p-5 pr-12 mb-5`}
+    >
+      <TitiMascot state="celebra" size="sm" message="" className="shrink-0" />
       <div className="min-w-0 flex-1 w-full">
-        <p className="text-base sm:text-lg font-extrabold text-titi-dark leading-tight">
-          ¡Curso completado! 🎓
+        <p className="inline-flex items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide text-titi-yellow">
+          <GraduationIcon className="w-4 h-4" />
+          Curso completado
         </p>
-        <p className="text-sm font-semibold text-gray-600 mt-0.5">
+        <h2 className="text-xl sm:text-2xl font-black text-white leading-tight mt-0.5">
+          ¡Lo <span className="text-titi-yellow">lograste</span>!
+        </h2>
+        <p className="text-sm font-medium text-white/70 mt-1">
           {certificado
-            ? 'Tu certificado esta listo y tiene codigo de verificacion unico.'
+            ? 'Tu certificado está listo y tiene un código de verificación único.'
             : 'Completaste todos los requisitos. Este curso no emite certificado.'}
         </p>
         {certificado && (
-          <Link
-            to="/certificates"
-            className="inline-block mt-2 bg-titi-yellow text-titi-dark font-bold text-sm px-4 py-2 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
-          >
+          <Link to="/certificates" className="titi-btn-primary text-sm px-4 py-2 mt-3">
+            <AwardIcon className="w-4 h-4" />
             Ver mi certificado
           </Link>
         )}
@@ -1542,36 +1728,9 @@ function CertificateBanner({ certificado, onClose }) {
         type="button"
         onClick={onClose}
         aria-label="Cerrar"
-        className="absolute top-2 right-2 w-8 h-8 grid place-items-center rounded-full text-gray-500 hover:text-gray-700 hover:bg-titi-yellow/30 text-lg font-bold transition-colors"
+        className="absolute top-3 right-3 w-9 h-9 grid place-items-center rounded-full border-2 border-white/20 text-white hover:bg-white/10 active:translate-y-0.5 transition-all duration-150 focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60"
       >
-        ✕
-      </button>
-    </div>
-  );
-}
-
-// ---- Empty state cuando no hay lecciones ----
-function EmptyLessonState({ onBack }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
-      <img
-        src="/Titi.png"
-        alt="Titi"
-        className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
-        draggable={false}
-      />
-      <h3 className="text-xl font-bold text-titi-dark mb-2">
-        Aún no hay lecciones
-      </h3>
-      <p className="text-sm text-gray-400 mb-6 max-w-xs">
-        Cuando el profe agregue contenido, lo vas a poder seguir desde aquí.
-      </p>
-      <button
-        type="button"
-        onClick={onBack}
-        className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
-      >
-        Volver al detalle del curso
+        <CloseIcon className="w-4 h-4" />
       </button>
     </div>
   );
