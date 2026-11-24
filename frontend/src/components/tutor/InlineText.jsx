@@ -32,7 +32,7 @@ function CitationBadge({ number, onCite }) {
       type="button"
       onClick={() => onCite?.(number)}
       aria-label={`Ver fuente ${number}`}
-      className="mx-0.5 inline-flex min-w-[1.25rem] justify-center rounded-md bg-titi-yellow-light px-1 text-xs font-bold text-titi-dark align-baseline hover:bg-titi-yellow active:scale-95 transition-colors duration-150"
+      className="mx-0.5 inline-flex min-w-[1.25rem] justify-center rounded-md border border-titi-dark bg-titi-yellow-light px-1 text-xs font-extrabold text-titi-dark align-baseline hover:bg-titi-yellow active:scale-95 transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-titi-dark"
     >
       {number}
     </button>
