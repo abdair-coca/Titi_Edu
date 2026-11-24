@@ -40,7 +40,7 @@
 
 ## Fase 6 — Learn (opcional)
 
-- [ ] 6.1 Chrome de `LearnCourse` (R11). **No se hizo:** se priorizó no tocar Learn (lógica vigilada por 9 chequeos); queda para un change propio.
+- [ ] 6.1 Chrome de `LearnCourse` (R11). **No se hizo:** se priorizó no tocar Learn (lógica vigilada por 9 chequeos); queda para un change propio. Se hizo en `rediseno-learn-v3`.
 
 ## Fase 7 — Cierre
 
