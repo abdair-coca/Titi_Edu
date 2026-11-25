@@ -368,7 +368,7 @@ describe('RAG chat security', () => {
 
     await chatWithCourseContext({ courseId: 'course-1', lessonId: 'lesson-1', principalId: 'student-1', message: '¿Qué es una variable?' });
 
-    expect(JSON.parse(fetchMock.mock.calls[1][1].body).messages[0].content).toMatch(/Source metadata \(untrusted\):.*section="Tipos de datos"/);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body).messages[0].content).toMatch(/Metadatos de la fuente \(no confiables\):.*sección="Tipos de datos"/);
   });
 
   describe('retrieval query', () => {
