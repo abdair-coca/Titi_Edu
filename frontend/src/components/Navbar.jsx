@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import client from '../api/client.js';
-import { resolveMediaUrl } from '../lib/format.js';
+import Avatar from './social/Avatar.jsx';
 import StreakBadge, { FlameIcon } from './StreakBadge.jsx';
 import useStreak from '../hooks/useStreak.js';
 import GotasCounter, { GotasValue } from './GotasCounter.jsx';
@@ -53,7 +53,7 @@ function NotifBadge({ count }) {
   return (
     <span
       aria-label={`${count} notificaciones no leídas`}
-      className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-red-500 text-white text-xs font-extrabold leading-none tabular-nums shadow"
+      className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 grid place-items-center rounded-full bg-red-500 border-2 border-titi-dark text-white text-xs font-extrabold leading-none tabular-nums"
     >
       {count > 99 ? '99+' : count}
     </span>
@@ -80,9 +80,9 @@ function TitiLogo({ size = 'md' }) {
 
 // ---- Sidebar desktop ----
 function sidebarItemClass({ isActive }) {
-  const base = 'flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all';
+  const base = 'flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all duration-150 active:scale-[0.96] focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60 motion-reduce:transition-none';
   return isActive
-    ? `${base} bg-titi-yellow text-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)]`
+    ? `${base} bg-titi-yellow text-titi-dark shadow-[0_3px_0_#E6B800]`
     : `${base} text-white/85 hover:bg-white/10 hover:text-white`;
 }
 
@@ -198,19 +198,9 @@ function Sidebar({ user, onLogout, unread, streak, desktopVisibility = 'md:flex'
         {user && (
           <Link
             to={`/profile/${user.username}`}
-            className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/10 transition-colors"
+            className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-white/10 active:scale-[0.97] transition-all duration-150 focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60"
           >
-            {user.avatarUrl ? (
-              <img
-                src={resolveMediaUrl(user.avatarUrl)}
-                alt={user.username}
-                className="w-9 h-9 rounded-full object-cover bg-titi-dark border-2 border-titi-yellow shrink-0"
-              />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold shrink-0">
-                {user.username?.[0]?.toUpperCase() ?? '?'}
-              </div>
-            )}
+            <Avatar username={user.username} src={user.avatarUrl} size="sm" className="!border-titi-yellow" />
             <div className={`min-w-0 ${sidebarLabel}`}>
               <p className="text-sm font-bold truncate">@{user.username}</p>
               <p className="text-xs text-white/60 truncate">Ver perfil</p>
@@ -220,7 +210,7 @@ function Sidebar({ user, onLogout, unread, streak, desktopVisibility = 'md:flex'
         <button
           type="button"
           onClick={onLogout}
-          className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-white/85 hover:bg-red-500/20 hover:text-red-500 transition-colors font-bold"
+          className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-white/85 hover:bg-red-500/20 hover:text-red-500 active:scale-[0.97] transition-all duration-150 font-bold focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60"
         >
           <Icon.Logout className="w-5 h-5 shrink-0" />
           <span className={sidebarLabel}>Cerrar sesión</span>
@@ -233,7 +223,7 @@ function Sidebar({ user, onLogout, unread, streak, desktopVisibility = 'md:flex'
 // ---- Top bar móvil ----
 function MobileTopBar({ user, onLogout, unread, streak, showStreak, mobileVisibility = 'md:hidden', compact = false }) {
   return (
-    <header className={`${mobileVisibility} fixed top-0 left-0 right-0 z-50 ${compact ? 'h-12' : 'h-14'} bg-titi-dark text-white border-b border-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)]`}>
+    <header className={`${mobileVisibility} fixed top-0 left-0 right-0 z-50 ${compact ? 'h-12' : 'h-14'} bg-titi-dark text-white border-b-2 border-titi-dark`}>
       <div className={`h-full ${compact ? 'px-3 gap-1.5' : 'px-4 gap-2'} flex items-center justify-between`}>
         <Link to="/feed">
           <TitiLogo size={compact ? 'sm' : 'md'} />
@@ -243,7 +233,7 @@ function MobileTopBar({ user, onLogout, unread, streak, showStreak, mobileVisibi
             <Link
               to="/admin"
               aria-label="Panel de administración"
-              className={`${compact ? 'p-1.5' : 'p-2'} rounded-full text-white/85 hover:text-titi-yellow hover:bg-white/10 transition-colors`}
+              className={`${compact ? 'p-1.5' : 'p-2'} rounded-full text-white/85 hover:text-titi-yellow hover:bg-white/10 active:scale-90 transition-all duration-150`}
             >
               <Icon.Shield className="w-5 h-5" />
             </Link>
@@ -252,7 +242,7 @@ function MobileTopBar({ user, onLogout, unread, streak, showStreak, mobileVisibi
             <Link
               to="/leaderboard"
               aria-label="Mis gotas"
-              className="inline-flex items-center gap-1 bg-titi-dark-mid border border-titi-yellow/30 px-2.5 py-1 rounded-full"
+              className="inline-flex items-center gap-1 bg-white/5 border-2 border-white/10 hover:border-titi-yellow px-2.5 py-1 rounded-full active:scale-95 transition-all duration-150"
             >
               <GotasCounter iconClass="w-3.5 h-3.5" className="text-sm" />
             </Link>
@@ -261,7 +251,7 @@ function MobileTopBar({ user, onLogout, unread, streak, showStreak, mobileVisibi
             <Link
               to="/my-courses"
               aria-label={`Racha de ${streak.racha} días`}
-              className="inline-flex items-center gap-1 bg-titi-dark-mid border border-titi-streak/30 px-2.5 py-1 rounded-full"
+              className="inline-flex items-center gap-1 bg-white/5 border-2 border-white/10 hover:border-titi-streak px-2.5 py-1 rounded-full active:scale-95 transition-all duration-150"
             >
               <MiniFlame active={streak.estaActiva && streak.racha > 0} />
               <span className="text-sm font-black text-titi-streak tabular-nums leading-none">
@@ -272,7 +262,7 @@ function MobileTopBar({ user, onLogout, unread, streak, showStreak, mobileVisibi
           <Link
             to="/notifications"
             aria-label="Notificaciones"
-              className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-full text-white/85 hover:text-titi-yellow hover:bg-white/10 transition-colors`}
+              className={`relative ${compact ? 'p-1.5' : 'p-2'} rounded-full text-white/85 hover:text-titi-yellow hover:bg-white/10 active:scale-90 transition-all duration-150`}
           >
             <Icon.Bell className="w-5 h-5" />
             <NotifBadge count={unread} />
@@ -281,7 +271,7 @@ function MobileTopBar({ user, onLogout, unread, streak, showStreak, mobileVisibi
             type="button"
             onClick={onLogout}
             aria-label="Cerrar sesión"
-            className={`${compact ? '-mr-1 p-1.5' : '-mr-2 p-2'} rounded-full text-white/85 hover:text-red-500 hover:bg-white/10 transition-colors`}
+            className={`${compact ? '-mr-1 p-1.5' : '-mr-2 p-2'} rounded-full text-white/85 hover:text-red-500 hover:bg-white/10 active:scale-90 transition-all duration-150`}
           >
             <Icon.Logout className="w-5 h-5" />
           </button>
@@ -310,7 +300,7 @@ function MiniFlame({ active }) {
 
 // ---- Bottom nav móvil ----
 function bottomItemClass({ isActive, compact = false }) {
-  const base = `flex flex-col items-center justify-center gap-0.5 h-full ${compact ? 'text-[11px]' : 'text-xs'} font-bold transition-colors`;
+  const base = `flex flex-col items-center justify-center gap-0.5 h-full text-xs font-bold transition-all duration-150 active:scale-90 motion-reduce:transition-none`;
   return isActive
     ? `${base} text-titi-yellow`
     : `${base} text-white/70 hover:text-white`;
@@ -323,7 +313,7 @@ function MobileBottomNav({ user, mobileVisibility = 'md:hidden', compact = false
   return (
     <nav
       aria-label="Navegación principal"
-      className={`${mobileVisibility} fixed bottom-0 left-0 right-0 z-50 ${compact ? 'h-14' : 'h-16'} bg-titi-dark text-white border-t border-titi-dark shadow-lg`}
+      className={`${mobileVisibility} fixed bottom-0 left-0 right-0 z-50 ${compact ? 'h-14' : 'h-16'} bg-titi-dark text-white border-t-2 border-titi-dark`}
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
       <div className="grid grid-cols-5 h-full">

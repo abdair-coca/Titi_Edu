@@ -55,6 +55,15 @@
     @apply titi-btn rounded-xl bg-white text-titi-dark text-sm border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
+  /* v3 (rediseno-plataforma-v3): superficie con borde oscuro y botón
+     secundario oscuro. Espejo de SURFACE / BTN_SECONDARY de components/ui/v3.jsx. */
+  .titi-surface {
+    @apply bg-white rounded-2xl border-2 border-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)];
+  }
+  .titi-btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white border-2 border-titi-dark text-sm font-extrabold text-titi-dark shadow-[0_3px_0_#1A1A2E] hover:bg-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1A1A2E] active:translate-y-0.5 active:shadow-none transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:bg-white;
+  }
+
   /* Input canónico (design.md §9). */
   .titi-input {
     @apply w-full bg-titi-cream border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-titi-dark placeholder:text-gray-300 focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150;
@@ -63,17 +72,37 @@
 
 /* ---- Llama de racha ---- */
 @keyframes titi-flame-flicker {
-  0%, 100% { transform: scale(1) rotate(0deg);       filter: drop-shadow(0 0 4px rgba(255, 107, 53, 0.4)); }
-  25%      { transform: scale(1.05) rotate(-1.5deg); filter: drop-shadow(0 0 6px rgba(255, 154, 60, 0.55)); }
-  50%      { transform: scale(0.97) rotate(1deg);    filter: drop-shadow(0 0 3px rgba(255, 107, 53, 0.35)); }
-  75%      { transform: scale(1.03) rotate(-0.5deg); filter: drop-shadow(0 0 5px rgba(255, 154, 60, 0.5)); }
+  0%, 100% { transform: rotate(0deg) scaleY(1); }
+  30%      { transform: rotate(-3deg) scaleY(1.04); }
+  60%      { transform: rotate(2deg) scaleY(0.98); }
+  80%      { transform: rotate(-1deg) scaleY(1.02); }
+}
+/* El núcleo late a otro ritmo que la llama: se ve vivo sin brillo ni blur. */
+@keyframes titi-flame-core {
+  0%, 100% { transform: scale(1, 1) translateY(0); }
+  50%      { transform: scale(0.9, 1.1) translateY(-0.4px); }
+}
+@keyframes titi-flame-spark {
+  0%       { transform: translate(0, 0) scale(1); opacity: 0; }
+  20%      { opacity: 1; }
+  100%     { transform: translate(1.5px, -5px) scale(0.3); opacity: 0; }
 }
 .titi-flame-flicker {
-  transform-origin: 50% 80%;
+  transform-origin: 50% 90%;
   animation: titi-flame-flicker 1.6s ease-in-out infinite;
 }
+.titi-flame-core {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: titi-flame-core 0.9s ease-in-out infinite;
+}
+.titi-flame-spark {
+  transform-box: fill-box;
+  animation: titi-flame-spark 1.8s ease-out infinite 0.4s;
+}
 @media (prefers-reduced-motion: reduce) {
-  .titi-flame-flicker { animation: none; }
+  .titi-flame-flicker, .titi-flame-core { animation: none; }
+  .titi-flame-spark { display: none; }
 }
 
 /* ---- Gota (contador de gotas, sidebar/topbar) ---- */
@@ -326,4 +355,31 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .titi-quickview { animation: none; }
+}
+
+/* Post v3 (rediseno-inicio-explorar R4): el corazón late al dar like y
+   estalla sobre la imagen con doble toque. */
+@keyframes titi-heart-beat {
+  0%   { transform: scale(1); }
+  35%  { transform: scale(1.35); }
+  65%  { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.titi-heart-beat { animation: titi-heart-beat 0.32s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+@keyframes titi-heart-burst {
+  0%   { transform: scale(0.2); opacity: 0; }
+  30%  { transform: scale(1.15); opacity: 1; }
+  60%  { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.05); opacity: 0; }
+}
+.titi-heart-burst > * { animation: titi-heart-burst 0.4s ease-out both; }
+
+/* Refrescar: el ícono da una vuelta mientras carga. */
+@keyframes titi-refresh-spin { to { transform: rotate(360deg); } }
+.titi-refresh-spin { animation: titi-refresh-spin 0.7s linear infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .titi-heart-beat, .titi-heart-burst > *, .titi-refresh-spin { animation: none; }
+  .titi-heart-burst { display: none; }
 }

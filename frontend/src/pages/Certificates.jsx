@@ -3,7 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { formatDate } from '../lib/format.js';
 import { useStaggerReveal } from '../lib/motion.js';
-import { CheckIcon } from '../components/icons.jsx';
+import { CourseCover } from '../components/catalog/CourseCard.jsx';
+import { categoryTheme } from '../components/catalog/categoryTheme.jsx';
+import { ErrorBox } from '../components/social/StateBlocks.jsx';
+import { BTN_SECONDARY_SM, EmptyState, PageHeader, SURFACE } from '../components/ui/v3.jsx';
+import { AwardIcon, CheckIcon, ChevronLeftIcon, CloseIcon, CopyIcon, ExternalLinkIcon, ShieldIcon } from '../components/icons.jsx';
+
+// Certificados v3 (rediseno-plataforma-v3 R5): superficie con la portada de la
+// categoría (sin emoji), sello dorado, código y acciones con press.
 
 /**
  * Certificates — lista de mis certificados (ruta protegida /certificates).
@@ -47,117 +54,101 @@ export default function Certificates() {
   }
 
   return (
-    <div>
-      <header className="mb-5 sm:mb-8">
-        <h1 className="text-xl sm:text-3xl font-extrabold text-titi-dark mb-1 leading-tight">
-          Mis certificados
-        </h1>
-        <p className="text-sm font-medium text-gray-500">
-          Cada certificado tiene un código único que cualquiera puede verificar.
-        </p>
-      </header>
+    <div className="max-w-6xl mx-auto">
+      <PageHeader
+        title="Mis"
+        accent="certificados"
+        subtitle="Cada certificado tiene un código único que cualquiera puede verificar."
+      >
+        {!loading && !error && certificados.length > 0 && (
+          <span className="inline-flex items-center gap-2 h-11 px-4 rounded-xl bg-titi-dark text-titi-cream text-sm font-extrabold tabular-nums">
+            <AwardIcon className="w-5 h-5 text-titi-certificate" />
+            {certificados.length} {certificados.length === 1 ? 'certificado' : 'certificados'}
+          </span>
+        )}
+      </PageHeader>
 
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-100 p-6 animate-pulse">
-              <div className="h-4 w-2/3 bg-gray-100 rounded mb-3" />
-              <div className="h-3 w-1/3 bg-gray-100 rounded mb-2" />
-              <div className="h-3 w-1/2 bg-gray-100 rounded" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label="Cargando certificados">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden">
+              <div className="h-28 bg-gray-100 border-b-2 border-gray-200" />
+              <div className="p-4 flex flex-col gap-3">
+                <div className="h-3 w-1/3 bg-gray-100 rounded-full" />
+                <div className="h-5 w-3/4 bg-gray-100 rounded-full" />
+                <div className="h-12 bg-gray-100 rounded-xl" />
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="h-9 bg-gray-100 rounded-xl" />
+                  <div className="h-9 bg-gray-100 rounded-xl" />
+                </div>
+              </div>
             </div>
           ))}
         </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 max-w-2xl">
-          <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-red-700">{error}</p>
-            <button
-              type="button"
-              onClick={fetch}
-              className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark mt-2"
-            >
-              Reintentar →
-            </button>
-          </div>
-        </div>
+        <ErrorBox title="No pudimos cargar tus certificados" message={error} onRetry={fetch} />
       ) : certificados.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
-          <img
-            src="/Titi.png"
-            alt="Titi"
-            className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
-            draggable={false}
-          />
-          <h3 className="text-xl font-bold text-titi-dark mb-2">
-            Todavía no tenés certificados
-          </h3>
-          <p className="text-sm text-gray-400 mb-6 max-w-xs">
-            Completá todas las lecciones y aprobá las evaluaciones de un curso para ganar el tuyo.
-          </p>
-          <button
-            type="button"
-            onClick={() => navigate('/my-courses')}
-            className="bg-titi-yellow text-titi-dark font-bold text-base px-6 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
-          >
+        <EmptyState
+          state="pensando"
+          title="Todavía no tenés"
+          accent="certificados"
+          text="Completá todas las lecciones y aprobá las evaluaciones de un curso para ganar el tuyo."
+        >
+          <button type="button" onClick={() => navigate('/my-courses')} className="titi-btn-primary">
             Ir a mis cursos
           </button>
-        </div>
+        </EmptyState>
       ) : (
-        <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          {certificados.map((cert) => (
-            <article
-              key={cert.id}
-              className="bg-white rounded-2xl border-2 border-titi-yellow shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden"
-            >
-              <div className="flex items-center gap-3 px-4 sm:px-5 py-4 bg-titi-yellow-light">
-                <span className="text-2xl sm:text-3xl select-none shrink-0" aria-hidden="true">
-                  {cert.curso?.categoria?.icono || '🎓'}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-xs sm:text-xs font-extrabold uppercase tracking-wide text-titi-yellow-dark">
-                    Certificado Titi
-                  </p>
-                  <h3 className="text-sm sm:text-base font-bold text-titi-dark leading-snug line-clamp-2">
-                    {cert.curso?.titulo || 'Curso'}
-                  </h3>
-                </div>
-              </div>
-              <div className="p-4 sm:p-5 flex flex-col gap-3">
-                <p className="text-sm font-medium text-gray-500">
-                  Emitido el {formatDate(cert.fechaEmision)}
-                </p>
-                <div className="bg-titi-cream rounded-xl px-3 py-2">
-                  <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-0.5">
-                    Código de verificación
-                  </p>
-                  <p className="text-xs font-mono font-bold text-titi-dark break-all">
-                    {cert.codigoVerif}
-                  </p>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => copyCode(cert)}
-                    className="bg-white text-titi-dark font-bold text-sm px-3 py-2 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 text-center"
+        <div ref={gridRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          {certificados.map((cert) => {
+            const theme = categoryTheme(cert.curso?.categoria?.nombre);
+            const copied = copiedId === cert.id;
+            return (
+              <article key={cert.id} className={`${SURFACE} overflow-hidden flex flex-col`}>
+                <div className="relative border-b-2 border-titi-dark">
+                  <CourseCover curso={cert.curso || {}} className="h-28" iconSize="sm" />
+                  <span
+                    title="Certificado Titi"
+                    className="absolute -bottom-5 right-4 w-11 h-11 rounded-full bg-titi-certificate text-white border-2 border-titi-dark grid place-items-center rotate-6"
                   >
-                    {copiedId === cert.id ? '✓ Copiado' : 'Copiar código'}
-                  </button>
-                  <Link
-                    to={`/verify/${cert.codigoVerif}`}
-                    className="bg-titi-yellow text-titi-dark font-bold text-sm px-3 py-2 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 text-center"
-                  >
-                    Ver verificación
-                  </Link>
+                    <AwardIcon className="w-5 h-5" />
+                  </span>
                 </div>
-              </div>
-            </article>
-          ))}
+                <div className="p-4 flex flex-col gap-3 flex-1">
+                  <div className="pr-12">
+                    <p className={`text-xs font-extrabold uppercase tracking-wide ${theme.text}`}>
+                      {cert.curso?.categoria?.nombre || 'Certificado Titi'}
+                    </p>
+                    <h3 className="text-lg font-extrabold text-titi-dark leading-snug line-clamp-2">{cert.curso?.titulo || 'Curso'}</h3>
+                    <p className="text-sm font-semibold text-gray-500 mt-0.5">Emitido el {formatDate(cert.fechaEmision)}</p>
+                  </div>
+                  <div className="bg-titi-cream border-2 border-dashed border-gray-300 rounded-xl px-3 py-2 mt-auto">
+                    <p className="text-xs font-extrabold uppercase tracking-wide text-gray-500 mb-0.5">Código de verificación</p>
+                    <p className="text-sm font-mono font-bold text-titi-dark break-all">{cert.codigoVerif}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button type="button" onClick={() => copyCode(cert)} className={`${BTN_SECONDARY_SM} ${copied ? '!bg-green-500 !text-white' : ''}`}>
+                      {copied ? <CheckIcon className="w-4 h-4" /> : <CopyIcon className="w-4 h-4" />}
+                      {copied ? 'Copiado' : 'Copiar código'}
+                    </button>
+                    <Link to={`/verify/${cert.codigoVerif}`} className="titi-btn-primary text-sm px-3 py-2">
+                      <ExternalLinkIcon className="w-4 h-4" />
+                      Verificar
+                    </Link>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
     </div>
   );
 }
+
+// App.jsx la importa como export nombrado (`m.Certificates`): sin esto la ruta
+// /certificates rompía con "Lazy element type must resolve to a function".
+export { Certificates };
 
 // ---- Verificación pública (sin login) ----
 export function VerifyCertificate() {
@@ -194,57 +185,53 @@ export function VerifyCertificate() {
   }, [codigo]);
 
   return (
-    <div className="min-h-screen bg-titi-cream flex items-center justify-center p-6">
+    <div className="min-h-screen bg-titi-cream flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-lg">
         <div className="text-center mb-6">
-          <img
-            src="/Titi.png"
-            alt="Titi"
-            className="w-20 h-20 mx-auto mb-2 object-contain drop-shadow-sm select-none"
-            draggable={false}
-          />
-          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark">
-            Verificación de certificado
+          <img src="/Titi.png" alt="Titi" className="w-20 h-20 mx-auto mb-2 object-contain drop-shadow-sm select-none" draggable={false} />
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark leading-tight">
+            Verificación de <span className="text-titi-streak">certificado</span>
           </h1>
         </div>
 
         {loading ? (
-          <div className="bg-white rounded-2xl border border-gray-100 p-8 animate-pulse">
-            <div className="h-4 w-2/3 bg-gray-100 rounded mb-3 mx-auto" />
-            <div className="h-3 w-1/2 bg-gray-100 rounded mx-auto" />
+          <div className="bg-white rounded-2xl border-2 border-gray-200 p-8 animate-pulse motion-reduce:animate-none">
+            <div className="w-12 h-12 rounded-xl bg-gray-100 mx-auto mb-3" />
+            <div className="h-4 w-2/3 bg-gray-100 rounded-full mb-3 mx-auto" />
+            <div className="h-24 bg-gray-100 rounded-xl" />
           </div>
         ) : error ? (
-          <div className="bg-white rounded-2xl border-2 border-red-200 p-8 text-center">
-            <span className="w-12 h-12 rounded-full bg-red-500 grid place-items-center mx-auto mb-3 text-white text-xl font-black" aria-hidden="true">✕</span>
-            <h2 className="text-lg font-bold text-red-700 mb-1">Certificado no válido</h2>
-            <p className="text-sm text-gray-500">{error}</p>
+          <div className={`${SURFACE} p-6 sm:p-8 text-center`}>
+            <span className="w-12 h-12 rounded-xl bg-red-500 border-2 border-titi-dark grid place-items-center mx-auto mb-3 -rotate-6 text-white" aria-hidden="true">
+              <CloseIcon className="w-6 h-6" />
+            </span>
+            <h2 className="text-xl font-extrabold text-red-600 mb-1">Certificado no válido</h2>
+            <p className="text-base font-medium text-gray-500">{error}</p>
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border-2 border-green-300 p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-            <span className="w-12 h-12 rounded-full bg-green-500 grid place-items-center mx-auto mb-3" aria-hidden="true">
-              <CheckIcon className="w-6 h-6 text-white" />
+          <div className={`${SURFACE} p-6 sm:p-8 text-center`}>
+            <span className="w-12 h-12 rounded-xl bg-green-500 border-2 border-titi-dark grid place-items-center mx-auto mb-3 -rotate-6 text-white" aria-hidden="true">
+              <ShieldIcon className="w-6 h-6" />
             </span>
-            <h2 className="text-lg font-bold text-green-700 mb-4">Certificado válido</h2>
-            <dl className="text-left bg-titi-cream rounded-xl p-4 space-y-3">
+            <h2 className="text-xl font-extrabold text-titi-dark mb-4">
+              Certificado <span className="text-green-600">válido</span>
+            </h2>
+            <dl className="text-left bg-titi-cream border-2 border-gray-200 rounded-xl p-4 space-y-3">
               <div>
-                <dt className="text-xs font-bold uppercase tracking-wide text-gray-400">Curso</dt>
-                <dd className="text-base font-bold text-titi-dark">{certificado.curso?.titulo}</dd>
+                <dt className="text-xs font-extrabold uppercase tracking-wide text-gray-500">Curso</dt>
+                <dd className="text-base font-extrabold text-titi-dark">{certificado.curso?.titulo}</dd>
               </div>
               <div>
-                <dt className="text-xs font-bold uppercase tracking-wide text-gray-400">Otorgado a</dt>
-                <dd className="text-base font-bold text-titi-dark">@{certificado.username}</dd>
+                <dt className="text-xs font-extrabold uppercase tracking-wide text-gray-500">Otorgado a</dt>
+                <dd className="text-base font-extrabold text-titi-dark">@{certificado.username}</dd>
               </div>
               <div>
-                <dt className="text-xs font-bold uppercase tracking-wide text-gray-400">Fecha de emisión</dt>
-                <dd className="text-sm font-semibold text-titi-dark">
-                  {formatDate(certificado.fechaEmision)}
-                </dd>
+                <dt className="text-xs font-extrabold uppercase tracking-wide text-gray-500">Fecha de emisión</dt>
+                <dd className="text-sm font-bold text-titi-dark">{formatDate(certificado.fechaEmision)}</dd>
               </div>
               <div>
-                <dt className="text-xs font-bold uppercase tracking-wide text-gray-400">Código</dt>
-                <dd className="text-xs font-mono font-bold text-titi-dark break-all">
-                  {certificado.codigoVerif}
-                </dd>
+                <dt className="text-xs font-extrabold uppercase tracking-wide text-gray-500">Código</dt>
+                <dd className="text-sm font-mono font-bold text-titi-dark break-all">{certificado.codigoVerif}</dd>
               </div>
             </dl>
           </div>
@@ -253,9 +240,10 @@ export function VerifyCertificate() {
         <p className="text-center mt-6">
           <Link
             to="/"
-            className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark transition-colors"
+            className="inline-flex items-center gap-1 text-sm font-bold uppercase tracking-wide text-blue-500 hover:text-blue-600 transition-all duration-150 active:scale-95"
           >
-            ← Ir a Titi
+            <ChevronLeftIcon className="w-4 h-4" />
+            Ir a Titi
           </Link>
         </p>
       </div>

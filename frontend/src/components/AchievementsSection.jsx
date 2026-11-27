@@ -2,13 +2,29 @@ import { useCallback, useEffect, useState } from 'react';
 import client from '../api/client.js';
 import { formatDate } from '../lib/format.js';
 import { useStaggerReveal } from '../lib/motion.js';
-import { AwardIcon } from './icons.jsx';
+import { ErrorBox } from './social/StateBlocks.jsx';
+import { PanelTitle, ProgressBar, SURFACE } from './ui/v3.jsx';
+import { AwardIcon, BooksIcon, CheckIcon, FireIcon, GraduationIcon, LockIcon, UsersIcon } from './icons.jsx';
+
+// Ícono por tipo de logro. El emoji de `logro.icono` (dato) no se muestra
+// (design.md §5.6): la emoción la pone el color del rol.
+const TYPE_ICON = {
+  curso: GraduationIcon,
+  racha: FireIcon,
+  evaluacion: CheckIcon,
+  social: UsersIcon,
+};
+function logroIcon(logro) {
+  if (logro.tipo === 'curso' && /lecci/i.test(logro.nombre || '')) return BooksIcon;
+  return TYPE_ICON[logro.tipo] || AwardIcon;
+}
 
 /**
- * AchievementsSection — grid de logros de un usuario para la página de perfil.
- * Desbloqueados a color, bloqueados en gris. Público (GET /api/progress/:username/achievements).
+ * AchievementsSection — logros de un usuario (superficie v3, rediseno-plataforma-v3 R1).
+ * Desbloqueados en púrpura sólido, bloqueados en gris con candado.
+ * Público (GET /api/progress/:username/achievements).
  */
-export default function AchievementsSection({ username, isSelf = false }) {
+export default function AchievementsSection({ username, isSelf = false, className = '' }) {
   const [logros, setLogros] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -32,81 +48,78 @@ export default function AchievementsSection({ username, isSelf = false }) {
     fetch();
   }, [fetch]);
 
+  // Desbloqueados primero (los más recientes arriba), después los que faltan.
+  const ordered = [...logros].sort((a, b) => {
+    if (a.desbloqueado !== b.desbloqueado) return a.desbloqueado ? -1 : 1;
+    return new Date(b.fechaObtenido || 0) - new Date(a.fechaObtenido || 0);
+  });
   const desbloqueados = logros.filter((l) => l.desbloqueado).length;
-
   const gridRef = useStaggerReveal([logros.length]);
 
   return (
-    <section aria-label="Logros" className="titi-card p-4 sm:p-6 mb-6">
-      <div className="flex items-center justify-between gap-2 mb-4">
-        <h2 className="text-base sm:text-lg font-bold text-titi-dark flex items-center gap-2">
-          <span className="w-7 h-7 rounded-full bg-titi-achievement grid place-items-center shrink-0" aria-hidden="true">
-            <AwardIcon className="w-4 h-4 text-white" />
-          </span>
-          Logros
-        </h2>
-        {!loading && !error && (
-          <span className="text-xs font-extrabold text-titi-achievement bg-purple-50 px-3 py-1 rounded-full tabular-nums">
-            {desbloqueados} / {logros.length}
+    <section aria-label="Logros" className={`${SURFACE} p-4 ${className}`}>
+      <PanelTitle Icon={AwardIcon} solid="bg-titi-achievement" title="Logros" accent={isSelf ? 'tuyos' : null}>
+        {!loading && !error && logros.length > 0 && (
+          <span className="text-sm font-black text-titi-achievement tabular-nums">
+            {desbloqueados}/{logros.length}
           </span>
         )}
-      </div>
+      </PanelTitle>
+
+      {!loading && !error && logros.length > 0 && (
+        <ProgressBar
+          value={desbloqueados}
+          max={logros.length}
+          color="bg-titi-achievement"
+          track="bg-purple-100"
+          height="h-2"
+          label="Logros desbloqueados"
+          className="mb-3"
+        />
+      )}
 
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3" aria-busy="true">
+        <div className="flex gap-2 overflow-hidden lg:grid lg:grid-cols-2 animate-pulse motion-reduce:animate-none" aria-busy="true">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 bg-gray-100 rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-3 flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold text-red-700">{error}</p>
-          <button
-            type="button"
-            onClick={fetch}
-            className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark shrink-0"
-          >
-            Reintentar
-          </button>
-        </div>
-      ) : logros.length === 0 ? (
-        <p className="text-sm text-gray-400 font-medium">
-          Todavía no hay logros disponibles.
-        </p>
-      ) : (
-        <div ref={gridRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
-          {logros.map((l) => (
-            <div
-              key={l.id}
-              title={
-                l.desbloqueado
-                  ? `${l.descripcion}${l.fechaObtenido ? ` · ${formatDate(l.fechaObtenido)}` : ''}`
-                  : l.condicion
-              }
-              className={`rounded-xl border p-2 sm:p-3 text-center transition-colors duration-150 ${
-                l.desbloqueado
-                  ? 'bg-purple-50 border-purple-200 shadow-[0_2px_8px_rgba(0,0,0,0.06)]'
-                  : 'bg-gray-50 border-gray-200 opacity-60 grayscale'
-              }`}
-            >
-              <span className="text-2xl sm:text-3xl block select-none" aria-hidden="true">
-                {l.icono}
-              </span>
-              <p className="text-xs sm:text-xs font-bold text-titi-dark mt-1 sm:mt-1.5 leading-tight">
-                {l.nombre}
-              </p>
-              {l.desbloqueado ? (
-                <p className="text-xs font-semibold text-titi-achievement mt-0.5">
-                  {l.fechaObtenido ? formatDate(l.fechaObtenido) : 'Desbloqueado'}
-                </p>
-              ) : (
-                <p className="text-xs font-semibold text-gray-400 mt-0.5 line-clamp-2">
-                  {isSelf ? l.condicion : 'Bloqueado'}
-                </p>
-              )}
+            <div key={i} className="w-36 shrink-0 lg:w-auto h-[104px] rounded-xl border-2 border-gray-100 p-2.5 flex flex-col gap-2">
+              <div className="w-9 h-9 rounded-xl bg-gray-100" />
+              <div className="h-3 w-3/4 bg-gray-100 rounded-full" />
+              <div className="h-2.5 w-1/2 bg-gray-100 rounded-full" />
             </div>
           ))}
         </div>
+      ) : error ? (
+        <ErrorBox title="No pudimos cargar los logros" message={error} onRetry={fetch} />
+      ) : logros.length === 0 ? (
+        <p className="text-sm font-medium text-gray-500">Todavía no hay logros disponibles.</p>
+      ) : (
+        <ul ref={gridRef} className="flex gap-2 overflow-x-auto snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4 pb-1 lg:mx-0 lg:px-0 lg:pb-0 lg:grid lg:grid-cols-2 lg:overflow-visible">
+          {ordered.map((l) => {
+            const Icon = logroIcon(l);
+            return (
+              <li
+                key={l.id}
+                title={l.desbloqueado ? `${l.descripcion}${l.fechaObtenido ? ` · ${formatDate(l.fechaObtenido)}` : ''}` : l.condicion}
+                className={`group w-36 shrink-0 snap-start lg:w-auto flex flex-col items-start gap-1.5 p-2.5 rounded-xl border-2 ${
+                  l.desbloqueado ? 'bg-purple-100 border-titi-dark' : 'bg-gray-50 border-gray-200'
+                }`}
+              >
+                <span
+                  className={`w-9 h-9 rounded-xl border-2 grid place-items-center -rotate-6 transition-transform duration-200 group-hover:rotate-0 motion-reduce:transition-none ${
+                    l.desbloqueado ? 'bg-titi-achievement border-titi-dark text-white' : 'bg-gray-200 border-gray-300 text-gray-500'
+                  }`}
+                  aria-hidden="true"
+                >
+                  {l.desbloqueado ? <Icon className="w-5 h-5" /> : <LockIcon className="w-4 h-4" />}
+                </span>
+                <p className={`text-sm font-extrabold leading-tight ${l.desbloqueado ? 'text-titi-dark' : 'text-gray-500'}`}>{l.nombre}</p>
+                <p className={`text-xs font-semibold leading-snug line-clamp-2 ${l.desbloqueado ? 'text-titi-achievement' : 'text-gray-500'}`}>
+                  {l.desbloqueado ? (l.fechaObtenido ? formatDate(l.fechaObtenido) : 'Desbloqueado') : isSelf ? l.condicion : 'Bloqueado'}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </section>
   );

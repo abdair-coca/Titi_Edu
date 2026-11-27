@@ -1,15 +1,32 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import { formatDate, relativeTime, resolveMediaUrl } from '../lib/format.js';
-import { useStaggerReveal, usePopIn } from '../lib/motion.js';
-import OptionsPosts from '../components/OptionsPosts.jsx';
-import PostCard from '../components/PostCard.jsx';
+import { formatDate, resolveMediaUrl } from '../lib/format.js';
+import { useCountUp, useStaggerReveal, usePopIn } from '../lib/motion.js';
+import PostCard, { PostCardSkeleton } from '../components/PostCard.jsx';
 import StreakBadge from '../components/StreakBadge.jsx';
 import AchievementsSection from '../components/AchievementsSection.jsx';
 import EditProfileModal from '../components/EditProfileModal.jsx';
+import { Pill } from '../components/catalog/CatalogFilters.jsx';
+import Avatar from '../components/social/Avatar.jsx';
+import FollowButton from '../components/social/FollowButton.jsx';
+import { ErrorBox } from '../components/social/StateBlocks.jsx';
+import { BackLink, BTN_SECONDARY, EmptyState, SURFACE } from '../components/ui/v3.jsx';
+import {
+  BookmarkIcon,
+  CalendarIcon,
+  GridIcon,
+  HeartIcon,
+  PencilIcon,
+  PinIcon,
+  UserIcon,
+  UsersIcon,
+} from '../components/icons.jsx';
 import useStreak from '../hooks/useStreak.js';
+
+// Perfil v3 (rediseno-plataforma-v3 R1): cabecera como superficie con portada
+// a sangre, stats con conteo, racha y logros en el rail, pestañas de pastillas.
 
 export default function Profile() {
   const { username } = useParams();
@@ -23,7 +40,6 @@ export default function Profile() {
   const [error, setError] = useState(null);
   const [following, setFollowing] = useState(false);
   const [followerCount, setFollowerCount] = useState(0);
-  const [followBusy, setFollowBusy] = useState(false);
   const [isSelf, setIsSelf] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
 
@@ -141,29 +157,6 @@ export default function Profile() {
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
-  async function toggleFollow() {
-    if (!isAuthenticated || isSelf || followBusy) return;
-    const wasFollowing = following;
-    setFollowing(!wasFollowing);
-    setFollowerCount((c) => c + (wasFollowing ? -1 : 1));
-    setFollowBusy(true);
-    try {
-      const url = wasFollowing
-        ? `/api/users/${username}/unfollow`
-        : `/api/users/${username}/follow`;
-      const { data } = await client.post(url);
-      if (!data?.success) {
-        setFollowing(wasFollowing);
-        setFollowerCount((c) => c + (wasFollowing ? 1 : -1));
-      }
-    } catch {
-      setFollowing(wasFollowing);
-      setFollowerCount((c) => c + (wasFollowing ? 1 : -1));
-    } finally {
-      setFollowBusy(false);
-    }
-  }
-
   const [rachaError, setRachaError] = useState(null);
 
   const streakToast = useCallback(async () => {
@@ -194,11 +187,26 @@ export default function Profile() {
   if (loading) return <ProfileSkeleton />;
 
   if (error) {
+    if (error === 'Usuario no encontrado') {
+      return (
+        <div className="max-w-2xl mx-auto">
+          <BackLink to="/explore">Explorar</BackLink>
+          <EmptyState
+            state="triste"
+            title="No encontramos a"
+            accent={`@${username}`}
+            text="Puede que haya cambiado su nombre de usuario. Buscalo en Explorar."
+          >
+            <Link to={`/explore?q=${encodeURIComponent(username || '')}`} className="titi-btn-primary">
+              Buscar en Explorar
+            </Link>
+          </EmptyState>
+        </div>
+      );
+    }
     return (
-      <div className="bg-white border-2 border-red-500/40 rounded-2xl p-8 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-        <h2 className="text-xl font-extrabold mb-2 text-red-500">¡Ups!</h2>
-        <p className="text-gray-500 mb-4">{error}</p>
-        <button onClick={fetchProfile} className="titi-btn-primary">Reintentar</button>
+      <div className="max-w-2xl mx-auto">
+        <ErrorBox title="No pudimos cargar el perfil" message={error} onRetry={fetchProfile} />
       </div>
     );
   }
@@ -236,209 +244,178 @@ export default function Profile() {
     }
   }
 
+  const tabs = [
+    { id: 'posts', label: 'Posts', Icon: GridIcon, solid: 'bg-titi-dark text-white', count: stats.postCount },
+    ...(isSelf
+      ? [
+          { id: 'saved', label: 'Guardados', Icon: BookmarkIcon, solid: 'bg-titi-yellow text-titi-dark', count: savedLoaded ? saved.length : null },
+          { id: 'liked', label: 'Likes', Icon: HeartIcon, solid: 'bg-red-500 text-white', count: likedLoaded ? liked.length : null },
+        ]
+      : []),
+  ];
+
   return (
-    <div>
-      {/* Header del perfil */}
-      <div ref={headerRef} className="titi-card mb-6 overflow-hidden">
-        {/* Portada / Banner */}
-        <div className="relative w-full h-32 sm:h-44 bg-titi-cream overflow-hidden border-b-2 border-gray-100">
+    <div className="max-w-6xl mx-auto">
+      {/* Cabecera del perfil (superficie v3) */}
+      <section ref={headerRef} aria-label={`Perfil de @${user.username}`} className={`${SURFACE} mb-6 overflow-hidden`}>
+        {/* Portada a sangre */}
+        <div className="relative w-full h-28 sm:h-40 bg-titi-yellow-light border-b-2 border-titi-dark overflow-hidden">
           {user.bannerUrl ? (
-            <img
-              src={resolveMediaUrl(user.bannerUrl)}
-              alt={`Portada de ${user.username}`}
-              className="w-full h-full object-cover"
-            />
+            <img src={resolveMediaUrl(user.bannerUrl)} alt="" className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full bg-titi-yellow/20 flex items-center justify-center">
-              <span className="text-xs font-bold text-titi-dark/40 tracking-wider uppercase">Titi Educación</span>
+            <div aria-hidden="true" className="w-full h-full grid place-items-center">
+              <img src="/Titi.png" alt="" draggable={false} className="absolute -right-4 -bottom-6 w-32 h-32 object-contain opacity-20 -rotate-12 select-none" />
+              <span className="text-sm font-extrabold uppercase tracking-wide text-titi-dark/40">Titi · aprendemos juntos</span>
             </div>
           )}
         </div>
 
-        <div className="p-6 pt-0 relative">
-          {/* Fila superior: avatar superpuesto a la izquierda + acciones a la derecha */}
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 -mt-14 sm:-mt-16 mb-4">
-            {/* Avatar con relative z-10 para elevarlo sobre el banner */}
-            <div className="relative z-10 flex justify-center sm:justify-start">
-              {user.avatarUrl ? (
-                <img
-                  src={resolveMediaUrl(user.avatarUrl)}
-                  alt={user.username}
-                  className="w-28 h-28 rounded-full bg-titi-cream border-4 border-white shrink-0 shadow-md object-cover ring-2 ring-gray-100"
-                />
-              ) : (
-                <div className="w-28 h-28 rounded-full bg-titi-yellow text-titi-dark grid place-items-center text-4xl font-extrabold shrink-0 border-4 border-white shadow-md ring-2 ring-gray-100">
-                  {user.username?.[0]?.toUpperCase() ?? '?'}
-                </div>
-              )}
-            </div>
-
-            {/* Acciones a la derecha (Editar perfil / Seguir / Vos) */}
-            <div className="flex items-center justify-center sm:justify-end gap-2 shrink-0">
+        <div className="px-4 sm:px-6 pb-5">
+          {/* Avatar superpuesto + acciones */}
+          <div className="flex items-end justify-between gap-3 -mt-12 sm:-mt-14 mb-3">
+            <Avatar username={user.username} src={user.avatarUrl} size="xl" className="relative ring-4 ring-white" />
+            <div className="flex items-center gap-2 pb-1">
               {isSelf && (
                 <>
-                  <span className="inline-block text-xs font-extrabold text-titi-dark bg-titi-yellow px-3 py-1 rounded-full">Vos</span>
-                  <button
-                    type="button"
-                    onClick={() => setEditModalOpen(true)}
-                    className="titi-btn-ghost text-xs py-1.5 px-3 flex items-center gap-1.5"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5" aria-hidden="true">
-                      <path d="M12 20h9" />
-                      <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                    </svg>
-                    <span>Editar perfil</span>
+                  <span className="hidden sm:inline-flex h-8 items-center px-3 rounded-full bg-titi-yellow border-2 border-titi-dark text-xs font-extrabold text-titi-dark">
+                    Vos
+                  </span>
+                  <button type="button" onClick={() => setEditModalOpen(true)} className={BTN_SECONDARY}>
+                    <PencilIcon className="w-4 h-4" />
+                    Editar perfil
                   </button>
                 </>
               )}
               {!isSelf && isAuthenticated && (
-                <button
-                  type="button"
-                  onClick={toggleFollow}
-                  disabled={followBusy}
-                  className={
-                    following
-                      ? 'titi-btn-ghost text-sm disabled:opacity-50'
-                      : 'titi-btn-primary text-sm disabled:opacity-50'
-                  }
-                >
-                  {followBusy ? '…' : following ? 'Siguiendo' : 'Seguir'}
-                </button>
+                <FollowButton
+                  key={user.username}
+                  username={user.username}
+                  initialFollowing={following}
+                  onChange={(now) => {
+                    setFollowing(now);
+                    setFollowerCount((c) => Math.max(0, c + (now ? 1 : -1)));
+                  }}
+                />
               )}
             </div>
           </div>
 
-          {/* Datos del usuario debajo del avatar */}
-          <div className="text-center sm:text-left">
-            <h1 className="text-2xl sm:text-3xl font-black text-titi-dark mb-1">@{user.username}</h1>
+          {/* Datos */}
+          <h1 className="text-3xl sm:text-4xl font-black text-titi-dark leading-tight break-words">
+            <span className="text-titi-streak">@</span>
+            {user.username}
+          </h1>
+          {user.bio ? (
+            <p className="text-base font-medium text-titi-dark whitespace-pre-wrap break-words mt-1 max-w-2xl">{user.bio}</p>
+          ) : isSelf ? (
+            <button
+              type="button"
+              onClick={() => setEditModalOpen(true)}
+              className="mt-1 text-sm font-bold uppercase tracking-wide text-blue-500 hover:text-blue-600 transition-all duration-150 active:scale-95"
+            >
+              Agregá una biografía
+            </button>
+          ) : null}
 
-            {user.bio ? (
-              <p className="text-titi-dark whitespace-pre-wrap mb-2 font-semibold">{user.bio}</p>
-            ) : (
-              <p className="text-gray-500 italic mb-2">Sin biografía.</p>
-            )}
-
+          <div className="flex flex-wrap gap-2 mt-3">
             {location && (
-              <p className="text-sm text-gray-500 flex items-center gap-1.5 justify-center sm:justify-start mb-1 font-semibold">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 text-green-600" aria-hidden="true">
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-                <span>{location.city}, {location.country}</span>
-              </p>
+              <MetaChip Icon={PinIcon} solid="bg-green-500">
+                {location.city}, {location.country}
+              </MetaChip>
             )}
-
             {user.createdAt && (
-              <p className="text-xs text-gray-500 font-semibold">
+              <MetaChip Icon={CalendarIcon} solid="bg-blue-500">
                 Se unió el {formatDate(user.createdAt)}
-              </p>
+              </MetaChip>
             )}
-          </div>
-
-          {/* Racha — solo para mi propio perfil */}
-          <div className="mt-6">
-            <StreakBadge
-              variant="hero"
-              racha={isSelf ? streak.racha : profileStreak?.racha}
-              estaActiva={isSelf ? streak.estaActiva : profileStreak?.estaActiva}
-              ultimaActividad={isSelf ? streak.ultimaActividad : profileStreak?.ultimaActividad}
-              isSelf={isSelf}
-            />
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-gray-100">
-            <Stat label="Posts" value={stats.postCount} color="text-titi-yellow" />
-            <Stat label="Seguidores" value={followerCount} color="text-blue-500" />
-            <Stat label="Seguidos" value={stats.followingCount} color="text-green-600" />
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-4">
+            <Stat label={stats.postCount === 1 ? 'Post' : 'Posts'} value={stats.postCount} Icon={GridIcon} solid="bg-titi-yellow text-titi-dark" />
+            <Stat label={followerCount === 1 ? 'Seguidor' : 'Seguidores'} value={followerCount} Icon={UsersIcon} solid="bg-blue-500 text-white" />
+            <Stat label="Seguidos" value={stats.followingCount} Icon={UserIcon} solid="bg-green-500 text-white" />
           </div>
         </div>
+      </section>
+
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6 lg:items-start">
+        {/* Rail: racha + logros (arriba en celular) */}
+        <aside className="lg:order-2 flex flex-col gap-5 mb-6 lg:mb-0 min-w-0">
+          <StreakBadge
+            variant="hero"
+            racha={isSelf ? streak.racha : profileStreak?.racha}
+            estaActiva={isSelf ? streak.estaActiva : profileStreak?.estaActiva}
+            ultimaActividad={isSelf ? streak.ultimaActividad : profileStreak?.ultimaActividad}
+            isSelf={isSelf}
+          />
+          <AchievementsSection username={username} isSelf={isSelf} />
+        </aside>
+
+        <div className="lg:order-1 min-w-0">
+          {/* Pestañas */}
+          <div role="group" aria-label="Secciones del perfil" className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4 sm:mx-0 sm:px-0 py-1 mb-4">
+            {tabs.map(({ id, label, Icon, solid, count }) => (
+              <Pill key={id} active={tab === id} onClick={() => setTab(id)}>
+                <span className={`w-7 h-7 rounded-full grid place-items-center ${solid}`}>
+                  <Icon className="w-4 h-4" filled={id !== 'posts' && tab === id} />
+                </span>
+                {label}
+                {typeof count === 'number' && <span className="text-xs font-extrabold tabular-nums text-gray-500">{count}</span>}
+              </Pill>
+            ))}
+          </div>
+
+          {tab === 'posts' && (
+            <section aria-label={`Posts de @${user.username}`}>
+              <PostsList
+                loading={postsLoading}
+                error={postsError}
+                posts={posts}
+                onRetry={fetchUserPosts}
+                empty={
+                  isSelf
+                    ? { state: 'idle', title: 'Todavía no', accent: 'publicaste', text: 'Compartí lo que estás aprendiendo y aparece acá.', to: '/feed', cta: 'Publicar en Inicio' }
+                    : { state: 'pensando', title: `@${user.username} todavía no`, accent: 'publicó', text: 'Mientras tanto, descubrí lo que comparte la comunidad.', to: '/explore', cta: 'Ir a Explorar' }
+                }
+                handleDelete={handleDeletePost}
+                handleEdit={handleEditPost}
+                onChange={handlePostChange}
+              />
+            </section>
+          )}
+
+          {tab === 'saved' && isSelf && (
+            <section aria-label="Posts guardados">
+              <PostsList
+                loading={savedLoading}
+                error={savedError}
+                posts={saved}
+                onRetry={fetchSaved}
+                empty={{ state: 'pensando', title: 'Nada', accent: 'guardado', text: 'Guardá un post con el marcador y lo encontrás rápido acá.', to: '/explore', cta: 'Ir a Explorar' }}
+                handleDelete={handleDeletePost}
+                handleEdit={handleEditPost}
+                onChange={handlePostChange}
+              />
+            </section>
+          )}
+
+          {tab === 'liked' && isSelf && (
+            <section aria-label="Posts con like">
+              <PostsList
+                loading={likedLoading}
+                error={likedError}
+                posts={liked}
+                onRetry={fetchLiked}
+                empty={{ state: 'pensando', title: 'Sin', accent: 'likes', text: 'Los posts que te gusten aparecen acá, del más nuevo al más viejo.', to: '/feed', cta: 'Ir a Inicio' }}
+                handleDelete={handleDeletePost}
+                handleEdit={handleEditPost}
+                onChange={handlePostChange}
+              />
+            </section>
+          )}
+        </div>
       </div>
-
-      {/* Logros */}
-      <AchievementsSection username={username} isSelf={isSelf} />
-
-      {/* Tabs */}
-      <div
-        role="tablist"
-        aria-label="Secciones del perfil"
-        className="flex gap-1 mb-5 border-b-2 border-gray-100 px-1 overflow-x-auto scrollbar-none"
-      >
-        <TabButton
-          active={tab === 'posts'}
-          onClick={() => setTab('posts')}
-          icon={<GridIcon className="w-4 h-4" />}
-          label="Posts"
-          count={stats.postCount}
-        />
-        {isSelf && (
-          <>
-            <TabButton
-              active={tab === 'saved'}
-              onClick={() => setTab('saved')}
-              icon={<BookmarkIcon className="w-4 h-4" filled={tab === 'saved'} />}
-              label="Guardados"
-              count={savedLoaded ? saved.length : null}
-            />
-            <TabButton
-              active={tab === 'liked'}
-              onClick={() => setTab('liked')}
-              icon={<HeartIcon className="w-4 h-4" filled={tab === 'liked'} />}
-              label="Likes"
-              count={likedLoaded ? liked.length : null}
-            />
-          </>
-        )}
-      </div>
-
-      {/* Contenido del tab activo */}
-      {tab === 'posts' && (
-        <section aria-label={`Posts de @${user.username}`} role="tabpanel">
-          <PostsList
-            loading={postsLoading}
-            error={postsError}
-            posts={posts}
-            onRetry={fetchUserPosts}
-            emptyTitle={isSelf ? 'Todavía no publicaste nada' : `@${user.username} no ha publicado nada todavía`}
-            emptyDescription={isSelf ? '¡Comparte tu primer post para que aparezca aquí!' : 'Vuelve más tarde para ver novedades.'}
-            handleDelete={handleDeletePost}
-            handleEdit={handleEditPost}
-            onChange={handlePostChange}
-          />
-        </section>
-      )}
-
-      {tab === 'saved' && isSelf && (
-        <section aria-label="Posts guardados" role="tabpanel">
-          <PostsList
-            loading={savedLoading}
-            error={savedError}
-            posts={saved}
-            onRetry={fetchSaved}
-            emptyTitle="No tienes posts guardados"
-            emptyDescription="Cuando guardes un post aparecerá aquí para que lo encuentres rápido."
-            handleDelete={handleDeletePost}
-            handleEdit={handleEditPost}
-            onChange={handlePostChange}
-          />
-        </section>
-      )}
-
-      {tab === 'liked' && isSelf && (
-        <section aria-label="Posts con like" role="tabpanel">
-          <PostsList
-            loading={likedLoading}
-            error={likedError}
-            posts={liked}
-            onRetry={fetchLiked}
-            emptyTitle="Aún no diste like a ningún post"
-            emptyDescription="Los posts a los que des like aparecerán aquí, ordenados por fecha."
-            handleDelete={handleDeletePost}
-            handleEdit={handleEditPost}
-            onChange={handlePostChange}
-          />
-        </section>
-      )}
 
       {/* Modal para editar perfil propio */}
       {isSelf && (
@@ -455,149 +432,92 @@ export default function Profile() {
   );
 }
 
-function TabButton({ active, onClick, icon, label, count }) {
+function MetaChip({ Icon, solid, children }) {
   return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={`flex items-center gap-1.5 px-2.5 sm:px-4 py-2.5 -mb-0.5 font-bold text-sm rounded-t-xl transition-all flex-shrink-0 ${active
-        ? 'text-titi-dark bg-titi-yellow-light border-b-2 border-titi-yellow'
-        : 'text-gray-500 hover:text-titi-dark hover:bg-titi-cream'
-        }`}
-    >
-      {icon}
-      <span>{label}</span>
-      {typeof count === 'number' && (
-        <span className={`text-xs tabular-nums px-2 py-0.5 rounded-full font-extrabold ${active ? 'bg-titi-yellow text-titi-dark' : 'bg-gray-100 text-gray-500'
-          }`}>
-          {count}
-        </span>
-      )}
-    </button>
+    <span className="inline-flex items-center gap-1.5 h-8 pl-1 pr-3 max-w-full rounded-full bg-titi-cream border-2 border-gray-200 text-xs font-bold text-titi-dark">
+      <span className={`w-6 h-6 rounded-full grid place-items-center text-white shrink-0 ${solid}`}>
+        <Icon className="w-3.5 h-3.5" />
+      </span>
+      <span className="truncate">{children}</span>
+    </span>
   );
 }
 
-function PostsList({ loading, error, posts, onRetry, emptyTitle, emptyDescription, handleDelete, handleEdit, onChange }) {
-  const listRef = useStaggerReveal([posts.length]);
-  if (loading) {
-    return (
-      <div className="titi-card p-6 text-center text-gray-500 font-semibold">Cargando…</div>
-    );
-  }
-  if (error) {
-    return (
-      <div className="bg-white border-2 border-red-500/40 rounded-2xl p-6 text-center shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
-        <p className="text-sm text-red-500 font-bold mb-3">{error}</p>
-        <button onClick={onRetry} className="titi-btn-primary">Reintentar</button>
-      </div>
-    );
-  }
-  if (posts.length === 0) {
-    return (
-      <div className="titi-card p-8 text-center flex flex-col items-center">
-        <img
-          src="/Titi.png"
-          alt="Titi"
-          className="w-24 h-24 mb-4 object-contain drop-shadow-sm select-none"
-          draggable={false}
-        />
-        <h3 className="text-xl font-bold text-titi-dark mb-2">{emptyTitle}</h3>
-        <p className="text-sm text-gray-500 max-w-xs">{emptyDescription}</p>
-      </div>
-    );
-  }
+function Stat({ label, value, Icon, solid }) {
+  const shown = useCountUp(value ?? 0);
   return (
-    <div ref={listRef} className="space-y-4">
-      {posts.map((p) => (
-        <PostCard
-          key={p.id}
-          post={p}
-          onDelete={handleDelete}
-          onEdit={handleEdit}
-          onChange={onChange}
-        />
-      ))}
+    <div className="flex flex-col sm:flex-row items-center sm:items-center gap-1.5 sm:gap-3 p-2.5 sm:p-3 rounded-xl bg-titi-cream border-2 border-gray-200 text-center sm:text-left min-w-0">
+      <span className={`w-9 h-9 rounded-xl border-2 border-titi-dark grid place-items-center shrink-0 -rotate-6 ${solid}`} aria-hidden="true">
+        <Icon className="w-4 h-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-2xl sm:text-3xl font-black text-titi-dark tabular-nums leading-none">{shown}</span>
+        <span className="block text-xs font-extrabold uppercase tracking-wide text-gray-500 mt-1 truncate">{label}</span>
+      </span>
     </div>
   );
 }
 
-const HeartIcon = ({ filled, className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill={filled ? 'currentColor' : 'none'}
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-  </svg>
-);
-
-const BookmarkIcon = ({ filled, className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill={filled ? 'currentColor' : 'none'}
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-  </svg>
-);
-
-const GridIcon = ({ className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <rect x="3" y="3" width="7" height="7" />
-    <rect x="14" y="3" width="7" height="7" />
-    <rect x="3" y="14" width="7" height="7" />
-    <rect x="14" y="14" width="7" height="7" />
-  </svg>
-);
-
-function Stat({ label, value, color = 'text-titi-dark' }) {
+function PostsList({ loading, error, posts, onRetry, empty, handleDelete, handleEdit, onChange }) {
+  const listRef = useStaggerReveal([loading, posts.length === 0]);
+  if (loading) {
+    return (
+      <div aria-busy="true" aria-label="Cargando posts">
+        <PostCardSkeleton />
+        <PostCardSkeleton withImage />
+      </div>
+    );
+  }
+  if (error) return <ErrorBox title="No pudimos cargar los posts" message={error} onRetry={onRetry} />;
+  if (posts.length === 0) {
+    return (
+      <EmptyState state={empty.state} title={empty.title} accent={empty.accent} text={empty.text}>
+        <Link to={empty.to} className="titi-btn-primary">
+          {empty.cta}
+        </Link>
+      </EmptyState>
+    );
+  }
   return (
-    <div className="text-center">
-      <p className={`text-2xl sm:text-3xl font-extrabold tabular-nums ${color}`}>{value ?? 0}</p>
-      <p className="text-xs uppercase tracking-wide text-gray-500 font-extrabold">{label}</p>
+    <div ref={listRef}>
+      {posts.map((p) => (
+        <PostCard key={p.id} post={p} onDelete={handleDelete} onEdit={handleEdit} onChange={onChange} />
+      ))}
     </div>
   );
 }
 
 function ProfileSkeleton() {
   return (
-    <div className="titi-card p-6 animate-pulse">
-      <div className="flex gap-6">
-        <div className="w-28 h-28 rounded-full bg-gray-100 shrink-0" />
-        <div className="flex-1 space-y-3 pt-3">
-          <div className="h-5 w-40 bg-gray-100 rounded" />
-          <div className="h-3 w-3/4 bg-gray-100 rounded" />
-          <div className="h-3 w-1/2 bg-gray-100 rounded" />
+    <div className="max-w-6xl mx-auto animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label="Cargando perfil">
+      <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden mb-6">
+        <div className="h-28 sm:h-40 bg-gray-100 border-b-2 border-gray-200" />
+        <div className="px-4 sm:px-6 pb-5">
+          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gray-100 ring-4 ring-white -mt-12 sm:-mt-14 mb-3" />
+          <div className="h-8 w-48 bg-gray-100 rounded-full" />
+          <div className="h-4 w-2/3 bg-gray-100 rounded-full mt-3" />
+          <div className="flex gap-2 mt-3">
+            <div className="h-8 w-36 bg-gray-100 rounded-full" />
+            <div className="h-8 w-40 bg-gray-100 rounded-full" />
+          </div>
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-[76px] rounded-xl bg-gray-100" />
+            ))}
+          </div>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-4 mt-6 pt-6 border-t-2 border-gray-100">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="space-y-2 text-center">
-            <div className="h-6 w-12 bg-gray-100 rounded mx-auto" />
-            <div className="h-2 w-16 bg-gray-100 rounded mx-auto" />
+      <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-6">
+        <div className="lg:order-2 flex flex-col gap-5 mb-6">
+          <div className="h-52 rounded-2xl border-2 border-gray-200 bg-white" />
+        </div>
+        <div className="lg:order-1">
+          <div className="flex gap-2 mb-4">
+            <div className="h-10 w-28 bg-gray-100 rounded-full" />
+            <div className="h-10 w-32 bg-gray-100 rounded-full" />
           </div>
-        ))}
+          <div className="h-40 rounded-2xl border-2 border-gray-200 bg-white" />
+        </div>
       </div>
     </div>
   );

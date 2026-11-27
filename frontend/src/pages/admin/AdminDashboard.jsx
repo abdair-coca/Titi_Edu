@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ErrorBox } from '../../components/social/StateBlocks.jsx';
+import { BackLink, PageHeader } from '../../components/ui/v3.jsx';
 import client from '../../api/client.js';
-import { useStaggerReveal } from '../../lib/motion.js';
-import { UsersIcon, BooksIcon, TagIcon, ChipIcon } from '../../components/icons.jsx';
+import { useCountUp, useStaggerReveal } from '../../lib/motion.js';
+import { AwardIcon, BooksIcon, ChipIcon, ShieldIcon, TagIcon, TargetIcon, UsersIcon } from '../../components/icons.jsx';
+import { TILE } from '../../components/ui/v3.jsx';
 
 const PANELS = [
   { to: '/admin/users', titulo: 'Usuarios', desc: 'Verificar profesores y cambiar roles', Icon: UsersIcon, chip: 'bg-blue-500 text-white' },
@@ -37,46 +40,40 @@ export default function AdminDashboard() {
 
   const cards = stats
     ? [
-        { label: 'Usuarios', value: stats.usuarios, color: 'text-blue-500' },
-        { label: 'Profesores verificados', value: stats.profesoresVerificados, color: 'text-green-600' },
-        { label: 'Cursos publicados', value: stats.cursosPublicados, color: 'text-titi-yellow-dark' },
-        { label: 'Inscripciones', value: stats.inscripciones, color: 'text-titi-streak' },
-        { label: 'Certificados', value: stats.certificados, color: 'text-titi-achievement' },
+        { label: 'Usuarios', value: stats.usuarios, Icon: UsersIcon, solid: 'bg-blue-500 text-white' },
+        { label: 'Profes verificados', value: stats.profesoresVerificados, Icon: ShieldIcon, solid: 'bg-green-500 text-white' },
+        { label: 'Cursos publicados', value: stats.cursosPublicados, Icon: BooksIcon, solid: 'bg-titi-yellow text-titi-dark' },
+        { label: 'Inscripciones', value: stats.inscripciones, Icon: TargetIcon, solid: 'bg-titi-streak text-white' },
+        { label: 'Certificados', value: stats.certificados, Icon: AwardIcon, solid: 'bg-titi-achievement text-white' },
       ]
     : [];
 
   return (
     <div>
-      <header className="mb-6 sm:mb-8">
-        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Panel de administración</h1>
-        <p className="text-base font-medium text-gray-500">Gobierná usuarios, cursos y categorías de Titi.</p>
-      </header>
+      <PageHeader title="Panel de" accent="administración" subtitle={<>Gobierná usuarios, cursos y categorías de Titi.</>} />
 
       {loading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="bg-white rounded-2xl border border-gray-100 h-24 animate-pulse" />
-          ))}
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3 mb-8">
-          <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-red-700">{error}</p>
-            <button onClick={fetchStats} className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark mt-2">
-              Reintentar →
-            </button>
+        <div className="bg-gray-200 rounded-2xl p-4 sm:p-5 mb-6 sm:mb-8 animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label="Cargando estadísticas">
+          <div className="h-5 w-40 bg-gray-100 rounded-full mb-3" />
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-[104px] bg-gray-100 rounded-xl" />
+            ))}
           </div>
         </div>
+      ) : error ? (
+        <ErrorBox title="No pudimos cargar los datos" message={error} onRetry={fetchStats} />
       ) : (
-        <div ref={statsRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
-          {cards.map((c) => (
-            <div key={c.label} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4">
-              <p className={`text-3xl font-black tabular-nums ${c.color}`}>{c.value}</p>
-              <p className="text-xs font-semibold text-gray-500 mt-1">{c.label}</p>
-            </div>
-          ))}
-        </div>
+        <section aria-label="Estadísticas" className="bg-titi-dark rounded-2xl border-2 border-titi-dark p-4 sm:p-5 mb-6 sm:mb-8">
+          <h2 className="text-lg font-extrabold text-titi-cream mb-3">
+            Titi en <span className="text-titi-yellow">números</span>
+          </h2>
+          <div ref={statsRef} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {cards.map((c) => (
+              <StatTile key={c.label} {...c} />
+            ))}
+          </div>
+        </section>
       )}
 
       <div ref={panelsRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -84,18 +81,31 @@ export default function AdminDashboard() {
           <Link
             key={p.to}
             to={p.to}
-            className="titi-card-pop bg-white rounded-2xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none p-5 flex items-center gap-4"
+            className={`group ${TILE} p-5 flex items-center gap-4`}
           >
-            <span className={`w-11 h-11 rounded-full grid place-items-center shrink-0 shadow-sm ${p.chip}`} aria-hidden="true">
-              <p.Icon className="w-5 h-5" />
+            <span className={`w-12 h-12 rounded-xl border-2 border-titi-dark grid place-items-center shrink-0 -rotate-6 transition-transform duration-200 group-hover:rotate-0 motion-reduce:transition-none ${p.chip}`} aria-hidden="true">
+              <p.Icon className="w-6 h-6" />
             </span>
-            <div>
-              <p className="text-base font-bold text-titi-dark">{p.titulo}</p>
-              <p className="text-xs font-semibold text-gray-500">{p.desc}</p>
+            <div className="min-w-0">
+              <p className="text-lg font-extrabold text-titi-dark">{p.titulo}</p>
+              <p className="text-sm font-semibold text-gray-500">{p.desc}</p>
             </div>
           </Link>
         ))}
       </div>
+    </div>
+  );
+}
+
+function StatTile({ label, value, Icon, solid }) {
+  const shown = useCountUp(value ?? 0);
+  return (
+    <div className="bg-white/5 border-2 border-white/10 rounded-xl p-3 sm:p-4">
+      <span className={`w-9 h-9 rounded-xl grid place-items-center mb-2 -rotate-6 ${solid}`} aria-hidden="true">
+        <Icon className="w-5 h-5" />
+      </span>
+      <p className="text-3xl font-black text-titi-cream tabular-nums leading-none">{shown}</p>
+      <p className="text-xs font-bold text-white/60 mt-1">{label}</p>
     </div>
   );
 }

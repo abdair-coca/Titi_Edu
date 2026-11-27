@@ -3,6 +3,22 @@ import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import TitiMascot from './TitiMascot.jsx';
 import { formatDeadline, isDeadlineExpired } from '../lib/deadline.js';
+import { useCountUp, usePopIn, useStaggerReveal } from '../lib/motion.js';
+import {
+  AwardIcon,
+  CheckIcon,
+  ClockIcon,
+  CloseIcon,
+  ListIcon,
+  LockIcon,
+  PlayIcon,
+  RefreshIcon,
+  SendIcon,
+  TargetIcon,
+  TrophyIcon,
+} from './icons.jsx';
+import { ErrorBox } from './social/StateBlocks.jsx';
+import { INPUT, ProgressBar, RoleBadge, SkeletonLine, SURFACE } from './ui/v3.jsx';
 
 /**
  * EvaluationQuiz — el estudiante rinde una evaluación.
@@ -29,6 +45,8 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
   const [intentoExtra, setIntentoExtra] = useState(0); // cuántos 'intento_extra' tengo en inventario
   const [usarExtra, setUsarExtra] = useState(false); // si el próximo submit debe consumir uno
   const [, refreshDeadline] = useState(0);
+  // Las correcciones entran escalonadas cuando aparece el resultado (§10).
+  const feedbackRef = useStaggerReveal([phase === 'result' ? result?.intento?.nota : null]);
 
   const fetchIntentoExtra = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -166,34 +184,26 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
   // ---- Render ----
   if (loading) {
     return (
-      <div className="bg-white border border-gray-100 rounded-2xl p-8 animate-pulse">
-        <div className="h-5 w-1/2 bg-gray-100 rounded mb-6" />
-        <div className="space-y-4">
+      <div className={`${SURFACE} p-5 sm:p-6 animate-pulse`} role="status" aria-busy="true">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-xl bg-gray-100" />
+          <div className="flex-1 space-y-2">
+            <SkeletonLine className="h-3 w-32" />
+            <SkeletonLine className="h-6 w-2/3" />
+          </div>
+        </div>
+        <div className="space-y-3">
           <div className="h-16 bg-gray-100 rounded-xl" />
           <div className="h-16 bg-gray-100 rounded-xl" />
           <div className="h-16 bg-gray-100 rounded-xl" />
         </div>
+        <span className="sr-only">Cargando evaluación…</span>
       </div>
     );
   }
 
   if (error && !evaluacion) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-        <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
-        <div className="flex-1">
-          <p className="text-sm font-semibold text-red-700">No pudimos cargar la evaluación</p>
-          <p className="text-xs text-red-500 mt-0.5">{error}</p>
-          <button
-            type="button"
-            onClick={fetchAll}
-            className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark mt-2"
-          >
-            Reintentar →
-          </button>
-        </div>
-      </div>
-    );
+    return <ErrorBox title="No pudimos cargar la evaluación" message={error} onRetry={fetchAll} />;
   }
 
   if (!evaluacion) return null;
@@ -207,10 +217,10 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
     const mejorNota = Math.max(0, ...(attemptsInfo.intentos || []).map((i) => i.nota));
     return (
       <QuizShell evaluacion={evaluacion}>
-        <div className="flex flex-col items-center text-center py-8">
-          <TitiMascot mood="celebrating" message="¡Ya aprobaste esta evaluación!" size="md" />
-          <p className="mt-4 text-4xl font-black text-green-600 tabular-nums">{mejorNota}%</p>
-          <p className="text-sm font-semibold text-gray-500 mt-1">Tu mejor nota</p>
+        <div className="flex flex-col items-center text-center py-4">
+          <TitiMascot state="celebra" message="¡Ya aprobaste esta evaluación!" size="md" />
+          <ScoreNumber value={mejorNota} passed className="mt-4" />
+          <p className="text-sm font-bold text-gray-500 mt-1">Tu mejor nota</p>
         </div>
       </QuizShell>
     );
@@ -220,13 +230,14 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
   if (bloqueado) {
     return (
       <QuizShell evaluacion={evaluacion}>
-        <div className="flex flex-col items-center text-center py-8">
+        <div className="flex flex-col items-center text-center py-4">
           <TitiMascot
-            mood="sad"
+            state="triste"
             message="Alcanzaste el máximo de intentos. Hablá con tu profesor para desbloquearla."
             size="md"
           />
-          <p className="mt-4 text-sm font-semibold text-gray-500">
+          <p className="mt-4 inline-flex items-center gap-2 h-9 px-3 rounded-full bg-red-50 border-2 border-red-500 text-sm font-extrabold text-red-700 tabular-nums">
+            <LockIcon className="w-4 h-4" />
             {attemptsInfo.intentos.length} de {attemptsInfo.intentosMax} intentos usados
           </p>
           {intentoExtra > 0 && !plazoVencido && (
@@ -240,20 +251,18 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
   // --- Intro ---
   if (phase === 'intro') {
     const usados = attemptsInfo?.intentos?.length ?? 0;
+    const maximo = attemptsInfo?.intentosMax ?? evaluacion.intentosMax;
     return (
       <QuizShell evaluacion={evaluacion}>
-        <div className="flex flex-col items-center text-center py-6">
-          <TitiMascot mood="motivating" message="¡Vos podés! Leé con calma cada pregunta." size="md" />
-          <dl className="grid grid-cols-3 gap-2 sm:gap-4 mt-6 w-full max-w-md">
-            <InfoStat label="Preguntas" value={totalPreguntas} />
-            <InfoStat label="Nota mínima" value={`${evaluacion.notaMinima}%`} />
-            <InfoStat
-              label="Intentos"
-              value={`${usados}/${attemptsInfo?.intentosMax ?? evaluacion.intentosMax}`}
-            />
-          </dl>
+        <div className="flex flex-col items-center text-center py-2">
+          <TitiMascot state="saludo" message="¡Vos podés! Leé con calma cada pregunta." size="md" />
+          <ul className="grid grid-cols-3 gap-2 sm:gap-3 mt-6 w-full max-w-md">
+            <InfoStat Icon={ListIcon} solid="bg-blue-500" label="Preguntas" value={totalPreguntas} />
+            <InfoStat Icon={TargetIcon} solid="bg-green-500" label="Nota mínima" value={evaluacion.notaMinima} suffix="%" />
+            <InfoStat Icon={RefreshIcon} solid="bg-titi-achievement" label="Intentos" text={`${usados}/${maximo}`} />
+          </ul>
           {usados > 0 && (
-            <p className="text-xs font-semibold text-gray-400 mt-3">
+            <p className="text-sm font-semibold text-gray-500 mt-3">
               Ya usaste {usados} {usados === 1 ? 'intento' : 'intentos'}.
             </p>
           )}
@@ -261,8 +270,9 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
             type="button"
             onClick={() => setPhase('quiz')}
             disabled={plazoVencido}
-            className="mt-6 bg-titi-yellow text-titi-dark font-bold text-base px-8 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="titi-btn-primary mt-6 px-8 py-3 text-base"
           >
+            {!plazoVencido && <PlayIcon className="w-5 h-5" />}
             {plazoVencido ? 'Plazo vencido' : 'Comenzar intento'}
           </button>
         </div>
@@ -275,65 +285,66 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
     const aprobado = result.intento.aprobado;
     return (
       <QuizShell evaluacion={evaluacion}>
-        <div className="flex flex-col items-center text-center py-6">
+        <div className="flex flex-col items-center text-center py-2">
           {aprobado ? (
-            <TitiMascot mood="celebrating" message="¡Lo lograste!" size="md" />
+            <TitiMascot state="celebra" message="¡Lo lograste!" size="md" />
           ) : result.bloqueado ? (
-            <>
-              <TitiMascot
-                mood="sad"
-                message="Se acabaron los intentos. Hablá con tu profesor."
-                size="md"
-              />
-              {intentoExtra > 0 && !plazoVencido && (
-                <ExtraAttemptCta cantidad={intentoExtra} onUse={handleUseExtra} />
-              )}
-            </>
+            <TitiMascot
+              state="triste"
+              message="Se acabaron los intentos. Hablá con tu profesor."
+              size="md"
+            />
           ) : (
             <TitiMascot
-              mood="motivating"
+              state="pensando"
               message="No te rindas, tenés más intentos. ¡Revisá el material y volvé!"
               size="md"
             />
           )}
 
-          <p
-            className={`mt-4 text-5xl font-black tabular-nums ${
-              aprobado ? 'text-green-600' : 'text-red-500'
+          <ScoreNumber value={result.intento.nota} passed={aprobado} className="mt-4" />
+          <span
+            className={`mt-2 inline-flex items-center gap-1.5 h-8 px-3 rounded-full border-2 text-sm font-extrabold ${
+              aprobado ? 'bg-green-50 border-green-500 text-green-700' : 'bg-red-50 border-red-500 text-red-700'
             }`}
           >
-            {result.intento.nota}%
-          </p>
-          <p className="text-sm font-semibold text-gray-500 mt-1">
+            {aprobado ? <CheckIcon className="w-4 h-4" /> : <CloseIcon className="w-4 h-4" />}
+            {aprobado ? 'Aprobada' : 'No aprobada'}
+          </span>
+          <p className="text-sm font-semibold text-gray-500 mt-2">
             {result.correctas} de {result.total} correctas · nota mínima {evaluacion.notaMinima}%
           </p>
           {!aprobado && !result.bloqueado && !plazoVencido && (
-            <p className="text-xs font-bold text-gray-400 mt-1">
+            <p className="text-sm font-bold text-gray-500 mt-0.5">
               Te {result.intentosRestantes === 1 ? 'queda' : 'quedan'} {result.intentosRestantes}{' '}
               {result.intentosRestantes === 1 ? 'intento' : 'intentos'}
             </p>
           )}
+          {result.bloqueado && intentoExtra > 0 && !plazoVencido && (
+            <ExtraAttemptCta cantidad={intentoExtra} onUse={handleUseExtra} />
+          )}
 
-          {/* Feedback por pregunta */}
-          <ul className="w-full max-w-md mt-6 space-y-2 text-left">
+          {/* Corrección por pregunta */}
+          <ul ref={feedbackRef} className="w-full max-w-lg mt-6 space-y-2 text-left">
             {evaluacion.preguntas.map((p, i) => {
               const d = result.detalle?.find((x) => x.preguntaId === p.id);
               const ok = Boolean(d?.correcta);
               return (
                 <li
                   key={p.id}
-                  className={`flex items-start gap-2 sm:gap-3 rounded-xl border px-3 py-2 ${
-                    ok ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                  className={`flex items-start gap-3 rounded-xl border-2 px-3 py-2.5 ${
+                    ok ? 'bg-green-50 border-green-500' : 'bg-red-50 border-red-500'
                   }`}
                 >
                   <span
-                    className={`text-sm font-black shrink-0 leading-relaxed ${ok ? 'text-green-600' : 'text-red-500'}`}
-                    aria-label={ok ? 'Correcta' : 'Incorrecta'}
+                    className={`w-7 h-7 rounded-full grid place-items-center shrink-0 text-white ${ok ? 'bg-green-500' : 'bg-red-500'}`}
+                    aria-hidden="true"
                   >
-                    {ok ? '✓' : '✗'}
+                    {ok ? <CheckIcon className="w-3.5 h-3.5" /> : <CloseIcon className="w-3.5 h-3.5" />}
                   </span>
-                  <span className="text-sm font-medium text-titi-dark min-w-0 break-words">
-                    <span className="text-gray-400 tabular-nums mr-1">{i + 1}.</span>
+                  <span className="text-sm font-semibold text-titi-dark min-w-0 break-words pt-0.5">
+                    <span className="sr-only">{ok ? 'Correcta: ' : 'Incorrecta: '}</span>
+                    <span className="text-gray-500 tabular-nums mr-1">{i + 1}.</span>
                     {p.texto}
                   </span>
                 </li>
@@ -345,8 +356,9 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
             <button
               type="button"
               onClick={handleRetry}
-              className="mt-6 bg-titi-yellow text-titi-dark font-bold text-base px-8 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
+              className="titi-btn-primary mt-6 px-8 py-3 text-base"
             >
+              <RefreshIcon className="w-5 h-5" />
               Reintentar
             </button>
           )}
@@ -358,12 +370,32 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
   // --- Quiz (formulario) ---
   return (
     <QuizShell evaluacion={evaluacion}>
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
+        {/* Avance de respuestas */}
+        <div className="rounded-xl bg-titi-cream border-2 border-gray-200 px-3 py-2.5">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <span className="text-sm font-extrabold text-titi-dark tabular-nums">
+              {answeredCount} de {totalPreguntas} respondidas
+            </span>
+            {allAnswered && (
+              <span className="inline-flex items-center gap-1 text-xs font-extrabold text-green-700">
+                <CheckIcon className="w-3.5 h-3.5" />
+                Listo para enviar
+              </span>
+            )}
+          </div>
+          <ProgressBar value={answeredCount} max={totalPreguntas || 1} color={allAnswered ? 'bg-green-500' : 'bg-titi-yellow'} track="bg-white" label="Preguntas respondidas" />
+        </div>
+
         {usarExtra && (
-          <p className="text-xs font-semibold text-titi-yellow-dark bg-titi-yellow-light border border-titi-yellow rounded-xl px-3 py-2">
-            🔁 Este intento va a consumir tu "intento extra" de la tienda.
+          <p className="flex items-center gap-2 rounded-xl border-2 border-titi-dark bg-titi-yellow-light px-3 py-2 text-sm font-bold text-titi-dark">
+            <span className="w-7 h-7 rounded-lg bg-titi-yellow border-2 border-titi-dark grid place-items-center shrink-0" aria-hidden="true">
+              <RefreshIcon className="w-4 h-4" />
+            </span>
+            Este intento va a consumir tu "intento extra" de la tienda.
           </p>
         )}
+
         {evaluacion.preguntas.map((p, i) => (
           <QuestionCard
             key={p.id}
@@ -374,22 +406,19 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
           />
         ))}
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-3">
-            <p className="text-sm font-semibold text-red-700">{error}</p>
-          </div>
-        )}
+        {error && <ErrorBox title="No pudimos enviar tus respuestas" message={error} onRetry={handleSubmit} />}
 
-        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
-          <span className="text-sm font-semibold text-gray-400 tabular-nums text-center sm:text-left">
-            {answeredCount} / {totalPreguntas} respondidas
+        <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 pt-1">
+          <span className="text-sm font-semibold text-gray-500 tabular-nums text-center sm:text-left">
+            {allAnswered ? 'Revisá tus respuestas y enviá.' : `Te ${totalPreguntas - answeredCount === 1 ? 'falta' : 'faltan'} ${totalPreguntas - answeredCount} por responder.`}
           </span>
           <button
             type="button"
             onClick={handleSubmit}
             disabled={!allAnswered || submitting || plazoVencido}
-            className="w-full sm:w-auto bg-titi-yellow text-titi-dark font-bold text-base px-6 sm:px-8 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="titi-btn-primary w-full sm:w-auto px-6 sm:px-8 py-3 text-base"
           >
+            <SendIcon className="w-5 h-5" />
             {submitting ? 'Enviando…' : 'Enviar respuestas'}
           </button>
         </div>
@@ -398,19 +427,26 @@ export default function EvaluationQuiz({ evaluationId, onResult }) {
   );
 }
 
+// ---- Nota grande con conteo (verde si aprobó, roja si no) ----
+function ScoreNumber({ value, passed, className = '' }) {
+  const shown = useCountUp(value);
+  return (
+    <p className={`text-5xl sm:text-6xl font-black tabular-nums leading-none ${passed ? 'text-green-600' : 'text-red-500'} ${className}`}>
+      {shown}%
+    </p>
+  );
+}
+
 // ---- CTA para destrabar con un ítem 'intento_extra' de la tienda ----
 function ExtraAttemptCta({ cantidad, onUse }) {
   return (
     <div className="mt-5 flex flex-col items-center gap-1.5">
-      <button
-        type="button"
-        onClick={onUse}
-        className="bg-titi-yellow text-titi-dark font-bold text-sm px-6 py-2.5 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150"
-      >
-        🔁 Usar intento extra
+      <button type="button" onClick={onUse} className="titi-btn-primary text-sm px-6 py-2.5">
+        <RefreshIcon className="w-4 h-4" />
+        Usar intento extra
       </button>
-      <span className="text-xs font-semibold text-gray-400 tabular-nums">
-        Te quedan {cantidad} en la tienda
+      <span className="text-sm font-semibold text-gray-500 tabular-nums">
+        Te {cantidad === 1 ? 'queda' : 'quedan'} {cantidad} en la tienda
       </span>
     </div>
   );
@@ -419,49 +455,78 @@ function ExtraAttemptCta({ cantidad, onUse }) {
 // ---- Carcasa con título ----
 function QuizShell({ evaluacion, children }) {
   const deadlineExpired = isDeadlineExpired(evaluacion.fechaLimite);
+  const ref = usePopIn([evaluacion.id]);
   return (
-    <section className="bg-white border border-gray-100 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 sm:p-6">
-      <header className="mb-4 sm:mb-5">
-        <p className="text-xs font-extrabold uppercase tracking-wide text-titi-achievement">
-          {evaluacion.esFinal ? 'Evaluación final' : 'Evaluación de módulo'}
-        </p>
-        <h2 className="text-lg sm:text-2xl font-bold text-titi-dark mt-0.5 leading-snug">
-          {evaluacion.titulo}
-        </h2>
-        {evaluacion.fechaLimite && (
-          <div className={`mt-3 rounded-xl border px-3 py-2 text-xs font-bold ${deadlineExpired ? 'border-red-200 bg-red-50 text-red-700' : 'border-gray-200 bg-titi-cream text-gray-600'}`}>
-            {deadlineExpired ? 'Plazo vencido' : 'Entrega hasta'}: {formatDeadline(evaluacion.fechaLimite)}
-            {deadlineExpired && <span className="block mt-1 font-semibold text-gray-500">Podés revisar contenido, notas y resúmenes, pero no enviar nuevos intentos.</span>}
-          </div>
-        )}
+    <section ref={ref} className={`${SURFACE} p-4 sm:p-6`}>
+      <header className="flex items-start gap-3 mb-5">
+        <RoleBadge Icon={evaluacion.esFinal ? TrophyIcon : AwardIcon} solid="bg-titi-achievement" />
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-extrabold uppercase tracking-wide text-titi-achievement">
+            {evaluacion.esFinal ? 'Evaluación final' : 'Evaluación de módulo'}
+          </p>
+          <h2 className="text-xl sm:text-2xl font-black text-titi-dark mt-0.5 leading-tight break-words">
+            {evaluacion.titulo}
+          </h2>
+          {evaluacion.fechaLimite && (
+            <div className="mt-2.5">
+              <span
+                className={`inline-flex items-center gap-1.5 min-h-8 px-3 py-1 rounded-full border-2 text-xs font-extrabold ${
+                  deadlineExpired ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-titi-cream text-titi-dark'
+                }`}
+              >
+                <ClockIcon className="w-4 h-4 shrink-0" />
+                {deadlineExpired ? 'Plazo vencido' : 'Entrega hasta'}: {formatDeadline(evaluacion.fechaLimite)}
+              </span>
+              {deadlineExpired && (
+                <p className="mt-1.5 text-sm font-semibold text-gray-500">
+                  Podés revisar contenido, notas y resúmenes, pero no enviar nuevos intentos.
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       </header>
       {children}
     </section>
   );
 }
 
-function InfoStat({ label, value }) {
+function InfoStat({ Icon, solid, label, value, suffix = '', text }) {
+  const shown = useCountUp(value ?? 0);
   return (
-    <div className="bg-titi-cream rounded-xl px-2 py-2 sm:px-3 sm:py-2.5">
-      <dt className="text-xs font-bold uppercase tracking-wide text-gray-400 leading-tight">
-        {label}
-      </dt>
-      <dd className="text-base sm:text-lg font-extrabold text-titi-dark tabular-nums mt-0.5">
-        {value}
-      </dd>
-    </div>
+    <li className="flex flex-col items-center text-center gap-1 p-2.5 rounded-xl bg-titi-cream border-2 border-gray-200">
+      <span className={`w-8 h-8 rounded-lg border-2 border-titi-dark grid place-items-center text-white -rotate-6 ${solid}`} aria-hidden="true">
+        <Icon className="w-4 h-4" />
+      </span>
+      <span className="text-xl font-black text-titi-dark tabular-nums leading-none mt-1">
+        {text ?? `${shown}${suffix}`}
+      </span>
+      <span className="text-xs font-bold text-gray-500 leading-tight">{label}</span>
+    </li>
   );
 }
 
 // ---- Una pregunta del formulario ----
+const LETTERS = 'ABCDEFGHIJ';
+
 function QuestionCard({ pregunta, index, answer, onAnswer }) {
+  const answered = pregunta.tipo === 'RESPUESTA_CORTA' ? Boolean(answer?.texto?.trim()) : Boolean(answer?.opcionId);
   return (
-    <fieldset className="bg-titi-cream/60 border border-gray-100 rounded-2xl p-3 sm:p-4">
+    <fieldset
+      className={`rounded-2xl border-2 bg-white p-4 sm:p-5 transition-colors duration-150 ${answered ? 'border-titi-dark' : 'border-gray-200'}`}
+    >
       <legend className="sr-only">Pregunta {index + 1}</legend>
-      <p className="text-sm sm:text-base font-bold text-titi-dark mb-3 break-words">
-        <span className="text-gray-400 tabular-nums mr-1.5">{index + 1}.</span>
-        {pregunta.texto}
-      </p>
+      <div className="flex items-start gap-3 mb-3">
+        <span
+          aria-hidden="true"
+          className={`w-8 h-8 shrink-0 rounded-lg border-2 border-titi-dark grid place-items-center text-sm font-black tabular-nums -rotate-6 ${
+            answered ? 'bg-titi-yellow text-titi-dark' : 'bg-white text-titi-dark'
+          }`}
+        >
+          {index + 1}
+        </span>
+        <p className="text-base font-extrabold text-titi-dark break-words min-w-0 pt-0.5">{pregunta.texto}</p>
+      </div>
 
       {pregunta.tipo === 'RESPUESTA_CORTA' ? (
         <input
@@ -470,11 +535,12 @@ function QuestionCard({ pregunta, index, answer, onAnswer }) {
           onChange={(e) => onAnswer({ texto: e.target.value })}
           placeholder="Escribí tu respuesta…"
           maxLength={200}
-          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-titi-dark placeholder:text-gray-300 focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 transition-all duration-150"
+          aria-label={`Respuesta a la pregunta ${index + 1}`}
+          className={INPUT}
         />
       ) : (
         <div className="flex flex-col gap-2">
-          {pregunta.opciones.map((o) => {
+          {pregunta.opciones.map((o, oIndex) => {
             const selected = answer?.opcionId === o.id;
             return (
               <button
@@ -482,19 +548,26 @@ function QuestionCard({ pregunta, index, answer, onAnswer }) {
                 type="button"
                 onClick={() => onAnswer({ opcionId: o.id })}
                 aria-pressed={selected}
-                className={`w-full text-left px-4 py-3 rounded-xl border text-sm font-semibold transition-all duration-150 ${
+                className={[
+                  'group w-full flex items-center gap-3 text-left px-3 py-2.5 rounded-xl border-2 text-sm font-bold text-titi-dark',
+                  'transition-all duration-150 active:translate-y-0.5 active:shadow-none motion-reduce:transition-none',
+                  'focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60',
                   selected
-                    ? 'bg-titi-yellow border-titi-yellow text-titi-dark shadow-[0_3px_0px_#E6B800]'
-                    : 'bg-white border-gray-200 text-titi-dark hover:border-titi-yellow hover:bg-titi-yellow-light'
-                }`}
+                    ? 'bg-titi-yellow border-titi-dark shadow-[0_3px_0_#1A1A2E]'
+                    : 'bg-white border-gray-200 hover:border-titi-dark hover:bg-titi-cream',
+                ].join(' ')}
               >
                 <span
-                  className={`inline-block w-4 h-4 rounded-full border-2 mr-2 align-middle ${
-                    selected ? 'border-titi-dark bg-titi-dark' : 'border-gray-300 bg-white'
-                  }`}
                   aria-hidden="true"
-                />
-                {o.texto}
+                  className={`w-7 h-7 shrink-0 rounded-lg border-2 grid place-items-center text-xs font-black transition-colors duration-150 ${
+                    selected
+                      ? 'bg-titi-dark border-titi-dark text-white'
+                      : 'bg-white border-gray-300 text-gray-500 group-hover:border-titi-dark group-hover:text-titi-dark'
+                  }`}
+                >
+                  {LETTERS[oIndex] || oIndex + 1}
+                </span>
+                <span className="min-w-0 break-words">{o.texto}</span>
               </button>
             );
           })}

@@ -1,64 +1,17 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import client from '../api/client.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { resolveMediaUrl, relativeTime } from '../lib/format.js';
 import CommentSection from './CommentSection.jsx';
 import OptionsPosts from './OptionsPosts.jsx';
+import Avatar from './social/Avatar.jsx';
+import { BookmarkIcon, CommentIcon, HeartIcon, MusicIcon, PinIcon } from './icons.jsx';
 
-// ---- Iconos ----
-const HeartIcon = ({ filled, className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill={filled ? 'currentColor' : 'none'}
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-  </svg>
-);
+// Post v3 (rediseno-inicio-explorar R4): superficie con borde oscuro; lo que
+// reacciona son las acciones de adentro. Doble toque en la imagen = like.
 
-const CommentIcon = ({ className }) => (
-  <svg
-    className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-  >
-    <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-  </svg>
-);
-
-const MusicIcon = ({ className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M9 18V5l12-2v13" />
-    <circle cx="6" cy="18" r="3" />
-    <circle cx="18" cy="16" r="3" />
-  </svg>
-);
-
-const PinIcon = ({ className }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-    <circle cx="12" cy="10" r="3" />
-  </svg>
-);
-
-const BookmarkIcon = ({ filled, className }) => (
-  <svg
-    className={className}
-    viewBox="0 0 24 24"
-    fill={filled ? 'currentColor' : 'none'}
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    aria-hidden="true"
-  >
-    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
-  </svg>
-);
+const DOUBLE_TAP_MS = 300;
 
 function ContentWithHashtags({ text }) {
   if (!text) return null;
@@ -73,12 +26,49 @@ function ContentWithHashtags({ text }) {
     parts.push(
       <Link key={`h-${key++}`} to={`/hashtag/${tag.toLowerCase()}`} className="text-blue-500 font-bold hover:underline">
         #{tag}
-      </Link>
+      </Link>,
     );
     lastIndex = match.index + match[0].length;
   }
   if (lastIndex < text.length) parts.push(text.slice(lastIndex));
-  return <p className="whitespace-pre-wrap leading-relaxed text-titi-dark">{parts}</p>;
+  return <p className="whitespace-pre-wrap break-words text-base font-medium leading-relaxed text-titi-dark">{parts}</p>;
+}
+
+/** Botón pastilla de acción: blanco en reposo, color sólido del rol al activarse. */
+function ActionPill({ active, activeClass, onClick, disabled, label, pressed, expanded, children, className = '' }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      aria-pressed={pressed}
+      aria-expanded={expanded}
+      className={[
+        'group inline-flex items-center gap-1.5 h-10 px-3 rounded-xl border-2 text-sm font-extrabold select-none',
+        'transition-all duration-150 active:translate-y-0.5 active:shadow-none motion-reduce:transition-none',
+        'focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60',
+        'disabled:opacity-50 disabled:cursor-not-allowed disabled:active:translate-y-0',
+        active
+          ? `${activeClass} border-titi-dark shadow-[0_3px_0_#1A1A2E]`
+          : 'bg-white border-gray-200 text-titi-dark shadow-[0_3px_0_#E5E7EB] hover:border-titi-dark',
+        className,
+      ].join(' ')}
+    >
+      {children}
+    </button>
+  );
+}
+
+function MetaChip({ Icon, solid, children }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 h-8 pl-1 pr-3 max-w-full rounded-full bg-titi-cream border-2 border-gray-200 text-xs font-bold text-titi-dark">
+      <span className={`w-6 h-6 rounded-full grid place-items-center text-white shrink-0 ${solid}`}>
+        <Icon className="w-3.5 h-3.5" />
+      </span>
+      <span className="truncate">{children}</span>
+    </span>
+  );
 }
 
 export default function PostCard({ post, onChange, onDelete, onEdit }) {
@@ -90,6 +80,10 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
   const [saving, setSaving] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(post.comments ?? 0);
+  // Cambia en cada like para re-disparar las animaciones (corazón que late / estalla).
+  const [beat, setBeat] = useState(0);
+  const [burst, setBurst] = useState(0);
+  const lastTap = useRef(0);
 
   const imageUrl = resolveMediaUrl(post.imageUrl);
 
@@ -99,6 +93,7 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
     const prevLikes = likes;
     setLikedByMe(!prevLiked);
     setLikes(prevLikes + (prevLiked ? -1 : 1));
+    if (!prevLiked) setBeat((b) => b + 1);
     setLiking(true);
     try {
       const { data } = await client.post(`/api/posts/${post.id}/like`);
@@ -107,10 +102,12 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
         setLikes(Number(data.data.likes ?? 0));
         onChange?.({ id: post.id, liked: data.data.liked, likes: data.data.likes });
       } else {
-        setLikedByMe(prevLiked); setLikes(prevLikes);
+        setLikedByMe(prevLiked);
+        setLikes(prevLikes);
       }
     } catch {
-      setLikedByMe(prevLiked); setLikes(prevLikes);
+      setLikedByMe(prevLiked);
+      setLikes(prevLikes);
     } finally {
       setLiking(false);
     }
@@ -136,75 +133,76 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
     }
   }
 
+  // Doble toque/clic en la imagen: da like (nunca lo quita) y el corazón estalla.
+  function likeFromImage() {
+    setBurst((b) => b + 1);
+    if (!likedByMe) toggleLike();
+  }
+  function onImagePointerUp(e) {
+    if (e.pointerType === 'mouse') return; // el mouse usa onDoubleClick
+    const now = Date.now();
+    if (now - lastTap.current < DOUBLE_TAP_MS) {
+      lastTap.current = 0;
+      likeFromImage();
+    } else {
+      lastTap.current = now;
+    }
+  }
+
   return (
-    <article className="bg-white rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-gray-100 overflow-hidden mb-6 hover:shadow-lg transition-shadow">
-      {/* Header */}
-      <header className="flex items-center gap-3 px-5 py-4">
-        <Link to={`/profile/${post.author}`} className="shrink-0">
-          {post.authorAvatar ? (
-            <img
-              src={post.authorAvatar}
-              alt={post.author}
-              className="w-11 h-11 rounded-full bg-titi-cream border-2 border-titi-yellow"
-            />
-          ) : (
-            <div className="w-11 h-11 rounded-full bg-titi-yellow text-titi-dark grid place-items-center font-extrabold border-2 border-titi-yellow">
-              {post.author?.[0]?.toUpperCase() ?? '?'}
-            </div>
-          )}
+    <article className="bg-white rounded-2xl border-2 border-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)] mb-5">
+      <header className="flex items-center gap-3 px-4 sm:px-5 pt-4 pb-3">
+        <Link to={`/profile/${post.author}`} className="shrink-0 rounded-full focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60">
+          <Avatar username={post.author} src={post.authorAvatar} />
         </Link>
         <div className="min-w-0">
-          <Link to={`/profile/${post.author}`} className="font-extrabold text-titi-dark hover:text-blue-500 transition-colors">
+          <Link to={`/profile/${post.author}`} className="block font-extrabold text-titi-dark hover:text-blue-500 transition-colors truncate">
             @{post.author}
           </Link>
-          <p className="text-xs text-gray-500 font-semibold">{relativeTime(post.createdAt)}</p>
+          <p className="text-xs text-gray-400 font-semibold">{relativeTime(post.createdAt)}</p>
         </div>
         <OptionsPosts user={user} post={post} onDelete={onDelete} onEdit={onEdit} />
       </header>
 
-      {/* Imagen */}
-      {imageUrl && (
-        <div className="bg-titi-cream">
-          <img src={imageUrl} alt="" className="w-full max-h-[600px] object-cover" loading="lazy" />
-        </div>
-      )}
-
-      {/* Contenido */}
       {post.content && (
-        <div className="px-5 pt-4">
+        <div className="px-4 sm:px-5 pb-3">
           <ContentWithHashtags text={post.content} />
         </div>
       )}
 
-      {/* Sonido + Ubicación */}
-      {(post.sound || post.location) && (
-        <div className="px-5 pt-3 flex flex-wrap gap-3 text-xs text-gray-500">
-          {post.sound && (
-            <span className="inline-flex items-center gap-1.5 max-w-full">
-              <MusicIcon className="w-3.5 h-3.5 text-titi-streak shrink-0" />
-              <span className="truncate">
-                <span className="text-titi-dark font-bold">{post.sound.name}</span>
-                {post.sound.artist && <span> — {post.sound.artist}</span>}
-              </span>
-            </span>
-          )}
-          {post.location && (
-            <span className="inline-flex items-center gap-1.5">
-              <PinIcon className="w-3.5 h-3.5 text-green-600 shrink-0" />
-              <span className="font-semibold">{post.location.city}, {post.location.country}</span>
+      {imageUrl && (
+        <div
+          className="relative bg-titi-cream border-y-2 border-titi-dark select-none touch-manipulation"
+          onDoubleClick={isAuthenticated ? likeFromImage : undefined}
+          onPointerUp={isAuthenticated ? onImagePointerUp : undefined}
+        >
+          <img src={imageUrl} alt="" className="w-full max-h-[560px] object-cover" loading="lazy" draggable={false} />
+          {burst > 0 && (
+            <span key={burst} aria-hidden="true" className="titi-heart-burst absolute inset-0 grid place-items-center pointer-events-none">
+              <HeartIcon filled className="w-24 h-24 text-red-500 drop-shadow-[0_4px_0_#1A1A2E]" />
             </span>
           )}
         </div>
       )}
 
-      {/* Hashtags chips amarillos */}
-      {post.hashtags?.length > 0 && (
-        <div className="px-5 pt-3 flex flex-wrap gap-2">
-          {post.hashtags.map((tag) => (
+      {(post.sound || post.location || post.hashtags?.length > 0) && (
+        <div className="px-4 sm:px-5 pt-3 flex flex-wrap gap-2">
+          {post.sound && (
+            <MetaChip Icon={MusicIcon} solid="bg-titi-streak">
+              {post.sound.name}
+              {post.sound.artist && <span className="font-semibold text-gray-500"> · {post.sound.artist}</span>}
+            </MetaChip>
+          )}
+          {post.location && (
+            <MetaChip Icon={PinIcon} solid="bg-green-500">
+              {post.location.city}, {post.location.country}
+            </MetaChip>
+          )}
+          {post.hashtags?.map((tag) => (
             <Link
               key={tag}
               to={`/hashtag/${tag.toLowerCase()}`}
-              className="inline-block text-xs font-extrabold text-titi-dark bg-titi-yellow/40 hover:bg-titi-yellow/70 px-3 py-1 rounded-full transition-colors"
+              className="inline-flex items-center h-8 px-3 rounded-full bg-white border-2 border-gray-200 text-xs font-extrabold text-titi-dark hover:border-titi-dark hover:bg-titi-yellow-light active:scale-95 transition-all duration-150"
             >
               #{tag}
             </Link>
@@ -212,58 +210,76 @@ export default function PostCard({ post, onChange, onDelete, onEdit }) {
         </div>
       )}
 
-      {/* Footer acciones */}
-      <footer className="px-5 py-4 mt-2 border-t border-gray-100 flex items-center gap-2">
-        <button
-          type="button"
+      <footer className="px-4 sm:px-5 pt-3 pb-4 flex items-center gap-2">
+        <ActionPill
+          active={likedByMe}
+          activeClass="bg-red-500 text-white"
           onClick={toggleLike}
           disabled={!isAuthenticated || liking}
-          aria-pressed={likedByMe}
-          aria-label={likedByMe ? 'Quitar like' : 'Dar like'}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-bold transition-all ${
-            likedByMe
-              ? 'text-red-500 bg-red-500/10 scale-105'
-              : 'text-gray-500 hover:bg-titi-cream hover:text-red-500'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          pressed={likedByMe}
+          label={likedByMe ? 'Quitar like' : 'Dar like'}
         >
-          <HeartIcon filled={likedByMe} className="w-5 h-5" />
-          <span className="text-sm tabular-nums">{likes}</span>
-        </button>
+          <span key={beat} className={beat > 0 && likedByMe ? 'titi-heart-beat inline-grid' : 'inline-grid'}>
+            <HeartIcon filled={likedByMe} className={`w-5 h-5 ${likedByMe ? '' : 'group-hover:text-red-500'}`} />
+          </span>
+          <span className="tabular-nums">{likes}</span>
+        </ActionPill>
 
-        <button
-          type="button"
+        <ActionPill
+          active={showComments}
+          activeClass="bg-blue-500 text-white"
           onClick={() => setShowComments((v) => !v)}
-          aria-expanded={showComments}
-          className="flex items-center gap-2 px-3 py-1.5 rounded-full font-bold text-gray-500 hover:bg-titi-cream hover:text-blue-500 transition-colors"
+          expanded={showComments}
+          label={`Comentarios (${commentCount})`}
         >
           <CommentIcon className="w-5 h-5" />
-          <span className="text-sm tabular-nums">{commentCount}</span>
-        </button>
+          <span className="tabular-nums">{commentCount}</span>
+        </ActionPill>
 
-        <button
-          type="button"
+        <ActionPill
+          active={savedByMe}
+          activeClass="bg-titi-yellow text-titi-dark"
           onClick={toggleSave}
           disabled={!isAuthenticated || saving}
-          aria-pressed={savedByMe}
-          aria-label={savedByMe ? 'Quitar de guardados' : 'Guardar post'}
-          className={`ml-auto flex items-center gap-2 px-3 py-1.5 rounded-full font-bold transition-all ${
-            savedByMe
-              ? 'text-titi-yellow-dark bg-titi-yellow-light scale-105'
-              : 'text-gray-500 hover:bg-titi-cream hover:text-titi-yellow-dark'
-          } disabled:opacity-50 disabled:cursor-not-allowed`}
+          pressed={savedByMe}
+          label={savedByMe ? 'Quitar de guardados' : 'Guardar post'}
+          className="ml-auto"
         >
           <BookmarkIcon filled={savedByMe} className="w-5 h-5" />
-          <span className="text-sm">{savedByMe ? 'Guardado' : 'Guardar'}</span>
-        </button>
+          <span className="hidden sm:inline">{savedByMe ? 'Guardado' : 'Guardar'}</span>
+        </ActionPill>
       </footer>
 
       {showComments && (
-        <CommentSection
-          postId={post.id}
-          initialCount={commentCount}
-          onCountChange={setCommentCount}
-        />
+        <div className="border-t-2 border-gray-100">
+          <CommentSection postId={post.id} initialCount={commentCount} onCountChange={setCommentCount} />
+        </div>
       )}
     </article>
+  );
+}
+
+/** Silueta del post v3 para la carga. */
+export function PostCardSkeleton({ withImage = false }) {
+  return (
+    <div className="bg-white rounded-2xl border-2 border-gray-200 mb-5 animate-pulse motion-reduce:animate-none">
+      <div className="flex items-center gap-3 px-5 pt-4 pb-3">
+        <div className="w-11 h-11 rounded-full bg-gray-100" />
+        <div className="space-y-2">
+          <div className="h-3 w-28 bg-gray-100 rounded-full" />
+          <div className="h-3 w-16 bg-gray-100 rounded-full" />
+        </div>
+      </div>
+      <div className="px-5 pb-3 space-y-2">
+        <div className="h-3 w-full bg-gray-100 rounded-full" />
+        <div className="h-3 w-4/5 bg-gray-100 rounded-full" />
+      </div>
+      {withImage && <div className="h-56 bg-gray-100 border-y-2 border-gray-200" />}
+      <div className="px-5 pt-3 pb-4 flex gap-2">
+        <div className="h-10 w-16 bg-gray-100 rounded-xl" />
+        <div className="h-10 w-16 bg-gray-100 rounded-xl" />
+        <div className="h-10 w-24 bg-gray-100 rounded-xl ml-auto" />
+      </div>
+    </div>
   );
 }

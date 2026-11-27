@@ -1,4 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ErrorBox } from '../../components/social/StateBlocks.jsx';
+import { BackLink, BTN_SECONDARY, PageHeader } from '../../components/ui/v3.jsx';
+import Avatar from '../../components/social/Avatar.jsx';
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon, FireIcon } from '../../components/icons.jsx';
 import client from '../../api/client.js';
 
 const ROLES = ['ESTUDIANTE', 'PROFESOR', 'ADMIN'];
@@ -68,29 +72,19 @@ export default function AdminUsers() {
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Usuarios</h1>
-        <p className="text-sm font-medium text-gray-500">{total} usuarios registrados</p>
-      </header>
+      <BackLink to="/admin">Panel de administración</BackLink>
+      <PageHeader title="Usuarios de" accent="Titi" subtitle={<>{total} usuarios registrados</>} />
 
       {loading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 h-80 animate-pulse" />
+        <div className="bg-white rounded-2xl border-2 border-gray-200 overflow-hidden animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label="Cargando usuarios"><div className="h-11 bg-gray-100" />{[0, 1, 2, 3, 4].map((i) => <div key={i} className="px-4 py-3 flex items-center gap-4 border-t border-gray-100"><span className="w-9 h-9 rounded-full bg-gray-100" /><span className="flex-1 h-4 bg-gray-100 rounded-full" /><span className="w-24 h-8 bg-gray-100 rounded-xl" /></div>)}</div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-          <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-red-700">{error}</p>
-            <button onClick={fetchUsers} className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark mt-2">
-              Reintentar →
-            </button>
-          </div>
-        </div>
+        <ErrorBox title="No pudimos cargar los datos" message={error} onRetry={fetchUsers} />
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
+        <div className="titi-surface overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-titi-cream text-left text-xs font-bold text-gray-500 uppercase tracking-wide">
+                <tr className="bg-titi-cream border-b-2 border-titi-dark text-left text-xs font-extrabold text-gray-500 uppercase tracking-wide">
                   <th className="px-4 py-3">Usuario</th>
                   <th className="px-4 py-3">Rol</th>
                   <th className="px-4 py-3">Verificación</th>
@@ -100,10 +94,15 @@ export default function AdminUsers() {
               </thead>
               <tbody>
                 {usuarios.map((u) => (
-                  <tr key={u.id} className="border-t border-gray-100">
+                  <tr key={u.id} className="border-t border-gray-100 hover:bg-titi-cream transition-colors duration-150">
                     <td className="px-4 py-3">
-                      <p className="font-bold text-titi-dark">@{u.username}</p>
-                      <p className="text-xs text-gray-400">{u.email}</p>
+                      <div className="flex items-center gap-3">
+                        <Avatar username={u.username} src={u.avatarUrl} size="sm" />
+                        <div className="min-w-0">
+                          <p className="font-extrabold text-titi-dark">@{u.username}</p>
+                          <p className="text-xs font-medium text-gray-500">{u.email}</p>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <select
@@ -111,7 +110,7 @@ export default function AdminUsers() {
                         onChange={(e) => changeRole(u, e.target.value)}
                         disabled={busy === u.id}
                         aria-label={`Rol de ${u.username}`}
-                        className="bg-titi-cream border border-gray-200 rounded-xl px-3 py-1.5 text-sm font-semibold text-titi-dark cursor-pointer focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20 disabled:opacity-50"
+                        className="bg-white border-2 border-gray-200 rounded-xl px-3 py-1.5 text-sm font-bold text-titi-dark cursor-pointer hover:border-titi-dark focus:outline-none focus:border-titi-dark focus:ring-4 focus:ring-titi-yellow/40 transition-all duration-150 disabled:opacity-50"
                       >
                         {ROLES.map((r) => (
                           <option key={r} value={r}>{r}</option>
@@ -122,22 +121,22 @@ export default function AdminUsers() {
                       {u.rol !== 'PROFESOR' ? (
                         <span className="text-gray-300">—</span>
                       ) : u.verificado ? (
-                        <span className="inline-flex items-center gap-1 bg-green-50 text-green-700 border border-green-200 text-xs font-bold px-2.5 py-1 rounded-full">
-                          ✓ Verificado
+                        <span className="inline-flex items-center gap-1 bg-green-500 text-white border-2 border-titi-dark text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">
+                          <CheckIcon className="w-3.5 h-3.5" /> Verificado
                         </span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => verify(u)}
                           disabled={busy === u.id}
-                          className="bg-titi-yellow text-titi-dark font-bold text-xs px-3 py-1.5 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50"
+                          className="titi-btn-primary text-sm px-3 py-1.5"
                         >
                           Verificar
                         </button>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-titi-streak">{u.racha} 🔥</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-gray-600">{u._count?.cursosCreados ?? 0}</td>
+                    <td className="px-4 py-3 text-right"><span className="inline-flex items-center gap-1 tabular-nums font-extrabold text-titi-streak"><FireIcon className="w-4 h-4" />{u.racha}</span></td>
+                    <td className="px-4 py-3 text-right tabular-nums font-bold text-titi-dark">{u._count?.cursosCreados ?? 0}</td>
                   </tr>
                 ))}
               </tbody>
@@ -152,18 +151,20 @@ export default function AdminUsers() {
             type="button"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="bg-white text-titi-dark font-bold text-sm px-4 py-2 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            className={BTN_SECONDARY}
           >
-            ← Anterior
+            <ChevronLeftIcon className="w-4 h-4" />
+            Anterior
           </button>
-          <span className="text-sm font-semibold text-gray-500">Página {page} de {totalPages}</span>
+          <span className="text-sm font-bold text-gray-500 tabular-nums">Página {page} de {totalPages}</span>
           <button
             type="button"
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={page >= totalPages}
-            className="bg-white text-titi-dark font-bold text-sm px-4 py-2 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+            className={BTN_SECONDARY}
           >
-            Siguiente →
+            Siguiente
+            <ChevronRightIcon className="w-4 h-4" />
           </button>
         </div>
       )}

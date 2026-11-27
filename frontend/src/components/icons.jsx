@@ -524,6 +524,40 @@ export function CloseIcon({ className = 'w-5 h-5' }) {
   );
 }
 
+// Engranaje — ajustes (configuración del tutor).
+export function GearIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-1.6v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" />
+    </NavSvg>
+  );
+}
+
+// Llave — clave personal (tutor IA).
+export function KeyIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <circle cx="7.5" cy="15.5" r="4" />
+      <path d="m10.5 12.5 9-9" />
+      <path d="m16 7 3 3" />
+      <path d="m14 9 2 2" />
+    </NavSvg>
+  );
+}
+
+// Pantalla completa — cuatro esquinas hacia afuera.
+export function ExpandIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M8 3H5a2 2 0 0 0-2 2v3" />
+      <path d="M21 8V5a2 2 0 0 0-2-2h-3" />
+      <path d="M3 16v3a2 2 0 0 0 2 2h3" />
+      <path d="M16 21h3a2 2 0 0 0 2-2v-3" />
+    </NavSvg>
+  );
+}
+
 // Filtros — deslizadores.
 export function SlidersIcon({ className = 'w-5 h-5' }) {
   return (
@@ -698,5 +732,130 @@ export function ArrowRightIcon({ className = 'w-5 h-5' }) {
       <path d="M5 12h14" />
       <path d="m13 6 6 6-6 6" />
     </NavSvg>
+  );
+}
+
+// ---- Íconos sociales (rediseno-inicio-explorar) ----
+
+// Corazón — like de un post. `filled` lo pinta entero.
+export function HeartIcon({ className = 'w-5 h-5', filled = false }) {
+  return (
+    <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M19.5 5.1a5 5 0 0 0-7.1 0L12 5.5l-.4-.4a5 5 0 0 0-7.1 7.1l.4.4L12 19.7l7.1-7.1.4-.4a5 5 0 0 0 0-7.1z" />
+    </svg>
+  );
+}
+
+// Globo de diálogo — comentarios.
+export function CommentIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M20 11.5a7.5 7.5 0 0 1-11 6.6L4 19.5l1.4-4.6A7.5 7.5 0 1 1 20 11.5z" />
+    </NavSvg>
+  );
+}
+
+// Marcador — guardar post. `filled` lo pinta entero.
+export function BookmarkIcon({ className = 'w-5 h-5', filled = false }) {
+  return (
+    <svg viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
+      <path d="M18 21l-6-4.5L6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+// Pin de mapa — ubicación del post.
+export function PinIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M19 10c0 5.5-7 11-7 11s-7-5.5-7-11a7 7 0 0 1 14 0z" />
+      <circle cx="12" cy="10" r="2.5" />
+    </NavSvg>
+  );
+}
+
+// Lupa — buscadores.
+export function SearchIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20.5 20.5-4.2-4.2" />
+    </NavSvg>
+  );
+}
+
+// Numeral — hashtags y tendencias.
+export function HashIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M5 9h14M5 15h14M10 3.5 8 20.5M16 3.5l-2 17" />
+    </NavSvg>
+  );
+}
+
+// Fuego — tendencias.
+export function FireIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12.6 2.3c-.4-.3-1-.1-1.1.4-.5 2.6-1.9 4.3-3.4 6C6.6 10.4 5 12.2 5 15a7 7 0 0 0 14 0c0-2.7-1.2-4.6-2.4-6.2-.3-.4-.9-.3-1.1.1-.3.8-.8 1.6-1.6 2.1.2-3.5-.9-6.6-1.3-8.7Zm-.5 18.2a3 3 0 0 1-3-3c0-1.6 1.1-2.6 2.2-3.8.3.9.9 1.6 1.8 2 .4.2.9 0 1-.4l.3-.8c.5.7.7 1.4.7 2.1a3 3 0 0 1-3 3.9Z" />
+    </svg>
+  );
+}
+
+// ---- Íconos de rediseno-plataforma-v3 ----
+
+// Cuadrícula — pestaña de posts del perfil.
+export function GridIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <rect x="3.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="3.5" width="7" height="7" rx="1.5" />
+      <rect x="3.5" y="13.5" width="7" height="7" rx="1.5" />
+      <rect x="13.5" y="13.5" width="7" height="7" rx="1.5" />
+    </NavSvg>
+  );
+}
+
+// Copo de nieve — ítem "Congelar racha" de la tienda.
+export function SnowflakeIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M12 2.5v19M3.8 7.25l16.4 9.5M3.8 16.75l16.4-9.5" />
+      <path d="m9.5 4 2.5 2.5L14.5 4M9.5 20l2.5-2.5 2.5 2.5" />
+    </NavSvg>
+  );
+}
+
+// Medalla — podio del ranking.
+export function MedalIcon({ className = 'w-5 h-5' }) {
+  return (
+    <NavSvg className={className}>
+      <path d="M7.5 2.5 10 8.5M16.5 2.5 14 8.5" />
+      <circle cx="12" cy="15" r="6" />
+      <path d="m12 12.3.9 1.8 2 .3-1.45 1.4.35 2-1.8-.95-1.8.95.35-2L9.1 14.4l2-.3z" />
+    </NavSvg>
+  );
+}
+
+// ---- Racha (llama) ----
+
+/**
+ * Forma de la llama de la racha (viewBox 24): cuerpo con una lengua lateral,
+ * núcleo y brillo. La usan `FlameIcon` (sticker a color, StreakBadge) y
+ * `StreakIcon` (un color, para círculos sólidos).
+ */
+export const FLAME_PATHS = {
+  body: 'M12 2.6c.5 2.7 2.3 4.3 3.9 6.1 1.9 2.1 3.1 4.1 3.1 6.7 0 3.9-3.1 6.6-7 6.6s-7-2.7-7-6.5c0-2.5 1.1-4.4 2.6-5.8.1 1.5.8 2.7 2 3.3-.4-3.6.7-7.3 2.4-10.4Z',
+  core: 'M12 11.8c.4 1.7 1.6 2.5 2.3 3.7.5.8.7 1.5.7 2.2 0 1.8-1.3 3-3 3s-3-1.2-3-2.9c0-1.3.7-2.3 1.6-3 .2.8.6 1.3 1.2 1.5-.3-1.5-.4-3 .2-4.5Z',
+  shine: 'M7.9 14.9c.1-1 .5-1.9 1.1-2.6',
+};
+
+// Llama de un color (currentColor) con el núcleo calado: para círculos sólidos
+// de rol (`bg-titi-streak` + ícono blanco), como el resto de íconos de chip.
+export function StreakIcon({ className = 'w-5 h-5' }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden="true">
+      <path d={`${FLAME_PATHS.body} ${FLAME_PATHS.core}`} fill="currentColor" fillRule="evenodd" />
+    </svg>
   );
 }

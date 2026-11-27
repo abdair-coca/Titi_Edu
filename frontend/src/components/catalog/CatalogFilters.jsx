@@ -8,7 +8,7 @@ import useSheetDismiss from './useSheetDismiss.js';
 // scrollear; en celular las categorías quedan como tira y el resto va a una
 // hoja inferior.
 
-function Pill({ active, onClick, children, className = '' }) {
+export function Pill({ active, onClick, children, className = '' }) {
   return (
     <button
       type="button"

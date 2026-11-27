@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import client from '../api/client.js';
 import TitiMascot from './TitiMascot.jsx';
 import { isDeadlineExpired } from '../lib/deadline.js';
-import { CalendarIcon, CheckIcon, RefreshIcon, StarIcon } from './icons.jsx';
+import { CalendarIcon, CheckIcon, ExpandIcon, RefreshIcon, StarIcon } from './icons.jsx';
+import { ErrorBox } from './social/StateBlocks.jsx';
+import { RoleBadge, SURFACE } from './ui/v3.jsx';
 import { loadMermaid, nextMermaidId } from '../lib/mermaid.js';
 
 const DEADLINE_DATE = new Intl.DateTimeFormat('es-BO', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -15,10 +17,10 @@ function splitDeadline(value) {
 }
 
 function activityStatus({ bestScore, deadlineExpired, attemptsExhausted }) {
-  if (bestScore != null) return { label: 'Completada', tone: 'bg-green-50 text-green-700 border-green-200' };
-  if (deadlineExpired) return { label: 'Plazo vencido', tone: 'bg-red-50 text-red-600 border-red-200' };
-  if (attemptsExhausted) return { label: 'Intentos agotados', tone: 'bg-gray-100 text-gray-600 border-gray-200' };
-  return { label: 'Pendiente', tone: 'bg-gray-100 text-gray-600 border-gray-200' };
+  if (bestScore != null) return { label: 'Completada', tone: 'bg-green-50 text-green-700 border-green-500', solid: 'bg-green-500' };
+  if (deadlineExpired) return { label: 'Plazo vencido', tone: 'bg-red-50 text-red-700 border-red-500', solid: 'bg-red-500' };
+  if (attemptsExhausted) return { label: 'Intentos agotados', tone: 'bg-gray-50 text-gray-600 border-gray-300', solid: 'bg-gray-500' };
+  return { label: 'Pendiente', tone: 'bg-titi-yellow-light text-titi-dark border-titi-dark', solid: 'bg-titi-yellow' };
 }
 
 function decodeMermaidDefinition(value) {
@@ -82,8 +84,8 @@ export function isTitiScoreMessage(event, iframeWindow, attemptToken) {
 function HtmlLessonLoading() {
   return (
     <section className="mb-6" role="status" aria-busy="true" aria-live="polite">
-      <div className="min-h-[32rem] overflow-hidden rounded-2xl border border-gray-200 bg-white">
-        <div className="flex items-center gap-3 border-b border-gray-100 bg-titi-dark px-4 py-3">
+      <div className="min-h-[32rem] overflow-hidden rounded-2xl border-2 border-titi-dark bg-white">
+        <div className="flex items-center gap-3 bg-titi-dark px-4 py-3">
           <span className="h-3 w-3 animate-pulse rounded-full bg-titi-yellow" aria-hidden="true" />
           <span className="h-3 w-40 animate-pulse rounded-full bg-white/20" aria-hidden="true" />
         </div>
@@ -240,25 +242,25 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
   const estado = activityStatus({ bestScore, deadlineExpired, attemptsExhausted });
 
   if (status === 'loading') return <HtmlLessonLoading />;
-  if (status === 'error') return <p className="text-sm font-semibold text-red-600">{error}</p>;
+  if (status === 'error') return <ErrorBox title="No pudimos cargar la actividad" message={error} />;
 
   return (
     <section className="mb-6">
-      <div className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-2xl border-2 border-titi-dark bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]">
         <div className="flex flex-col gap-3 bg-titi-dark px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-white">{title || 'Presentación interactiva'}</p>
-            <span className="mt-1 inline-flex rounded-full bg-white/10 px-2 py-1 text-[11px] font-bold text-titi-yellow">
+            <span className="mt-1 inline-flex rounded-full bg-white/10 px-2 py-0.5 text-xs font-bold text-titi-yellow">
               Presentación interactiva
             </span>
           </div>
           <button
             type="button"
             onClick={handleFullscreen}
-            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border border-white/20 px-3 py-2 text-xs font-bold text-white transition-colors hover:bg-white/10 sm:w-auto"
+            className="inline-flex w-full shrink-0 items-center justify-center gap-2 rounded-xl border-2 border-white/20 px-3 py-2 text-sm font-bold text-white transition-all duration-150 hover:bg-white/10 hover:border-white/40 active:translate-y-0.5 focus:outline-none focus-visible:ring-4 focus-visible:ring-titi-yellow/60 sm:w-auto"
             aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Ver presentación en pantalla completa'}
           >
-            <span aria-hidden="true">⛶</span>
+            <ExpandIcon className="w-4 h-4" />
             {isFullscreen ? 'Salir' : 'Pantalla completa'}
           </button>
         </div>
@@ -274,90 +276,77 @@ export default function HtmlLessonPlayer({ lessonId, title, onEvaluableChange, o
         />
       </div>
       {evaluable && (
-        <div className="mt-3 overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 lg:divide-x lg:divide-gray-100">
-            <div className="flex items-center gap-3 px-5 py-4 transition-colors duration-150 hover:bg-gray-50">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-100 text-blue-600">
-                <RefreshIcon className="w-5 h-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-gray-500">Intentos restantes</p>
-                <p className="text-xl font-bold tabular-nums text-gray-900">
-                  {remainingAttempts ?? '—'} / {maxAttempts}
-                </p>
-                <p className="mt-0.5 text-xs text-gray-400">
-                  {attemptsExhausted
-                    ? 'Agotaste tus intentos'
-                    : `Puedes reintentar hasta ${maxAttempts} ${maxAttempts === 1 ? 'vez' : 'veces'}`}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 px-5 py-4 transition-colors duration-150 hover:bg-gray-50">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-purple-100 text-purple-600">
-                <CalendarIcon className="w-5 h-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-gray-500">Entrega hasta</p>
-                {deadline ? (
-                  <>
-                    <p className="text-xl font-bold tabular-nums text-gray-900">{splitDeadline(deadline).date}</p>
-                    {deadlineExpired ? (
-                      <p className="mt-0.5 text-xs font-semibold text-red-600">Plazo vencido · no se registran nuevos puntajes</p>
-                    ) : (
-                      <p className="mt-0.5 text-xs text-gray-400">{splitDeadline(deadline).time}</p>
-                    )}
-                  </>
+        <ul className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <ActivityStat Icon={RefreshIcon} solid="bg-blue-500" label="Intentos restantes">
+            <p className="text-xl font-black tabular-nums text-titi-dark leading-tight">
+              {remainingAttempts ?? '—'} / {maxAttempts}
+            </p>
+            <p className={`mt-0.5 text-xs font-semibold ${attemptsExhausted ? 'text-red-700' : 'text-gray-500'}`}>
+              {attemptsExhausted
+                ? 'Agotaste tus intentos'
+                : `Podés reintentar hasta ${maxAttempts} ${maxAttempts === 1 ? 'vez' : 'veces'}`}
+            </p>
+          </ActivityStat>
+          <ActivityStat Icon={CalendarIcon} solid={deadlineExpired ? 'bg-red-500' : 'bg-titi-achievement'} label="Entrega hasta">
+            {deadline ? (
+              <>
+                <p className="text-xl font-black tabular-nums text-titi-dark leading-tight">{splitDeadline(deadline).date}</p>
+                {deadlineExpired ? (
+                  <p className="mt-0.5 text-xs font-bold text-red-700">Plazo vencido · no se registran nuevos puntajes</p>
                 ) : (
-                  <>
-                    <p className="text-xl font-bold text-gray-400">Sin límite</p>
-                    <p className="mt-0.5 text-xs text-gray-400">Sin fecha de entrega</p>
-                  </>
+                  <p className="mt-0.5 text-xs font-semibold text-gray-500">{splitDeadline(deadline).time}</p>
                 )}
+              </>
+            ) : (
+              <>
+                <p className="text-xl font-black text-gray-500 leading-tight">Sin límite</p>
+                <p className="mt-0.5 text-xs font-semibold text-gray-500">Sin fecha de entrega</p>
+              </>
+            )}
+          </ActivityStat>
+          <ActivityStat Icon={CheckIcon} solid={estado.solid} label="Estado">
+            <span className={`mt-0.5 inline-flex items-center h-7 rounded-full border-2 px-2.5 text-xs font-extrabold ${estado.tone}`}>
+              {estado.label}
+            </span>
+          </ActivityStat>
+          <ActivityStat Icon={StarIcon} solid="bg-titi-yellow" label="Tu nota">
+            {status === 'submitting' ? (
+              <div className="flex items-center gap-2">
+                <span
+                  className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-titi-dark"
+                  aria-hidden="true"
+                />
+                <span className="text-xs font-semibold text-gray-500" role="status">Registrando puntaje…</span>
               </div>
-            </div>
-            <div className="flex items-center gap-3 px-5 py-4 transition-colors duration-150 hover:bg-gray-50">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-green-100 text-green-600">
-                <CheckIcon className="w-5 h-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-gray-500">Estado</p>
-                <span className={`mt-1 inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold ${estado.tone}`}>
-                  {estado.label}
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 px-5 py-4 transition-colors duration-150 hover:bg-gray-50">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-titi-yellow-light text-titi-yellow-dark">
-                <StarIcon className="w-5 h-5" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-gray-500">Tu nota</p>
-                {status === 'submitting' ? (
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-titi-dark"
-                      aria-hidden="true"
-                    />
-                    <span className="text-xs font-semibold text-gray-500" role="status">Registrando puntaje…</span>
-                  </div>
-                ) : (
-                  <>
-                    <p className="text-2xl font-black tabular-nums text-gray-900">
-                      {bestScore != null || score != null ? `${bestScore ?? score} / 100` : '—'}
-                    </p>
-                    {bestScore != null && score != null && bestScore > score ? (
-                      <p className="mt-0.5 text-xs text-gray-400">Mejor puntaje de tus intentos</p>
-                    ) : bestScore == null && score == null ? (
-                      <p className="mt-0.5 text-xs text-gray-400">Realizá la actividad para obtener tu nota</p>
-                    ) : null}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
+            ) : (
+              <>
+                <p className="text-xl font-black tabular-nums text-titi-dark leading-tight">
+                  {bestScore != null || score != null ? `${bestScore ?? score} / 100` : '—'}
+                </p>
+                {bestScore != null && score != null && bestScore > score ? (
+                  <p className="mt-0.5 text-xs font-semibold text-gray-500">Mejor puntaje de tus intentos</p>
+                ) : bestScore == null && score == null ? (
+                  <p className="mt-0.5 text-xs font-semibold text-gray-500">Realizá la actividad para obtener tu nota</p>
+                ) : null}
+              </>
+            )}
+          </ActivityStat>
+        </ul>
       )}
-      {error && status === 'ready' && <p className="mt-3 text-xs font-semibold text-red-600">{error}</p>}
+      {error && status === 'ready' && <p role="alert" className="mt-3 text-sm font-bold text-red-700">{error}</p>}
     </section>
+  );
+}
+
+// Cifra de la actividad evaluable: insignia sólida + etiqueta + valor.
+function ActivityStat({ Icon, solid, label, children }) {
+  return (
+    <li className={`${SURFACE} flex items-center gap-3 px-4 py-3`}>
+      <RoleBadge Icon={Icon} solid={solid} />
+      <div className="min-w-0">
+        <p className="text-xs font-extrabold uppercase tracking-wide text-gray-500">{label}</p>
+        {children}
+      </div>
+    </li>
   );
 }

@@ -1,4 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useCountUp } from '../lib/motion.js';
+import { ProgressBar } from './ui/v3.jsx';
+import { CheckIcon, ClockIcon, FLAME_PATHS } from './icons.jsx';
 
 /**
  * StreakBadge — muestra la racha del usuario con estética Titi.
@@ -58,14 +60,9 @@ function getEstado(racha, estaActiva, ultimaActividad) {
   return estaActiva ? 'hoy' : 'apagada';
 }
 
-// ---- Metas (alineadas con los logros de racha: 7 🔥 y 30 ⚡) ----
+// ---- Metas (alineadas con los logros de racha: 7 y 30 días) ----
 
-const METAS = [
-  { dias: 7, icono: '🔥' },
-  { dias: 30, icono: '⚡' },
-  { dias: 100, icono: '💯' },
-  { dias: 365, icono: '👑' },
-];
+const METAS = [7, 30, 100, 365].map((dias) => ({ dias }));
 
 function nextMeta(racha) {
   const next = METAS.find((m) => racha < m.dias) || null;
@@ -81,67 +78,39 @@ function metaProgress(racha) {
   return { next, prev, pct };
 }
 
-// ---- Contador animado (respeta prefers-reduced-motion) ----
+// ---- Llama de la racha (sticker v3) ----
 
-function useCountUp(target, duration = 450) {
-  const [value, setValue] = useState(0);
-
-  useEffect(() => {
-    if (
-      typeof window !== 'undefined' &&
-      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    ) {
-      setValue(target);
-      return;
-    }
-    let raf;
-    const start = performance.now();
-    const tick = (now) => {
-      const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 3);
-      setValue(Math.round(target * eased));
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-
-  return value;
-}
-
-// ---- Llama animada SVG ----
-
-export function FlameIcon({ size = 24, dim = false, animated = true }) {
-  const id = `${size}-${dim ? 'dim' : 'lit'}`;
+/**
+ * Llama de la racha: plana, con contorno oscuro (como las tarjetas v3), cuerpo
+ * naranja de racha, núcleo amarillo y un brillo crema. Encendida, la llama se
+ * mece y el núcleo late por separado; desde 24 px suelta una chispa. Apagada
+ * (`dim`) queda en grises. Sin degradados ni resplandor (design.md §1).
+ * La forma vive en `FLAME_PATHS` (icons.jsx), compartida con `StreakIcon`.
+ */
+export function FlameIcon({ size = 24, dim = false, animated = true, className = '' }) {
+  const lit = animated && !dim;
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
       aria-hidden="true"
-      className={animated && !dim ? 'titi-flame-flicker' : ''}
+      className={`overflow-visible ${lit ? 'titi-flame-flicker' : ''} ${className}`}
     >
-      <defs>
-        <linearGradient id={`flame-outer-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={dim ? '#9CA3AF' : '#FF9A3C'} />
-          <stop offset="55%" stopColor={dim ? '#6B7280' : '#FF6B35'} />
-          <stop offset="100%" stopColor={dim ? '#4B5563' : '#D9480F'} />
-        </linearGradient>
-        <linearGradient id={`flame-inner-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={dim ? '#E5E7EB' : '#FFE08A'} />
-          <stop offset="100%" stopColor={dim ? '#9CA3AF' : '#FFD93D'} />
-        </linearGradient>
-      </defs>
-      {/* Cuerpo principal */}
       <path
-        d="M12 2c.6 3.4 3.5 4.8 3.5 8.5 0 1.6-.6 2.8-1.5 3.6.4-1.5.1-3-1-4.3 0 2.2-1 3.6-2 4.5-1.8 1.6-2.5 3.3-2.5 5 0 3.3 2.5 4.7 5.5 4.7s5.5-1.4 5.5-4.7c0-5.6-7.5-7.4-7.5-17.3z"
-        fill={`url(#flame-outer-${id})`}
+        d={FLAME_PATHS.body}
+        className={dim ? 'fill-gray-300 stroke-gray-500' : 'fill-titi-streak stroke-titi-dark'}
+        strokeWidth="1.6"
+        strokeLinejoin="round"
       />
-      {/* Lengua interior */}
       <path
-        d="M12 11c0 1.8-.7 2.8-1.4 3.7-.8 1-1.3 2-1.3 3.3 0 1.9 1.4 2.8 2.7 2.8s2.7-.9 2.7-2.8c0-2.4-2.7-3.8-2.7-7z"
-        fill={`url(#flame-inner-${id})`}
+        d={FLAME_PATHS.core}
+        className={`${dim ? 'fill-gray-100' : 'fill-titi-yellow'} ${lit ? 'titi-flame-core' : ''}`}
       />
+      {!dim && (
+        <path d={FLAME_PATHS.shine} className="fill-none stroke-titi-cream" strokeWidth="1.3" strokeLinecap="round" />
+      )}
+      {lit && size >= 24 && <circle cx="17.6" cy="5.4" r="1" className="fill-titi-yellow titi-flame-spark" />}
     </svg>
   );
 }
@@ -149,23 +118,30 @@ export function FlameIcon({ size = 24, dim = false, animated = true }) {
 // ---- Chip de estado del día ----
 
 function EstadoChip({ estado, isSelf }) {
+  const base = 'inline-flex items-center gap-1.5 h-7 pl-1 pr-2.5 rounded-full border-2 text-xs font-extrabold';
   if (estado === 'hoy') {
     return (
-      <span className="inline-flex items-center gap-1 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full text-xs font-bold text-green-700">
-        ✓ {isSelf ? 'Hoy ya sumaste' : 'Activa hoy'}
+      <span className={`${base} bg-white border-titi-dark text-titi-dark`}>
+        <span className="w-5 h-5 rounded-full bg-green-500 text-white grid place-items-center">
+          <CheckIcon className="w-3 h-3" />
+        </span>
+        {isSelf ? 'Hoy ya sumaste' : 'Activa hoy'}
       </span>
     );
   }
   if (estado === 'riesgo') {
     return (
-      <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-full text-xs font-bold text-amber-700">
-        ⏳ {isSelf ? '¡Estudiá hoy para no perderla!' : 'En riesgo'}
+      <span className={`${base} bg-white border-titi-dark text-titi-dark`}>
+        <span className="w-5 h-5 rounded-full bg-titi-certificate text-white grid place-items-center">
+          <ClockIcon className="w-3 h-3" />
+        </span>
+        {isSelf ? '¡Estudiá hoy para no perderla!' : 'En riesgo'}
       </span>
     );
   }
   if (estado === 'apagada') {
     return (
-      <span className="inline-flex items-center gap-1 bg-gray-100 border border-gray-200 px-2.5 py-1 rounded-full text-xs font-bold text-gray-500">
+      <span className={`${base} pl-2.5 bg-gray-100 border-gray-200 text-gray-500`}>
         {isSelf ? 'Se está apagando…' : 'Inactiva'}
       </span>
     );
@@ -179,30 +155,28 @@ function InlineVariant({ racha, estado, className }) {
   if (estado === 'rota') {
     return (
       <span
-        className={`inline-flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-full ${className}`}
+        className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-gray-100 border-2 border-gray-200 ${className}`}
         aria-label="Sin racha activa"
       >
         <FlameIcon size={16} dim animated={false} />
-        <span className="text-sm font-bold text-gray-400 tabular-nums">0</span>
-        <span className="text-xs text-gray-400 font-semibold">días</span>
+        <span className="text-sm font-black text-gray-500 tabular-nums">0</span>
+        <span className="text-xs text-gray-500 font-bold">días</span>
       </span>
     );
   }
   return (
     <span
-      className={`inline-flex items-center gap-1.5 bg-orange-50 border border-orange-200 px-3 py-1.5 rounded-full ${className}`}
+      className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-white border-2 border-titi-dark ${className}`}
       aria-label={`Racha de ${racha} días`}
     >
       <FlameIcon size={16} animated={estado === 'hoy'} dim={estado === 'apagada'} />
       <span className="text-sm font-black text-titi-streak tabular-nums">{racha}</span>
-      <span className="text-xs text-titi-streak/80 font-semibold">
-        {racha === 1 ? 'día' : 'días'}
-      </span>
+      <span className="text-xs text-titi-dark font-bold">{racha === 1 ? 'día' : 'días'}</span>
     </span>
   );
 }
 
-// ---- Variante hero (tarjeta cálida grande — perfil) ----
+// ---- Variante hero (superficie v3 — perfil) ----
 
 function HeroVariant({ racha, estado, isSelf, className }) {
   const display = useCountUp(racha);
@@ -210,75 +184,51 @@ function HeroVariant({ racha, estado, isSelf, className }) {
   const rota = estado === 'rota';
   const encendida = estado === 'hoy' || estado === 'riesgo';
 
-  if (rota) {
-    return (
-      <div
-        className={`flex items-center gap-3 sm:gap-4 p-4 sm:p-5 bg-gray-50 border-2 border-gray-200 rounded-2xl ${className}`}
-      >
-        <FlameIcon size={48} dim animated={false} />
-        <div className="min-w-0 flex-1">
-          <p className="text-3xl sm:text-4xl font-black leading-none tabular-nums text-gray-400">0</p>
-          <p className="text-sm font-bold text-gray-500 mt-1.5">
-            {isSelf ? 'Tu racha está apagada' : 'Sin racha activa'}
-          </p>
-          {isSelf && (
-            <p className="text-xs font-semibold text-gray-400 mt-0.5">
-              Completá una lección hoy y encendé la primera llama 🔥
-            </p>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div
-      className={`p-4 sm:p-6 bg-orange-50 border-2 border-orange-200 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] ${className}`}
-      aria-label={`Racha de ${racha} ${racha === 1 ? 'día' : 'días'}`}
+    <section
+      className={`bg-white rounded-2xl border-2 border-titi-dark shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 ${className}`}
+      aria-label={rota ? 'Sin racha activa' : `Racha de ${racha} ${racha === 1 ? 'día' : 'días'}`}
     >
-      <div className="flex items-center gap-3 sm:gap-5">
-        <FlameIcon size={56} animated={encendida} dim={estado === 'apagada'} />
-
+      <h2 className="text-lg font-extrabold text-titi-dark leading-tight mb-3">
+        Racha de <span className="text-titi-streak">estudio</span>
+      </h2>
+      <div className="flex items-center gap-3">
+        <span
+          className={`w-14 h-14 shrink-0 rounded-2xl border-2 border-titi-dark grid place-items-center -rotate-6 ${
+            rota ? 'bg-gray-100' : 'bg-orange-100'
+          }`}
+        >
+          <FlameIcon size={40} animated={encendida} dim={rota || estado === 'apagada'} />
+        </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-end gap-2 flex-wrap">
-            <span className="text-3xl sm:text-4xl font-black text-titi-streak tabular-nums leading-none">
+          <p className="flex items-end gap-1.5 flex-wrap">
+            <span className={`text-4xl font-black tabular-nums leading-none ${rota ? 'text-gray-400' : 'text-titi-streak'}`}>
               {display}
             </span>
-            <span className="text-sm font-bold text-titi-dark pb-0.5">
-              {racha === 1 ? 'día seguido' : 'días seguidos'}
-            </span>
-          </div>
-          <div className="mt-2">
-            <EstadoChip estado={estado} isSelf={isSelf} />
+            <span className="text-sm font-bold text-titi-dark pb-0.5">{racha === 1 ? 'día seguido' : 'días seguidos'}</span>
+          </p>
+          <div className="mt-1.5">
+            {rota ? (
+              <p className="text-sm font-semibold text-gray-500">
+                {isSelf ? 'Completá una lección hoy y encendé la primera llama.' : 'Sin racha activa'}
+              </p>
+            ) : (
+              <EstadoChip estado={estado} isSelf={isSelf} />
+            )}
           </div>
         </div>
       </div>
 
-      {/* Progreso hacia la próxima meta */}
+      {/* Progreso hacia la próxima meta (se llena desde 0) */}
       {next && (
         <div className="mt-4">
           <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 mb-1.5">
-            <span className="text-xs font-bold text-titi-dark">
-              Próxima meta: {next.icono} {next.dias} días
-            </span>
-            <span className="text-xs font-bold text-titi-streak tabular-nums">
-              {isSelf
-                ? `faltan ${next.dias - racha}`
-                : `${racha}/${next.dias}`}
+            <span className="text-xs font-extrabold uppercase tracking-wide text-gray-500">Próxima meta: {next.dias} días</span>
+            <span className="text-xs font-extrabold text-titi-streak tabular-nums">
+              {isSelf ? `faltan ${next.dias - racha}` : `${racha}/${next.dias}`}
             </span>
           </div>
-          <div
-            className="h-2.5 bg-orange-100 rounded-full overflow-hidden"
-            role="progressbar"
-            aria-valuenow={racha}
-            aria-valuemin={0}
-            aria-valuemax={next.dias}
-          >
-            <div
-              className="h-full bg-titi-streak rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+          <ProgressBar value={pct} color="bg-titi-streak" track="bg-orange-100" label={`Racha hacia la meta de ${next.dias} días`} />
         </div>
       )}
 
@@ -290,21 +240,17 @@ function HeroVariant({ racha, estado, isSelf, className }) {
             <span
               key={m.dias}
               title={logrado ? `¡Meta de ${m.dias} días lograda!` : `Meta: ${m.dias} días`}
-              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border ${
-                logrado
-                  ? 'bg-titi-streak border-titi-streak text-white'
-                  : 'bg-white border-orange-200 text-gray-400'
+              className={`inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-xs font-extrabold border-2 tabular-nums ${
+                logrado ? 'bg-titi-streak border-titi-dark text-white' : 'bg-white border-gray-200 text-gray-500'
               }`}
             >
-              <span className={logrado ? '' : 'grayscale opacity-60'} aria-hidden="true">
-                {m.icono}
-              </span>
-              <span className="tabular-nums">{m.dias}</span>
+              {logrado && <CheckIcon className="w-3 h-3" />}
+              {m.dias} días
             </span>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 }
 

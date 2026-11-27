@@ -17,8 +17,13 @@ router.get('/', requireAuth, async (req, res) => {
       runQuery(
         `MATCH (u:Usuario)
          WHERE toLower(u.username) CONTAINS toLower($q) OR toLower(u.bio) CONTAINS toLower($q)
-         RETURN u LIMIT 10`,
-        { q: cleanQ }
+         OPTIONAL MATCH (u)<-[:SIGUIO]-(fol:Usuario)
+         WITH u, count(DISTINCT fol) AS followerCount
+         OPTIONAL MATCH (:Usuario {id: $userId})-[f:SIGUIO]->(u)
+         RETURN u, followerCount, f IS NOT NULL AS isFollowing
+         ORDER BY followerCount DESC, u.username ASC
+         LIMIT 10`,
+        { q: cleanQ, userId: req.user.id }
       ),
       runQuery(
         `MATCH (u:Usuario)-[:PUBLICO]->(p:Post)
@@ -38,7 +43,14 @@ router.get('/', requireAuth, async (req, res) => {
 
     const users = userRecords.map(r => {
       const p = r.get('u').properties;
-      return { id: p.id, username: p.username, bio: p.bio, avatarUrl: p.avatarUrl };
+      return {
+        id: p.id,
+        username: p.username,
+        bio: p.bio,
+        avatarUrl: p.avatarUrl,
+        followerCount: r.has?.('followerCount') ? toNumber(r.get('followerCount')) : 0,
+        isFollowing: r.has?.('isFollowing') ? Boolean(r.get('isFollowing')) : false,
+      };
     });
 
     const posts = postRecords.map(r => {
@@ -62,6 +74,44 @@ router.get('/', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('GET /search error', err);
     res.status(500).json({ success: false, message: 'Error en búsqueda' });
+  }
+});
+
+// ---- Tendencias (rediseno-inicio-explorar R8) ----
+// Hashtags con más posts de los últimos 14 días; si no hay recientes, los de
+// más posts de siempre.
+const TRENDING_DAYS = 14;
+const TRENDING_DEFAULT = 8;
+const TRENDING_MAX = 20;
+
+router.get('/trending', requireAuth, async (req, res) => {
+  try {
+    const limit = Math.min(TRENDING_MAX, Math.max(1, Number(req.query.limit) || TRENDING_DEFAULT));
+    const query = (recent) =>
+      runQuery(
+        `MATCH (h:Hashtag)<-[:TIENE_HASHTAG]-(p:Post)
+         ${recent ? 'WHERE p.createdAt >= datetime() - duration({days: toInteger($days)})' : ''}
+         RETURN h.name AS name, count(DISTINCT p) AS postCount
+         ORDER BY postCount DESC, name ASC
+         LIMIT toInteger($limit)`,
+        { days: TRENDING_DAYS, limit },
+      );
+
+    let records = await query(true);
+    let recent = true;
+    if (records.length === 0) {
+      records = await query(false);
+      recent = false;
+    }
+
+    const hashtags = records.map((r) => ({
+      name: r.get('name'),
+      postCount: toNumber(r.get('postCount')),
+    }));
+    res.json({ success: true, data: { hashtags, recent } });
+  } catch (err) {
+    console.error('GET /search/trending error', err);
+    res.status(500).json({ success: false, message: 'Error obteniendo tendencias' });
   }
 });
 

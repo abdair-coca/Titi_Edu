@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ErrorBox } from '../../components/social/StateBlocks.jsx';
+import { BackLink, BTN_SECONDARY, INPUT, PageHeader } from '../../components/ui/v3.jsx';
+import { CategoryIcon, categoryTheme } from '../../components/catalog/categoryTheme.jsx';
 import client from '../../api/client.js';
 import ConfirmModal from '../../components/ConfirmModal.jsx';
 import { useStaggerReveal } from '../../lib/motion.js';
@@ -90,13 +93,11 @@ export default function AdminCategories() {
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Categorías</h1>
-        <p className="text-sm font-medium text-gray-500">Creá, editá y borrá las categorías del catálogo.</p>
-      </header>
+      <BackLink to="/admin">Panel de administración</BackLink>
+      <PageHeader title="Categorías del" accent="catálogo" subtitle={<>Creá, editá y borrá las categorías del catálogo.</>} />
 
       {/* Formulario crear / editar */}
-      <form onSubmit={submit} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] p-4 mb-6 flex flex-col sm:flex-row gap-3 sm:items-end">
+      <form onSubmit={submit} className="titi-surface p-4 mb-6 flex flex-col sm:flex-row gap-3 sm:items-end">
         <div className="sm:w-24">
           <label className="text-xs font-bold text-gray-500 block mb-1">Icono</label>
           <input
@@ -104,7 +105,7 @@ export default function AdminCategories() {
             onChange={(e) => setForm((f) => ({ ...f, icono: e.target.value }))}
             placeholder="💻"
             maxLength={4}
-            className="w-full bg-titi-cream border border-gray-200 rounded-xl px-4 py-3 text-center text-lg focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20"
+            className="w-full bg-white border-2 border-gray-200 rounded-xl px-4 py-2.5 text-center text-lg hover:border-gray-300 focus:outline-none focus:border-titi-dark focus:ring-4 focus:ring-titi-yellow/40 transition-all duration-150"
           />
         </div>
         <div className="flex-1">
@@ -113,14 +114,14 @@ export default function AdminCategories() {
             value={form.nombre}
             onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
             placeholder="Programación"
-            className="w-full bg-titi-cream border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium text-titi-dark placeholder:text-gray-300 focus:outline-none focus:border-titi-yellow focus:ring-2 focus:ring-titi-yellow/20"
+            className={INPUT}
           />
         </div>
         <div className="flex gap-2">
           <button
             type="submit"
             disabled={saving}
-            className="bg-titi-yellow text-titi-dark font-bold text-sm px-5 py-3 rounded-xl shadow-[0_4px_0px_#E6B800] hover:shadow-[0_2px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50 whitespace-nowrap"
+            className="titi-btn-primary text-sm px-5 whitespace-nowrap"
           >
             {saving ? 'Guardando…' : editId ? 'Guardar' : 'Crear'}
           </button>
@@ -128,43 +129,35 @@ export default function AdminCategories() {
             <button
               type="button"
               onClick={cancelEdit}
-              className="bg-white text-titi-dark font-bold text-sm px-4 py-3 rounded-xl border-2 border-gray-200 shadow-[0_4px_0px_#E5E7EB] hover:border-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_6px_0px_#E5E7EB] active:translate-y-0.5 active:shadow-none transition-all duration-150"
+              className={BTN_SECONDARY}
             >
               Cancelar
             </button>
           )}
         </div>
       </form>
-      {formError && <p className="text-sm font-semibold text-red-500 -mt-3 mb-6">{formError}</p>}
+      {formError && <p role="alert" className="text-sm font-bold text-red-600 -mt-3 mb-6">{formError}</p>}
 
       {/* Lista */}
       {loading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 h-60 animate-pulse" />
+        <div className="bg-white rounded-2xl border-2 border-gray-200 divide-y divide-gray-100 animate-pulse motion-reduce:animate-none" aria-busy="true">{[0, 1, 2, 3].map((i) => <div key={i} className="p-4 flex items-center gap-4"><span className="w-10 h-10 rounded-xl bg-gray-100" /><span className="flex-1 h-4 bg-gray-100 rounded-full" /></div>)}</div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-          <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-red-700">{error}</p>
-            <button onClick={fetchCategorias} className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark mt-2">
-              Reintentar →
-            </button>
-          </div>
-        </div>
+        <ErrorBox title="No pudimos cargar los datos" message={error} onRetry={fetchCategorias} />
       ) : (
-        <div ref={listRef} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] divide-y divide-gray-100">
+        <div ref={listRef} className="titi-surface divide-y divide-gray-100">
           {categorias.map((cat) => (
             <div key={cat.id} className="p-4 flex items-center gap-4">
-              <span className="text-2xl select-none shrink-0" aria-hidden="true">{cat.icono}</span>
+              <span className={`w-10 h-10 rounded-xl border-2 border-titi-dark grid place-items-center text-white shrink-0 -rotate-6 ${categoryTheme(cat.nombre).solid}`}><CategoryIcon nombre={cat.nombre} className="w-5 h-5" /></span>
               <div className="min-w-0 flex-1">
-                <p className="font-bold text-titi-dark">{cat.nombre}</p>
-                <p className="text-xs text-gray-400">
+                <p className="font-extrabold text-titi-dark">{cat.nombre}</p>
+                <p className="text-xs font-semibold text-gray-500">
                   {cat._count?.cursos ?? 0} {cat._count?.cursos === 1 ? 'curso' : 'cursos'}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => startEdit(cat)}
-                className="text-titi-dark font-semibold text-xs hover:text-titi-yellow-dark"
+                className="text-sm font-bold uppercase tracking-wide text-blue-500 hover:text-blue-600 active:scale-95 transition-all duration-150"
               >
                 Editar
               </button>
@@ -172,7 +165,7 @@ export default function AdminCategories() {
                 type="button"
                 onClick={() => setConfirm(cat)}
                 disabled={busy === cat.id}
-                className="text-red-500 font-semibold text-xs hover:underline disabled:opacity-50"
+                className="text-sm font-bold uppercase tracking-wide text-red-500 hover:text-red-600 active:scale-95 transition-all duration-150 disabled:opacity-50"
               >
                 Eliminar
               </button>

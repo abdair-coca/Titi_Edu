@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { CheckIcon } from '../../components/icons.jsx';
+import { ArrowRightIcon, CheckIcon, ImageIcon } from '../../components/icons.jsx';
+import { BackLink, PageHeader } from '../../components/ui/v3.jsx';
 import { resolveMediaUrl } from '../../lib/format.js';
 import { authoringError, authoringMutation } from '../../lib/authoring.js';
 import client from '../../api/client.js';
@@ -93,37 +94,38 @@ export default function CourseEditor() {
     finally { setSaving(false); }
   }
 
-  if (loading) return <div className="bg-white border border-gray-100 rounded-2xl p-8 animate-pulse max-w-2xl"><div className="h-5 w-1/3 bg-gray-100 rounded mb-6" /><div className="space-y-4"><div className="h-10 bg-gray-100 rounded-xl" /><div className="h-32 bg-gray-100 rounded-xl" /></div></div>;
+  if (loading) return <div className="max-w-2xl animate-pulse motion-reduce:animate-none" aria-busy="true" aria-label="Cargando el curso"><div className="h-9 w-56 bg-gray-100 rounded-full mb-4" /><div className="h-9 w-2/3 bg-gray-100 rounded-full mb-6" /><div className="bg-white border-2 border-gray-200 rounded-2xl p-5 sm:p-6 space-y-5"><div className="h-12 bg-gray-100 rounded-xl" /><div className="h-32 bg-gray-100 rounded-xl" /><div className="grid grid-cols-2 gap-4"><div className="h-12 bg-gray-100 rounded-xl" /><div className="h-12 bg-gray-100 rounded-xl" /></div></div></div>;
 
   return (
     <div className="max-w-2xl">
-      <button type="button" onClick={() => navigate('/teacher')} className="text-sm font-semibold text-gray-500 hover:text-titi-dark mb-4 inline-flex items-center gap-1">← Mis cursos como profesor</button>
-      <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">{isEdit ? 'Editar curso' : 'Crear nuevo curso'}</h1>
-      <p className="text-sm font-medium text-gray-500 mb-6">{published ? 'Curso publicado: sus datos quedan solo lectura.' : 'Guardá el borrador antes de publicar.'}</p>
-      <form onSubmit={handleSubmit} className="bg-white border border-gray-100 rounded-2xl p-5 sm:p-6 shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex flex-col gap-5">
+      <BackLink to="/teacher">Mis cursos como profe</BackLink>
+      <PageHeader title={isEdit ? 'Editar' : 'Crear nuevo'} accent="curso" subtitle={published ? 'Curso publicado: sus datos quedan solo lectura.' : 'Guardá el borrador antes de publicar.'}>
+        {published && <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-green-500 border-2 border-titi-dark text-xs font-extrabold text-white"><CheckIcon className="w-3.5 h-3.5" />Publicado</span>}
+      </PageHeader>
+      <form onSubmit={handleSubmit} className="titi-surface p-5 sm:p-6 flex flex-col gap-5">
         <Field label="Título del curso" required><input value={form.titulo} onChange={onChange('titulo')} disabled={published} maxLength={120} className="titi-input disabled:opacity-60" required /></Field>
         <Field label="Descripción" required><textarea value={form.descripcion} onChange={onChange('descripcion')} disabled={published} rows={5} maxLength={1000} className="titi-input resize-none disabled:opacity-60" required /><p className="text-xs text-gray-400 mt-1 tabular-nums">{form.descripcion.length} / 1000</p></Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Nivel" required><select value={form.nivel} onChange={onChange('nivel')} disabled={published} className="titi-input capitalize disabled:opacity-60">{NIVELES.map((nivel) => <option key={nivel} value={nivel}>{nivel}</option>)}</select></Field>
-          <Field label="Categoría" required><select value={form.categoriaId} onChange={onChange('categoriaId')} disabled={published} className="titi-input disabled:opacity-60" required><option value="" disabled>Elegí una categoría</option>{categorias.map((category) => <option key={category.id} value={category.id}>{category.icono} {category.nombre}</option>)}</select></Field>
+          <Field label="Categoría" required><select value={form.categoriaId} onChange={onChange('categoriaId')} disabled={published} className="titi-input disabled:opacity-60" required><option value="" disabled>Elegí una categoría</option>{categorias.map((category) => <option key={category.id} value={category.id}>{category.nombre}</option>)}</select></Field>
         </div>
         <Field label="Portada del curso (opcional)">
-          {form.portadaUrl && <img src={resolveMediaUrl(form.portadaUrl)} alt="Portada del curso" className="h-28 w-full object-cover rounded-xl border border-gray-100" />}
+          {form.portadaUrl && <img src={resolveMediaUrl(form.portadaUrl)} alt="Portada del curso" className="h-28 w-full object-cover rounded-xl border-2 border-titi-dark" />}
           <div className="flex flex-col sm:flex-row gap-3">
-            <label className={`inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-600 hover:border-titi-yellow hover:text-titi-dark cursor-pointer ${uploading ? 'opacity-60 pointer-events-none' : ''}`}>
+            <label className={`inline-flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 px-4 py-2.5 text-sm font-bold text-titi-dark hover:border-titi-dark hover:bg-titi-cream active:scale-[0.98] transition-all duration-150 cursor-pointer whitespace-nowrap ${uploading ? 'opacity-60 pointer-events-none' : ''}`}>
               <input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" disabled={published} onChange={handlePortadaUpload} />
-              {uploading ? 'Subiendo…' : 'Subir imagen'}
+              <ImageIcon className="w-4 h-4" />{uploading ? 'Subiendo…' : 'Subir imagen'}
             </label>
             <input type="text" value={form.portadaUrl} onChange={onChange('portadaUrl')} disabled={published || uploading} placeholder="https://… o subí una imagen" className="titi-input disabled:opacity-60" />
           </div>
         </Field>
-        <label className="flex items-start gap-3 rounded-xl bg-titi-cream border border-gray-100 p-4 cursor-pointer"><input type="checkbox" checked={form.emiteCertificado} onChange={(event) => setForm((current) => ({ ...current, emiteCertificado: event.target.checked }))} disabled={published} className="mt-1 h-4 w-4 accent-titi-yellow" /><span><span className="block text-sm font-bold text-titi-dark">Emitir certificado al completar</span><span className="block text-xs text-gray-500 mt-1">El curso otorgará certificado cuando el estudiante cumpla requisitos.</span></span></label>
-        {error && <div className="bg-red-50 border border-red-200 rounded-xl p-3"><p className="text-sm font-semibold text-red-700">{error}</p></div>}
-        {success && <div className="bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2"><CheckIcon className="w-4 h-4 text-green-700" /><p className="text-sm font-semibold text-green-700">{success}</p></div>}
-        {!published && <div className="flex flex-col sm:flex-row gap-3 pt-2"><button type="submit" disabled={saving} className="titi-btn-ghost">{saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Guardar borrador'}</button><button type="button" onClick={(event) => handleSubmit(event, { gotoContent: true })} disabled={saving} className="titi-btn-primary">Guardar y editar contenido →</button></div>}
+        <label className="flex items-start gap-3 rounded-xl bg-titi-cream border-2 border-gray-200 hover:border-titi-dark transition-colors duration-150 p-4 cursor-pointer"><input type="checkbox" checked={form.emiteCertificado} onChange={(event) => setForm((current) => ({ ...current, emiteCertificado: event.target.checked }))} disabled={published} className="mt-1 h-4 w-4 accent-titi-yellow" /><span><span className="block text-sm font-bold text-titi-dark">Emitir certificado al completar</span><span className="block text-xs font-semibold text-gray-500 mt-1">El curso otorgará certificado cuando el estudiante cumpla requisitos.</span></span></label>
+        {error && <div role="alert" className="bg-red-50 border-2 border-red-500 rounded-2xl p-3 flex items-start gap-3"><span aria-hidden="true" className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black">!</span><p className="text-sm font-bold text-red-700 pt-1.5">{error}</p></div>}
+        {success && <div role="status" className="bg-green-50 border-2 border-green-500 rounded-2xl p-3 flex items-center gap-3"><span aria-hidden="true" className="w-8 h-8 rounded-full bg-green-500 grid place-items-center shrink-0"><CheckIcon className="w-4 h-4 text-white" /></span><p className="text-sm font-bold text-green-700">{success}</p></div>}
+        {!published && <div className="flex flex-col sm:flex-row gap-3 pt-2"><button type="submit" disabled={saving} className="titi-btn-outline">{saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Guardar borrador'}</button><button type="button" onClick={(event) => handleSubmit(event, { gotoContent: true })} disabled={saving} className="titi-btn-primary">Guardar y editar contenido<ArrowRightIcon className="w-4 h-4" /></button></div>}
       </form>
     </div>
   );
 }
 
-function Field({ label, required, children }) { return <label className="flex flex-col gap-1.5"><span className="text-sm font-semibold text-titi-dark">{label}{required && <span className="text-red-500 ml-1">*</span>}</span>{children}</label>; }
+function Field({ label, required, children }) { return <label className="flex flex-col gap-1.5"><span className="text-sm font-bold text-titi-dark">{label}{required && <span className="text-red-500 ml-1">*</span>}</span>{children}</label>; }

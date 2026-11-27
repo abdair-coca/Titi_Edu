@@ -1,4 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ErrorBox } from '../../components/social/StateBlocks.jsx';
+import { BackLink, PageHeader } from '../../components/ui/v3.jsx';
+import { Pill } from '../../components/catalog/CatalogFilters.jsx';
+import { CategoryIcon, categoryTheme } from '../../components/catalog/categoryTheme.jsx';
+import { BooksIcon } from '../../components/icons.jsx';
 import client from '../../api/client.js';
 import DeletionConfirmationDialog from '../../components/DeletionConfirmationDialog.jsx';
 import { useStaggerReveal } from '../../lib/motion.js';
@@ -86,53 +91,38 @@ export default function AdminCourses() {
 
   return (
     <div>
-      <header className="mb-6">
-        <h1 className="text-3xl sm:text-4xl font-black text-titi-dark mb-1">Cursos</h1>
-        <p className="text-sm font-medium text-gray-500">Aprobá, moderá y eliminá cursos del catálogo.</p>
-      </header>
+      <BackLink to="/admin">Panel de administración</BackLink>
+      <PageHeader title="Cursos de la" accent="comunidad" subtitle={<>Aprobá, moderá y eliminá cursos del catálogo.</>} />
 
       {/* Filtro */}
-      <div className="flex gap-2 mb-5">
+      <div role="group" aria-label="Filtrar cursos" className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden -mx-4 px-4 sm:mx-0 sm:px-0 py-1 mb-5">
         {FILTROS.map((f) => (
-          <button
-            key={f.value}
-            type="button"
-            onClick={() => setFiltro(f.value)}
-            className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
-              filtro === f.value
-                ? 'bg-titi-yellow text-titi-dark'
-                : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-50'
-            }`}
-          >
+          <Pill key={f.value} active={filtro === f.value} onClick={() => setFiltro(f.value)} className="pl-4">
             {f.label}
-          </button>
+          </Pill>
         ))}
       </div>
 
       {loading ? (
-        <div className="bg-white rounded-2xl border border-gray-100 h-72 animate-pulse" />
+        <div className="bg-white rounded-2xl border-2 border-gray-200 divide-y divide-gray-100 animate-pulse motion-reduce:animate-none" aria-busy="true">{[0, 1, 2, 3].map((i) => <div key={i} className="p-4 flex items-center gap-4"><span className="w-10 h-10 rounded-xl bg-gray-100" /><span className="flex-1 flex flex-col gap-2"><span className="h-4 w-1/2 bg-gray-100 rounded-full" /><span className="h-3 w-1/3 bg-gray-100 rounded-full" /></span></div>)}</div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-          <span className="w-8 h-8 rounded-full bg-red-500 grid place-items-center shrink-0 text-white text-sm font-black" aria-hidden="true">!</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-red-700">{error}</p>
-            <button onClick={fetchCourses} className="text-sm font-bold text-titi-dark hover:text-titi-yellow-dark mt-2">
-              Reintentar →
-            </button>
-          </div>
-        </div>
+        <ErrorBox title="No pudimos cargar los datos" message={error} onRetry={fetchCourses} />
       ) : cursos.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-10 text-center text-gray-400 font-semibold">
-          No hay cursos con este filtro.
+        <div className="bg-white rounded-2xl border-2 border-dashed border-gray-300 py-10 px-6 text-center">
+          <span className="mx-auto w-12 h-12 rounded-xl border-2 border-titi-dark bg-titi-yellow text-titi-dark grid place-items-center -rotate-6 mb-3">
+            <BooksIcon className="w-6 h-6" />
+          </span>
+          <h2 className="text-lg font-extrabold text-titi-dark">No hay cursos con este filtro</h2>
+          <p className="text-sm font-medium text-gray-500 mt-1">Probá con otro estado.</p>
         </div>
       ) : (
-        <div ref={listRef} className="bg-white rounded-2xl border border-gray-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] divide-y divide-gray-100">
+        <div ref={listRef} className="titi-surface divide-y divide-gray-100">
           {cursos.map((curso) => (
-            <div key={curso.id} className="p-4 flex items-center gap-4">
-              <span className="text-2xl select-none shrink-0" aria-hidden="true">{curso.categoria?.icono || '📚'}</span>
+            <div key={curso.id} className="p-4 flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4">
+              <span className={`w-10 h-10 rounded-xl border-2 border-titi-dark grid place-items-center text-white shrink-0 -rotate-6 ${categoryTheme(curso.categoria?.nombre).solid}`} aria-hidden="true"><CategoryIcon nombre={curso.categoria?.nombre} className="w-5 h-5" /></span>
               <div className="min-w-0 flex-1">
-                <p className="font-bold text-titi-dark line-clamp-1">{curso.titulo}</p>
-                <p className="text-xs text-gray-400">
+                <p className="font-extrabold text-titi-dark line-clamp-1">{curso.titulo}</p>
+                <p className="text-xs font-semibold text-gray-500">
                   {curso.creador?.username ? `Por @${curso.creador.username}` : 'Sin autor'}
                   {' · '}
                   {curso._count?.inscripciones ?? 0} inscritos · {curso._count?.modulos ?? 0} módulos
@@ -141,8 +131,8 @@ export default function AdminCourses() {
               <span
                 className={`text-xs font-bold px-2.5 py-1 rounded-full shrink-0 ${
                   curso.publicado
-                    ? 'bg-green-50 text-green-700 border border-green-200'
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'
+                    ? 'bg-green-500 text-white border-2 border-titi-dark'
+                    : 'bg-white text-titi-dark border-2 border-gray-200'
                 }`}
               >
                 {curso.publicado ? 'Publicado' : 'Borrador'}
@@ -153,7 +143,7 @@ export default function AdminCourses() {
                     type="button"
                     onClick={() => approve(curso)}
                     disabled={busy === curso.id}
-                    className="bg-titi-yellow text-titi-dark font-bold text-xs px-3 py-1.5 rounded-xl shadow-[0_3px_0px_#E6B800] hover:shadow-[0_1px_0px_#E6B800] hover:-translate-y-0.5 active:shadow-none active:translate-y-0 transition-all duration-150 disabled:opacity-50"
+                    className="titi-btn-primary text-sm px-3 py-1.5"
                   >
                     Aprobar
                   </button>
@@ -162,7 +152,7 @@ export default function AdminCourses() {
                   type="button"
                   onClick={() => startDelete(curso)}
                   disabled={busy === curso.id}
-                  className="text-red-500 font-semibold text-xs hover:underline disabled:opacity-50"
+                  className="text-sm font-bold uppercase tracking-wide text-red-500 hover:text-red-600 active:scale-95 transition-all duration-150 disabled:opacity-50"
                 >
                   Eliminar
                 </button>

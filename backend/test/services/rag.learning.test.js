@@ -109,7 +109,7 @@ describe('RAG learning contract', () => {
     expect(embeddingBody.input).toContain('Tema de la lección actual: Variables');
     expect(systemPrompt).toContain('TÍTULO DE LA LECCIÓN ACTUAL');
     expect(systemPrompt).toContain('Variables');
-    expect(systemPrompt).toContain('Source metadata (untrusted)');
+    expect(systemPrompt).toContain('Metadatos de la fuente (no confiables)');
   });
 
   it.each([

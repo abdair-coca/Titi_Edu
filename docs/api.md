@@ -56,6 +56,9 @@ GET  /me         → { user }          Perfil completo del JWT actual
 ```
 GET  /api/users/me                   Perfil propio con stats
 GET  /api/users/:username            Perfil público (isFollowing/isSelf)
+GET  /api/users/suggestions          Gente para seguir (?limit≤20): amigos de amigos y,
+                                     si faltan, los más seguidos; mutualCount, mutualSample,
+                                     followerCount
 POST /api/users/:username/follow | /unfollow
 PUT  /api/users/me/location
 
@@ -74,6 +77,8 @@ DELETE /api/comments/:id
 GET  /api/notifications
 GET  /api/notifications/unread/count
 GET  /api/search                     Usuarios, posts, hashtags
+GET  /api/search/trending            Hashtags con más posts de 14 días (?limit≤20);
+                                     sin recientes, los de siempre (recent: false)
 ```
 
 ## Cursos — `/api/courses`

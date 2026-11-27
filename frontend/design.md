@@ -453,6 +453,8 @@ quedan son **canónicas** (redefinidas como espejo exacto de este documento):
 | `.titi-btn-primary` | botón primario (§5.1) |
 | `.titi-btn-ghost` | botón secundario chunky (§5.1) |
 | `.titi-input` | input estándar (§9) |
+| `.titi-surface` | superficie v3 (§5.2): `border-2 border-titi-dark` + sombra difusa — espejo de `SURFACE` de `components/ui/v3.jsx` |
+| `.titi-btn-outline` | botón secundario v3 (§15): blanco, borde y sombra dura oscuros, amarillo al hover — espejo de `BTN_SECONDARY` |
 | `.titi-card-pop` | hover pop de tiles (§10 patrón 7) |
 | `.titi-backdrop-in`, `.titi-*-toast-*`, `.titi-flame-flicker` | animaciones de modales/toasts/racha — **no tocar** (motion.md) |
 
@@ -566,6 +568,26 @@ Un clickeable sin feedback es un bug de diseño. Ver `.titi-btn` en `motion.md`.
   …
 </div>
 ```
+
+**v3 (`/courses`, Inicio, Explorar):** las dos familias se mantienen pero
+el borde pasa a oscuro. **Tile v3** = `border-2 border-titi-dark` + sombra
+dura oscura `shadow-[0_5px_0_#1A1A2E]` (sube a `0_8px` al hover, se aplasta a
+`0_2px` al presionar): CourseCard, PersonCard, mini tile de curso en la
+actividad. **Superficie v3** = `border-2 border-titi-dark` + sombra **difusa**
+(`shadow-[0_2px_8px_rgba(0,0,0,0.06)]`), nunca levanta ni se hunde: post,
+actividad académica, paneles del rail. En una superficie lo que reacciona son
+sus botones, no la card. Paneles oscuros de cierre o de "tu día":
+`bg-titi-dark rounded-2xl` con tiles internos `bg-white/5 border-2 border-white/10`.
+
+Desde `rediseno-plataforma-v3` y `rediseno-learn-v3` **toda la app** usa
+v3: perfil, hashtag, notificaciones, Mis cursos, certificados, ranking,
+tienda, detalle de curso, Learn (índice, lección, evaluación, comentarios),
+enseñar y admin. Las clases van centralizadas en
+`components/ui/v3.jsx` (`TILE`, `SURFACE`, `DARK_PANEL`, `DARK_TILE`,
+`BTN_SECONDARY`, `INPUT`…) y las piezas `PageHeader`, `BackLink`,
+`RoleBadge`, `PanelTitle`, `EmptyState` y `ProgressBar` (§15). Una tarjeta
+con varios botones adentro (`TeachingCard`, `ItemCard`, certificado) es
+superficie, no tile.
 
 ### 5.3 CourseCard — Tarjeta de curso (tile)
 
@@ -743,11 +765,28 @@ const navItems = [
 // También disponibles: UsersIcon (estudiantes), LogoutIcon (cerrar sesión).
 ```
 
-### 5.5 Feed — Tarjeta de actividad académica
+### 5.5 Feed — Post y actividad académica (v3)
 
-**Descripción:** El feed mezcla posts sociales con actividad de cursos. El
-ícono de tipo de actividad es un **chip sólido** con SVG blanco (§2), no un
-emoji suelto.
+**v3 (`PostCard.jsx`, `AcademicActivityCard.jsx`, change
+`rediseno-inicio-explorar`):** ambos son **superficie v3** (§5.2).
+
+- **Post:** avatar `Avatar` (borde oscuro; sin foto, inicial sobre amarillo),
+  texto `text-base font-medium`, imagen a sangre entre `border-y-2
+  border-titi-dark`. Sonido y ubicación como chips con círculo sólido del rol
+  (`titi-streak` / `green-500`); hashtags como pastillas `h-8`. Acciones como
+  pastillas `h-10 rounded-xl border-2`: blancas en reposo, **sólido del rol**
+  activas (like `red-500`, comentarios `blue-500`, guardado `titi-yellow`),
+  con press. Doble toque/clic en la imagen da like y el corazón estalla
+  (`.titi-heart-burst`); el corazón del botón late (`.titi-heart-beat`).
+- **Actividad:** cabecera como el post + cuadro sólido del rol girado
+  (`rounded-xl border-2 border-titi-dark -rotate-6`). El curso es un **mini
+  tile v3** con `CourseCover` y abre la vista rápida (`onOpenCourse`); sin esa
+  prop enlaza a la página del curso. El logro va en tinte `purple-100`.
+- **Composer (`CreatePost`):** plegado tiene la forma del buscador del hero
+  (borde y sombra oscuros); al enfocarlo se despliega con imagen, sonido y
+  ubicación como selectores con ícono SVG.
+
+El snippet de abajo es la versión v2 que documenta la estructura base:
 
 ```jsx
 // Tarjeta de actividad académica en Feed.jsx
@@ -873,7 +912,8 @@ Las barras **siempre** montan en 0 y se llenan hasta el % real (§10). El
 número acompaña con count-up.
 
 ```jsx
-// ProgressBar — usada en LearnCourse.jsx arriba del contenido
+// Barra de progreso de referencia (en Learn hoy se usa <ProgressBar> de ui/v3.jsx
+// en el panel oscuro del índice y en el botón del índice en celular)
 <div className="flex items-center gap-3 mb-6">
   <button onClick={onClose} className="text-gray-400 hover:text-gray-600 active:scale-95"><CloseIcon className="w-5 h-5" /></button>
   <div className="flex-1 h-3 bg-gray-100 rounded-full overflow-hidden">
@@ -1254,14 +1294,14 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `Navbar.jsx` | rail desktop + top bar y bottom nav mobile (por rol) |
 | `PageTransition.jsx` | transición de página (ya montada en `App.jsx`) |
 | `TitiMascot.jsx` | mascota animada por estado (`idle`, `celebra`, `triste`, `racha`, `saludo`, `pensando`) |
-| `icons.jsx` | **única fuente de íconos SVG**: navegación (trazo 2.2), categorías (`categoryIcon(nombre)`), Gota/Bolt/Target/Check/Award/Graduation/Trophy/Users |
-| `StreakBadge.jsx` | badge de racha (variants `sidebar`/compacta) + `FlameIcon` |
+| `icons.jsx` | **única fuente de íconos SVG**: navegación (trazo 2.2), categorías (`categoryIcon(nombre)`), Gota/Bolt/Target/Check/Award/Graduation/Trophy/Users; `ExpandIcon` (pantalla completa), `GearIcon` (ajustes), `KeyIcon` (clave); sociales Heart/Comment/Bookmark/Pin/Search/Hash/Fire; racha `StreakIcon` (llama de un color para círculos sólidos) y `FLAME_PATHS` |
+| `StreakBadge.jsx` | badge de racha (variants `sidebar`/`hero`/`inline`) + `FlameIcon`: llama sticker plana (contorno oscuro, cuerpo `titi-streak`, núcleo amarillo, brillo crema; se mece, el núcleo late y suelta una chispa; `dim` en grises). **La racha siempre es la llama**, nunca el rayo (`BoltIcon` = misiones y multiplicador de gotas) |
 | `GotasCounter.jsx` | contador de gotas (usa GamificationContext) |
-| `DailyMissions.jsx` | misiones diarias (prop `title`) |
-| `CategoriesExplorer.jsx` | chips de categorías → `/courses?categoria=` (Mis cursos + rails de Feed/Explore) |
-| `AchievementsSection.jsx` | grid de logros del perfil |
+| `DailyMissions.jsx` | misiones diarias v3 (prop `title`, su última palabra va de acento); ícono por `codigo` de misión |
+| `CategoriesExplorer.jsx` | mini tiles de categoría con acento → `/courses?cat=<slug>`; `layout="rail"` (Feed/Explore) o `"wide"` (Mis cursos) |
+| `AchievementsSection.jsx` | logros del perfil (superficie v3): ícono por `tipo` en púrpura, candado si falta; tira deslizable en celular, 2 columnas en el rail |
 | `AcademicActivityCard.jsx` | actividad académica del feed (chips sólidos por tipo) |
-| `ItemCard.jsx` | tile de ítem de tienda |
+| `ItemCard.jsx` | ítem de tienda (superficie v3) con ícono SVG por `codigo` (`congelar_racha` copo, `intento_extra` flechas, `multiplicador_gotas` rayo, resto regalo) |
 | `catalog/CourseCard.jsx` | tarjeta de curso v3 del catálogo (§5.3) + `CourseCover`, `FriendStack`, `LevelChip`, skeleton |
 | `catalog/categoryTheme.jsx` | `categoryTheme(nombre)` (acento §2) y `<CategoryIcon>` con microinteracción (§5.6) |
 | `catalog/CatalogFilters.jsx` · `CatalogGrid.jsx` | filtros pegajosos + hoja en celular; cuadrícula con FLIP, vacío con Titi y lupa |
@@ -1269,8 +1309,11 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `catalog/CourseQuickView.jsx` | vista rápida: panel derecho (md+) / hoja inferior; foco atrapado, `?curso=` |
 | `catalog/LearningPathMap.jsx` · `CatalogOutro.jsx` | rutas en camino serpenteante; bloque final visitante/con sesión |
 | `catalog/useSheetDismiss.js` | Esc, bloqueo de scroll, foco atrapado y cerrar arrastrando (hojas y paneles) |
-| `PostCard.jsx`, `CreatePost.jsx`, `CommentSection.jsx`, `LessonComments.jsx`, `EditPostModal.jsx`, `OptionsPosts.jsx` | social: post, composer, comentarios, edición |
-| `EvaluationQuiz.jsx` | quiz de evaluación en Learn |
+| `PostCard.jsx` (+ `PostCardSkeleton`), `CreatePost.jsx`, `CommentSection.jsx`, `LessonComments.jsx`, `EditPostModal.jsx`, `OptionsPosts.jsx` | social: post, composer, comentarios, edición |
+| `EvaluationQuiz.jsx` | evaluación v3 en Learn: superficie con insignia púrpura (trofeo si es final), cifras con conteo, avance de respuestas, opciones con letra y press, nota con conteo y correcciones con check/cruz |
+| `TutorPanel.jsx` + `tutor/*` | tutor IA v3: cabecera con insignia y botones redondos con borde, contexto en tarjeta amarilla, pregunta amarilla con sombra dura, respuesta en superficie con avatar de chispas, fuentes numeradas, acciones rápidas como tiles; DIL con pasos unidos, avisos con insignia girada, tablas con cabecera amarilla y quiz con letra |
+| `HtmlLessonPlayer.jsx` | presentación HTML: marco oscuro, `ExpandIcon`, cifras de la actividad evaluable en superficies 2×2 (`ActivityStat`) |
+| `pages/LearnCourse.jsx` (piezas locales) | `CourseIndex` (índice: categoría, avance en panel oscuro, módulos numerados con el acento de la categoría) e `IndexStep` (paso de la ruta: nodo verde con check / amarillo actual / blanco con número; púrpura para evaluaciones); barra de acción con "Siguiente" que muestra lo que sigue; riel de recursos con pestaña activa amarilla y sombra dura |
 | `ConfirmModal.jsx` | confirmación destructiva — **nunca** `window.confirm` |
 | `auth/AuthField.jsx` | campo de auth: label flotante, ícono con wiggle al enfocar, barra de foco, check animado (`valid`), error con shake, slot `trailing` |
 | `auth/AuthLayout.jsx` | superficie compartida de login/registro (fondo, encabezado, escena, entrada GSAP) + piezas: `AuthHeading`, `AuthSubmitButton`, `PasswordToggle`, `ErrorBanner`, `AuthSwitchLink`, `CapsLockHint` |
@@ -1283,6 +1326,13 @@ falta una variante, **extendé con props** (patrón: `DailyMissions` recibió
 | `hero3d/support.js` · `sceneKit.jsx` · `dropGeometry.js` | compartido por las escenas 3D: decidir 3D (`canShow3D`), carga diferida, pausa fuera de pantalla, `SceneBoundary` · luz de ambiente, guardia de contexto, calentamiento del monitor · forma de la gota |
 | `heroSky/HeroSky.jsx` | cielo 3D del header de `/courses` (detrás de barra amarilla + texto): mide carriles (`skyLayout.js`), carga diferida de `SkyScene`, sin respaldo (§10, "3D") |
 | `heroSky/SkyScene.jsx` | escena del cielo (chunk diferido): dron repartidor, dron chico, avión de papel, gotas y nubes (`Drone`, `PaperPlane`, `SkyDrops`, `Clouds`); en celular solo repartidor + avión |
+| `social/Avatar.jsx` · `FollowButton.jsx` | avatar v3 (foto o inicial; tamaños `xs`–`xl`) · Seguir/Siguiendo optimista con rollback y refresco de gotas (también en el perfil) |
+| `social/PersonCard.jsx` · `Suggestions.jsx` | persona para seguir: tile v3 con banda de color + variante de lista; `SuggestionsRow` (fila) y `SuggestionsPanel` (rail) |
+| `social/TrendingHashtags.jsx` | `HashtagPill`, `TrendingStrip` (pastillas) y `TrendingPanel` (ranking del rail) |
+| `social/StateBlocks.jsx` · `useSocialData.js` | `ErrorBox` con Reintentar y `SectionHeading` con acento · `useApiList`, `useSuggestions`, `useTrending` |
+| `catalog/useQuickViewParam.js` | vista rápida en `?curso=` reusable (catálogo, Inicio, Explorar) |
+| `ui/v3.jsx` | clases v3 (`TILE`, `SURFACE`, `DARK_PANEL`, `DARK_TILE`, `BTN_SECONDARY(_SM)`, `BTN_DANGER_SM`, `INPUT`) y piezas `PageHeader` (título con acento + acciones), `BackLink` (volver), `RoleBadge` (cuadro sólido girado), `PanelTitle`, `EmptyState` (Titi con `state` + CTA; `compact` para secciones), `ProgressBar` (se llena desde 0), `SkeletonLine` |
+| `ConfirmModal.jsx` · `DeletionConfirmationDialog.jsx` | diálogos v3 (borde oscuro, sombra dura de 8 px); mismas props |
 | `GotaToast.jsx`, `StreakToast.jsx`, `AchievementToast.jsx`, `PurchaseToast.jsx`, `WeeklyPrizeCelebration.jsx` | toasts/celebraciones (animaciones cerradas, no tocar) |
 
 ### Hooks y lib
@@ -1347,6 +1397,17 @@ de §2-4 y se agrega acá.
 // Fila de lista densa
 <li className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
 
+// v3 (rediseno-plataforma-v3) — preferí las piezas de components/ui/v3.jsx:
+<PageHeader title="Mis" accent="cursos" subtitle="Continuá donde lo dejaste.">{acciones}</PageHeader>
+<BackLink to="/explore">Explorar</BackLink>
+<RoleBadge Icon={AwardIcon} solid="bg-titi-achievement" size="sm" />   // cuadro sólido girado, ícono blanco (oscuro sobre amarillo)
+<PanelTitle Icon={BoltIcon} solid="bg-titi-yellow" title="Desafíos del" accent="día" />
+<EmptyState state="pensando" title="Todavía no tenés" accent="cursos" text="…"><Link className="titi-btn-primary">…</Link></EmptyState>
+<ProgressBar value={pct} color="bg-titi-streak" track="bg-orange-100" label="…" />   // monta en 0 y se llena
+
+// Botón secundario v3 (BTN_SECONDARY / .titi-btn-outline)
+<button className="inline-flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-white border-2 border-titi-dark text-sm font-extrabold text-titi-dark shadow-[0_3px_0_#1A1A2E] hover:bg-titi-yellow hover:-translate-y-0.5 hover:shadow-[0_4px_0_#1A1A2E] active:translate-y-0.5 active:shadow-none transition-all duration-150">
+
 // Barra de progreso (siempre animada, §10)
 <div className="h-2 bg-gray-100 rounded-full overflow-hidden" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={label}>
   <div className="h-full bg-titi-yellow rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none" style={{ width: `${pct}%` }} />
@@ -1358,7 +1419,8 @@ de §2-4 y se agrega acá.
 | Tipo | Contenedor | Ejemplo |
 |---|---|---|
 | Dashboard | full-width del shell; stats en `grid sm:grid-cols-3`; secciones cortas emparejadas `grid lg:grid-cols-2`; banner full al pie | Mis cursos |
-| Feed / columna social | `max-w-xl mx-auto` (Feed, Explore) o `max-w-2xl` (listas) | Feed, Leaderboard |
+| Feed / columna social | `max-w-6xl` con grid `lg:grid-cols-[minmax(0,1fr)_320px]` (columna + rail sticky); en celular la columna a `max-w-2xl` | Feed, Explore |
+| Lista + rail | `max-w-6xl` con grid `lg:grid-cols-[minmax(0,1fr)_320px]`; la lista ocupa la columna (en celular `max-w-2xl`) y el rail suma algo útil (temporada, gente para seguir, tendencias) | Leaderboard, Notificaciones, Hashtag, Perfil |
 | Catálogo / grid | grid de tiles `sm:2 lg:3 xl:4` + `gap-4 sm:gap-5` | Courses |
 | Detalle | 2 columnas `lg:` (contenido + panel de acción sticky) | CourseDetail |
 | Admin / tablas | full-width, cards informativas, tablas sin stagger | AdminUsers |
@@ -1403,6 +1465,17 @@ esto te dice qué esperar del código existente:
 
 **Migración v2 completa (etapas 1-6, 2026-07-02).** Desde acá rige solo la
 regla boy scout: lo que se toque queda 100% v2.
+
+**v3 en toda la app (2026-11-22, change `rediseno-plataforma-v3`):** perfil,
+hashtag, notificaciones, Mis cursos, certificados, ranking, tienda, detalle de
+curso, navegación, enseñar y admin pasaron al lenguaje v3.
+
+**Learn en v3 (2026-11-23, change `rediseno-learn-v3`):** índice, lección,
+riel y paneles, evaluación y comentarios. Solo cambió la capa visual: los
+contratos de `test:learn-*`, `test:tutor-*`, `test:html-lesson` y `test:rag`
+siguen en verde. En una segunda vuelta el tutor IA (conversación, fuentes,
+clave), sus respuestas estructuradas y la actividad HTML también pasaron a
+v3. Con esto toda la app habla v3.
 
 **Regla boy scout**: cualquier archivo que toques por otro motivo queda
 migrado completo a v2 en ese mismo cambio (tokens, tipografía, átomos).
