@@ -23,3 +23,6 @@ embedding-service/.env.staging
 backend/eval/rag/data/
 backend/eval/rag/.cache/
 backend/eval/rag/results/
+
+# Explicador local (no se versiona)
+.explicador/
