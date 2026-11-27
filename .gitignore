@@ -26,3 +26,6 @@ backend/eval/rag/results/
 
 # Explicador local (no se versiona)
 .explicador/
+
+# Configuración local de Codex (no se versiona)
+.codex/
