@@ -24,28 +24,39 @@ function enExclusiva(clave, tarea) {
   return turno;
 }
 
-// Login: 5 fallos seguidos del mismo email bloquean ese email durante 15 minutos.
+// Login: 5 intentos seguidos del mismo email o desde la misma IP bloquean 15 minutos.
+// Cada intento cuenta al llegar, así una ráfaga en paralelo no supera el límite.
+// Un login correcto borra los fallos de su email y libera su intento de la IP.
 const MAX_INTENTOS = 5;
 const VENTANA_MS = 15 * 60 * 1000;
-const intentosFallidos = new Map();
+const contadores = new Map(); // "email:x" | "ip:y" -> { cuenta, expira }
 
-function estaBloqueado(email) {
-  const registro = intentosFallidos.get(email);
-  if (!registro) return false;
+function contadorVigente(clave) {
+  const registro = contadores.get(clave);
+  if (!registro) return null;
   if (Date.now() > registro.expira) {
-    intentosFallidos.delete(email);
-    return false;
+    contadores.delete(clave);
+    return null;
   }
-  return registro.cuenta >= MAX_INTENTOS;
+  return registro;
 }
 
-function registrarFallo(email) {
-  const registro = intentosFallidos.get(email);
-  if (!registro || Date.now() > registro.expira) {
-    intentosFallidos.set(email, { cuenta: 1, expira: Date.now() + VENTANA_MS });
-  } else {
+function estaBloqueado(...claves) {
+  return claves.some((clave) => (contadorVigente(clave)?.cuenta ?? 0) >= MAX_INTENTOS);
+}
+
+function contarIntento(clave) {
+  const registro = contadorVigente(clave);
+  if (registro) {
     registro.cuenta += 1;
+  } else {
+    contadores.set(clave, { cuenta: 1, expira: Date.now() + VENTANA_MS });
   }
+}
+
+function liberarIntento(clave) {
+  const registro = contadorVigente(clave);
+  if (registro) registro.cuenta = Math.max(0, registro.cuenta - 1);
 }
 
 function signToken(user) {
@@ -83,6 +94,10 @@ router.post('/register', async (req, res) => {
     }
     if (password.trim() === '') {
       return res.status(400).json({ success: false, message: 'La contraseña no puede estar formada solo por espacios' });
+    }
+    // bcrypt solo usa los primeros 72 bytes: una password más larga no se puede guardar bien.
+    if (Buffer.byteLength(password, 'utf8') > 72) {
+      return res.status(400).json({ success: false, message: 'La contraseña no puede superar 72 bytes' });
     }
 
     // Email y username se guardan sin espacios y en minúsculas, así la igualdad de Cypher
@@ -161,26 +176,29 @@ router.post('/login', async (req, res) => {
     }
 
     const correo = email.trim().toLowerCase();
-    if (estaBloqueado(correo)) {
+    const claveEmail = `email:${correo}`;
+    const claveIp = `ip:${req.ip}`;
+    if (estaBloqueado(claveEmail, claveIp)) {
       return res.status(429).json({ success: false, message: 'Demasiados intentos fallidos. Inténtalo de nuevo más tarde' });
     }
+    contarIntento(claveEmail);
+    contarIntento(claveIp);
 
     const records = await runQuery(
       'MATCH (u:Usuario {email: $email}) RETURN u LIMIT 1',
       { email: correo }
     );
     if (records.length === 0) {
-      registrarFallo(correo);
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     }
 
     const node = records[0].get('u');
     const ok = await bcrypt.compare(password, node.properties.password);
     if (!ok) {
-      registrarFallo(correo);
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     }
-    intentosFallidos.delete(correo);
+    contadores.delete(claveEmail);
+    liberarIntento(claveIp);
 
     const user = publicUser(node);
 
