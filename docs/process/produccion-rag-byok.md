@@ -6,7 +6,8 @@ Rollout manual sobre backend Render productivo y Neon productivo. No existe DB s
 para este despliegue. Curso único:
 `bceba93d-d954-4bc9-abf7-db865b1df8ff`.
 
-Render permanece en plan free y `autoDeploy: false`. Los cold starts son esperables;
+Render permanece en plan free y con `autoDeploy: true`: cada push a `main` despliega
+a producción. Los cold starts son esperables;
 no hay SLA de disponibilidad ni latencia. No presentar este piloto como servicio con
 alta disponibilidad.
 
