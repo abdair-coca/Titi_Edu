@@ -34,6 +34,14 @@ describe('POST /api/auth/register', () => {
     expect(res.status).toBe(400);
   });
 
+  it('400 si la contraseña supera 72 bytes (37 "ñ" son 74 bytes)', async () => {
+    const res = await request(app).post('/api/auth/register')
+      .send({ username: 'a', email: 'a@b.com', password: 'ñ'.repeat(37) });
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(runQuery).not.toHaveBeenCalled();
+  });
+
   it('409 si el usuario o email ya existe', async () => {
     runQuery.mockResolvedValueOnce([userRecord({ id: 'x' })]); // existing check
     const res = await request(app).post('/api/auth/register')

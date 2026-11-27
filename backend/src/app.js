@@ -37,6 +37,10 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const app = express();
 
+// Render pone un proxy delante: sin esto req.ip sería la IP del proxy para todos
+// y el límite de login por IP bloquearía a todos a la vez.
+app.set('trust proxy', 1);
+
 // ---- CORS ----
 // Orígenes permitidos: localhost (dev) + lo que venga en FRONTEND_URL.
 // FRONTEND_URL admite múltiples URLs separadas por coma — útil para
