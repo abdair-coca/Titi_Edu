@@ -178,3 +178,80 @@ describe('POST /api/users/me/banner', () => {
     expect(res.body.data).toHaveProperty('bannerUrl');
   });
 });
+
+describe('username de la URL y del token sin distinguir mayúsculas', () => {
+  // Token de una sesión abierta antes de migrar los usernames a minúsculas.
+  const tokenViejo = jwt.sign(
+    { id: 'user-ana', username: 'AnaQuispe', email: 'ana@example.com', rol: 'ESTUDIANTE' },
+    process.env.JWT_SECRET,
+    { expiresIn: '1h' }
+  );
+  const perfil = {
+    get: (k) => (k === 'u'
+      ? { properties: { id: 'user-ana', username: 'anaquispe', bio: '', avatarUrl: '' } }
+      : 0),
+    has: () => false,
+  };
+
+  it('GET /:username busca el username en minúsculas aunque el enlace tenga mayúsculas', async () => {
+    runQuery.mockResolvedValueOnce([perfil]).mockResolvedValueOnce([]);
+    const res = await request(app)
+      .get('/api/users/AnaQuispe')
+      .set('Authorization', `Bearer ${token}`);
+    expect(res.status).toBe(200);
+    expect(runQuery.mock.calls[0][1]).toEqual({ username: 'anaquispe' });
+  });
+
+  it('GET /:username reconoce el perfil propio con un token de username viejo', async () => {
+    runQuery.mockResolvedValueOnce([perfil]);
+    const res = await request(app)
+      .get('/api/users/anaquispe')
+      .set('Authorization', `Bearer ${tokenViejo}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.isSelf).toBe(true);
+    expect(runQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it('POST /:username/follow no deja seguirse a sí mismo con otra capitalización', async () => {
+    runQuery.mockResolvedValueOnce([{ get: () => 'user-ana' }]);
+    const res = await request(app)
+      .post('/api/users/AnaQuispe/follow')
+      .set('Authorization', `Bearer ${tokenViejo}`);
+    expect(res.status).toBe(400);
+    expect(runQuery).toHaveBeenCalledTimes(1);
+  });
+
+  // Cuenta renombrada al migrar: "Helen_Terrazas" pasó a "helen_terrazas_2", y su token viejo
+  // normalizado coincide con OTRA cuenta, "helen_terrazas".
+  const tokenRenombrada = jwt.sign(
+    { id: 'user-helen-2', username: 'Helen_Terrazas', email: 'h2@example.com', rol: 'ESTUDIANTE' },
+    process.env.JWT_SECRET,
+    { expiresIn: '1h' }
+  );
+  const otraHelen = {
+    get: (k) => (k === 'u'
+      ? { properties: { id: 'user-helen-1', username: 'helen_terrazas', bio: '', avatarUrl: '' } }
+      : 0),
+    has: () => false,
+  };
+
+  it('GET /:username no toma como propio el perfil de otra cuenta con el mismo username normalizado', async () => {
+    runQuery.mockResolvedValueOnce([otraHelen]).mockResolvedValueOnce([]);
+    const res = await request(app)
+      .get('/api/users/helen_terrazas')
+      .set('Authorization', `Bearer ${tokenRenombrada}`);
+    expect(res.status).toBe(200);
+    expect(res.body.data.isSelf).toBe(false);
+  });
+
+  it('POST /:username/follow deja seguir a otra cuenta con el mismo username normalizado', async () => {
+    runQuery
+      .mockResolvedValueOnce([{ get: () => 'user-helen-1' }])
+      .mockResolvedValueOnce([{ get: (k) => (k === 'targetId' ? 'user-helen-1' : true) }])
+      .mockResolvedValue([]);
+    const res = await request(app)
+      .post('/api/users/helen_terrazas/follow')
+      .set('Authorization', `Bearer ${tokenRenombrada}`);
+    expect(res.status).not.toBe(400);
+  });
+});

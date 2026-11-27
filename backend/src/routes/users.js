@@ -14,6 +14,10 @@ import { avanzarMisionesPorNeoId } from '../services/mision.service.js';
 
 const router = Router();
 
+// Los usernames se guardan en minúsculas: la URL y el token se normalizan igual antes de
+// buscar o comparar, así un enlace viejo como /profile/Ana sigue llevando a "ana".
+const claveUsername = (u) => String(u ?? '').trim().toLowerCase();
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
@@ -262,7 +266,7 @@ router.post('/me/banner', requireAuth, (req, res, next) => {
 // ---- Perfil público (requiere login) ----
 router.get('/:username', requireAuth, async (req, res) => {
   try {
-    const { username } = req.params;
+    const username = claveUsername(req.params.username);
     const records = await runQuery(
       `MATCH (u:Usuario {username: $username})
        OPTIONAL MATCH (u)-[:PUBLICO]->(p:Post)
@@ -281,9 +285,11 @@ router.get('/:username', requireAuth, async (req, res) => {
     }
     const r = records[0];
     const node = r.get('u');
+    // Se compara por id: el username del token puede ser anterior a la migración a minúsculas.
+    const esYo = req.user?.id === node.properties.id;
 
     let isFollowing = false;
-    if (req.user && req.user.username !== username) {
+    if (req.user && !esYo) {
       const rel = await runQuery(
         'MATCH (me:Usuario {id: $meId})-[r:SIGUIO]->(u:Usuario {username: $username}) RETURN r LIMIT 1',
         { meId: req.user.id, username }
@@ -302,7 +308,7 @@ router.get('/:username', requireAuth, async (req, res) => {
         },
         location: locationFromRecord(r),
         isFollowing,
-        isSelf: req.user?.username === username,
+        isSelf: esYo,
       },
     });
   } catch (err) {
@@ -314,8 +320,10 @@ router.get('/:username', requireAuth, async (req, res) => {
 // ---- Follow ----
 router.post('/:username/follow', requireAuth, async (req, res) => {
   try {
-    const { username } = req.params;
-    if (username === req.user.username) {
+    const username = claveUsername(req.params.username);
+    // Se compara por id: el username del token puede ser anterior a la migración a minúsculas.
+    const destino = await runQuery('MATCH (b:Usuario {username: $username}) RETURN b.id AS id', { username });
+    if (destino.length > 0 && destino[0].get('id') === req.user.id) {
       return res.status(400).json({ success: false, message: 'No puedes seguirte a ti mismo' });
     }
     const records = await runQuery(
@@ -377,7 +385,7 @@ router.post('/:username/follow', requireAuth, async (req, res) => {
 // ---- Unfollow ----
 router.post('/:username/unfollow', requireAuth, async (req, res) => {
   try {
-    const { username } = req.params;
+    const username = claveUsername(req.params.username);
     await runQuery(
       `MATCH (a:Usuario {id: $followerId})-[r:SIGUIO]->(b:Usuario {username: $targetUsername})
        DELETE r`,
@@ -393,7 +401,7 @@ router.post('/:username/unfollow', requireAuth, async (req, res) => {
 // ---- Followers ----
 router.get('/:username/followers', requireAuth, async (req, res) => {
   try {
-    const { username } = req.params;
+    const username = claveUsername(req.params.username);
     const records = await runQuery(
       `MATCH (u:Usuario {username: $username})<-[:SIGUIO]-(f:Usuario)
        RETURN f ORDER BY f.username`,
@@ -409,7 +417,7 @@ router.get('/:username/followers', requireAuth, async (req, res) => {
 // ---- Following ----
 router.get('/:username/following', requireAuth, async (req, res) => {
   try {
-    const { username } = req.params;
+    const username = claveUsername(req.params.username);
     const records = await runQuery(
       `MATCH (u:Usuario {username: $username})-[:SIGUIO]->(f:Usuario)
        RETURN f ORDER BY f.username`,

@@ -5,6 +5,10 @@ import { rachaEstaActiva } from '../services/progress.service.js';
 
 const router = Router();
 
+// Los usernames se guardan en minúsculas: la URL y el token se normalizan igual antes de
+// buscar o comparar, así un enlace viejo como /profile/Ana sigue llevando a "ana".
+const claveUsername = (u) => String(u ?? '').trim().toLowerCase();
+
 // --- Helpers ---
 
 // El JWT actual lleva el id de Neo4j. En Postgres ese id vive en `Usuario.neoId`.
@@ -165,7 +169,7 @@ router.get('/certificate/:courseId', requireAuth, async (req, res) => {
 router.get('/:username/achievements', requireAuth, async (req, res) => {
   try {
     const usuario = await prisma.usuario.findUnique({
-      where: { username: req.params.username },
+      where: { username: claveUsername(req.params.username) },
       select: { id: true },
     });
     if (!usuario) {
@@ -182,7 +186,7 @@ router.get('/:username/achievements', requireAuth, async (req, res) => {
 // ---- GET /api/progress/:username/streak — racha de un usuario (requiere login) ----
 router.get('/:username/streak', requireAuth, async (req, res) => {
   try {
-    const { username } = req.params;
+    const username = claveUsername(req.params.username);
 
     const usuario = await prisma.usuario.findUnique({
       where: { username },

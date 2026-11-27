@@ -7,7 +7,17 @@ import prisma from '../prisma.js';
 
 const router = Router();
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// El dominio no admite partes vacías: rechaza "a@gmail..com", "a@.com" y "a@gmail.com.".
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
+
+// Cuenta caracteres como se ven: un emoji o una letra con tilde valen 1, no sus unidades UTF-16.
+const grafemas = new Intl.Segmenter('es', { granularity: 'grapheme' });
+const contarCaracteres = (texto) => [...grafemas.segment(texto)].length;
+
+// Quita de los bordes los espacios y también los invisibles (ancho cero, BOM) que se cuelan
+// al copiar y pegar, y pasa a minúsculas: así "Ana\u200B" y " ana " son el mismo username.
+const BORDES_RE = /^[\s\u200B-\u200D\uFEFF]+|[\s\u200B-\u200D\uFEFF]+$/g;
+const normalizar = (texto) => texto.replace(BORDES_RE, '').toLowerCase();
 
 // Registros con el mismo email se procesan uno tras otro en este proceso, para que
 // la comprobación de duplicados y la creación no se intercalen.
@@ -89,7 +99,7 @@ router.post('/register', async (req, res) => {
     if (typeof username !== 'string' || typeof email !== 'string' || typeof password !== 'string') {
       return res.status(400).json({ success: false, message: 'username, email y password deben ser texto' });
     }
-    if (password.length < 6) {
+    if (contarCaracteres(password) < 6) {
       return res.status(400).json({ success: false, message: 'La contraseña debe tener al menos 6 caracteres' });
     }
     if (password.trim() === '') {
@@ -102,8 +112,8 @@ router.post('/register', async (req, res) => {
 
     // Email y username se guardan sin espacios y en minúsculas, así la igualdad de Cypher
     // detecta como duplicados los que solo difieren en mayúsculas o espacios.
-    const usuario = username.trim().toLowerCase();
-    const correo = email.trim().toLowerCase();
+    const usuario = normalizar(username);
+    const correo = normalizar(email);
     if (!usuario) {
       return res.status(400).json({ success: false, message: 'El username no puede estar vacío' });
     }
@@ -175,7 +185,7 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ success: false, message: 'email y password deben ser texto' });
     }
 
-    const correo = email.trim().toLowerCase();
+    const correo = normalizar(email);
     const claveEmail = `email:${correo}`;
     const claveIp = `ip:${req.ip}`;
     if (estaBloqueado(claveEmail, claveIp)) {
